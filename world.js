@@ -342,6 +342,7 @@ export function signs(terrain, runs) {
     post.castShadow = true;
     const board = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: signTexture(run), side: THREE.DoubleSide }));
     board.position.y = 2.25;
+    board.userData.signRun = run;
     sign.add(post, board);
     group.add(sign);
   }

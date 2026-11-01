@@ -6,8 +6,11 @@
 //   real      – toward realism: physically based snow, ACES tone mapping, crisp light
 import * as THREE from "three";
 import { OutlineEffect } from "three/addons/effects/OutlineEffect.js";
+import { Sky } from "three/addons/objects/Sky.js";
+import { SUN_DIR, drawSymbol } from "./world.js";
 
 export const STYLES = {
+  semi: "半写实",
   lowpoly: "低多边形柔和",
   ink: "描边插画",
   mood: "剪影氛围",
@@ -44,6 +47,7 @@ const setSky = (skyMesh, top, mid, low, glow) => {
 export async function applyStyle(name, { renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
   const plain = (s, c) => renderer.render(s, c);
   if (name === "diorama") return diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi });
+  if (name === "semi") return semi({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi });
   if (name === "cartoon") {
     const forestGroup = scene.getObjectByName("forest");
     eachMesh(scene, (m) => swap(m, (old) => new THREE.MeshToonMaterial({ color: old.color, vertexColors: old.vertexColors, map: old.map, transparent: old.transparent, opacity: old.opacity, gradientMap: toonRamp })));
@@ -183,11 +187,25 @@ function diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) 
   scene.fog.near = 1e6; scene.fog.far = 2e6;
   scene.userData.noFog = true;
   scene.background = new THREE.Color(0xe9e7e3);
+  const build = miniature(renderer, scene, terrain);
+  scene.userData.onMap = () => build(0, 0, 1e5, "Copper Mountain");
+  scene.userData.onArrive = (x, z, title) => build(x, z, 520, title);
+  scene.userData.onSlope = () => build(null);
+  scene.userData.onMap();
+  scene.userData.mapScale = 2.4;
+  sun.intensity = 2.2;
+  hemi.color.set(0xffffff); hemi.groundColor.set(0xc9c6d6);
+  return (s, c) => renderer.render(s, c);
+}
+
+// A block of terrain cut out around (cx, cz) and set on a plinth with a name plate; build(null) removes it.
+function miniature(renderer, scene, terrain, look = {}) {
   renderer.localClippingEnabled = true;
   const base = -220;
   let block = null;
   const build = (cx, cz, half, title) => {
-    if (block) { scene.remove(block); block.traverse((o) => o.geometry?.dispose()); }
+    if (block) { scene.remove(block); block.traverse((o) => o.geometry?.dispose()); block = null; }
+    if (cx === null) { renderer.clippingPlanes = []; return; }
     const x0 = Math.max(terrain.x0, cx - half), x1 = Math.min(terrain.x1, cx + half), z0 = Math.max(terrain.z0, cz - half), z1 = Math.min(terrain.z1, cz + half);
     renderer.clippingPlanes = [
       new THREE.Plane(new THREE.Vector3(1, 0, 0), -x0), new THREE.Plane(new THREE.Vector3(-1, 0, 0), x1),
@@ -210,12 +228,12 @@ function diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) 
       block.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, clippingPlanes: [] })));
     };
     edge(x0, z0, x1, z0); edge(x1, z0, x1, z1); edge(x1, z1, x0, z1); edge(x0, z1, x0, z0);
-    const plinth = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 + 30, 160, z1 - z0 + 30), new THREE.MeshLambertMaterial({ color: 0xdedbd5, clippingPlanes: [] }));
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 + 30, 160, z1 - z0 + 30), new THREE.MeshLambertMaterial({ color: look.plinth ?? 0xdedbd5, clippingPlanes: [] }));
     plinth.position.set((x0 + x1) / 2, bottom - 80, (z0 + z1) / 2);
     block.add(plinth);
     const c = document.createElement("canvas"); c.width = 1024; c.height = 160;
     const g = c.getContext("2d");
-    g.fillStyle = "#5d616e"; g.fillRect(0, 0, 1024, 160);
+    g.fillStyle = look.plate ?? "#5d616e"; g.fillRect(0, 0, 1024, 160);
     g.fillStyle = "#f2f2f2"; g.font = "bold 84px Helvetica, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(title, 512, 84);
     const plate = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(x1 - x0, 1600) * 0.6, Math.min(x1 - x0, 1600) * 0.6 * 0.156), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), clippingPlanes: [] }));
     plate.position.set((x0 + x1) / 2, bottom - 80, z0 - 16);
@@ -223,14 +241,144 @@ function diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) 
     block.add(plate);
     scene.add(block);
   };
-  scene.userData.onMap = () => build(0, 0, 1e5, "Copper Mountain");
-  scene.userData.onArrive = (x, z, title) => build(x, z, 520, title);
-  scene.userData.onSlope = () => { if (block) { scene.remove(block); block = null; } renderer.clippingPlanes = []; };
-  scene.userData.onMap();
-  scene.userData.mapScale = 2.4;
-  sun.intensity = 2.2;
-  hemi.color.set(0xffffff); hemi.groundColor.set(0xc9c6d6);
-  return (s, c) => renderer.render(s, c);
+  return build;
+}
+
+// Semi-realistic: physical sky and image-based light, textured snow with rock on steep ground,
+// snow-laden conifers, modern resort signage and stations. The lift-top look-around is a miniature.
+async function semi({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.85;
+  document.body.classList.add("theme-semi");
+  // Sky and environment light from the same sun.
+  skyMesh.visible = false;
+  const sky = new Sky();
+  sky.scale.setScalar(45000);
+  const u = sky.material.uniforms;
+  u.turbidity.value = 1.6; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.004; u.mieDirectionalG.value = 0.82;
+  u.sunPosition.value.copy(SUN_DIR).multiplyScalar(1000);
+  scene.add(sky);
+  const envScene = new THREE.Scene();
+  envScene.add(sky.clone());
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(envScene, 0.04).texture;
+  scene.environmentIntensity = 0.55;
+  scene.fog.color.set(0xb9cbe0);
+  sun.color.set(0xfff1e0); sun.intensity = 3.2;
+  hemi.color.set(0xcfe0ff); hemi.groundColor.set(0x7d8aa6); hemi.intensity = 0.45;
+
+  const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    res(t);
+  }));
+  const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
+
+  // Terrain: baked sun shadow stays in the vertex colors; texture by world position, rock where steep,
+  // fading to a flat snow tone in the distance so the far mountain does not shimmer.
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 });
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, { snowD: { value: snowD }, snowN: { value: snowN }, rockD: { value: rockD } });
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWP; varying vec3 vWN;")
+      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);");
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform sampler2D snowD, snowN, rockD; varying vec3 vWP; varying vec3 vWN;")
+      .replace("#include <color_fragment>", `#include <color_fragment>
+        float fade = smoothstep(350.0, 2600.0, length(vWP - cameraPosition));
+        vec3 sn = mix(texture2D(snowD, vWP.xz / 7.0).rgb * 1.08, vec3(0.93, 0.94, 0.96), fade);
+        vec3 rk = mix(texture2D(rockD, vWP.xz / 45.0).rgb, vec3(0.42, 0.40, 0.40), fade * 0.6);
+        float rockW = smoothstep(0.30, 0.48, 1.0 - vWN.y);
+        diffuseColor.rgb *= mix(sn, rk * 1.4, rockW);`)
+      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+        vec3 nt = texture2D(snowN, vWP.xz / 7.0).xyz * 2.0 - 1.0;
+        normal = normalize(normal + (viewMatrix * vec4(nt.x, 0.0, -nt.y, 0.0)).xyz * 0.45 * (1.0 - fade));`);
+  };
+  // Vertex colors: keep the mountain shadow, drop the stylized rock tint (the rock texture does that now).
+  const pos = terrainMesh.geometry.attributes.position, col = terrainMesh.geometry.attributes.color;
+  const shade = new THREE.Color(0x8fa0cf), c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const s0 = terrain.sunShadow(pos.getX(i), pos.getZ(i), pos.getY(i));
+    c.set(0xffffff).lerp(shade, s0 * 0.5);
+    col.setXYZ(i, c.r, c.g, c.b);
+  }
+  col.needsUpdate = true;
+  terrainMesh.material = mat;
+
+  // Snow-laden conifers: five narrow tiers, white on the upper faces.
+  scene.getObjectByName("forest").traverse((o) => {
+    if (!o.isInstancedMesh) return;
+    o.geometry = conifer();
+    o.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+  });
+  // Everything else to physically based materials; modern station colors.
+  scene.traverse((o) => {
+    if (!o.isMesh || o === terrainMesh || o.material instanceof THREE.ShaderMaterial) return;
+    const m = o.material;
+    if (m.isMeshLambertMaterial) {
+      const hex = m.color.getHex();
+      o.material = new THREE.MeshStandardMaterial({
+        color: hex === 0xb4483f ? 0x2f3540 : hex === 0x9a9fae ? 0xd9dde3 : hex, vertexColors: m.vertexColors, map: m.map,
+        transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite, roughness: 0.7, metalness: hex === 0x7c8193 ? 0.6 : 0,
+        polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits,
+      });
+    }
+    if (o.userData.signRun) { o.material.map = signTexture(o.userData.signRun); o.material.needsUpdate = true; }
+  });
+  // Map: runs read as resort-map lines with a white casing.
+  scene.traverse((o) => { if (o.isMesh && o.material?.color?.getHex?.() === 0xc4c8d8) { o.material.color.set(0xffffff); o.material.opacity = 0.65; } });
+
+  const build = miniature(renderer, scene, terrain, { plinth: 0x2a3140, plate: "#11161f" });
+  scene.userData.onArrive = (x, z, title) => { sky.visible = false; scene.background = new THREE.Color(0xdfe6ee); build(x, z, 520, title); };
+  const back = () => { build(null); sky.visible = true; scene.background = null; };
+  scene.userData.onSlope = back;
+  scene.userData.onMap = back;
+  return (s2, c2) => renderer.render(s2, c2);
+}
+
+function conifer() {
+  const tiers = [[0.8, 5, 3.4], [3.4, 5, 2.9], [6.0, 4.6, 2.3], [8.4, 4.2, 1.7], [10.6, 3.6, 1.1]];
+  const pos = [], colr = [];
+  const green = new THREE.Color(0x1d3a2c), snow = new THREE.Color(0xeef3fa), c = new THREE.Color();
+  for (const [y, h, r] of tiers) {
+    const g = new THREE.ConeGeometry(r, h, 8, 1, true).toNonIndexed();
+    g.translate(0, y + h / 2, 0);
+    g.computeVertexNormals();
+    const p = g.attributes.position, n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) {
+      pos.push(p.getX(i), p.getY(i), p.getZ(i));
+      const top = (p.getY(i) - y) / h;
+      c.copy(green).lerp(snow, Math.max(0, n.getY(i)) * 0.55 * (0.4 + top * 0.6) + (top > 0.98 ? 0.2 : 0));
+      colr.push(c.r, c.g, c.b);
+    }
+  }
+  const trunk = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 6).toNonIndexed();
+  trunk.translate(0, 0.6, 0);
+  for (let i = 0; i < trunk.attributes.position.count; i++) { pos.push(...trunk.attributes.position.array.slice(i * 3, i * 3 + 3)); colr.push(0.24, 0.17, 0.12); }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute("color", new THREE.Float32BufferAttribute(colr, 3));
+  out.computeVertexNormals();
+  return out;
+}
+
+// Modern resort trail sign: dark panel, difficulty symbol, run name, arrow.
+function signTexture(run) {
+  const cv = document.createElement("canvas");
+  cv.width = 512; cv.height = 128;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#18202b"; g.fillRect(0, 0, 512, 128);
+  g.fillStyle = "#f4f6f8"; g.fillRect(0, 118, 512, 10);
+  g.fillStyle = "#f4f6f8"; g.beginPath(); g.arc(64, 60, 40, 0, Math.PI * 2); g.fill();
+  drawSymbol(g, run.level, 64, 60, 28);
+  g.fillStyle = "#ffffff"; g.font = "600 46px Helvetica, Arial, sans-serif"; g.textBaseline = "middle";
+  let t = run.name;
+  while (g.measureText(t).width > 330 && t.length > 3) t = t.slice(0, -2) + "…";
+  g.fillText(t, run.level === "expert" ? 150 : 124, 62);
+  g.font = "600 52px Helvetica, Arial, sans-serif"; g.fillText("→", 458, 60);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
 }
 
 // Voxel: the mountain rebuilt from blocks, trees as stacked cubes.
