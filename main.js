@@ -2,10 +2,10 @@
 // on the chair with the runs below named, and down each run with turn-by-turn signs.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Terrain, sky, lights, treeMaskFn, forest, runLayers, highlight, signs, Lifts, LEVEL, at, chairMesh, farTerrain } from "./world.js";
-import { Rider, riderModel, Tracks, Spray, loadAvatar, applyPose } from "./rider.js";
-import { buildGraph, planRoute, nodesNear, lengthAlong, LEVELS } from "./route.js";
-import { applyStyle, miniature } from "./styles.js";
+import { Terrain, sky, lights, treeMaskFn, forest, runLayers, highlight, signs, Lifts, LEVEL, at, chairMesh, farTerrain } from "./world.js?v=5";
+import { Rider, riderModel, Tracks, Spray, loadAvatar, applyPose } from "./rider.js?v=5";
+import { buildGraph, planRoute, nodesNear, lengthAlong, LEVELS } from "./route.js?v=5";
+import { applyStyle, miniature } from "./styles.js?v=5";
 
 const $ = (id) => document.getElementById(id);
 const icon = (level) => `<i class="lv ${level}"></i>`;
@@ -18,7 +18,8 @@ const saveSettings = () => localStorage.setItem("prerun", JSON.stringify(setting
 // ---------- Renderer ----------
 const canvas = $("scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const phone = matchMedia("(pointer: coarse)").matches;
+renderer.setPixelRatio(Math.min(devicePixelRatio, phone ? 1.5 : 2)); // phones: less GPU memory
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -27,6 +28,7 @@ scene.fog = new THREE.Fog(0xd8ebe8, 4000, 22000);
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.5, 60000);
 const controls = new OrbitControls(camera, canvas);
 Object.assign(controls, { enableDamping: true, maxPolarAngle: 1.38, minDistance: 150, maxDistance: 11000, screenSpacePanning: false });
+canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); $("loading").textContent = "手机显卡内存不够，画面停了。请关掉其他页面后刷新。"; $("intro").classList.remove("hidden"); });
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();

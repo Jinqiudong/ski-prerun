@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { OutlineEffect } from "three/addons/effects/OutlineEffect.js";
 import { Sky } from "three/addons/objects/Sky.js";
-import { SUN_DIR, drawSymbol } from "./world.js";
+import { SUN_DIR, drawSymbol } from "./world.js?v=5";
 
 export const STYLES = {
   semi: "半写实",

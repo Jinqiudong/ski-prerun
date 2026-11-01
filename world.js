@@ -165,7 +165,7 @@ export function lights(scene) {
   const sun = new THREE.DirectionalLight(0xffe2c4, 2.6);
   sun.position.copy(SUN_DIR).multiplyScalar(500);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.setScalar(matchMedia("(pointer: coarse)").matches ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 10, far: 1500 });
   sun.shadow.bias = -0.0008;
   sun.shadow.normalBias = 0.6;
