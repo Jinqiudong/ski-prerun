@@ -100,16 +100,19 @@ export function sky() {
   const geo = new THREE.SphereGeometry(40000, 32, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { sun: { value: SUN_DIR } },
+    uniforms: {
+      sun: { value: SUN_DIR },
+      top: { value: new THREE.Color(0.55, 0.78, 0.80) }, mid: { value: new THREE.Color(0.78, 0.90, 0.89) },
+      low: { value: new THREE.Color(0.98, 0.90, 0.84) }, glow: { value: new THREE.Color(1.0, 0.75, 0.55) },
+    },
     vertexShader: "varying vec3 v; void main(){ v = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
-    fragmentShader: `varying vec3 v; uniform vec3 sun;
+    fragmentShader: `varying vec3 v; uniform vec3 sun, top, mid, low, glow;
       void main(){
         float h = clamp(v.y, -0.1, 1.0);
-        vec3 top = vec3(0.55,0.78,0.80), mid = vec3(0.78,0.90,0.89), low = vec3(0.98,0.90,0.84);
         vec3 c = mix(low, mid, smoothstep(0.0, 0.18, h));
         c = mix(c, top, smoothstep(0.18, 0.8, h));
         float s = max(dot(normalize(v), sun), 0.0);
-        c += vec3(1.0,0.75,0.55) * (pow(s, 12.0) * 0.35 + pow(s, 400.0) * 0.8);
+        c += glow * (pow(s, 12.0) * 0.35 + pow(s, 400.0) * 0.8);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });

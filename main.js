@@ -5,6 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Terrain, sky, lights, treeMaskFn, forest, runLayers, highlight, signs, Lifts, LEVEL, at, chairMesh } from "./world.js";
 import { Rider, riderModel, Tracks, Spray } from "./rider.js";
 import { buildGraph, planRoute, nodesNear, lengthAlong, LEVELS } from "./route.js";
+import { applyStyle } from "./styles.js";
 
 const $ = (id) => document.getElementById(id);
 const icon = (level) => `<i class="lv ${level}"></i>`;
@@ -33,6 +34,7 @@ addEventListener("resize", () => {
 });
 
 let T, R, graph, sun, liftsView, runView, signGroup, routeGroup = null;
+let draw = (s, c) => renderer.render(s, c);
 
 // ---------- Labels ----------
 const labels = [];
@@ -118,21 +120,23 @@ function show(...ids) {
   for (const id of ["mapbar", "info", "plan", "list", "hud", "ride", "card", "overviewBar"]) $(id).classList.toggle("hidden", !ids.includes(id));
 }
 function mapLook() {
+  if (mode === "map") scene.userData.onMap?.();
   rider.model.visible = false;
   sun.castShadow = false;
   runView.mapLayer.visible = true;
   runView.skiLayer.visible = false;
   signGroup.visible = false;
-  scene.fog.near = 5000; scene.fog.far = 24000;
+  if (!scene.userData.noFog) { scene.fog.near = 5000 * (scene.userData.fogScale || 1); scene.fog.far = 24000 * (scene.userData.fogScale || 1); }
   camera.near = 2; camera.fov = 50; camera.updateProjectionMatrix();
 }
 function slopeLook() {
+  scene.userData.onSlope?.();
   rider.model.visible = true;
   sun.castShadow = true;
   runView.mapLayer.visible = false;
   runView.skiLayer.visible = true;
   signGroup.visible = true;
-  scene.fog.near = 700; scene.fog.far = 7000;
+  scene.fog.near = 700 * (scene.userData.fogScale || 1); scene.fog.far = 7000 * (scene.userData.fogScale || 1);
   camera.near = 0.5; camera.updateProjectionMatrix();
 }
 
@@ -580,14 +584,24 @@ function arrive(x, z, lift, runs, next) {
     aboveLabels.push(label(`${icon(p.run.level)}${esc(p.run.name)}`, `run sel${next?.run === p.run ? " next" : ""}`, ptV(p.pts[Math.min(p.pts.length - 1, 10)], 8)));
   }
   aboveLabels.push(label(`📍 ${esc(lift.name)} 山顶`, "you", new THREE.Vector3(x, y + 20, z)));
-  // Orbit slowly around the top station with a wide lens; drag to look yourself.
-  controls.enabled = true;
-  Object.assign(controls, { minDistance: 60, maxDistance: 1200, autoRotate: true, autoRotateSpeed: 1.6 });
-  controls.target.set(x, y + 6, z);
-  const n = T.normalAt(x, z);
-  const down = new THREE.Vector3(n.x, 0, n.z).normalize();
-  camera.position.set(x - down.x * 160, y + 110, z - down.z * 160);
-  camera.fov = 72; camera.near = 1; camera.updateProjectionMatrix();
+  if (scene.userData.onArrive) {
+    // Miniature: the area around the top on a little plinth, turning slowly.
+    scene.userData.onArrive(x, z, `${lift.name} · 山顶`);
+    controls.target.set(x, y - 200, z);
+    camera.position.set(x - 1700, y + 1500, z - 1700);
+    controls.enabled = true;
+    Object.assign(controls, { minDistance: 800, maxDistance: 6000, autoRotate: true, autoRotateSpeed: 1.6 });
+    camera.fov = 30; camera.near = 10; camera.updateProjectionMatrix();
+  } else {
+    // Orbit slowly around the top station with a wide lens; drag to look yourself.
+    controls.enabled = true;
+    Object.assign(controls, { minDistance: 60, maxDistance: 1200, autoRotate: true, autoRotateSpeed: 1.6 });
+    controls.target.set(x, y + 6, z);
+    const n = T.normalAt(x, z);
+    const down = new THREE.Vector3(n.x, 0, n.z).normalize();
+    camera.position.set(x - down.x * 160, y + 110, z - down.z * 160);
+    camera.fov = 72; camera.near = 1; camera.updateProjectionMatrix();
+  }
 
   $("cardTitle").innerHTML = `${icon("lift")}到了 ${esc(lift.name)} 山顶`;
   $("cardMeta").textContent = `海拔 ${T.altitude(y)} 米 · 拖动可以自己转着看，亮起来的是从这里出发的雪道`;
@@ -769,7 +783,7 @@ function frame(now) {
   else if (mode === "map" || mode === "intro" || mode === "arrive") controls.update();
   rider.spray?.update(dt);
   updateLabels();
-  renderer.render(scene, camera);
+  draw(scene, camera);
   requestAnimationFrame(frame);
 }
 
@@ -783,12 +797,15 @@ async function main() {
   T = new Terrain(R);
   const mask = treeMaskFn(R, T);
   terrainMesh = T.mesh(mask);
-  scene.add(sky(), terrainMesh);
+  const skyMesh = sky();
+  scene.add(skyMesh, terrainMesh);
   sun = lights(scene);
   sun.userData.dir = sun.position.clone().normalize();
   $("loading").textContent = "种树、架缆车…";
   await pause();
-  scene.add(forest(T, mask));
+  const trees = forest(T, mask);
+  trees.name = "forest";
+  scene.add(trees);
   runView = runLayers(T, R.runs);
   scene.add(runView.mapLayer, runView.skiLayer);
   signGroup = signs(T, R.runs);
@@ -797,6 +814,8 @@ async function main() {
   scene.add(liftsView.group);
   graph = buildGraph(R, (x, z) => T.heightAt(x, z));
   rider.spray = new Spray(scene);
+  const style = new URLSearchParams(location.search).get("style") || "lowpoly";
+  draw = await applyStyle(style, { renderer, scene, skyMesh, terrainMesh, terrain: T, sun, hemi: scene.children.find((o) => o.isHemisphereLight) });
   chair = chairMesh();
   chair.visible = false;
   scene.add(chair);
@@ -815,7 +834,9 @@ async function main() {
   const all = R.runs.flatMap((r) => r.pts);
   const cx = all.reduce((s, p) => s + p[0], 0) / all.length, cz = all.reduce((s, p) => s + p[1], 0) / all.length;
   controls.target.set(cx, T.heightAt(cx, cz), cz);
-  camera.position.set(cx + 1500, T.heightAt(cx, cz) + 2600, cz - 4200); // from the villages in the north, looking up the mountain
+  const k = scene.userData.mapScale || 1; // the miniature is seen from further away, as a whole block
+  camera.position.set(cx + 1500 * k, T.heightAt(cx, cz) + 2600 * k, cz - 4200 * k); // from the villages in the north, looking up the mountain
+  controls.maxDistance = 11000 * k;
   renderSettings($("introSettings"));
   $("loading").textContent = `${R.runs.length} 条雪道 · ${R.lifts.length} 条缆车`;
   const start = $("start");
@@ -850,7 +871,7 @@ $("exitRide").addEventListener("click", () => { ride?.below.forEach(dropLabel); 
 window.__prerun = {
   get R() { return R; }, get graph() { return graph; }, get mode() { return mode; }, get journey() { return journey; },
   rider, settings, startJourney, planRoute, nodesNear, stepRun, stepRide, openPlan, select,
-  continueRoute: () => { leaveArrival(); nextLeg(); }, get T() { return T; }, reachableLifts,
+  continueRoute: () => { leaveArrival(); nextLeg(); }, get T() { return T; }, reachableLifts, scene, renderer,
 };
 
 main().catch((e) => { $("loading").textContent = `加载失败：${e.message}`; console.error(e); });
