@@ -42,9 +42,21 @@ const setSky = (skyMesh, top, mid, low, glow) => {
   u.top.value.set(top); u.mid.value.set(mid); u.low.value.set(low); u.glow.value.set(glow);
 };
 
-// Returns the render function for the chosen style. Styles may also set scene.userData.onArrive(x, z)
-// and scene.userData.onMap() to change how the lift-top view and the overview are staged.
-export async function applyStyle(name, { renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
+// Returns the render function for the chosen style. Every style gets the miniature look-around
+// (scene.userData.onArrive); a style may stage it its own way.
+export async function applyStyle(name, ctx) {
+  const draw = await styled(name, ctx);
+  if (!ctx.scene.userData.onArrive) {
+    const { renderer, scene, skyMesh, terrain } = ctx;
+    const build = miniature(renderer, scene, terrain);
+    const far = () => scene.getObjectByName("far") || { visible: true };
+    scene.userData.onArrive = (x, z, title, half = 520) => { skyMesh.visible = false; far().visible = false; scene.background = new THREE.Color(0xe3e8ee); scene.fog.near = 1e6; scene.fog.far = 2e6; build(x, z, half, title); };
+    scene.userData.onSlope = scene.userData.onMap = () => { build(null); skyMesh.visible = true; far().visible = true; scene.background = null; };
+  }
+  return draw;
+}
+
+async function styled(name, { renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
   const plain = (s, c) => renderer.render(s, c);
   if (name === "diorama") return diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi });
   if (name === "semi") return semi({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi });
@@ -184,12 +196,14 @@ function paperOverlay() {
 // Miniature model: the resort (or the area around a lift top) cut out as a block on a plinth.
 function diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
   skyMesh.visible = false;
+  const farMesh = scene.getObjectByName("far");
+  if (farMesh) farMesh.visible = false;
   scene.fog.near = 1e6; scene.fog.far = 2e6;
   scene.userData.noFog = true;
   scene.background = new THREE.Color(0xe9e7e3);
   const build = miniature(renderer, scene, terrain);
   scene.userData.onMap = () => build(0, 0, 1e5, "Copper Mountain");
-  scene.userData.onArrive = (x, z, title) => build(x, z, 520, title);
+  scene.userData.onArrive = (x, z, title, half = 520) => build(x, z, half, title);
   scene.userData.onSlope = () => build(null);
   scene.userData.onMap();
   scene.userData.mapScale = 2.4;
@@ -199,7 +213,7 @@ function diorama({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) 
 }
 
 // A block of terrain cut out around (cx, cz) and set on a plinth with a name plate; build(null) removes it.
-function miniature(renderer, scene, terrain, look = {}) {
+export function miniature(renderer, scene, terrain, look = {}) {
   renderer.localClippingEnabled = true;
   const base = -220;
   let block = null;
@@ -248,22 +262,22 @@ function miniature(renderer, scene, terrain, look = {}) {
 // snow-laden conifers, modern resort signage and stations. The lift-top look-around is a miniature.
 async function semi({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi }) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.85;
+  renderer.toneMappingExposure = 1.0;
   document.body.classList.add("theme-semi");
-  // Sky and environment light from the same sun.
-  skyMesh.visible = false;
+  // A deep winter-blue sky to look at; the physical sky lights the scene from the same sun.
+  setSky(skyMesh, 0x1d5cc0, 0x6ea6ea, 0xdcebf8, 0xfff2dc);
   const sky = new Sky();
   sky.scale.setScalar(45000);
   const u = sky.material.uniforms;
   u.turbidity.value = 1.6; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.004; u.mieDirectionalG.value = 0.82;
   u.sunPosition.value.copy(SUN_DIR).multiplyScalar(1000);
-  scene.add(sky);
   const envScene = new THREE.Scene();
   envScene.add(sky.clone());
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(envScene, 0.04).texture;
   scene.environmentIntensity = 0.55;
-  scene.fog.color.set(0xb9cbe0);
-  sun.color.set(0xfff1e0); sun.intensity = 3.2;
+  scene.fog.color.set(0xcfe1f4);
+  scene.userData.fogScale = 4; // see the ranges 30 km away through a light blue haze
+  sun.color.set(0xfff3e6); sun.intensity = 3.6;
   hemi.color.set(0xcfe0ff); hemi.groundColor.set(0x7d8aa6); hemi.intensity = 0.45;
 
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
@@ -328,8 +342,8 @@ async function semi({ renderer, scene, skyMesh, terrainMesh, terrain, sun, hemi 
   scene.traverse((o) => { if (o.isMesh && o.material?.color?.getHex?.() === 0xc4c8d8) { o.material.color.set(0xffffff); o.material.opacity = 0.65; } });
 
   const build = miniature(renderer, scene, terrain, { plinth: 0x2a3140, plate: "#11161f" });
-  scene.userData.onArrive = (x, z, title) => { sky.visible = false; scene.background = new THREE.Color(0xdfe6ee); build(x, z, 520, title); };
-  const back = () => { build(null); sky.visible = true; scene.background = null; };
+  scene.userData.onArrive = (x, z, title, half = 520) => { skyMesh.visible = false; scene.getObjectByName("far").visible = false; scene.background = new THREE.Color(0xdfe6ee); scene.fog.near = 1e6; scene.fog.far = 2e6; build(x, z, half, title); };
+  const back = () => { build(null); skyMesh.visible = true; scene.getObjectByName("far").visible = true; scene.background = null; };
   scene.userData.onSlope = back;
   scene.userData.onMap = back;
   return (s2, c2) => renderer.render(s2, c2);
@@ -347,7 +361,7 @@ function conifer() {
     for (let i = 0; i < p.count; i++) {
       pos.push(p.getX(i), p.getY(i), p.getZ(i));
       const top = (p.getY(i) - y) / h;
-      c.copy(green).lerp(snow, Math.max(0, n.getY(i)) * 0.55 * (0.4 + top * 0.6) + (top > 0.98 ? 0.2 : 0));
+      c.copy(green).lerp(snow, Math.min(0.85, Math.max(0, n.getY(i)) * 0.7 * (0.35 + top * 0.65) + (top > 0.98 ? 0.3 : 0)));
       colr.push(c.r, c.g, c.b);
     }
   }

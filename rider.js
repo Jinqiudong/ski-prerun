@@ -2,75 +2,123 @@
 import * as THREE from "three";
 
 const lambert = (color) => new THREE.MeshLambertMaterial({ color });
-const THIGH = 0.44, SHIN = 0.44;
+
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+
+// A semi-realistic person (assets/models/rider.glb, a humanoid rig) dressed for the snow and posed by bones.
+let avatarGltf = null;
+export async function loadAvatar() {
+  if (!avatarGltf) avatarGltf = await new GLTFLoader().loadAsync("assets/models/rider.glb");
+  return avatarGltf;
+}
+
+const OUTFIT = {
+  ski: { top: 0x1f4f8f, bottom: 0x23262e, helmet: 0xf2f3f5 },
+  board: { top: 0xd86a2e, bottom: 0x2b3340, helmet: 0x2a2d33 },
+};
 
 // Hierarchy (root sits at the feet, local +z is the direction of travel):
 //   root → yaw (board/skis skidding across) → gear (skis or board, tilts onto its edge)
 //                                          → pivot (whole-body inclination into the turn)
-//                                              → stance (ski: facing forward; board: chest to the toe side, +x)
-//                                                  → legs (two segments each) and hips → upper body, arms, head
+//                                              → stance (ski: facing forward; board: chest to the toe side, +x) → avatar
 export function riderModel(kind) {
   const root = new THREE.Group(), yaw = new THREE.Group(), gear = new THREE.Group(), pivot = new THREE.Group(), stance = new THREE.Group();
   root.add(yaw);
   yaw.add(gear, pivot);
   pivot.add(stance);
   const board = kind === "board";
-  const jacket = lambert(board ? 0xd9643f : 0x2f6f8f), pants = lambert(0x2b2f3d), dark = lambert(0x1d1f27);
-  const limb = (r, len, mat) => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 8), mat); m.castShadow = true; return m; };
-
-  // Legs: hip joint → thigh → knee joint → shin → boot. Bending is set in pose().
-  const footX = board ? 0.26 : 0.12;
-  const legs = [-1, 1].map((side) => {
-    const hip = new THREE.Group();
-    const thigh = limb(0.095, THIGH - 0.1, pants); thigh.position.y = -THIGH / 2;
-    const knee = new THREE.Group(); knee.position.y = -THIGH;
-    const shin = limb(0.08, SHIN - 0.08, pants); shin.position.y = -SHIN / 2;
-    const ankle = new THREE.Group(); ankle.position.y = -SHIN;
-    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.16, 0.3), dark); boot.position.set(0, -0.02, 0.04); boot.castShadow = true;
-    ankle.add(boot); knee.add(shin, ankle); hip.add(thigh, knee);
-    hip.position.x = side * footX;
-    stance.add(hip);
-    return { side, hip, knee, ankle };
-  });
-
-  const hips = new THREE.Group(); // upper body pivots here
-  stance.add(hips);
-  const torso = limb(0.19, 0.38, jacket); torso.position.y = 0.3;
-  const pack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.36, 0.13), lambert(0x3a4256)); pack.position.set(0, 0.34, -0.2); pack.castShadow = true;
-  const neck = new THREE.Group(); neck.position.y = 0.66;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), lambert(0xf0c8a8)); head.position.y = 0.12;
-  const lid = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), lambert(0xf6f6f6)); lid.position.y = 0.14; lid.castShadow = true;
-  const lens = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.07, 0.06), new THREE.MeshLambertMaterial({ color: 0xff9a3c, emissive: 0x552200 })); lens.position.set(0, 0.13, 0.125);
-  neck.add(head, lid, lens);
-  const arms = [-1, 1].map((side) => {
-    const shoulder = new THREE.Group(); shoulder.position.set(side * 0.25, 0.5, 0.02);
-    const arm = limb(0.06, 0.5, jacket); arm.position.y = -0.28;
-    shoulder.add(arm);
-    if (!board) {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.15), dark);
-      pole.position.set(0, -0.6, 0.05);
-      shoulder.add(pole);
+  const outfit = OUTFIT[kind];
+  const avatar = SkeletonUtils.clone(avatarGltf.scene);
+  const bones = {};
+  avatar.traverse((o) => {
+    if (o.isBone) bones[o.name] = o;
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.frustumCulled = false;
+      const name = o.material.name || "";
+      o.material = o.material.clone();
+      if (name.includes("Outfit_Top")) o.material.color.set(outfit.top);
+      if (name.includes("Outfit_Bottom")) o.material.color.set(outfit.bottom);
+      if (name.includes("Headwear") || name.includes("Hair") || name.includes("Beard")) o.visible = false; // under the helmet
     }
-    hips.add(shoulder);
-    return { side, shoulder };
   });
-  hips.add(torso, pack, neck);
+  stance.add(avatar);
+  // Helmet and goggles ride on the head bone.
+  const head = bones.Head;
+  // Sized to the head (about 19 cm wide), not a cartoon bubble.
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.104, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.56), new THREE.MeshStandardMaterial({ color: outfit.helmet, roughness: 0.35 }));
+  helmet.position.set(0, 0.105, -0.008);
+  helmet.scale.set(0.98, 0.95, 1.1);
+  const goggles = new THREE.Mesh(new THREE.CapsuleGeometry(0.034, 0.1, 4, 12), new THREE.MeshStandardMaterial({ color: 0xff8a3d, roughness: 0.12, metalness: 0.7, emissive: 0x2a1000 }));
+  goggles.rotation.z = Math.PI / 2;
+  goggles.position.set(0, 0.075, 0.088);
+  goggles.scale.set(1, 1, 0.5);
+  helmet.castShadow = true;
+  head.add(helmet, goggles);
 
   if (board) {
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.035, 1.55), lambert(0x2f7fe8));
-    deck.position.y = 0.02; deck.castShadow = true;
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 1.55), new THREE.MeshStandardMaterial({ color: 0x2f7fe8, roughness: 0.4 }));
+    deck.position.y = 0.035; deck.castShadow = true;
     gear.add(deck);
     stance.rotation.y = Math.PI / 2; // regular stance: chest to the toe edge (+x), left foot forward
   } else {
     gear.userData.skis = [-1, 1].map((side) => {
-      const ski = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.03, 1.72), lambert(0xe2463d));
-      ski.position.set(side * footX, 0.015, 0.05); ski.castShadow = true;
+      const ski = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.025, 1.72), new THREE.MeshStandardMaterial({ color: 0xe2463d, roughness: 0.4 }));
+      ski.position.set(side * 0.11, 0.02, 0.05); ski.castShadow = true;
       gear.add(ski);
       return ski;
     });
+    for (const side of ["Left", "Right"]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 1.2), new THREE.MeshStandardMaterial({ color: 0x1d1f27 }));
+      pole.position.set(0, -0.08, 0.02);
+      pole.rotation.x = Math.PI / 2;
+      bones[`${side}Hand`]?.add(pole);
+    }
   }
-  root.userData = { kind, yaw, gear, pivot, stance, hips, neck, legs, arms, t: 0 };
+  const rest = {};
+  for (const [name, bone] of Object.entries(bones)) rest[name] = { q: bone.quaternion.clone(), p: bone.position.clone() };
+  root.userData = { kind, yaw, gear, pivot, stance, avatar, bones, rest };
   return root;
+}
+
+const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _ax = new THREE.Vector3(), _ref = new THREE.Quaternion();
+const AX = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+// Rotate a bone about an axis given in the avatar's own frame (x = its left, y = up, z = facing).
+function turn(bone, axis, angle) {
+  if (!bone || !angle) return;
+  _ax.copy(AX[axis]).applyQuaternion(_ref);
+  bone.parent.getWorldQuaternion(_pq);
+  _ax.applyQuaternion(_pq.invert()).normalize();
+  bone.quaternion.premultiply(_q.setFromAxisAngle(_ax, angle));
+  bone.updateMatrixWorld(true);
+}
+
+// Pose by joint angles (radians). knee: bend; fwd: upper body forward; twist: upper body yaw;
+// armsOut/armsFwd/elbow; headYaw; spread: legs apart; sit: seated on a chair.
+export function applyPose(model, p) {
+  const { bones: b, rest, avatar } = model.userData;
+  for (const [name, r] of Object.entries(rest)) { b[name].quaternion.copy(r.q); b[name].position.copy(r.p); }
+  avatar.updateMatrixWorld(true);
+  avatar.parent.getWorldQuaternion(_ref); // the rider's frame: y up, z facing (the glTF root itself is rotated)
+  const knee = p.sit ? 1.5 : p.knee, hip = p.sit ? 1.5 : knee * 0.55;
+  b.Hips.position.y = rest.Hips.p.y - (p.sit ? 0.45 : 0.9 * (1 - Math.cos(knee * 0.5)) + 0.02);
+  turn(b.Spine, "x", p.fwd * 0.5); turn(b.Spine1, "x", p.fwd * 0.3); turn(b.Spine2, "x", p.fwd * 0.2);
+  turn(b.Spine, "y", p.twist * 0.6); turn(b.Spine2, "y", p.twist * 0.4);
+  turn(b.Spine, "z", p.side || 0);
+  for (const [side, s] of [["Left", 1], ["Right", -1]]) {
+    const leg = (p.legs && p.legs[side]) || 0;
+    turn(b[`${side}UpLeg`], "z", s * (p.spread || 0.05));
+    turn(b[`${side}UpLeg`], "x", -(hip + leg));
+    turn(b[`${side}Leg`], "x", knee + leg * 1.5);
+    turn(b[`${side}Foot`], "x", p.sit ? -0.2 : -(knee - hip) - leg * 0.5);
+    // The rest pose already hangs the arms ~55° down: armsOut lifts them away from the body.
+    turn(b[`${side}Arm`], "z", s * (p.armsOut || 0));
+    turn(b[`${side}Arm`], "y", -s * p.armsFwd);
+    turn(b[`${side}ForeArm`], "y", -s * (p.elbow ?? 0.3));
+  }
+  turn(b.Neck, "x", -p.fwd * 0.45);
+  turn(b.Head, "y", p.headYaw || 0);
 }
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -128,72 +176,42 @@ export class Rider {
 
   pose(model) {
     const u = model.userData, A = this.anim, dt = this.dt || 0.016, board = u.kind === "board";
-    model.position.set(this.x, this.y + 0.03, this.z);
+    model.position.set(this.x, this.y + 0.01, this.z);
     model.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), this.n);
     model.rotateY(this.heading);
+    if (board) u.stance.rotation.y = Math.PI / 2;
     const fast = this.speed > 14 && Math.abs(this.steer) < 0.25 && !this.braking;
     const carve = Math.min(Math.abs(this.steer) * this.speed / 10, 1);
     // Right turns (steer > 0) bend toward -x; for a regular snowboarder that is the heel edge.
     const heelside = this.steer > 0.05, toeside = this.steer < -0.05;
     const plow = !board && this.braking && this.speed < 6;
-    const skid = this.braking && !plow ? 1 : 0;
-    A.skid = damp(A.skid, skid, 5, dt);
+    A.skid = damp(A.skid, this.braking && !plow ? 1 : 0, 5, dt);
     A.plow = damp(A.plow, plow ? 1 : 0, 6, dt);
     A.push = damp(A.push, this.pushing ? 1 : 0, 6, dt);
     A.phase += dt * (this.pushing ? 7 : 0);
-
-    // Skidding stop: skis or board swing across the fall line, the upper body keeps facing down the hill.
+    // Inclination is capped: real riders angulate at the hips instead of lying on the snow.
+    const lean = Math.max(-0.55, Math.min(0.55, this.lean));
     const across = (board ? 1.25 : 1.05) * A.skid;
     u.yaw.rotation.y = across;
-    u.pivot.rotation.z = this.lean * (board ? 1 : 0.85) + (board ? 0.35 : 0.25) * A.skid;
-    u.gear.rotation.z = (board ? 0 : this.lean * 0.4);
-
-    let crouch, pitch;
+    u.pivot.rotation.z = lean * (board ? 0.9 : 0.7) + (board ? 0.25 : 0.18) * A.skid;
+    u.gear.rotation.z = board ? 0 : lean * 0.35;
+    const pose = { spread: board ? 0.26 : 0.06, legs: {} };
     if (board) {
-      // Heel side: sit back over the heels, arms forward. Toe side: knees and hips drive toward the toes.
-      crouch = 0.35 + carve * 0.35 + A.skid * 0.2;
-      pitch = heelside ? -0.25 - carve * 0.25 : toeside ? 0.35 + carve * 0.2 : 0.1;
-      u.neck.rotation.y = damp(u.neck.rotation.y, -Math.PI / 2 + 0.25 + across * 0.6, 5, dt); // look where you are going
-      u.hips.rotation.y = damp(u.hips.rotation.y, -0.35 + across * 0.3, 5, dt);
-      for (const arm of u.arms) {
-        arm.shoulder.rotation.x = damp(arm.shoulder.rotation.x, heelside ? -0.9 : toeside ? -0.2 : -0.4, 6, dt);
-        arm.shoulder.rotation.z = damp(arm.shoulder.rotation.z, arm.side * (toeside ? 0.9 : 0.6), 6, dt);
-      }
+      // Heel side: sit back over the heels, arms forward. Toe side: knees and hips toward the toes.
+      A.crouch = damp(A.crouch, 0.95 + carve * 0.4 + A.skid * 0.3, 6, dt);
+      A.pitch = damp(A.pitch, heelside ? -0.1 - carve * 0.15 : toeside ? 0.35 + carve * 0.25 : 0.2, 6, dt);
+      Object.assign(pose, { knee: A.crouch, fwd: A.pitch, twist: -0.35 - across * 0.3, armsOut: heelside ? 0.5 : 0.75, armsFwd: heelside ? 0.6 : 0.2, elbow: 0.35, headYaw: -1.1 });
+      if (A.push > 0.01) pose.legs.Right = Math.max(0, Math.sin(A.phase)) * 0.5 * A.push; // back foot pushes
     } else {
-      crouch = fast ? 0.85 : 0.3 + carve * 0.3 + A.plow * 0.15 + A.skid * 0.25;
-      pitch = fast ? 0.75 : 0.2 + carve * 0.1;
-      // Counter-rotation and angulation: the upper body stays facing down the fall line.
-      u.hips.rotation.y = damp(u.hips.rotation.y, -across * 0.95 + this.steer * 0.25, 6, dt);
-      u.hips.rotation.z = damp(u.hips.rotation.z, -this.lean * 0.5, 6, dt);
-      u.neck.rotation.y = damp(u.neck.rotation.y, 0, 5, dt);
-      for (const arm of u.arms) {
-        const swing = A.push * Math.sin(A.phase + (arm.side > 0 ? 0 : Math.PI)) * 0.7;
-        arm.shoulder.rotation.x = damp(arm.shoulder.rotation.x, fast ? -1.2 : -0.45 + swing, 8, dt);
-        arm.shoulder.rotation.z = damp(arm.shoulder.rotation.z, arm.side * (fast ? 0.15 : 0.3), 8, dt);
-      }
-      // Snowplow: ski tips together, tails apart.
+      A.crouch = damp(A.crouch, fast ? 1.45 : 0.8 + carve * 0.4 + A.plow * 0.2 + A.skid * 0.35, 6, dt);
+      A.pitch = damp(A.pitch, fast ? 0.85 : 0.35 + carve * 0.1, 6, dt);
+      // Counter-rotation and angulation: the upper body faces down the fall line, hips drop inside the turn.
+      Object.assign(pose, { knee: A.crouch, fwd: A.pitch, twist: -across * 0.9 + this.steer * 0.3, side: -lean * 0.6, armsOut: fast ? 0.1 : 0.35, armsFwd: fast ? 1.0 : 0.55, elbow: fast ? 0.9 : 0.6, headYaw: across * 0.6 });
+      pose.spread = 0.06 + A.plow * 0.12;
+      if (A.push > 0.01) for (const [side, ph] of [["Left", 0], ["Right", Math.PI]]) pose.legs[side] = Math.max(0, Math.sin(A.phase + ph)) * 0.45 * A.push;
       gearSkis(u.gear, A.plow);
     }
-    A.crouch = damp(A.crouch, crouch, 6, dt);
-    A.pitch = damp(A.pitch, pitch, 6, dt);
-    // Bend the knees: thigh forward, shin back, so the feet stay under the hips.
-    const knee = 0.25 + A.crouch * 1.15;
-    for (const leg of u.legs) {
-      let k = knee, lift = 0;
-      if (A.push > 0.01) {
-        // Skating (skis) or pushing with the back foot (board): one leg works at a time.
-        const w = Math.max(0, Math.sin(A.phase + (leg.side > 0 ? 0 : Math.PI)));
-        k += w * 0.5 * A.push;
-        lift = board && leg.side < 0 ? 0.12 * A.push : 0;
-      }
-      leg.hip.rotation.x = -k / 2 - (board ? 0 : A.pitch * 0.3);
-      leg.knee.rotation.x = k;
-      leg.ankle.rotation.x = -k / 2 + (board ? 0 : A.pitch * 0.3);
-      leg.hip.position.y = 0.08 + (THIGH + SHIN) * Math.cos(knee / 2) + lift;
-      leg.hip.position.z = board && leg.side < 0 ? -0.25 * A.push : 0;
-    }
-    u.hips.position.y = 0.08 + (THIGH + SHIN) * Math.cos(knee / 2);
-    u.hips.rotation.x = A.pitch;
+    applyPose(model, pose);
   }
 }
 
@@ -201,7 +219,7 @@ function gearSkis(gear, plow) {
   for (const [i, ski] of gear.userData.skis.entries()) {
     const side = i ? 1 : -1;
     ski.rotation.y = -side * 0.32 * plow;
-    ski.position.x = side * (0.12 + 0.18 * plow);
+    ski.position.x = side * (0.11 + 0.14 * plow);
   }
 }
 
@@ -259,7 +277,12 @@ export class Spray {
     const geo = new THREE.BufferGeometry();
     this.pos = new Float32Array(this.n * 3).fill(-1e5);
     geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.22, transparent: true, opacity: 0.9, depthWrite: false }));
+    const dot = document.createElement("canvas");
+    dot.width = dot.height = 32;
+    const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.16, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.85, depthWrite: false }));
     this.points.frustumCulled = false;
     this.next = 0;
     scene.add(this.points);

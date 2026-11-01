@@ -32,7 +32,9 @@ export class Terrain {
     r = Math.min(Math.max(r, 0), gh - 1.001);
     const i = Math.floor(r), j = Math.floor(c), fr = r - i, fc = c - j;
     const k = i * gw + j;
-    return h[k] * (1 - fc) * (1 - fr) + h[k + 1] * fc * (1 - fr) + h[k + gw] * (1 - fc) * fr + h[k + gw + 1] * fc * fr;
+    // Same triangles as mesh(): (a, a+gw, a+1) and (a+1, a+gw, a+gw+1), so riders sit exactly on the drawn snow.
+    if (fr + fc <= 1) return h[k] + (h[k + 1] - h[k]) * fc + (h[k + gw] - h[k]) * fr;
+    return h[k + gw + 1] + (h[k + gw] - h[k + gw + 1]) * (1 - fc) + (h[k + 1] - h[k + gw + 1]) * (1 - fr);
   }
 
   normalAt(x, z, out = new THREE.Vector3()) {
@@ -94,6 +96,43 @@ export class Terrain {
     mesh.receiveShadow = true;
     return mesh;
   }
+}
+
+// The ranges around the resort (data/<resort>-far.json): coarse, sunk under the detailed resort terrain.
+export function farTerrain(far, terrain) {
+  const n = far.grid, H = far.half, raw = Uint8Array.from(atob(far.heights), (c) => c.charCodeAt(0)), q = new Uint16Array(raw.buffer);
+  const pos = new Float32Array(n * n * 3), col = new Float32Array(n * n * 3);
+  const at = (r, c) => q[r * n + c] * far.scale + far.offset;
+  const snow = new THREE.Color(0xf4f6fa), forest = new THREE.Color(0x2c4a3c), rock = new THREE.Color(0x8b8580), c = new THREE.Color();
+  const cell = (2 * H) / (n - 1), base = terrain.data.hmin;
+  for (let r = 0; r < n; r++) {
+    for (let j = 0; j < n; j++) {
+      const x = -H + j * cell, z = -H + r * cell;
+      let y = at(r, j);
+      const inside = x > terrain.x0 + 200 && x < terrain.x1 - 200 && z > terrain.z0 + 200 && z < terrain.z1 - 200;
+      if (inside) y -= 60; // hidden under the detailed terrain
+      pos.set([x, y, z], (r * n + j) * 3);
+      const dzx = (at(r, Math.min(n - 1, j + 1)) - at(r, Math.max(0, j - 1))) / (2 * cell);
+      const dzz = (at(Math.min(n - 1, r + 1), j) - at(Math.max(0, r - 1), j)) / (2 * cell);
+      const steep = Math.hypot(dzx, dzz), alt = y + base;
+      // Winter: snow everywhere, dark forest belts below ~3450 m, rock on the steepest faces.
+      const woods = Math.max(0, Math.min(1, (3450 - alt) / 250)) * (0.55 + 0.25 * Math.sin(x / 700 + Math.cos(z / 900) * 2));
+      c.copy(snow).lerp(forest, woods * (steep < 0.9 ? 1 : 0.4));
+      if (steep > 0.75) c.lerp(rock, Math.min(0.75, (steep - 0.75) * 1.5));
+      col.set([c.r, c.g, c.b], (r * n + j) * 3);
+    }
+  }
+  const idx = [];
+  for (let r = 0; r < n - 1; r++) for (let j = 0; j < n - 1; j++) { const a = r * n + j; idx.push(a, a + n, a + 1, a + 1, a + n, a + n + 1); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.name = "far";
+  mesh.receiveShadow = false;
+  return mesh;
 }
 
 export function sky() {
