@@ -30,3 +30,15 @@ Style frame: `/mountain/` (semi-realistic).
   game-like lift choice.
 
 Next: storyboard of the day flow (step 3 for this flow), then build.
+
+## Base miniature and lift choice (2026-11-01)
+
+- Picking a base opens that area as a miniature world: a thick cut block (snow, earth and rock layers on
+  the faces), white rounded plinth with a name plate, relief ×1.8, toy-scale trees, lifts with moving
+  chairs and riders, a lodge, little skiers; soft studio light and a tilt-shift blur.
+- Intro: one 10-second turn around the block, skippable. Then drag to turn.
+- Lift choice as cards: length, ride time, top altitude, runs leaving the top by difficulty. The chosen
+  lift lights runs in three tiers: leaving the top, reachable without another lift, the rest faded.
+- Quick plans (warm-up green, cruise blue, challenge black) suggest one loop back to the base.
+- Proposed by Claude, pending the owner's review: nav cues at 200 m and again at 50 m; keep a compact
+  slope profile in run previews.

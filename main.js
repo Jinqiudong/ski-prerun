@@ -856,6 +856,14 @@ async function main() {
   start.textContent = "进入雪场";
   start.addEventListener("click", () => { $("intro").classList.add("hidden"); enterMap(); });
   requestAnimationFrame(frame);
+  // Arriving from the mountain page's lift choice: go straight onto that lift.
+  const q = new URLSearchParams(location.search), wanted = R.lifts.find((l) => l.name === q.get("lift"));
+  if (wanted) {
+    if (q.get("kind") && q.get("kind") !== settings.kind) { settings.kind = q.get("kind") === "board" ? "board" : "ski"; saveSettings(); buildRider(); }
+    $("intro").classList.add("hidden");
+    enterMap();
+    startJourney([{ type: "lift", lift: wanted, length: wanted.length }]);
+  }
 }
 
 // ---------- Wiring ----------

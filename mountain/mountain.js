@@ -4,6 +4,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
+import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
+import { Diorama } from "./diorama.js?v=3";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -472,7 +474,7 @@ async function main() {
   $("status").remove();
 
   const basePins = R.places.filter((p) => p.kind === "village").map((base) => {
-    const item = pin(`<b>🏠 ${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) * EXAG + 60, base.z), () => chooseBase(T, R, base, basePins));
+    const item = pin(`<b>🏠 ${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) * EXAG + 60, base.z), () => openBase(base));
     item.base = base;
     return item;
   });
@@ -492,9 +494,106 @@ async function main() {
   toggle("lifts", (on) => (lifts.group.visible = on));
   renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); });
 
+  // ---------- A base as a miniature world: 10 s around it, then pick a lift ----------
+  const graph = buildGraph(R, (x, z) => T.heightAt(x, z));
+  const dio = new Diorama(renderer);
+  let mini = null; // { base, lifts, t0, intro }
+  const liftsAt = (base) => R.lifts.filter((l) => Math.hypot(l.pts[0][0] - base.x, l.pts[0][1] - base.z) < BASE_RADIUS)
+    .sort((a, b) => b.rise - a.rise);
+  const runsFromTop = (l) => {
+    const top = l.pts[l.pts.length - 1], seen = new Map();
+    for (const r of R.runs) if (r.name && Math.hypot(r.pts[0][0] - top[0], r.pts[0][1] - top[1]) < 160 && !seen.has(r.name)) seen.set(r.name, r);
+    return [...seen.values()];
+  };
+  const SYMBOL = { easy: '<span class="lv easy"></span>', intermediate: '<span class="lv intermediate"></span>', advanced: '<span class="lv advanced"></span>', expert: '<span class="lv expert"></span>' };
+  const LEVEL_ZH = { easy: "绿", intermediate: "蓝", advanced: "黑", expert: "双黑" };
+  function openBase(base) {
+    const ls = liftsAt(base);
+    dio.build({ T, R, mask, graph, base, lifts: ls, title: base.name });
+    mini = { base, lifts: ls, t0: performance.now(), intro: true, pick: ls[0] };
+    document.body.classList.add("mini");
+    $("introSkip").hidden = false;
+    $("liftPick").classList.remove("show");
+    $("miniTitle").textContent = base.name;
+    dio.highlightFrom(null);
+  }
+  function endIntro() {
+    if (!mini) return;
+    mini.intro = false;
+    $("introSkip").hidden = true;
+    showLiftCards();
+  }
+  function showLiftCards() {
+    const box = $("liftCards");
+    box.innerHTML = "";
+    for (const l of mini.lifts) {
+      const top = l.pts[l.pts.length - 1], runs = runsFromTop(l);
+      const count = {};
+      runs.forEach((r) => (count[r.level] = (count[r.level] || 0) + 1));
+      const len = l.length || 0, mins = Math.max(1, Math.round(len / 4.5 / 60));
+      const what = l.rise < 40 ? "初学者短缆车" : `${(len / 1000).toFixed(1)} 公里 · 约 ${mins} 分钟`;
+      const can = LEVELS.filter((k) => count[k]).map((k) => `${SYMBOL[k]}${count[k]} ${LEVEL_ZH[k]}`).join("　") || "没有直接出发的雪道";
+      const card = document.createElement("button");
+      card.className = "liftCard";
+      card.innerHTML = `<b>🚡 ${l.name}</b><small>${what} · 到 ${Math.round(T.data.hmin + T.heightAt(top[0], top[1]))} 米</small><small>山顶能滑：${can}</small>`;
+      card.addEventListener("click", () => pickLift(l, card));
+      box.append(card);
+    }
+    $("liftPick").classList.add("show");
+    pickLift(mini.lifts[0], box.firstChild);
+  }
+  function pickLift(l, card) {
+    mini.pick = l;
+    document.querySelectorAll(".liftCard").forEach((c) => c.classList.toggle("on", c === card));
+    const { reach, fromTop } = dio.highlightFrom(l);
+    const names = (set) => new Set([...set].map((r) => r.name).filter(Boolean)).size;
+    $("liftGo").textContent = `坐 ${l.name} 上山 ›`;
+    $("liftHint").textContent = `最亮的是从 ${l.name} 山顶直接出发的 ${names(fromTop)} 条；半亮的是滑下去还能接上的 ${Math.max(0, names(reach) - names(fromTop))} 条`;
+  }
+  // Quick plans: a loop from this base at a level, back to a lift at the base.
+  document.querySelectorAll("[data-plan]").forEach((b) => b.addEventListener("click", () => {
+    const level = b.dataset.plan, out = $("planOut");
+    document.querySelectorAll("[data-plan]").forEach((x) => x.classList.toggle("on", x === b));
+    let best = null;
+    for (const l of mini.lifts) {
+      const back = mini.lifts.map((x) => graph.liftNodes.get(x).bottom);
+      const route = planRoute(graph, [graph.liftNodes.get(l).top], back, level);
+      if (route && route.legs.some((g) => g.type === "run" && g.run.level === level) && (!best || route.seconds < best.route.seconds)) best = { l, route };
+      if (!best && route) best = { l, route };
+    }
+    if (!best) { out.textContent = "这个 base 没有合适的一圈，换个水平试试"; return; }
+    const runs = best.route.legs.filter((g) => g.type === "run").map((g) => g.run.name || "雪道").filter((n, i, all) => n !== all[i - 1]);
+    out.innerHTML = `推荐一圈：坐 <b>${best.l.name}</b> → 滑 ${runs.join(" → ")}，下山约 ${Math.max(1, Math.round(best.route.seconds / 60))} 分钟`;
+    const card = [...document.querySelectorAll(".liftCard")].find((c) => c.textContent.includes(best.l.name));
+    pickLift(best.l, card);
+  }));
+  $("introSkip").addEventListener("click", endIntro);
+  $("liftGo").addEventListener("click", () => {
+    const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
+    location.href = `../?lift=${encodeURIComponent(mini.pick.name)}&kind=${kind || "ski"}`;
+  });
+  $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini"); $("liftPick").classList.remove("show"); });
+  addEventListener("resize", () => dio.resize());
+  // Drag to turn the miniature after the intro.
+  let drag = null, spin = 0;
+  renderer.domElement.addEventListener("pointerdown", (e) => { if (mini && !mini.intro) drag = { x: e.clientX, s: spin }; });
+  addEventListener("pointermove", (e) => { if (drag) spin = drag.s - (e.clientX - drag.x) / 600; });
+  addEventListener("pointerup", () => { drag = null; });
+
+  const ease = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
   let t = 0, last = performance.now();
   renderer.setAnimationLoop((now) => {
     t += (now - last) / 1000; last = now;
+    if (mini) {
+      if (mini.intro) {
+        const u = Math.min(1, (now - mini.t0) / 10000); // one turn in ten seconds
+        spin = ease(u);
+        if (u >= 1) endIntro();
+      }
+      dio.orbit(spin, $("liftPick").classList.contains("show") ? 0.24 : 0);
+      dio.render(t);
+      return;
+    }
     lifts.update(t);
     controls.update();
     renderer.render(scene, camera);
