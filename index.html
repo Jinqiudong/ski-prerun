@@ -79,7 +79,9 @@
       <canvas id="minimap" width="300" height="300"></canvas>
     </div>
     <div class="stats"><div class="card"><b id="hudSpeed">0</b><small>km/h</small></div><div class="card"><b id="hudAlt">0</b><small>海拔 m</small></div><div class="card"><b id="hudTime">0:00</b><small>用时</small></div></div>
-    <div class="pads"><button id="push" class="pad">蹬</button><button id="auto" class="pad">自动</button><button id="brake" class="pad">刹车</button></div>
+    <div id="stick"><div id="knob"></div><span class="n">蹬</span><span class="s">刹</span></div>
+    <div class="pads right"><button id="push" class="pad">蹬</button><button id="brake" class="pad">刹车</button></div>
+    <div id="autoTag" class="card hidden">👀 自动预览中 · 碰摇杆就由你来滑</div>
   </section>
 
   <section id="ride" class="hidden">

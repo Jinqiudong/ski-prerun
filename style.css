@@ -111,3 +111,15 @@ h2 { font-size: 24px; margin: 0; flex: 1; display: flex; align-items: center; ga
 #rideMeta { margin: 4px 0 0; font-size: 16px; }
 
 #credit { position: fixed; right: 6px; bottom: 2px; font-size: 10px; font-family: -apple-system, sans-serif; color: rgba(35, 37, 47, .6); z-index: 1; pointer-events: none; text-align: right; max-width: 70vw; }
+
+/* 360° thumbstick */
+#stick { position: absolute; left: 22px; bottom: calc(22px + env(safe-area-inset-bottom)); width: 128px; height: 128px; border-radius: 50%; border: 2px solid var(--ink); background: rgba(251, 248, 241, .55); box-shadow: 3px 3px 0 rgba(35, 37, 47, .6); pointer-events: auto; touch-action: none; }
+#knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); pointer-events: none; }
+#stick span { position: absolute; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--muted); pointer-events: none; }
+#stick .n { top: 4px; } #stick .s { bottom: 4px; }
+.pads.right { left: auto; right: 18px; justify-content: flex-end; flex-direction: column; gap: 12px; }
+#autoTag { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(168px + env(safe-area-inset-bottom)); padding: 4px 12px; font-size: 15px; white-space: nowrap; }
+.stats { bottom: calc(168px + env(safe-area-inset-bottom)) !important; }
+#card h3 { font-size: 16px; color: var(--muted); margin: 12px 0 2px; font-weight: normal; }
+.label.next { background: var(--gold); }
+#card.low { max-height: 46vh; }

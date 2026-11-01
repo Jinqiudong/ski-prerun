@@ -143,6 +143,8 @@ function enterMap() {
   clearAbove();
   show("mapbar");
   mapLook();
+  clearTimeout(arrivalTimer);
+  Object.assign(controls, { minDistance: 150, maxDistance: 11000, autoRotate: false });
   controls.enabled = true;
   setRoute(null);
 }
@@ -379,7 +381,7 @@ function startRun(leg) {
   controls.enabled = false;
   slopeLook();
   $("hudRun").innerHTML = `${icon(leg.run.level)}${esc(leg.run.name || "无名雪道")}`;
-  $("auto").classList.toggle("on", journey.auto);
+  $("autoTag").classList.toggle("hidden", !journey.auto);
   if (!continuing) placeChase(true);
 }
 
@@ -388,17 +390,20 @@ function stepRun(dt) {
   let steer = 0;
   if (keys.has("arrowleft") || keys.has("a")) steer -= 1;
   if (keys.has("arrowright") || keys.has("d")) steer += 1;
-  if (steerTouch) steer = Math.max(-1, Math.min(1, steerTouch.dx / 70));
+  if (stick.active) {
+    steer = stick.x;
+    if (journey.auto) { journey.auto = false; $("autoTag").classList.add("hidden"); } // touching the stick takes over
+  }
   const near = nearestOnRun(run, r.x, r.z, Math.max(leg.from, leg.progress - 6), leg.to);
   if (near.d < 70) leg.progress = Math.max(leg.progress, near.i);
-  let brake = holdBrake || keys.has("s") || keys.has(" ") || keys.has("arrowdown");
-  if (journey.auto && steer === 0 && !steerTouch) {
+  let brake = holdBrake || stick.y > 0.45 || keys.has("s") || keys.has(" ") || keys.has("arrowdown");
+  if (journey.auto && steer === 0) {
     const [tx, tz] = run.pts[Math.min(near.i + 4, leg.to)];
     steer = Math.max(-1, Math.min(1, -angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5));
     brake = brake || r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[run.level];
   }
   const offPiste = near.d > 45 && !nearestRun(r.x, r.z, 30);
-  r.step(dt, { steer, brake, push: holdPush || keys.has("w") || keys.has("arrowup") || (journey.auto && r.speed < 4), offPiste });
+  r.step(dt, { steer, brake, push: holdPush || stick.y < -0.45 || keys.has("w") || keys.has("arrowup") || (journey.auto && r.speed < 4), offPiste });
   r.pose(rider.model);
   rider.tracks.add(r);
   const carve = Math.abs(r.steer) * r.speed;
@@ -437,11 +442,25 @@ function hud(leg, near) {
   drawMinimap(leg);
 }
 
-// Touch steering: drag left/right anywhere, like a joystick that starts where you touch.
-let steerTouch = null, holdBrake = false, holdPush = false, holdFast = false;
-canvas.addEventListener("pointerdown", (e) => { if (mode === "ski") steerTouch = { id: e.pointerId, x: e.clientX, dx: 0 }; });
-canvas.addEventListener("pointermove", (e) => { if (steerTouch?.id === e.pointerId) steerTouch.dx = e.clientX - steerTouch.x; });
-for (const ev of ["pointerup", "pointercancel"]) canvas.addEventListener(ev, (e) => { if (steerTouch?.id === e.pointerId) steerTouch = null; });
+// 360° thumbstick: left/right steers, push up to skate on the flat, pull down to brake.
+let holdBrake = false, holdPush = false, holdFast = false;
+const stick = { active: false, x: 0, y: 0, id: null };
+{
+  const base = $("stick"), knob = $("knob"), R = 48;
+  const move = (e) => {
+    const b = base.getBoundingClientRect();
+    let dx = e.clientX - (b.left + b.width / 2), dy = e.clientY - (b.top + b.height / 2);
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    stick.x = dx / R; stick.y = dy / R;
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  };
+  base.addEventListener("pointerdown", (e) => { e.preventDefault(); stick.active = true; stick.id = e.pointerId; base.setPointerCapture(e.pointerId); move(e); });
+  base.addEventListener("pointermove", (e) => { if (stick.active && e.pointerId === stick.id) move(e); });
+  const end = (e) => { if (e.pointerId !== stick.id) return; stick.active = false; stick.x = stick.y = 0; knob.style.transform = ""; };
+  base.addEventListener("pointerup", end);
+  base.addEventListener("pointercancel", end);
+}
 function holdButton(id, set) {
   const el = $(id);
   const on = (v) => (e) => { e.preventDefault(); set(v); el.classList.toggle("on", v); };
@@ -451,7 +470,6 @@ function holdButton(id, set) {
 holdButton("brake", (v) => (holdBrake = v));
 holdButton("push", (v) => (holdPush = v));
 holdButton("faster", (v) => (holdFast = v));
-$("auto").addEventListener("click", () => { journey.auto = !journey.auto; $("auto").classList.toggle("on", journey.auto); });
 
 function placeChase(snap, dt = 0.016) {
   const r = rider.physics;
@@ -505,7 +523,7 @@ function stepRide(dt) {
   const dir = b.clone().sub(a).setY(0).normalize();
   rider.model.position.copy(p).add(new THREE.Vector3(0, -2.95, 0.05));
   rider.model.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-  rider.model.userData.legs.scale.y = 0.6;
+  sit(rider.model);
   chair.position.copy(p);
   chair.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
   const want = p.clone().addScaledVector(dir, -9).add(new THREE.Vector3(0, 1.5, 0));
@@ -519,6 +537,15 @@ function stepRide(dt) {
 }
 $("skipRide").addEventListener("click", () => { if (ride) ride.d = ride.length; });
 
+// Sitting on the chair: thighs level, shins hanging.
+function sit(model) {
+  const u = model.userData;
+  u.yaw.rotation.set(0, 0, 0); u.pivot.rotation.set(0, 0, 0); u.hips.rotation.set(-0.1, model.userData.kind === "board" ? -Math.PI / 2 : 0, 0);
+  for (const leg of u.legs) { leg.hip.rotation.x = -1.45; leg.knee.rotation.x = 1.45; leg.ankle.rotation.x = 0; leg.hip.position.y = 0.55; leg.hip.position.z = 0; }
+  u.hips.position.y = 0.55;
+  for (const arm of u.arms) { arm.shoulder.rotation.x = -0.6; arm.shoulder.rotation.z = arm.side * 0.2; }
+}
+
 function endRide() {
   const lift = ride.lift;
   ride.below.forEach(dropLabel);
@@ -528,32 +555,87 @@ function endRide() {
   const r = rider.physics;
   const next = journey.legs[journey.i + 1];
   rider.model.visible = false;
-  if (next) {
-    r.place(x, z, next.type === "run" ? runDir(next.run, next.from) : 0, 1);
-    return nextLeg();
-  }
-  // A single ride: at the top, show where each run from here goes.
   const runs = runsFrom(x, z, 160);
-  r.place(x, z, runs[0] ? runDir(runs[0], 0) : 0, 1);
-  topCard(x, z, lift, runs);
+  r.place(x, z, next?.type === "run" ? runDir(next.run, next.from) : runs[0] ? runDir(runs[0], 0) : 0, 1);
+  arrive(x, z, lift, runs, next);
 }
 
-function topCard(x, z, lift, runs) {
-  mode = "card";
+// Getting off the lift: look around 360°, see which runs start here (lit on the snow) and which lifts
+// you can reach from here at your level, then choose. On a planned route the next run is lit first.
+function arrive(x, z, lift, runs, next) {
+  mode = "arrive";
   show("card");
-  lookFromAbove(x, z, runs.map((r) => ({ run: r, pts: r.pts, level: r.level })));
-  $("cardTitle").innerHTML = `到了 ${esc(lift.name)} 山顶`;
-  $("cardMeta").textContent = `海拔 ${T.altitude(T.heightAt(x, z))} 米 · 亮起来的是从这里出发的雪道`;
+  $("card").classList.add("low"); // keep the top half of the screen for the 360° view
+  clearAbove();
+  mapLook();
+  scene.fog.near = 2500; scene.fog.far = 16000;
+  const y = T.heightAt(x, z);
+  const pieces = runs.map((r) => ({ run: r, pts: r.pts, level: r.level }));
+  if (next?.type === "run" && !runs.includes(next.run)) pieces.unshift({ run: next.run, pts: next.run.pts.slice(next.from, next.to + 1), level: next.run.level });
+  setRoute(pieces);
+  const seen = new Set();
+  for (const p of pieces) {
+    if (!p.run.name || seen.has(p.run.name)) continue;
+    seen.add(p.run.name);
+    aboveLabels.push(label(`${icon(p.run.level)}${esc(p.run.name)}`, `run sel${next?.run === p.run ? " next" : ""}`, ptV(p.pts[Math.min(p.pts.length - 1, 10)], 8)));
+  }
+  aboveLabels.push(label(`📍 ${esc(lift.name)} 山顶`, "you", new THREE.Vector3(x, y + 20, z)));
+  // Orbit slowly around the top station with a wide lens; drag to look yourself.
+  controls.enabled = true;
+  Object.assign(controls, { minDistance: 60, maxDistance: 1200, autoRotate: true, autoRotateSpeed: 1.6 });
+  controls.target.set(x, y + 6, z);
+  const n = T.normalAt(x, z);
+  const down = new THREE.Vector3(n.x, 0, n.z).normalize();
+  camera.position.set(x - down.x * 160, y + 110, z - down.z * 160);
+  camera.fov = 72; camera.near = 1; camera.updateProjectionMatrix();
+
+  $("cardTitle").innerHTML = `${icon("lift")}到了 ${esc(lift.name)} 山顶`;
+  $("cardMeta").textContent = `海拔 ${T.altitude(y)} 米 · 拖动可以自己转着看，亮起来的是从这里出发的雪道`;
   const box = $("cardActions");
   box.innerHTML = "";
+  if (next) {
+    const what = next.type === "run" ? `${icon(next.run.level)}滑 <b>${esc(next.run.name)}</b>` : `${icon("lift")}去坐 <b>${esc(next.lift.name)}</b>`;
+    box.append(button(`▶ 继续路线：${what}`, () => { leaveArrival(); nextLeg(); }, "go"));
+    if (journey.auto) arrivalTimer = setTimeout(() => { if (mode === "arrive") { leaveArrival(); nextLeg(); } }, 6000);
+  }
+  const h3 = (t) => { const e = document.createElement("h3"); e.textContent = t; box.append(e); };
+  h3("从这里能滑的雪道");
   for (const run of runs.slice(0, 6)) {
     const end = nameOfPlaceNear(...lastPt(run.pts));
     const ok = LEVELS.indexOf(run.level) <= LEVELS.indexOf(settings.level);
-    box.append(button(`${icon(run.level)}<span><b>${esc(run.name)}</b><small>${fmtLen(run.length)}${end ? ` → ${esc(end)}` : ""}${ok ? "" : " · 超出你的水平"}</small></span>`,
-      () => startJourney([{ type: "run", run, from: 0, to: run.pts.length - 1, length: run.length }])));
+    box.append(button(`${icon(run.level)}<span><b>${esc(run.name)}</b><small>${fmtLen(run.length)} · 落差 ${run.drop} 米${end ? ` → ${esc(end)}` : ""}${ok ? "" : " · 超出你的水平"}</small></span>`,
+      () => { leaveArrival(); startJourney([{ type: "run", run, from: 0, to: run.pts.length - 1, length: run.length }]); }));
   }
-  if (!runs.length) box.append(button("这里没有直接出发的雪道，回地图看看", () => { enterMap(); flyTo(x, z); }));
-  box.append(button("🗺 规划从这里出发的路线", () => { enterMap(); openPlan({ lift }, null); }));
+  if (!runs.length) box.append(button("这里没有直接出发的雪道", () => { leaveArrival(); enterMap(); flyTo(x, z); }));
+  const lifts = reachableLifts(lift, settings.level);
+  if (lifts.length) {
+    h3("从这里能滑过去接着坐的缆车");
+    for (const { other, route } of lifts) {
+      const via = route.legs.filter((l) => l.type === "run").map((l) => esc(l.run.name || "雪道"));
+      box.append(button(`${icon("lift")}<span><b>${esc(other.name)}</b><small>滑 ${via.join(" → ")} 过去 · 约 ${fmtMin(route.seconds)}</small></span>`,
+        () => { leaveArrival(); startJourney([...route.legs, { type: "lift", lift: other, length: other.length }]); }));
+    }
+  }
+  box.append(button("🗺 回地图规划", () => { leaveArrival(); enterMap(); openPlan({ lift }, null); }));
+}
+let arrivalTimer = null;
+function leaveArrival() {
+  clearTimeout(arrivalTimer);
+  clearAbove();
+  setRoute(null);
+  $("card").classList.remove("low");
+  Object.assign(controls, { minDistance: 150, maxDistance: 11000, autoRotate: false });
+  controls.enabled = false;
+}
+// Lifts whose bottom you can ski to from the top of `lift` without going over your level.
+function reachableLifts(lift, level) {
+  const top = graph.liftNodes.get(lift).top, out = [];
+  for (const other of R.lifts) {
+    if (other === lift) continue;
+    const route = planRoute(graph, [top], [graph.liftNodes.get(other).bottom], level);
+    if (route && route.legs.every((l) => l.type !== "lift") && route.seconds < 15 * 60) out.push({ other, route });
+  }
+  return out.sort((a, b) => a.route.seconds - b.route.seconds).slice(0, 4);
 }
 
 // A still, high view over a spot with some runs highlighted and named: where am I, where does it go.
@@ -684,7 +766,7 @@ function frame(now) {
   liftsView?.update(clock);
   if (mode === "ski") { stepRun(dt); placeChase(false, dt); }
   else if (mode === "ride" && ride) stepRide(dt);
-  else if (mode === "map" || mode === "intro") controls.update();
+  else if (mode === "map" || mode === "intro" || mode === "arrive") controls.update();
   rider.spray?.update(dt);
   updateLabels();
   renderer.render(scene, camera);
@@ -768,6 +850,7 @@ $("exitRide").addEventListener("click", () => { ride?.below.forEach(dropLabel); 
 window.__prerun = {
   get R() { return R; }, get graph() { return graph; }, get mode() { return mode; }, get journey() { return journey; },
   rider, settings, startJourney, planRoute, nodesNear, stepRun, stepRide, openPlan, select,
+  continueRoute: () => { leaveArrival(); nextLeg(); }, get T() { return T; }, reachableLifts,
 };
 
 main().catch((e) => { $("loading").textContent = `加载失败：${e.message}`; console.error(e); });
