@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>雪场预滑 · Copper Mountain</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {"imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }}
+  </script>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="labels"></div>
+
+  <!-- Start screen -->
+  <section id="intro" class="sheet center">
+    <h1>雪场预滑</h1>
+    <p class="resort">Copper Mountain · Colorado</p>
+    <p>真实的雪道、缆车和山形。去之前先滑一遍，认认路。</p>
+    <ul class="howto">
+      <li><b>看地图</b>：拖动旋转，双指缩放，点一条雪道或缆车</li>
+      <li><b>滑雪</b>：按住屏幕左右拖动转弯，按「刹车」减速；按「自动滑」会沿着雪道自己滑，用来认路</li>
+      <li>电脑：← → 或 A D 转弯，S / 空格 刹车，W 往前蹬</li>
+    </ul>
+    <button id="start" class="primary" disabled>加载雪场中…</button>
+  </section>
+
+  <!-- Map mode UI -->
+  <header id="mapbar" class="bar hidden">
+    <button id="openList" class="chip">☰ 雪道和缆车</button>
+    <div class="legend">
+      <span><i class="lv easy"></i>初级</span><span><i class="lv intermediate"></i>中级</span>
+      <span><i class="lv advanced"></i>高级</span><span><i class="lv expert"></i>专家</span><span><i class="lv lift"></i>缆车</span>
+    </div>
+  </header>
+
+  <section id="info" class="sheet bottom hidden">
+    <div class="row"><span id="infoIcon"></span><h2 id="infoName"></h2><button id="infoClose" class="x">×</button></div>
+    <p id="infoMeta"></p>
+    <div class="actions" id="infoActions"></div>
+  </section>
+
+  <section id="list" class="sheet side hidden">
+    <div class="row"><input id="search" placeholder="搜雪道或缆车名字" autocomplete="off"><button id="listClose" class="x">×</button></div>
+    <div class="filters" id="filters"></div>
+    <ul id="items"></ul>
+  </section>
+
+  <!-- Ski mode UI -->
+  <section id="hud" class="hidden">
+    <div class="hudtop">
+      <button id="exitSki" class="chip">← 地图</button>
+      <div class="runbox"><div id="hudRun"></div><div id="hudNow"></div></div>
+      <canvas id="minimap" width="150" height="104"></canvas>
+    </div>
+    <div class="stats"><div><b id="hudSpeed">0</b><small>km/h</small></div><div><b id="hudAlt">0</b><small>米海拔</small></div><div><b id="hudProg">0%</b><small>进度</small></div></div>
+    <div id="warn" class="hidden"></div>
+    <div class="pads"><button id="push" class="pad">蹬</button><button id="auto" class="pad">自动滑</button><button id="brake" class="pad">刹车</button></div>
+  </section>
+
+  <section id="ride" class="sheet center small hidden">
+    <h2 id="rideName"></h2><p>坐缆车上山中（20 倍速）</p><button id="rideSkip" class="chip">跳过</button>
+  </section>
+
+  <section id="done" class="sheet center hidden">
+    <h2 id="doneTitle"></h2>
+    <p id="doneMeta"></p>
+    <h3>接下来可以</h3>
+    <div class="actions column" id="doneActions"></div>
+  </section>
+
+  <footer id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 原型，仅供熟悉路线，以雪场官方地图为准</footer>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
