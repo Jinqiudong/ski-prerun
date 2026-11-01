@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>雪场预滑 · Copper Mountain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     {"imports": {
@@ -17,61 +20,82 @@
   <canvas id="scene"></canvas>
   <div id="labels"></div>
 
-  <!-- Start screen -->
-  <section id="intro" class="sheet center">
+  <section id="intro" class="card center">
     <h1>雪场预滑</h1>
     <p class="resort">Copper Mountain · Colorado</p>
-    <p>真实的雪道、缆车和山形。去之前先滑一遍，认认路。</p>
-    <ul class="howto">
-      <li><b>看地图</b>：拖动旋转，双指缩放，点一条雪道或缆车</li>
-      <li><b>滑雪</b>：按住屏幕左右拖动转弯，按「刹车」减速；按「自动滑」会沿着雪道自己滑，用来认路</li>
-      <li>电脑：← → 或 A D 转弯，S / 空格 刹车，W 往前蹬</li>
-    </ul>
-    <button id="start" class="primary" disabled>加载雪场中…</button>
+    <p>真实的山形、雪道和缆车。去之前规划好路线，坐一遍缆车、滑一遍雪道，明天到了就认得路。</p>
+    <div id="introSettings"></div>
+    <p id="loading" class="hint">加载中…</p>
+    <button id="start" class="btn go big" disabled>加载中…</button>
   </section>
 
-  <!-- Map mode UI -->
   <header id="mapbar" class="bar hidden">
-    <button id="openList" class="chip">☰ 雪道和缆车</button>
-    <div class="legend">
+    <button id="openPlan" class="btn go">🧭 规划路线</button>
+    <button id="openList" class="btn">☰ 雪道和缆车</button>
+    <button id="openSettings" class="btn">⚙︎</button>
+    <div class="legend card">
       <span><i class="lv easy"></i>初级</span><span><i class="lv intermediate"></i>中级</span>
       <span><i class="lv advanced"></i>高级</span><span><i class="lv expert"></i>专家</span><span><i class="lv lift"></i>缆车</span>
     </div>
   </header>
 
-  <section id="info" class="sheet bottom hidden">
-    <div class="row"><span id="infoIcon"></span><h2 id="infoName"></h2><button id="infoClose" class="x">×</button></div>
-    <p id="infoMeta"></p>
-    <div class="actions" id="infoActions"></div>
+  <section id="info" class="card sheet hidden">
+    <div class="row"><h2 class="title"></h2><button id="infoClose" class="x">×</button></div>
+    <p class="meta"></p>
+    <p class="extra"></p>
+    <div class="actions"></div>
   </section>
 
-  <section id="list" class="sheet side hidden">
-    <div class="row"><input id="search" placeholder="搜雪道或缆车名字" autocomplete="off"><button id="listClose" class="x">×</button></div>
-    <div class="filters" id="filters"></div>
+  <section id="plan" class="card sheet tall hidden">
+    <div class="row"><h2>🧭 规划路线</h2><button id="planClose" class="x">×</button></div>
+    <label>从 <select id="planFrom"></select></label>
+    <label>到 <select id="planTo"></select></label>
+    <label>最难滑到 <select id="planLevel">
+      <option value="easy">● 初级</option><option value="intermediate">■ 中级</option>
+      <option value="advanced">◆ 高级</option><option value="expert">◆◆ 专家</option>
+    </select></label>
+    <div id="planResult"></div>
+    <div class="actions">
+      <button id="planGo" class="btn go" disabled>▶ 自己滑一遍</button>
+      <button id="planWatch" class="btn" disabled>👀 自动滑，我看路线</button>
+    </div>
+  </section>
+
+  <section id="list" class="card side hidden">
+    <div class="row"><input id="search" placeholder="搜雪道、缆车、餐厅" autocomplete="off"><button id="listClose" class="x">×</button></div>
     <ul id="items"></ul>
   </section>
 
-  <!-- Ski mode UI -->
   <section id="hud" class="hidden">
     <div class="hudtop">
-      <button id="exitSki" class="chip">← 地图</button>
-      <div class="runbox"><div id="hudRun"></div><div id="hudNow"></div></div>
-      <canvas id="minimap" width="150" height="104"></canvas>
+      <div class="col">
+        <button id="exitSki" class="btn">← 地图</button>
+        <button id="overviewBtn" class="btn">🗺 看路线</button>
+      </div>
+      <div class="col grow">
+        <div class="card runbox"><div id="hudRun"></div><div id="hudNow"></div></div>
+        <div id="cue" class="card cue"></div>
+      </div>
+      <canvas id="minimap" width="300" height="300"></canvas>
     </div>
-    <div class="stats"><div><b id="hudSpeed">0</b><small>km/h</small></div><div><b id="hudAlt">0</b><small>米海拔</small></div><div><b id="hudProg">0%</b><small>进度</small></div></div>
-    <div id="warn" class="hidden"></div>
-    <div class="pads"><button id="push" class="pad">蹬</button><button id="auto" class="pad">自动滑</button><button id="brake" class="pad">刹车</button></div>
+    <div class="stats"><div class="card"><b id="hudSpeed">0</b><small>km/h</small></div><div class="card"><b id="hudAlt">0</b><small>海拔 m</small></div><div class="card"><b id="hudTime">0:00</b><small>用时</small></div></div>
+    <div class="pads"><button id="push" class="pad">蹬</button><button id="auto" class="pad">自动</button><button id="brake" class="pad">刹车</button></div>
   </section>
 
-  <section id="ride" class="sheet center small hidden">
-    <h2 id="rideName"></h2><p>坐缆车上山中（20 倍速）</p><button id="rideSkip" class="chip">跳过</button>
+  <section id="ride" class="hidden">
+    <div class="card rideTop"><div class="row"><h2 id="rideName"></h2><button id="exitRide" class="x">×</button></div><p id="rideMeta"></p><p class="hint">看看下面经过的雪道，记住缆车往哪走</p></div>
+    <div class="pads"><button id="skipRide" class="btn">跳过 ⏭</button><button id="faster" class="pad">按住<br>加速</button></div>
   </section>
 
-  <section id="done" class="sheet center hidden">
-    <h2 id="doneTitle"></h2>
-    <p id="doneMeta"></p>
-    <h3>接下来可以</h3>
-    <div class="actions column" id="doneActions"></div>
+  <section id="card" class="card sheet tall hidden">
+    <h2 id="cardTitle"></h2>
+    <p id="cardMeta" class="meta"></p>
+    <div id="cardActions" class="actions column"></div>
+  </section>
+
+  <section id="overviewBar" class="card sheet hidden">
+    <p class="meta">亮起来的是接下来要滑的路线，📍 是你现在的位置。</p>
+    <div class="actions"><button id="resume" class="btn go">▶ 继续滑</button></div>
   </section>
 
   <footer id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 原型，仅供熟悉路线，以雪场官方地图为准</footer>

@@ -1,6 +1,7 @@
 """Bake a resort into one JSON the game loads: heightmap, runs, lifts and a tree mask.
 
-Inputs: an Overpass JSON export (pistes + aerialways) and AWS Terrain Tiles (terrarium, z13) for the area.
+Inputs: an Overpass JSON export (pistes + aerialways), AWS Terrain Tiles (terrarium, z14) for the area, and
+optionally an Overpass export of points of interest (restaurants, cafes) used as route destinations.
 Coordinates are local meters: x east, z south, origin at the bbox center; heights in meters.
 """
 import base64, json, math, sys
@@ -9,12 +10,13 @@ import numpy as np
 from PIL import Image
 
 osm_path, tiles_dir, out_path = sys.argv[1:4]
-Z = 13
+poi_path = sys.argv[4] if len(sys.argv) > 4 else None
+Z = 14
 S, N, W, E = 39.452, 39.503, -106.197, -106.124
 LAT0, LON0 = (S + N) / 2, (W + E) / 2
 MX = 111320 * math.cos(math.radians(LAT0))
 MZ = 110574
-GW, GH = 224, 200  # heightmap grid (~28 m)
+GW, GH = 448, 400  # heightmap grid (~14 m)
 
 def to_local(lat, lon):
     return (lon - LON0) * MX, -(lat - LAT0) * MZ
@@ -127,13 +129,33 @@ for r in range(MH):
             if height_at(x, z) > 3560:
                 mask[r, c] = False  # above treeline
 
+# Destinations: base villages (named after the lift bases they serve) and named on-mountain restaurants.
+places = []
+VILLAGES = [("Center Village", "American Eagle"), ("Union Creek", "Union Creek"), ("East Village", "Super Bee")]
+for name, anchor in VILLAGES:
+    lift = next((l for l in lifts if l["name"] == anchor), None)
+    if lift:
+        places.append({"name": name, "kind": "village", "x": lift["pts"][0][0], "z": lift["pts"][0][1]})
+if poi_path:
+    for e in json.load(open(poi_path))["elements"]:
+        tags = e.get("tags", {}); c = e.get("center") or e
+        if not tags.get("name") or (tags.get("amenity") or "").split(";")[0].strip() not in {"restaurant", "cafe", "bar", "fast_food"}:
+            continue
+        x, z = to_local(c["lat"], c["lon"])
+        if x0 <= x <= x1 and z0 <= z <= z1:
+            if tags["name"] == "Union Creek":
+                if not any(p["name"] == "Union Creek" for p in places):
+                    places.append({"name": "Union Creek", "kind": "village", "x": round(x, 1), "z": round(z, 1)})
+                continue
+            places.append({"name": tags["name"], "kind": "food", "x": round(x, 1), "z": round(z, 1)})
+
 out = {
     "name": "Copper Mountain", "attribution": "Runs and lifts © OpenStreetMap contributors (ODbL). Terrain: AWS Terrain Tiles (Mapzen/USGS).",
     "origin": {"lat": LAT0, "lon": LON0}, "bounds": [round(x0, 1), round(z0, 1), round(x1, 1), round(z1, 1)],
     "grid": [GW, GH], "hmin": round(hmin, 1),
     "heights": base64.b64encode(q.astype("<u2").tobytes()).decode(),
     "trees": {"grid": [MW, MH], "bits": base64.b64encode(np.packbits(mask.ravel()).tobytes()).decode()},
-    "runs": sorted(runs, key=lambda r: r["name"]), "lifts": sorted(lifts, key=lambda l: l["name"]),
+    "runs": sorted(runs, key=lambda r: r["name"]), "lifts": sorted(lifts, key=lambda l: l["name"]), "places": places,
 }
 Path(out_path).write_text(json.dumps(out, separators=(",", ":")))
 print(f"{len(runs)} runs, {len(lifts)} lifts, elevation {hmin:.0f}-{heights.max():.0f} m, {Path(out_path).stat().st_size // 1024} KB, trees {mask.sum()}")
