@@ -1,6 +1,6 @@
 # 雪场预滑 · Ski Pre-Run
 
-A chibi, playable version of a real ski resort: explore the 3D map, ride a lift, ski a run, and learn the routes the night before you go. Prototype for Venture Lab idea [#48](https://github.com/Jinqiudong/venture-lab/issues/48). First resort: Copper Mountain, Colorado (155 runs, 23 lifts).
+A playable version of a real ski resort: plan your day, ride the lifts and ski the runs the night before you go, so you know the way tomorrow. Prototype for Venture Lab idea [#48](https://github.com/Jinqiudong/venture-lab/issues/48). First resort: Copper Mountain, Colorado (155 runs, 23 lifts).
 
 - **Plan a route**: from a base village, restaurant or lift top to anywhere, capped at your level (green to double black). The planner chains lifts and runs (`route.js`) and shows each step with times.
 - **Ride it**: sit on the chair with the runs passing below named, then ski each run with turn-by-turn cues ("前方 120 米 向左 · 进 Main Vein"), trail signs at run starts, and a heading-up minimap. 👀 auto mode skis the route for you; 🗺 pauses to look at the rest of the route from above.
