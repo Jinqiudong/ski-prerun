@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=3";
+import { Diorama } from "./diorama.js?v=6";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -513,7 +513,7 @@ async function main() {
     mini = { base, lifts: ls, t0: performance.now(), intro: true, pick: ls[0] };
     document.body.classList.add("mini");
     $("introSkip").hidden = false;
-    $("liftPick").classList.remove("show");
+    $("liftPick").classList.remove("show", "open");
     $("miniTitle").textContent = base.name;
     dio.highlightFrom(null);
   }
@@ -533,13 +533,27 @@ async function main() {
       const len = l.length || 0, mins = Math.max(1, Math.round(len / 4.5 / 60));
       const what = l.rise < 40 ? "初学者短缆车" : `${(len / 1000).toFixed(1)} 公里 · 约 ${mins} 分钟`;
       const can = LEVELS.filter((k) => count[k]).map((k) => `${SYMBOL[k]}${count[k]} ${LEVEL_ZH[k]}`).join("　") || "没有直接出发的雪道";
+      // Lifts you can ski to from this lift's top without another lift, at a blue level.
+      const next = [];
+      for (const o of R.lifts) {
+        if (o === l || o.rise < 40) continue;
+        const rt = planRoute(graph, [graph.liftNodes.get(l).top], [graph.liftNodes.get(o).bottom], "intermediate");
+        if (rt && rt.legs.every((g) => g.type !== "lift") && rt.seconds < 15 * 60) {
+          const via = rt.legs.filter((g) => g.type === "run").map((g) => g.run.name).filter((n, i, all) => n && n !== all[i - 1]);
+          next.push({ o, rt, via });
+        }
+      }
+      next.sort((a, b) => a.rt.seconds - b.rt.seconds);
+      const connects = next.length
+        ? `<div class="next"><small>上去后能接 ${next.length} 条缆车：</small>${next.slice(0, 5).map((n) => `<small>🚡 <b>${n.o.name}</b> · 滑 ${n.via.slice(0, 2).join(" → ")}${n.via.length > 2 ? " …" : ""} · 约 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</small>`).join("")}</div>`
+        : "";
       const card = document.createElement("button");
       card.className = "liftCard";
-      card.innerHTML = `<b>🚡 ${l.name}</b><small>${what} · 到 ${Math.round(T.data.hmin + T.heightAt(top[0], top[1]))} 米</small><small>山顶能滑：${can}</small>`;
+      card.innerHTML = `<b>🚡 ${l.name}</b><small>${what} · 到 ${Math.round(T.data.hmin + T.heightAt(top[0], top[1]))} 米</small><small>山顶能滑：${can}</small>${connects}`;
       card.addEventListener("click", () => pickLift(l, card));
       box.append(card);
     }
-    $("liftPick").classList.add("show");
+    $("liftPick").classList.add("show", "open");
     pickLift(mini.lifts[0], box.firstChild);
   }
   function pickLift(l, card) {
@@ -568,6 +582,14 @@ async function main() {
     pickLift(best.l, card);
   }));
   $("introSkip").addEventListener("click", endIntro);
+  // The lift drawer slides up and down; the miniature uses whatever space is above it.
+  $("drawerHandle").addEventListener("click", () => $("liftPick").classList.toggle("open"));
+  $("replay").addEventListener("click", () => {
+    if (!mini) return;
+    mini.intro = true; mini.t0 = performance.now();
+    $("introSkip").hidden = false;
+    $("liftPick").classList.remove("show", "open");
+  });
   $("liftGo").addEventListener("click", () => {
     const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
     location.href = `../?lift=${encodeURIComponent(mini.pick.name)}&kind=${kind || "ski"}`;
@@ -590,7 +612,9 @@ async function main() {
         spin = ease(u);
         if (u >= 1) endIntro();
       }
-      dio.orbit(spin, $("liftPick").classList.contains("show") ? 0.24 : 0);
+      const drawer = $("liftPick"), top = drawer.classList.contains("show") ? drawer.getBoundingClientRect().top : innerHeight;
+      const pad = 64 / innerHeight; // the buttons along the top
+      dio.orbit(spin, Math.max(0.3, top / innerHeight - pad), pad);
       dio.render(t);
       return;
     }

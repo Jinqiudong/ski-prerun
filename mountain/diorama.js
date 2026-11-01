@@ -24,7 +24,9 @@ export class Diorama {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xe9edf2);
     this.camera = new THREE.PerspectiveCamera(24, innerWidth / innerHeight, 10, 40000);
-    this.composer = new EffectComposer(renderer);
+    // Multisampled target: post-processing would otherwise drop antialiasing and look soft on phones.
+    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+    this.composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(size.x, size.y, { samples: 4, type: THREE.HalfFloatType }));
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.hTilt = new ShaderPass(HorizontalTiltShiftShader);
     this.vTilt = new ShaderPass(VerticalTiltShiftShader);
@@ -40,7 +42,7 @@ export class Diorama {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.composer.setSize(innerWidth, innerHeight);
-    const amount = 4.5; // blur strength in pixels at the top and bottom edges
+    const amount = 1.2; // a light tilt-shift: only the far top and bottom soften
     this.hTilt.uniforms.h.value = amount / innerWidth;
     this.vTilt.uniforms.v.value = amount / innerHeight;
     this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 0.5;
@@ -399,18 +401,22 @@ export class Diorama {
   }
 
   // Camera on a circle around the block; u in [0, 1) is the position on the circle.
-  orbit(u, raise = 0) {
+  // u: position on the circle [0, 1). visible: the fraction of the screen height above the drawer;
+  // the block is fitted into that part and centred in it.
+  orbit(u, visible = 1, topPad = 0) {
     const { cx, cz, x0, x1, z0, z1 } = this.box;
-    // Distance that fits the block's diagonal across the narrower field of view, at a 32° elevation.
     const radius = Math.hypot(x1 - x0, z1 - z0) / 2 + 150;
     const vfov = (this.camera.fov * Math.PI) / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
-    const dist = (radius / Math.sin(Math.min(vfov, hfov) / 2)) * 1.02, el = (32 * Math.PI) / 180, a = -Math.PI / 2 + u * Math.PI * 2;
+    const room = 2 * Math.atan(Math.tan(vfov / 2) * visible); // vertical angle of the visible part
+    // Start and rest at a three-quarter view (u = 0 is 45° off the base's side), slightly from above.
+    const dist = (radius / Math.sin(Math.min(room, hfov) / 2)) * (visible < 0.7 ? 0.88 : 1.04), // a small space may crop the corners a little
+      el = (36 * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
     this.camera.position.set(cx + Math.cos(a) * dist * Math.cos(el), dist * Math.sin(el), cz + Math.sin(a) * dist * Math.cos(el));
     this.camera.lookAt(cx, 60, cz);
-    // When the lift cards cover the lower part of the screen, shift the picture up.
-    const h = innerHeight, w = innerWidth;
-    if (raise) this.camera.setViewOffset(w, h, 0, raise * h, w, h); else this.camera.clearViewOffset();
-    this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 0.5 + raise; // keep the block in focus
+    // Tilt down so the block's centre sits in the middle of the visible part, not of the whole screen.
+    const centreFromTop = topPad + visible / 2, shift = Math.atan((0.5 - centreFromTop) * 2 * Math.tan(vfov / 2));
+    this.camera.rotateX(-shift);
+    this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 1 - centreFromTop; // focus on the block
   }
 
   render(t) {

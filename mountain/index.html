@@ -47,15 +47,25 @@
     #miniTop button { font: inherit; color: var(--ink); cursor: pointer; }
     #introSkip { position: fixed; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); padding: 8px 16px; font: inherit; color: var(--ink); cursor: pointer; display: none; }
     body.mini #introSkip:not([hidden]) { display: block; }
-    #liftPick { position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 12px; display: none; }
+    /* Bottom drawer: a handle when closed, the lift cards when open. */
+    #liftPick { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 0 12px 12px; display: none; border-radius: 18px; }
     #liftPick.show { display: block; }
+    #liftPick:not(.open) .drawerBody { display: none; }
+    .drawerBody { max-height: 48vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; } /* the miniature keeps the top half */
+    #drawerHandle { width: 100%; background: none; border: 0; color: var(--ink); font: inherit; padding: 8px 0 10px; cursor: pointer; display: grid; justify-items: center; gap: 4px; }
+    #drawerHandle i { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.45); }
+    #drawerHandle span { font-size: 14px; font-weight: 600; }
+    #liftPick.open #drawerHandle span::after { content: " ▾"; }
+    #liftPick:not(.open) #drawerHandle span::after { content: " ▴"; }
+    .next { margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,.18); display: grid; gap: 1px; }
+    .next b { color: var(--ink); font-weight: 600; }
     #liftPick h3 { margin: 0 0 6px; font-size: 14px; color: var(--muted); font-weight: 400; }
     .plans { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
     .plans button { font: inherit; font-size: 13px; color: var(--ink); background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
     .plans button.on { background: var(--accent); border-color: var(--accent); }
     #planOut { font-size: 13px; color: var(--muted); min-height: 18px; margin-bottom: 8px; }
     #planOut b { color: var(--ink); }
-    #liftCards { display: grid; gap: 6px; max-height: 30vh; overflow-y: auto; }
+    #liftCards { display: grid; gap: 6px; }
     .liftCard { text-align: left; font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 8px 10px; cursor: pointer; display: grid; gap: 2px; }
     .liftCard.on { border-color: var(--accent); background: rgba(47,127,232,.22); }
     .liftCard b { font-size: 15px; }
@@ -73,9 +83,11 @@
   <canvas id="c"></canvas>
   <div id="title" class="glass"><b>Copper Mountain</b><span>第 1 步样稿 · 点绿色标签选 base · 点右上角切时间和天气</span></div>
   <div id="vignette"></div>
-  <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><button id="miniBack" class="glass">← 回全景</button></div>
+  <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
   <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
   <div id="liftPick" class="glass">
+    <button id="drawerHandle" aria-label="展开或收起缆车选择"><i></i><span>选缆车</span></button>
+    <div class="drawerBody">
     <h3>今天想怎么滑</h3>
     <div class="plans"><button data-plan="easy">热身（绿）</button><button data-plan="intermediate">巡航（蓝）</button><button data-plan="advanced">挑战（黑）</button></div>
     <div id="planOut"></div>
@@ -83,6 +95,7 @@
     <div id="liftCards"></div>
     <div id="liftHint"></div>
     <button id="liftGo">坐缆车上山 ›</button>
+    </div>
   </div>
   <div id="pins"></div>
   <div id="now" class="glass">…</div>
@@ -102,6 +115,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=9"></script>
+  <script type="module" src="mountain.js?v=12"></script>
 </body>
 </html>
