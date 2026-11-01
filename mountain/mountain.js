@@ -5,7 +5,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 
-const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // mid-afternoon from the south-west: long shadows model the ridges
+const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
+const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
+const RESORT = { lat: 39.4775, lon: -106.1605, tz: "America/Denver" };
 const RUN_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
 const $ = (id) => document.getElementById(id);
 const status = (t) => { $("status").textContent = t; return new Promise((r) => setTimeout(r, 20)); };
@@ -22,19 +24,70 @@ const controls = new OrbitControls(camera, renderer.domElement);
 Object.assign(controls, { enableDamping: true, maxPolarAngle: 1.42, minDistance: 400, maxDistance: 26000, autoRotate: true, autoRotateSpeed: 0.35 });
 addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
+// ---------- Sun and weather ----------
+// Solar position (NOAA approximation): elevation and azimuth in radians, azimuth from north, clockwise.
+function solar(date, lat, lon) {
+  const rad = Math.PI / 180, d = date.getTime() / 86400000 + 2440587.5 - 2451545.0;
+  const g = (357.529 + 0.98560028 * d) * rad, q = 280.459 + 0.98564736 * d;
+  const L = (q + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * rad, e = (23.439 - 0.00000036 * d) * rad;
+  const ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L)), dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const gmst = (18.697374558 + 24.06570982441908 * d) % 24;
+  const ha = (gmst * 15 + lon) * rad - ra;
+  const el = Math.asin(Math.sin(lat * rad) * Math.sin(dec) + Math.cos(lat * rad) * Math.cos(dec) * Math.cos(ha));
+  const az = Math.atan2(-Math.sin(ha), Math.tan(dec) * Math.cos(lat * rad) - Math.sin(lat * rad) * Math.cos(ha));
+  return { el, az: (az + 2 * Math.PI) % (2 * Math.PI) };
+}
+// Our frame: x east, z south, y up.
+const sunVector = ({ el, az }) => new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
+
+// WMO weather codes to our four looks.
+function weatherKind(code, cloud) {
+  if ([71, 73, 75, 77, 85, 86].includes(code) || (code >= 56 && code <= 67)) return "snow";
+  if (code >= 45 && code <= 48) return "overcast";
+  if (cloud >= 85 || code === 3) return "overcast";
+  if (cloud >= 40 || code === 2) return "cloudy";
+  return "clear";
+}
+const WEATHER_ZH = { clear: "晴", cloudy: "多云", overcast: "阴", snow: "下雪" };
+
+// Sky and light for a sun elevation, greyed by cloud.
+function palette(elDeg, kind) {
+  const C = (h) => new THREE.Color(h);
+  const keys = [
+    { el: -12, top: C(0x0b1530), mid: C(0x1a2c55), hor: C(0x2b3d66), sun: C(0x6d7fb8), si: 0.0, amb: 0.25, exp: 0.75 },
+    { el: -2, top: C(0x1d2e63), mid: C(0x4a5c9a), hor: C(0xd59a8c), sun: C(0xff9a6a), si: 0.4, amb: 0.35, exp: 0.85 },
+    { el: 6, top: C(0x2c5cb0), mid: C(0x7da3df), hor: C(0xffc49a), sun: C(0xffb178), si: 2.4, amb: 0.4, exp: 0.9 },
+    { el: 20, top: C(0x1a52b8), mid: C(0x5e97e6), hor: C(0xd6e6f6), sun: C(0xffe6c8), si: 3.3, amb: 0.4, exp: 0.92 },
+    { el: 60, top: C(0x1452c4), mid: C(0x4f8ee8), hor: C(0xcfe3f7), sun: C(0xfff6ec), si: 3.6, amb: 0.42, exp: 0.92 },
+  ];
+  let a = keys[0], b = keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) if (elDeg >= keys[i].el && elDeg <= keys[i + 1].el) { a = keys[i]; b = keys[i + 1]; }
+  const t = elDeg <= a.el ? 0 : elDeg >= b.el ? 1 : (elDeg - a.el) / (b.el - a.el);
+  const mix = (k) => a[k].clone().lerp(b[k], t), num = (k) => a[k] + (b[k] - a[k]) * t;
+  const p = { top: mix("top"), mid: mix("mid"), hor: mix("hor"), sun: mix("sun"), si: num("si"), amb: num("amb"), exp: num("exp") };
+  const grey = { clear: 0, cloudy: 0.25, overcast: 0.75, snow: 0.85 }[kind];
+  const g = new THREE.Color(0xc4cad3).multiplyScalar(Math.max(0.25, Math.min(1, (elDeg + 6) / 25)));
+  for (const k of ["top", "mid", "hor"]) p[k].lerp(g, grey);
+  p.si *= 1 - grey * 0.85;
+  p.amb += grey * 0.35;
+  p.shadow = 1 - grey * 0.8; // how strong mountain shadows are
+  p.fog = { clear: [20000, 95000], cloudy: [14000, 70000], overcast: [6000, 32000], snow: [1500, 9000] }[kind];
+  p.clouds = { clear: 0.35, cloudy: 1, overcast: 1, snow: 0.6 }[kind];
+  return p;
+}
+
 function skyDome() {
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { sun: { value: SUN } },
+    uniforms: { sun: { value: SUN.clone() }, top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color() } },
     vertexShader: "varying vec3 v; void main(){ v = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
-    fragmentShader: `varying vec3 v; uniform vec3 sun;
+    fragmentShader: `varying vec3 v; uniform vec3 sun, top, mid, hor, glow;
       void main(){
         float h = clamp(v.y, -0.05, 1.0);
-        vec3 horizon = vec3(0.80, 0.89, 0.97), mid = vec3(0.36, 0.62, 0.93), top = vec3(0.10, 0.33, 0.78);
-        vec3 c = mix(horizon, mid, smoothstep(0.0, 0.22, h));
+        vec3 c = mix(hor, mid, smoothstep(0.0, 0.22, h));
         c = mix(c, top, smoothstep(0.22, 0.9, h));
         float s = max(dot(normalize(v), sun), 0.0);
-        c += vec3(1.0, 0.92, 0.78) * (pow(s, 8.0) * 0.18 + pow(s, 600.0) * 1.2);
+        c += glow * (pow(s, 8.0) * 0.25 + pow(s, 600.0) * 1.2);
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -79,6 +132,27 @@ function clouds(base) {
   return group;
 }
 
+// Falling snow around the camera.
+function snowParticles() {
+  const n = 4000, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * 3000, Math.random() * 1500, (Math.random() - 0.5) * 3000], i * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const dot = document.createElement("canvas");
+  dot.width = dot.height = 32;
+  const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 5, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false, fog: false }));
+  pts.visible = false;
+  pts.frustumCulled = false;
+  pts.onBeforeRender = (r, sc, cam) => {
+    const t = performance.now() / 1000;
+    pts.position.set(cam.position.x, cam.position.y - 150 - ((t * 60) % 1500), cam.position.z);
+  };
+  return pts;
+}
+
 const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`../assets/tex/${f}`, (t) => {
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
@@ -113,18 +187,29 @@ function snowMaterial(snowD, snowN, rockD) {
   return mat;
 }
 
-function terrainMesh(T, mask) {
-  const { gw, gh } = T;
-  const pos = new Float32Array(gw * gh * 3), col = new Float32Array(gw * gh * 3);
+// Baked colors: forest floor, and the shadows the mountains cast for the current sun.
+function shadeTerrain(geo, T, mask, sunDir, strength) {
+  const { gw, gh } = T, col = geo.attributes.color;
   const shadow = new THREE.Color(0x8ea6d6), forestFloor = new THREE.Color(0xb7c2cf), c = new THREE.Color();
   for (let r = 0; r < gh; r++) {
     for (let j = 0; j < gw; j++) {
-      const k = r * gw + j, x = T.x0 + j * T.cell, z = T.z0 + ((T.z1 - T.z0) * r) / (gh - 1), y = T.h[k];
-      pos.set([x, y, z], k * 3);
+      const k = r * gw + j, x = T.x0 + j * T.cell, z = T.z0 + ((T.z1 - T.z0) * r) / (gh - 1);
       c.set(0xffffff);
       if (mask(x, z)) c.lerp(forestFloor, 0.5);
-      c.lerp(shadow, T.sunShadow(x, z, y) * 0.7);
-      col.set([c.r, c.g, c.b], k * 3);
+      if (strength > 0.05) c.lerp(shadow, T.sunShadow(x, z, T.h[k], sunDir) * 0.7 * strength);
+      col.setXYZ(k, c.r, c.g, c.b);
+    }
+  }
+  col.needsUpdate = true;
+}
+
+function terrainMesh(T, mask) {
+  const { gw, gh } = T;
+  const pos = new Float32Array(gw * gh * 3), col = new Float32Array(gw * gh * 3).fill(1);
+  for (let r = 0; r < gh; r++) {
+    for (let j = 0; j < gw; j++) {
+      const k = r * gw + j;
+      pos.set([T.x0 + j * T.cell, T.h[k], T.z0 + ((T.z1 - T.z0) * r) / (gh - 1)], k * 3);
     }
   }
   const idx = new Uint32Array((gw - 1) * (gh - 1) * 6);
@@ -141,7 +226,7 @@ function terrainMesh(T, mask) {
 // Spruce with snow lying on every tier.
 function spruce() {
   // Four tiers, seven sides: ~50 triangles, so a dense forest stays light enough for a phone.
-  const tiers = [[0.6, 6.5, 3.6], [4.2, 6.0, 2.8], [7.8, 5.2, 2.0], [11.0, 4.6, 1.1]];
+  const tiers = [[0.6, 6.5, 4.4], [4.2, 6.0, 3.5], [7.8, 5.2, 2.5], [11.0, 4.6, 1.4]];
   const pos = [], col = [];
   const needles = new THREE.Color(0x14301f), snow = new THREE.Color(0xe9f0f8), c = new THREE.Color();
   for (const [y, h, r] of tiers) {
@@ -153,7 +238,7 @@ function spruce() {
       pos.push(p.getX(i), p.getY(i), p.getZ(i));
       const up = Math.max(0, n.getY(i)), top = (p.getY(i) - y) / h;
       const lump = 0.5 + 0.5 * Math.sin(p.getX(i) * 7.1 + p.getZ(i) * 5.3);
-      c.copy(needles).lerp(snow, Math.min(0.7, up * (0.35 + 0.45 * top) * (0.5 + 0.7 * lump)));
+      c.copy(needles).lerp(snow, Math.min(0.85, up * (0.5 + 0.5 * top) * (0.6 + 0.7 * lump)));
       col.push(c.r, c.g, c.b);
     }
   }
@@ -169,7 +254,7 @@ function forest(T, mask) {
   let s = 11;
   const rand = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let r = 0; r < mh; r++) for (let c = 0; c < mw; c++) {
-    if (!mask.at(c, r) || rand() > 0.1) continue;
+    if (!mask.at(c, r) || rand() > 0.085) continue;
     const x = T.x0 + ((T.x1 - T.x0) * (c + rand() - 0.5)) / (mw - 1), z = T.z0 + ((T.z1 - T.z0) * (r + rand() - 0.5)) / (mh - 1);
     spots.push([x, z, rand()]);
   }
@@ -185,8 +270,8 @@ function forest(T, mask) {
     if (!b.length) continue;
     const mesh = new THREE.InstancedMesh(geo, mat, b.length);
     b.forEach(([x, z, v], i) => {
-      const k = 1.0 + v * 0.9;
-      m.compose(p.set(x, T.heightAt(x, z) - 0.5, z), q.setFromAxisAngle(Y, v * 6.28), sc.set(k, k * (0.9 + v * 0.4), k));
+      const k = 1.5 + v * 1.1; // drawn larger than life so the forest reads at map scale
+      m.compose(p.set(x, T.heightAt(x, z) - 0.5, z), q.setFromAxisAngle(Y, v * 6.28), sc.set(k, (k * (0.9 + v * 0.4)) / EXAG, k));
       mesh.setMatrixAt(i, m);
     });
     mesh.computeBoundingSphere();
@@ -198,13 +283,17 @@ function forest(T, mask) {
 // Runs as on a resort map: a white casing and a colored core.
 function runs(T, list) {
   const group = new THREE.Group();
-  const casing = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
-  const mats = {};
+  const mat = (color, opacity, order) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: order, polygonOffsetUnits: order, fog: false });
+  const casing = mat(0xffffff, 0.9, -4), glows = {}, cores = {};
   for (const run of list) {
-    const pts = run.outline || run.pts;
-    if (!run.area) group.add(new THREE.Mesh(ribbon(T, pts, 22, 0.6), casing));
-    mats[run.level] ??= new THREE.MeshBasicMaterial({ color: RUN_COLOR[run.level], transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
-    group.add(new THREE.Mesh(ribbon(T, pts, run.area ? 6 : 11, 0.8), mats[run.level]));
+    const pts = run.outline || run.pts, color = RUN_COLOR[run.level];
+    glows[run.level] ??= mat(color, run.level === "advanced" || run.level === "expert" ? 0.12 : 0.22, -3);
+    cores[run.level] ??= mat(color, 1, -6);
+    if (!run.area) {
+      group.add(new THREE.Mesh(ribbon(T, pts, 70, 0.4), glows[run.level])); // a soft glow so runs read from far away
+      group.add(new THREE.Mesh(ribbon(T, pts, 34, 0.6), casing));
+    }
+    group.add(new THREE.Mesh(ribbon(T, pts, run.area ? 9 : 20, 0.8), cores[run.level]));
   }
   return group;
 }
@@ -242,17 +331,18 @@ function chooseBase(T, R, base, basePins) {
   liftGlow = new THREE.Group();
   const glow = new THREE.MeshBasicMaterial({ color: 0xe0402f, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
   for (const l of lifts) {
-    liftGlow.add(new THREE.Mesh(ribbon(T, l.pts, 9, 1.2), glow));
+    liftGlow.add(new THREE.Mesh(ribbon(T, l.pts, 14, 1.2), glow));
     const top = l.pts[l.pts.length - 1];
-    liftTags.push(pin(`🚡 ${l.name}`, "tag", new THREE.Vector3(top[0], T.heightAt(top[0], top[1]) + 40, top[1])));
+    liftTags.push(pin(`🚡 ${l.name}`, "tag", new THREE.Vector3(top[0], T.heightAt(top[0], top[1]) * EXAG + 40, top[1])));
   }
+  liftGlow.scale.y = EXAG;
   scene.add(liftGlow);
   // Fly to the base, looking up the mountain along its lifts.
   const tops = lifts.map((l) => l.pts[l.pts.length - 1]);
   const ux = tops.reduce((a, t) => a + t[0], 0) / Math.max(1, tops.length) - base.x, uz = tops.reduce((a, t) => a + t[1], 0) / Math.max(1, tops.length) - base.z;
-  const len = Math.hypot(ux, uz) || 1, y = T.heightAt(base.x, base.z);
-  controls.target.set(base.x + (ux / len) * 900, y + 250, base.z + (uz / len) * 900);
-  camera.position.set(base.x - (ux / len) * 1700 + (uz / len) * 500, y + 1000, base.z - (uz / len) * 1700 - (ux / len) * 500);
+  const len = Math.hypot(ux, uz) || 1, y = T.heightAt(base.x, base.z), ye = y * EXAG;
+  controls.target.set(base.x + (ux / len) * 900, ye + 350, base.z + (uz / len) * 900);
+  camera.position.set(base.x - (ux / len) * 1700 + (uz / len) * 500, ye + 1200, base.z - (uz / len) * 1700 - (ux / len) * 500);
   controls.autoRotate = false;
   $("spin").classList.remove("on");
   $("baseName").textContent = `🏠 ${base.name}`;
@@ -265,9 +355,9 @@ function chooseBase(T, R, base, basePins) {
 }
 
 const VIEWS = {
-  hero: (c) => ({ target: [c.x, c.y + 450, c.z + 400], pos: [c.x + 2900, c.y + 1500, c.z - 6600] }),
-  close: (c) => ({ target: [c.x - 300, c.y + 450, c.z + 300], pos: [c.x + 900, c.y + 1300, c.z - 2300] }),
-  top: (c) => ({ target: [c.x, c.y, c.z], pos: [c.x + 200, c.y + 9000, c.z - 1200] }),
+  hero: (c) => ({ target: [c.x, c.y * EXAG + 500, c.z + 500], pos: [c.x + 3200, c.y * EXAG + 2200, c.z - 7800] }),
+  close: (c) => ({ target: [c.x - 300, c.y * EXAG + 600, c.z + 300], pos: [c.x + 900, c.y * EXAG + 1700, c.z - 2400] }),
+  top: (c) => ({ target: [c.x, c.y * EXAG, c.z], pos: [c.x + 200, c.y * EXAG + 10000, c.z - 1200] }),
 };
 let center;
 function setView(name) {
@@ -284,31 +374,96 @@ async function main() {
   await status("生成山体和阴影…");
   const T = new Terrain(R);
   const mask = treeMaskFn(R, T);
-  const ground = new THREE.Mesh(terrainMesh(T, mask), snowMaterial(snowD, snowN, rockD));
+  const geo = terrainMesh(T, mask);
+  const ground = new THREE.Mesh(geo, snowMaterial(snowD, snowN, rockD));
   const ranges = farTerrain(far, T);
   ranges.material = snowMaterial(snowD, snowN, rockD);
-  scene.add(skyDome(), clouds(T.data.hmin > 0 ? 900 : 900), ground, ranges);
+  // Everything on the mountain lives in one group, stretched vertically for relief.
+  const world = new THREE.Group();
+  world.scale.y = EXAG;
+  const dome = skyDome(), cloudLayer = clouds(900);
+  scene.add(dome, cloudLayer, world);
+  world.add(ground, ranges);
   await status("种树、画雪道…");
-  scene.add(forest(T, mask));
+  world.add(forest(T, mask));
   const runLayer = runs(T, R.runs);
-  scene.add(runLayer);
+  world.add(runLayer);
   const lifts = new Lifts(T, R.lifts);
-  scene.add(lifts.group);
-  // Light: one warm sun, a cool sky fill, and image-based light from a physical sky.
-  scene.add(new THREE.HemisphereLight(0xcfe2ff, 0x7d88a3, 0.35));
+  world.add(lifts.group);
+  const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d88a3, 0.35);
   const sun = new THREE.DirectionalLight(0xfff0dc, 3.6);
-  sun.position.copy(SUN).multiplyScalar(1000);
-  scene.add(sun);
-  const sky = new Sky();
-  sky.scale.setScalar(10000);
-  Object.assign(sky.material.uniforms, {});
-  sky.material.uniforms.sunPosition.value.copy(SUN);
-  sky.material.uniforms.rayleigh.value = 1.4;
-  sky.material.uniforms.turbidity.value = 2;
-  const env = new THREE.Scene();
-  env.add(sky);
-  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0.04).texture;
-  scene.environmentIntensity = 0.35;
+  scene.add(hemi, sun);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const physSky = new Sky();
+  physSky.scale.setScalar(10000);
+  physSky.material.uniforms.rayleigh.value = 1.4;
+  physSky.material.uniforms.turbidity.value = 2;
+  const envScene = new THREE.Scene();
+  envScene.add(physSky);
+  const snowfall = snowParticles();
+  scene.add(snowfall);
+
+  // Light the scene for a moment in time and a kind of weather.
+  let shadedFor = "";
+  const look = { live: true, date: new Date(), kind: "clear", temp: null };
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${RESORT.lat}&longitude=${RESORT.lon}&current=temperature_2m,weather_code,cloud_cover&timezone=${encodeURIComponent(RESORT.tz)}`;
+  const fetchWeather = async () => {
+    try {
+      const w = await (await fetch(weatherUrl)).json();
+      look.kind = weatherKind(w.current.weather_code, w.current.cloud_cover);
+      look.temp = w.current.temperature_2m;
+    } catch { /* offline: keep the last weather */ }
+  };
+  const applyLook = () => {
+    const s0 = solar(look.date, RESORT.lat, RESORT.lon), elDeg = (s0.el * 180) / Math.PI;
+    const dir = sunVector(s0), p = palette(elDeg, look.kind), day = dir.y > 0.02;
+    const u = dome.material.uniforms;
+    u.sun.value.copy(dir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor);
+    u.glow.value.copy(p.sun).multiplyScalar(look.kind === "clear" ? 1 : 0.3);
+    scene.fog.color.copy(p.hor);
+    [scene.fog.near, scene.fog.far] = p.fog;
+    const lightDir = day ? dir : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
+    sun.position.copy(lightDir).multiplyScalar(1000);
+    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0));
+    sun.intensity = day ? p.si : 0.5;
+    hemi.intensity = p.amb;
+    renderer.toneMappingExposure = p.exp;
+    cloudLayer.children.forEach((c, i) => {
+      c.material.opacity = Math.min(0.95, p.clouds * (i % 3 === 0 || look.kind !== "clear" ? 0.95 : 0.25));
+      c.material.color.copy(p.hor).lerp(new THREE.Color(0xffffff), 0.6);
+    });
+    snowfall.visible = look.kind === "snow";
+    physSky.material.uniforms.sunPosition.value.copy(lightDir);
+    scene.environment?.dispose();
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    scene.environmentIntensity = day ? 0.35 : 0.12;
+    // Re-cast mountain shadows only when the sun has moved noticeably.
+    const key = `${Math.round(elDeg / 3)}:${Math.round((s0.az * 180) / Math.PI / 6)}:${look.kind}`;
+    if (key !== shadedFor) { shadedFor = key; shadeTerrain(geo, T, mask, lightDir, day ? p.shadow : 0.4); }
+    const local = look.date.toLocaleTimeString("zh-CN", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" });
+    $("now").textContent = `${look.live ? "实时" : "预览"} · Copper 当地 ${local} · ${WEATHER_ZH[look.kind]}${look.temp !== null && look.live ? ` · ${Math.round(look.temp)}°C` : ""}`;
+  };
+  await fetchWeather();
+  applyLook();
+  setInterval(() => { if (look.live) { look.date = new Date(); applyLook(); } }, 60000);
+  // Preview: drag the hour, pick the weather; 回到实时 goes back to now.
+  const hourOf = (d) => +d.toLocaleString("en-US", { timeZone: RESORT.tz, hour: "numeric", hour12: false }) % 24;
+  $("hour").value = hourOf(look.date);
+  $("hour").addEventListener("input", () => {
+    look.live = false;
+    const d = new Date();
+    look.date = new Date(d.getTime() + (+$("hour").value - hourOf(d)) * 3600000);
+    applyLook();
+  });
+  document.querySelectorAll("[data-weather]").forEach((b) => b.addEventListener("click", () => { look.live = false; look.kind = b.dataset.weather; applyLook(); }));
+  $("live").addEventListener("click", async () => {
+    look.live = true;
+    look.date = new Date();
+    await fetchWeather();
+    $("hour").value = hourOf(look.date);
+    applyLook();
+  });
+  $("now").addEventListener("click", () => $("timePanel").classList.toggle("show"));
 
   const all = R.runs.flatMap((r) => r.pts);
   const cx = all.reduce((a, p) => a + p[0], 0) / all.length, cz = all.reduce((a, p) => a + p[1], 0) / all.length;
@@ -317,7 +472,7 @@ async function main() {
   $("status").remove();
 
   const basePins = R.places.filter((p) => p.kind === "village").map((base) => {
-    const item = pin(`<b>🏠 ${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) + 60, base.z), () => chooseBase(T, R, base, basePins));
+    const item = pin(`<b>🏠 ${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) * EXAG + 60, base.z), () => chooseBase(T, R, base, basePins));
     item.base = base;
     return item;
   });

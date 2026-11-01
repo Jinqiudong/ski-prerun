@@ -31,14 +31,30 @@
     #base ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
     #base li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, .08); font-size: 15px; }
     #base li small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(8,18,40,.38) 100%); }
+    #now { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; padding: 8px 12px; font-size: 13px; cursor: pointer; text-align: right; max-width: 46vw; }
+    #timePanel { position: fixed; top: calc(60px + env(safe-area-inset-top)); right: 12px; padding: 12px; display: none; width: 250px; }
+    #timePanel.show { display: block; }
+    #timePanel label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+    #timePanel input { width: 100%; }
+    #timePanel .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    #timePanel button { font: inherit; font-size: 13px; color: var(--ink); background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+    #timePanel #live { background: var(--accent); border-color: var(--accent); }
     #credit { position: fixed; right: 8px; bottom: 2px; font-size: 9px; color: rgba(255, 255, 255, .75); text-shadow: 0 1px 2px rgba(0, 0, 0, .4); pointer-events: none; }
   </style>
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div id="title" class="glass"><b>Copper Mountain</b><span>半写实地形 · 第 1 步样稿 · 点绿色标签选出发的 base</span></div>
+  <div id="title" class="glass"><b>Copper Mountain</b><span>第 1 步样稿 · 点绿色标签选 base · 点右上角切时间和天气</span></div>
+  <div id="vignette"></div>
   <div id="pins"></div>
+  <div id="now" class="glass">…</div>
+  <div id="timePanel" class="glass">
+    <label for="hour">拖动看一天中不同时间（Copper 当地时间）</label>
+    <input id="hour" type="range" min="0" max="23" step="1">
+    <div class="row"><button data-weather="clear">晴</button><button data-weather="cloudy">多云</button><button data-weather="overcast">阴</button><button data-weather="snow">下雪</button><button id="live">回到实时</button></div>
+  </div>
   <div id="status" class="glass">生成山体…</div>
   <div id="base" class="glass"><h2><span id="baseName"></span><button id="baseClose" aria-label="关闭">×</button></h2><p id="baseMeta"></p><ul id="baseLifts"></ul></div>
   <div id="bar">
@@ -50,6 +66,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=3"></script>
+  <script type="module" src="mountain.js?v=5"></script>
 </body>
 </html>

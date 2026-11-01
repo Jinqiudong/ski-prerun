@@ -45,8 +45,9 @@ export class Terrain {
   altitude(y) { return Math.round(this.data.hmin + y); }
 
   // 0 = in the sun, 1 = in a mountain's shadow (soft near the edge).
-  sunShadow(x, z, y) {
-    const dx = SUN_DIR.x, dz = SUN_DIR.z, horiz = Math.hypot(dx, dz), rise = SUN_DIR.y / horiz;
+  sunShadow(x, z, y, dir = SUN_DIR) {
+    if (dir.y <= 0.02) return 1; // sun at or below the horizon
+    const dx = dir.x, dz = dir.z, horiz = Math.hypot(dx, dz) || 1e-6, rise = dir.y / horiz;
     let t = this.cell, shade = 0;
     while (t < 3500) {
       const px = x + (dx / horiz) * t, pz = z + (dz / horiz) * t;

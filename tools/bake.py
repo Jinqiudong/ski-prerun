@@ -11,6 +11,7 @@ from PIL import Image
 
 osm_path, tiles_dir, out_path = sys.argv[1:4]
 poi_path = sys.argv[4] if len(sys.argv) > 4 else None
+forest_path = sys.argv[5] if len(sys.argv) > 5 else None  # Overpass export of natural=wood / landuse=forest
 Z = 14
 S, N, W, E = 39.452, 39.503, -106.197, -106.124
 LAT0, LON0 = (S + N) / 2, (W + E) / 2
@@ -108,9 +109,21 @@ for e in elements:
                       "pts": [[round(x, 1), round(z, 1)] for x, z in pts],
                       "rise": round(height_at(*pts[-1]) - height_at(*pts[0]))})
 
-# Tree mask: forest below treeline, away from runs and lifts (cells of ~18 m).
+# Tree mask: where the forest is (mapped woods when given, else everything below treeline),
+# minus runs and lifts.
 MW, MH = GW * 2, GH * 2
 mask = np.ones((MH, MW), dtype=bool)
+if forest_path:
+    from PIL import ImageDraw
+    img = Image.new("1", (MW, MH), 0)
+    draw = ImageDraw.Draw(img)
+    to_px = lambda x, z: ((x - x0) / (x1 - x0) * (MW - 1), (z - z0) / (z1 - z0) * (MH - 1))
+    for e in json.load(open(forest_path))["elements"]:
+        rings = [e["geometry"]] if e["type"] == "way" else [m["geometry"] for m in e.get("members", []) if m.get("role") == "outer" and m.get("geometry")]
+        for ring in rings:
+            if len(ring) >= 3:
+                draw.polygon([to_px(*to_local(g["lat"], g["lon"])) for g in ring], fill=1)
+    mask = np.asarray(img, dtype=bool).copy()
 def clear(x, z, radius):
     c = (x - x0) / (x1 - x0) * (MW - 1); r = (z - z0) / (z1 - z0) * (MH - 1)
     k = radius / ((x1 - x0) / (MW - 1))
