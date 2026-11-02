@@ -25,7 +25,7 @@ addEventListener("resize", () => {
 });
 
 const DESC = {
-  A: "A 半写实：分层下垂的云杉、带压雪条纹的雪道、有滑轮和安全杆的四人吊椅、真实天空和远山雾气",
+  A: "A 半写实：分层下垂的云杉、带压雪条纹的雪道、带蓝色防风罩的六人吊椅（American Flyer 实物就是这种）、真实天空和远山雾气",
   C: "C 风格化：块面感的地形和树、柔和的粉蓝色调、干净的色块和雾，像一张插画",
 };
 
@@ -33,7 +33,11 @@ let seed = 7;
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 // ---------- Shared: the lift line, its towers and ropes ----------
-const TOWER_EVERY = 85, ROPE_H = 11.5, HALF_GAUGE = 2.9, CHAIR_GAP = 34, SPEED = 5;
+// American Flyer: Leitner-Poma detachable six-pack with blue bubbles (2018), 182 chairs, 5 m/s.
+const TOWER_EVERY = 85, ROPE_H = 11.5, HALF_GAUGE = 3.3, CHAIR_GAP = 33, SPEED = 5;
+const SEAT_X = [-1.6, -0.96, -0.32, 0.32, 0.96, 1.6], MY_SEAT = SEAT_X[1];
+// The bubble hinges at its top back edge and swings up and back when raised.
+const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.1;
 
 function liftLine(T, lift) {
   const ground = lift.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
@@ -76,28 +80,62 @@ function along(path, d, out = new THREE.Vector3()) {
 }
 
 // ---------- Chairs ----------
-// A detachable quad chair. Origin at the grip on the rope, +z the way it travels, y up.
+// A detachable six-pack. Origin at the grip on the rope, +z the way it travels, y up.
 function chairParts() {
   const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
+  const H = 1.95; // half the chair's width
   const metal = [
-    new THREE.BoxGeometry(0.26, 0.34, 0.62).translate(0, -0.12, 0), // grip
-    tube([[0, -0.25, 0], [0, -0.75, -0.12], [0, -1.45, -0.48], [0, -1.95, -0.44], [0, -2.15, -0.3]], 0.05), // hanger
-    tube([[-1.15, -2.47, -0.22], [1.15, -2.47, -0.22]]), tube([[-1.15, -2.47, 0.36], [1.15, -2.47, 0.36]]),
+    new THREE.BoxGeometry(0.28, 0.36, 0.7).translate(0, -0.12, 0), // grip
+    tube([[0, -0.25, 0], [0, -0.75, -0.14], [0, -1.35, -0.55], [0, -1.95, -0.5], [0, -2.15, -0.32]], 0.06), // hanger
+    tube([[-0.9, -1.25, -0.56], [0.9, -1.25, -0.56]], 0.04), // bubble hinge bar
+    tube([[-H, -2.47, -0.22], [H, -2.47, -0.22]], 0.045), tube([[-H, -2.47, 0.36], [H, -2.47, 0.36]], 0.04),
   ];
   for (const s of [-1, 1]) {
-    metal.push(tube([[s * 1.15, -2.47, 0.36], [s * 1.15, -2.47, -0.22], [s * 1.15, -1.82, -0.32]]));
-    metal.push(tube([[s * 1.15, -2.15, -0.26], [s * 1.15, -2.12, 0.3]], 0.035)); // armrest
-    metal.push(tube([[s * 1.15, -1.8, -0.3], [s * 1.15, -1.88, 0.2], [s * 1.12, -1.96, 0.55]], 0.035)); // safety bar arms, lowered
-    metal.push(tube([[s * 0.42, -1.96, 0.56], [s * 0.44, -2.5, 0.6], [s * 0.45, -2.88, 0.62]], 0.03)); // footrest stems
-    metal.push(new THREE.BoxGeometry(0.42, 0.04, 0.24).translate(s * 0.45, -2.9, 0.68)); // foot plates
+    metal.push(tube([[s * H, -2.47, 0.36], [s * H, -2.47, -0.22], [s * H, -1.82, -0.32]]));
+    metal.push(tube([[s * H, -2.15, -0.26], [s * H, -2.12, 0.3]], 0.035)); // armrest
+    metal.push(tube([[s * H, -1.8, -0.3], [s * H, -1.88, 0.2], [s * (H - 0.03), -1.96, 0.55]], 0.035)); // safety bar arms, lowered
   }
-  metal.push(tube([[-1.12, -1.96, 0.55], [1.12, -1.96, 0.55]], 0.035)); // safety bar
-  metal.push(tube([[-0.7, -2.89, 0.62], [0.7, -2.89, 0.62]], 0.03));
-  const pad = [
-    new RoundedBoxGeometry(2.24, 0.11, 0.56, 2, 0.04).translate(0, -2.41, 0.07),
-    new RoundedBoxGeometry(2.24, 0.52, 0.09, 2, 0.04).rotateX(-0.14).translate(0, -2.1, -0.25),
-  ];
-  return { metal: mergeGeometries(metal.map((g) => g.toNonIndexed())), pad: mergeGeometries(pad.map((g) => g.toNonIndexed())) };
+  for (const x of [-0.96, 0, 0.96]) { // a footrest for each pair of riders
+    for (const d of [-0.22, 0.22]) metal.push(tube([[x + d, -1.96, 0.56], [x + d, -2.5, 0.6], [x + d, -2.88, 0.62]], 0.028));
+    metal.push(new THREE.BoxGeometry(0.62, 0.04, 0.24).translate(x, -2.9, 0.68));
+  }
+  metal.push(tube([[-H + 0.03, -1.96, 0.55], [H - 0.03, -1.96, 0.55]], 0.035)); // safety bar
+  const pad = [];
+  for (const x of SEAT_X) { // a cushion per seat
+    pad.push(new RoundedBoxGeometry(0.6, 0.11, 0.56, 2, 0.04).translate(x, -2.41, 0.07));
+    pad.push(new RoundedBoxGeometry(0.6, 0.55, 0.09, 2, 0.04).rotateX(-0.14).translate(x, -2.08, -0.25));
+  }
+  // The bubble, lowered: a curved shell from over the heads down in front to the shins, with flat ends.
+  const C = new THREE.Vector3(0, -2.05, -0.15), R = 1.0, a0 = -0.33, a1 = 2.2, NA = 18, NX = 12;
+  const pos = [], idx = [];
+  for (let i = 0; i <= NA; i++) for (let j = 0; j <= NX; j++) {
+    const a = a0 + (a1 - a0) * i / NA, x = -H - 0.1 + (2 * H + 0.2) * j / NX;
+    pos.push(x, C.y + R * Math.cos(a), C.z + R * Math.sin(a));
+    if (i < NA && j < NX) { const k = i * (NX + 1) + j; idx.push(k, k + NX + 1, k + 1, k + 1, k + NX + 1, k + NX + 2); }
+  }
+  for (const x of [-H - 0.1, H + 0.1]) { // end caps: a fan from the curve's centre
+    const c = pos.length / 3;
+    pos.push(x, C.y, C.z);
+    for (let i = 0; i <= NA; i++) { const a = a0 + (a1 - a0) * i / NA; pos.push(x, C.y + R * Math.cos(a), C.z + R * Math.sin(a)); }
+    for (let i = 0; i < NA; i++) idx.push(c, c + 1 + i, c + 2 + i);
+  }
+  const bubble = new THREE.BufferGeometry();
+  bubble.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  bubble.setIndex(idx);
+  bubble.computeVertexNormals();
+  // Its frame: the bottom edge and the two ends.
+  const arc = (x) => Array.from({ length: NA + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / NA; return [x, C.y + R * Math.cos(a), C.z + R * Math.sin(a)]; });
+  const rim = mergeGeometries([tube(arc(-H - 0.1), 0.03), tube(arc(H + 0.1), 0.03),
+    tube([[-H - 0.1, C.y + R * Math.cos(a1), C.z + R * Math.sin(a1)], [H + 0.1, C.y + R * Math.cos(a1), C.z + R * Math.sin(a1)]], 0.035)].map((g) => g.toNonIndexed()));
+  return { metal: mergeGeometries(metal.map((g) => g.toNonIndexed())), pad: mergeGeometries(pad.map((g) => g.toNonIndexed())), bubble, rim };
+}
+
+// The bubble's transform for an opening u: 0 lowered, 1 raised (turned up and back about its hinge).
+const _bm = new THREE.Matrix4(), _bt = new THREE.Matrix4();
+function bubbleMatrix(u, out = new THREE.Matrix4()) {
+  return out.makeTranslation(BUBBLE_PIVOT.x, BUBBLE_PIVOT.y, BUBBLE_PIVOT.z)
+    .multiply(_bm.makeRotationX(BUBBLE_UP * u))
+    .multiply(_bt.makeTranslation(-BUBBLE_PIVOT.x, -BUBBLE_PIVOT.y, -BUBBLE_PIVOT.z));
 }
 
 // ---------- Trees ----------
@@ -487,6 +525,7 @@ function gradientSky(top, horizon, bottom) {
 
 // ---------- The scene for a look ----------
 let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
+let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
 function build(look, ctx) {
   if (world) { scene.remove(world); world.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); } }); }
   world = new THREE.Group();
@@ -586,11 +625,23 @@ function build(look, ctx) {
   const n = Math.floor(line.total / CHAIR_GAP);
   chairsUp = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsUp = new THREE.InstancedMesh(parts.pad, padMat, n);
   chairsDown = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsDown = new THREE.InstancedMesh(parts.pad, padMat, n);
+  // Copper's signature blue bubbles: tinted, glossy, see-through.
+  const bubbleMat = new THREE.MeshStandardMaterial({ color: 0x2a6fe0, transparent: true, opacity: A ? 0.42 : 0.6, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.5 });
+  bubblesUp = new THREE.InstancedMesh(parts.bubble, bubbleMat, n); bubblesDown = new THREE.InstancedMesh(parts.bubble, bubbleMat, n);
+  rimsUp = new THREE.InstancedMesh(parts.rim, rimMat, n); rimsDown = new THREE.InstancedMesh(parts.rim, rimMat, n);
+  for (const m of [bubblesUp, bubblesDown]) { m.renderOrder = 2; m.frustumCulled = false; world.add(m); }
+  for (const m of [rimsUp, rimsDown]) { m.frustumCulled = false; m.castShadow = true; world.add(m); }
   for (const m of [chairsUp, padsUp, chairsDown, padsDown]) { m.castShadow = true; m.frustumCulled = false; world.add(m); }
   myChair = new THREE.Group();
   myChair.add(new THREE.Mesh(parts.metal, chairMetal), new THREE.Mesh(parts.pad, padMat));
+  myBubble = new THREE.Group();
+  myBubble.add(new THREE.Mesh(parts.bubble, bubbleMat), new THREE.Mesh(parts.rim, rimMat));
+  myBubble.matrixAutoUpdate = false;
+  myBubble.children[0].renderOrder = 2;
+  myChair.add(myBubble);
   myChair.traverse((o) => { o.castShadow = o.receiveShadow = true; });
-  rider.position.set(-0.55, -2.95, 0.12);
+  rider.position.set(MY_SEAT, -2.95, 0.12);
   myChair.add(rider);
   world.add(myChair);
   $("desc").textContent = DESC[look];
@@ -652,7 +703,13 @@ async function main() {
   const d0 = line.total * 0.22, d1 = line.total * 0.66;
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
-  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera };
+  const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
+  // The rider's own bubble: pull it down against the wind, or push it up for the view.
+  const bubbleBtn = $("bubble");
+  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.textContent = open ? "🫧 放下防风罩" : "🫧 收起防风罩"; };
+  bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
+  if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
+  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble };
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -669,12 +726,17 @@ async function main() {
       along(line.up, s, p); along(line.up, s + 4, q);
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
       chairsUp.setMatrixAt(i, m.compose(p, rot, one)); padsUp.setMatrixAt(i, m);
+      // Riders going up keep some bubbles down, some up; empty chairs come down with them closed.
+      bm2.copy(m).multiply((i * 7) % 5 < 3 ? bOpen : bShut); bubblesUp.setMatrixAt(i, bm2); rimsUp.setMatrixAt(i, bm2);
       const s2 = (line.total - d + i * CHAIR_GAP + CHAIR_GAP / 2) % line.total;
       along(line.down, s2, p); along(line.down, s2 + 4, q);
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
       chairsDown.setMatrixAt(i, m.compose(p, rot, one)); padsDown.setMatrixAt(i, m);
+      bm2.copy(m).multiply(bShut); bubblesDown.setMatrixAt(i, bm2); rimsDown.setMatrixAt(i, bm2);
     }
-    for (const c of [chairsUp, padsUp, chairsDown, padsDown]) c.instanceMatrix.needsUpdate = true;
+    for (const c of [chairsUp, padsUp, chairsDown, padsDown, bubblesUp, bubblesDown, rimsUp, rimsDown]) c.instanceMatrix.needsUpdate = true;
+    bubbleOpen += (bubbleWant - bubbleOpen) * Math.min(1, dt * 2.5);
+    bubbleMatrix(bubbleOpen, myBubble.matrix);
 
     const k = Math.min(1, dt * 6);
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
@@ -682,7 +744,7 @@ async function main() {
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
-    const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * -0.55, -1.5, -Math.sin(yaw) * -0.55));
+    const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, -1.5, -Math.sin(yaw) * MY_SEAT));
     camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 1.9, 0));
     camera.lookAt(head.clone().addScaledVector(view, 20).add(new THREE.Vector3(0, 20 * Math.tan(-0.2 + look.pitch), 0)));
     sun.position.copy(head).addScaledVector(sun.userData.dir, 400);

@@ -57,3 +57,12 @@ Next: storyboard of the day flow (step 3 for this flow), then build.
 - Trees: spruce built from branch cards painted from Poly Haven's fir_tree_01 twig textures
   (`tools/make_branch.py`), snow only on sky-facing faces; fewer tiers far from the lift.
 - Next: vertical slice of this stretch in A until the owner is happy, then roll out to the game.
+
+## Lift and riders (2026-11-02)
+
+- American Flyer modelled as the real lift: Leitner-Poma detachable six-pack with Copper's blue bubbles
+  (2018; 182 chairs, 5 m/s, ~3 km). The rider can lower or raise their bubble.
+- Riders: no real faces. Every rider wears helmet, goggles and a face mask; friends are told apart by
+  outfit, gear and board. Friends' photos are not uploaded anywhere or committed.
+- The code-grown clothes on the CC0 base body (`avatar.js`, `/riders.html`) were rejected as a look. The
+  owner is trying ChatGPT's Blender tools for a proper character; Claude integrates whatever GLB comes back.
