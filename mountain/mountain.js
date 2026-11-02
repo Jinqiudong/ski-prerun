@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=9";
+import { Diorama } from "./diorama.js?v=11";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -542,6 +542,7 @@ async function main() {
     $("planOut").hidden = true;
     document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on"));
     dio.highlightFrom(null);
+    dio.focusLift(null);
     // Floating tags in the world, one per lift; tap one to pick it.
     tagBox.innerHTML = "";
     cards.innerHTML = "";
@@ -578,12 +579,13 @@ async function main() {
     if (!mini || !l) return;
     const changed = mini.pick !== l;
     mini.pick = l;
+    dio.focusLift(l);
     for (const [x, info] of mini.info) {
       info.tag.classList.toggle("on", x === l);
       info.card.classList.toggle("on", x === l);
     }
     if (route) { dio.highlightRoute(route); dio.aim(l, route); }
-    else if (changed) { dio.aim(l, [...dio.highlightFrom(l).fromTop]); $("planOut").hidden = true; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
+    else if (changed) { dio.aim(l, [...dio.highlightFrom(l).fromTop]); $("planOut").hidden = true; $("legend").hidden = false; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
     if (changed) {
       // Turn the model so the lift is seen from below, the short way round.
       let u = dio.facing(l);
@@ -638,7 +640,7 @@ async function main() {
     const level = b.dataset.plan, out = $("planOut");
     const was = b.classList.contains("on");
     document.querySelectorAll("[data-plan]").forEach((x) => x.classList.toggle("on", !was && x === b));
-    if (was) { out.hidden = true; dio.highlightFrom(mini.pick); return; }
+    if (was) { out.hidden = true; $("legend").hidden = false; dio.highlightFrom(mini.pick); return; }
     let best = null;
     for (const l of mini.lifts) {
       const back = mini.lifts.map((x) => graph.liftNodes.get(x).bottom);
@@ -647,6 +649,7 @@ async function main() {
       if (!best && route) best = { l, route };
     }
     out.hidden = false;
+    $("legend").hidden = true;
     if (!best) { out.textContent = "这个 base 没有合适的一圈，换个水平试试"; return; }
     const legs = best.route.legs.filter((g) => g.type === "run");
     const names = legs.map((g) => g.run.name || "雪道").filter((n, i, all) => n !== all[i - 1]);
@@ -660,6 +663,7 @@ async function main() {
     openDetail(false);
     mini.intro = true; mini.t0 = performance.now(); mini.spinTo = null;
     dio.aim(null);
+    dio.focusLift(null);
     spin = spin % 1;
     mini.spin0 = spin;
     document.body.classList.remove("picking");

@@ -69,6 +69,10 @@
     .plans button.on { background: var(--accent); border-color: var(--accent); }
     #planOut { font-size: 12px; padding: 6px 10px; max-width: 520px; color: var(--muted); }
     #planOut b { color: var(--ink); }
+    #legend { font-size: 11px; color: var(--muted); padding: 4px 10px; display: flex; align-items: center; gap: 4px; }
+    #legend .sw { width: 16px; height: 4px; border-radius: 2px; background: #1f6fe5; margin-left: 4px; }
+    #legend .sw:first-child { margin-left: 0; }
+    #legend .half { opacity: .5; }
     #liftCards { position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom)); display: none; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 calc(50vw - min(39vw, 160px)); scrollbar-width: none; touch-action: pan-x; transition: transform .3s, opacity .3s; }
     #liftCards::-webkit-scrollbar { display: none; }
     body.picking #liftCards { display: flex; }
@@ -117,7 +121,7 @@
   <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
   <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
   <div id="liftTags"></div>
-  <div id="plansBar"><div class="plans"><span>今天想怎么滑</span><button class="glass" data-plan="easy">热身（绿）</button><button class="glass" data-plan="intermediate">巡航（蓝）</button><button class="glass" data-plan="advanced">挑战（黑）</button></div><div id="planOut" class="glass" hidden></div></div>
+  <div id="plansBar"><div class="plans"><span>今天想怎么滑</span><button class="glass" data-plan="easy">热身（绿）</button><button class="glass" data-plan="intermediate">巡航（蓝）</button><button class="glass" data-plan="advanced">挑战（黑）</button></div><div id="planOut" class="glass" hidden></div><div id="legend" class="glass"><span class="sw full"></span>山顶直接出发 <span class="sw half"></span>滑下去能接上</div></div>
   <div id="liftCards"></div>
   <div id="dim"></div>
   <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
@@ -139,6 +143,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=15"></script>
+  <script type="module" src="mountain.js?v=17"></script>
 </body>
 </html>

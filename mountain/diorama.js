@@ -54,6 +54,7 @@ export class Diorama {
     this.movers = [];
     this.anims = [];
     this.anchors = new Map();
+    this.liftParts = new Map();
     this.T = T;
     const xs = [base.x, ...lifts.map((l) => l.pts[l.pts.length - 1][0])], zs = [base.z, ...lifts.map((l) => l.pts[l.pts.length - 1][1])];
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
@@ -297,6 +298,13 @@ export class Diorama {
     const side = new THREE.Vector3(rope[rope.length - 1].z - rope[0].z, 0, -(rope[rope.length - 1].x - rope[0].x)).normalize().multiplyScalar(7 * TOY);
     const lines = [rope.map((p) => p.clone().add(side)), rope.map((p) => p.clone().sub(side)).reverse()];
     for (const line of lines) group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(line), line.length * 4, 0.9 * TOY, 4), new THREE.MeshStandardMaterial({ color: 0x2c313a })));
+    // A glowing band along the line, shown when this lift is the chosen one.
+    const glow = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rope), rope.length * 4, 9 * TOY, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffc23a, transparent: true, opacity: 0.55, depthWrite: false }));
+    glow.visible = false;
+    glow.renderOrder = 2;
+    group.add(glow);
+    this.liftParts.set(l, { group, glow });
     // Stations at both ends.
     for (const [p, q] of [[pts[0], pts[1]], [pts[pts.length - 1], pts[pts.length - 2]]]) {
       const st = new THREE.Group();
@@ -334,6 +342,19 @@ export class Diorama {
       chairs.instanceMatrix.needsUpdate = riders.instanceMatrix.needsUpdate = true;
     });
     return group;
+  }
+
+  // The chosen lift glows; the others fade back. Null shows every lift as it is.
+  focusLift(l) {
+    for (const [x, { group, glow }] of this.liftParts) {
+      glow.visible = x === l;
+      group.traverse((o) => {
+        if (!o.material || o === glow) return;
+        o.material.transparent = true;
+        o.material.opacity = l && x !== l ? 0.3 : 1;
+      });
+    }
+    this.chosen = l;
   }
 
   // A chalet at the base: timber walls, a steep snowy roof, lit windows.
@@ -401,8 +422,8 @@ export class Diorama {
     this.scene.add(key, key.target);
   }
 
-  // Light up the runs you can reach from a lift's top without taking another lift; dim the rest.
-  // Three tiers: runs leaving the top, runs you can carry on to, everything else faded. The light flows
+  // Light up the runs you can reach from a lift's top without taking another lift; hide the rest.
+  // Two tiers: runs leaving the top, runs you can carry on to; runs out of reach are hidden. The light flows
   // downhill: runs leaving the top first, then the ones they lead to.
   highlightFrom(lift) {
     const depth = new Map();
@@ -421,7 +442,7 @@ export class Diorama {
     const top = lift && lift.pts[lift.pts.length - 1];
     const fromTop = new Set(lift ? this.R.runs.filter((r) => Math.hypot(r.pts[0][0] - top[0], r.pts[0][1] - top[1]) < 160) : []);
     for (const r of fromTop) depth.set(r, 0);
-    this.light3(lift ? (run) => (fromTop.has(run) ? 1 : depth.has(run) ? 0.5 : 0.12) : () => 1, (run) => Math.min(depth.get(run) ?? 0, 6) * 0.3);
+    this.light3(lift ? (run) => (fromTop.has(run) ? 1 : depth.has(run) ? 0.5 : 0) : () => 1, (run) => Math.min(depth.get(run) ?? 0, 6) * 0.3);
     return { reach: new Set(depth.keys()), fromTop };
   }
 
@@ -429,7 +450,7 @@ export class Diorama {
   highlightRoute(runs) {
     const order = new Map();
     runs.forEach((r, i) => order.has(r) || order.set(r, i));
-    this.light3((run) => (order.has(run) ? 1 : 0.1), (run) => (order.get(run) ?? 0) * 0.45);
+    this.light3((run) => (order.has(run) ? 1 : 0), (run) => (order.get(run) ?? 0) * 0.45);
   }
 
   light3(tier, delay) {
@@ -437,8 +458,9 @@ export class Diorama {
     this.anims = [];
     for (const m of this.runLayer.children) {
       const u = m.userData.u, to = tier(m.userData.run);
-      if (to > 0.12) {
-        u.uFrom.value = 0.12; u.uTo.value = to; u.uReveal.value = 0; u.uFront.value = 1;
+      m.visible = to > 0; // runs this lift cannot reach are not drawn at all
+      if (to > 0) {
+        u.uFrom.value = 0; u.uTo.value = to; u.uReveal.value = 0; u.uFront.value = 1;
         this.anims.push({ u, t0: now + delay(m.userData.run), dur: 0.9 });
       } else {
         u.uFrom.value = u.uTo.value = to; u.uReveal.value = 1; u.uFront.value = 0;
@@ -501,6 +523,8 @@ export class Diorama {
   render(t) {
     for (const f of this.movers) f(t);
     const now = performance.now() / 1000;
+    const g = this.chosen && this.liftParts.get(this.chosen);
+    if (g) g.glow.material.opacity = 0.42 + 0.2 * Math.sin(now * 3.2); // a slow pulse
     for (const a of this.anims) {
       const k = Math.min(1, Math.max(0, (now - a.t0) / a.dur));
       a.u.uReveal.value = 1 - (1 - k) * (1 - k);
