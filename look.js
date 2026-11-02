@@ -10,6 +10,7 @@ import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=5
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=13";
+import { junctions, junctionSign, chevrons, Minimap, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -811,8 +812,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // Where to go: each base, and each lift you can ski over to.
   const dests = [];
   for (const b of bases) {
-    const r = plan(nodesNear(graph, b.x, b.z, 220));
-    const p = r && makePlan(r.rt.legs, { kind: "base", key: `base:${b.name}`, title: `回 ${b.name}`, short: b.name, icon: "🏠", seconds: r.rt.seconds, harder: r.harder, end: [b.x, b.z], base: b });
+    const to = nodesNear(graph, b.x, b.z, 220), r = plan(to);
+    const p = r && makePlan(r.rt.legs, { to, kind: "base", key: `base:${b.name}`, title: `回 ${b.name}`, short: b.name, icon: "🏠", seconds: r.rt.seconds, harder: r.harder, end: [b.x, b.z], base: b });
     if (p) dests.push(p);
   }
   const liftDests = [];
@@ -820,7 +821,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     if (!bigLift(l)) continue;
     const r = plan([graph.liftNodes.get(l).bottom]);
     if (!r || r.rt.legs.some((g) => g.type === "lift") || r.rt.seconds > 20 * 60) continue;
-    const p = makePlan(r.rt.legs, { kind: "lift", key: `lift:${l.name}`, title: l === lift ? `再坐一趟 ${l.name}` : `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: r.rt.seconds, harder: r.harder, end: l.pts[0], lift: l });
+    const p = makePlan(r.rt.legs, { to: [graph.liftNodes.get(l).bottom], kind: "lift", key: `lift:${l.name}`, title: l === lift ? `再坐一趟 ${l.name}` : `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: r.rt.seconds, harder: r.harder, end: l.pts[0], lift: l });
     if (p) liftDests.push(p);
   }
   // A lift that leaves from a base is the same place as that base: one option, "there you can ride X".
@@ -852,7 +853,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
           || planRoute(graph, [graph.runNodes.get(r).at(-1)], liftBottoms);
         if (rt && !rt.legs.some((g) => g.type === "lift")) { legs.push(...rt.legs); end = [rt.end.x, rt.end.z]; leads = leadsTo(end); seconds += rt.seconds; }
       }
-      return makePlan(legs, { kind: "run", key: `run:${r.name}`, title: r.name, icon: "", seconds, end, leads, first: r });
+      const to = nodesNear(graph, end[0], end[1], 60);
+      return makePlan(legs, { to, kind: "run", key: `run:${r.name}`, title: r.name, icon: "", seconds, end, leads, first: r });
     })
     .filter(Boolean);
   const wantKey = params.get("to");
@@ -877,19 +879,76 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     for (const m of [...marks.children]) { marks.remove(m); m.geometry.dispose(); }
     routeMarks = []; reveal = null;
     clearTags();
-    // The forest and runs along the way, beyond what was planted around the lift.
-    ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
-    ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
+    dress(P);
     phys = new Rider(T, "ski");
-    phys.place(path[0][0], path[0][1], pathDir(path, 0), 2);
-    const h0 = pathDir(path, 0);
+    // Start a little way down, clear of the top station.
+    let i0 = 0;
+    while (i0 < path.length - 2 && P.dist[i0] < 25) i0++;
+    phys.place(path[i0][0], path[i0][1], pathDir(path, i0), 2);
+    const h0 = pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks = new Tracks(scene, T, "ski");
-    prog = 0; ended = false; auto = true;
+    prog = i0; ended = false; auto = true;
     st.phase = "ski";
     $("skiHud").hidden = false;
+    $("minimap").hidden = false;
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
     $("desc").textContent = "自动滑行中，拖动屏幕就由你来滑";
+  }
+  // The way down, made findable: forest and runs along it, a sign at every junction saying where each
+  // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
+  let nav = null, offFor = 0, lastLook = 0, onRun = null, mapAt = 0;
+  const minimap = new Minimap($("minimap"), R);
+  $("minimap").onclick = () => { $("minimap").classList.toggle("big"); minimap.radius = $("minimap").classList.contains("big") ? 900 : 450; };
+  function dress(P) {
+    const path = P.path;
+    ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
+    boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
+    ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
+    if (nav) { scene.remove(nav.group); nav.group.traverse((o) => o.geometry?.dispose()); }
+    const group = new THREE.Group(), js = junctions(path, P.segs, R);
+    for (const j of js) {
+      // The sign stands 25 m before the junction on the rider's right, just off the piste, facing them.
+      let k = j.i, d = 0;
+      while (k > 0 && d < 25) { d += Math.hypot(path[k][0] - path[k - 1][0], path[k][1] - path[k - 1][1]); k--; }
+      const h = pathDir(path, k), [x, z] = path[k];
+      group.add(junctionSign(T, x - Math.cos(h) * 17, z + Math.sin(h) * 17, h + Math.PI, j.options, renderer));
+      const way = j.options.find((o) => o.route);
+      if (way && Math.abs(way.bearing) > 0.18) group.add(chevrons(T, path, j.i, way.bearing));
+    }
+    scene.add(group);
+    nav = { group, js };
+  }
+  // Off the route and onto another run: plan again from there to the same destination.
+  function replan(r) {
+    const P = chosen, found = runNear(r.x, r.z, 28);
+    if (!found || !found.run.name) return false;
+    const nodes = graph.runNodes.get(found.run).filter((n) => n.i >= found.i);
+    if (!nodes.length || !P.to?.length) return false;
+    let rt = null;
+    for (const lv of LEVELS.slice(LEVELS.indexOf(myLevel))) if ((rt = planRoute(graph, [nodes[0]], P.to, lv))) break;
+    if (!rt) return false;
+    const legs = [{ type: "run", run: found.run, from: found.i, to: nodes[0].i, length: 0 }, ...rt.legs].filter((l) => l.type !== "run" || l.to > l.from);
+    const { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, seconds, harder } = P;
+    const Q = makePlan(legs, { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, seconds, harder });
+    if (!Q) return false;
+    chosen = Q; prog = 0;
+    dress(Q);
+    flashCue(`已改走 ${LEVEL_MARK[found.run.level]}${found.run.name}，重新规划到 ${P.short || P.title}`);
+    return true;
+  }
+  let cueHold = 0, cueText = "";
+  const flashCue = (t) => { cueText = t; cueHold = performance.now() + 3500; };
+  // The named run nearest to (x, z) within `max` metres, and the index of its nearest point.
+  function runNear(x, z, max) {
+    let best = null, bd = max * max;
+    for (const run of R.runs) {
+      if (run.area) continue;
+      const ps = run.pts;
+      if (Math.abs(ps[0][0] - x) > 3000 && Math.abs(ps[ps.length - 1][0] - x) > 3000) continue;
+      for (let i = 0; i < ps.length; i++) { const d = (ps[i][0] - x) ** 2 + (ps[i][1] - z) ** 2; if (d < bd) { bd = d; best = { run, i }; } }
+    }
+    return best;
   }
   let sdrag = null;
   renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "ski") sdrag = { x: e.clientX, y: e.clientY }; });
@@ -925,13 +984,23 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("skiSpeed").textContent = Math.round(r.speed * 3.6);
     $("skiLeft").textContent = fmtLen(left);
     const name = (s) => `${LEVEL_MARK[s.run.level]}${s.run.name || "无名雪道"}`;
+    const nameR = (run) => `${LEVEL_MARK[run.level]}${run.name || "无名雪道"}`;
+    const now = performance.now();
+    // Which run am I on, really? (Twice a second is plenty.)
+    if (now - lastLook > 500) { lastLook = now; onRun = runNear(r.x, r.z, 26); }
+    $("skiWhere").innerHTML = onRun ? `你在 ${nameR(onRun.run)}` : "雪道外";
+    // Off the route for a while: replan from the run I'm on, if it leads anywhere.
+    offFor = near.d > 45 ? offFor + dt : 0;
+    if (offFor > 1.2 && onRun && replan(r)) { offFor = 0; return; }
+    if (now - mapAt > 120) { mapAt = now; minimap.draw(r.x, r.z, r.heading, path.slice(Math.max(0, prog - 2)), P.end); }
+    const J = nav?.js.find((j) => j.i > prog), toJ = J ? P.dist[J.i] - P.dist[prog] : Infinity;
     let cue;
-    if (near.d > 60) cue = `<b>偏离路线 ${Math.round(near.d)} 米</b>，回到 ${name(seg)}`;
-    else if (nextSeg && P.dist[nextSeg.at] - P.dist[prog] < 200) {
-      // Which way the route bends where the next run starts: heading up to more than left (see the camera).
-      const d = angleDiff(pathDir(path, Math.min(last, nextSeg.at + 4)), pathDir(path, Math.max(0, nextSeg.at - 4)));
-      const turn = d > 0.35 ? "↰ 左转" : d < -0.35 ? "↱ 右转" : "↑ 直行";
-      cue = `<b>前方 ${Math.round(P.dist[nextSeg.at] - P.dist[prog])} 米 ${turn}</b> 进 ${name(nextSeg)}`;
+    if (now < cueHold) cue = cueText;
+    else if (near.d > 60) cue = `<b>偏离路线 ${Math.round(near.d)} 米</b>，回到 ${name(seg)}${onRun ? ` · 或者沿 ${nameR(onRun.run)} 滑，会自动重新规划` : ""}`;
+    else if (J && toJ < 260) {
+      // The junction ahead: every way, left to right, the route's in bold.
+      const way = J.options.find((o) => o.route);
+      cue = `<b>前方 ${Math.round(toJ)} 米岔口 · ${way ? `${arrowText(way.bearing)} ${turnWord(way.bearing)}进 ${nameR(way.run)}` : ""}</b><br><small>${J.options.filter((o) => o !== way).map((o) => `${arrowText(o.bearing)} ${nameR(o.run)}`).join("　")}</small>`;
     } else if (left < 220) cue = `<b>快到了</b> · ${P.next ? `${P.next.name} 底站` : P.short || "雪道尽头"}还有 ${Math.round(left)} 米`;
     else cue = `沿 ${name(seg)} 滑${nextSeg ? ` · 接着进 ${name(nextSeg)}` : P.next ? ` · 到底坐 🚡${P.next.name}` : P.kind === "base" ? ` · 到底就是 🏠${P.short}` : ""}`;
     $("skiCue").innerHTML = cue;
@@ -939,6 +1008,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   }
   function arrive(P) {
     $("skiHud").hidden = true;
+    $("minimap").hidden = true;
     $("arrive").hidden = false;
     const link = (l, to, label) => `<a class="btn go" href="look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}">${label}</a>`;
     let title, note, row = "";
@@ -1290,6 +1360,13 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     });
   }
   st.plans = { dests, runs };
+  // Testing: jump the rider `m` metres down the route, or onto the run named `run`.
+  st.warp = (m, run) => {
+    if (run) { const r = R.runs.find((x) => x.name === run), q = r.pts[Math.min(r.pts.length - 1, 4)]; phys.place(q[0], q[1], pathDir(r.pts, 4), 8); return; }
+    const P = chosen; let i = 0; while (i < P.path.length - 2 && P.dist[i] < m) i++;
+    phys.place(P.path[i][0], P.path[i][1], pathDir(P.path, i), 8); prog = i;
+  };
+  st.state = () => ({ x: Math.round(phys?.x), z: Math.round(phys?.z), prog, plan: chosen?.steps.map((s) => s.name).join(">"), junctions: nav?.js.map((j) => `${Math.round(chosen.dist[j.i])}m: ${j.options.map((o) => (o.route ? "*" : "") + o.run.name).join(", ")}`) });
   st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, mode, chosen: chosen?.key, dests: dests.map((d) => `${d.key} ${Math.round(d.seconds)}s ${d.steps.map((s) => s.name).join(">")}`), cam: camera.position.toArray().map(Math.round), want: { ox: +want.ox.toFixed(2), oy: +want.oy.toFixed(2) } });
   st.select = (key) => { const P = [...dests, ...runs].find((p) => p.key === key); if (P) { if (!list().includes(P)) setMode(P.kind === "run" ? "runs" : "dest", P); else select(P, true); } };
   return st;
