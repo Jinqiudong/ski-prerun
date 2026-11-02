@@ -7,6 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose } from "./rider.js?v=5";
+import { snowNames, fadeNames } from "./snownames.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -48,7 +49,7 @@ function setLiftKind(name) {
   HALF_GAUGE = k.seats === 6 ? 3.3 : 2.7;
 }
 // The bubble hinges at its top back edge and swings up and back when raised.
-const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.1;
+const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.35;
 
 function liftLine(T, lift) {
   const ground = lift.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
@@ -713,6 +714,10 @@ async function main() {
   build(current, ctx);
   document.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.style !== current) build((current = b.dataset.style), ctx); }));
   $("status").remove();
+  // Run names carved into the snow, met on the way up.
+  const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
+  const names = snowNames(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer);
+  scene.add(names);
   const flakes = snowfall();
   scene.add(flakes);
   weather(params, flakes);
@@ -737,7 +742,7 @@ async function main() {
   const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.textContent = open ? "🫧 放下防风罩" : "🫧 收起防风罩"; };
   bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
-  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble };
+  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names };
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -779,10 +784,14 @@ async function main() {
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
     const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, -1.5, -Math.sin(yaw) * MY_SEAT));
-    camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 1.9, 0));
-    camera.lookAt(head.clone().addScaledVector(view, 20).add(new THREE.Vector3(0, 20 * Math.tan(-0.2 + look.pitch), 0)));
+    camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
+    // Look up the slope, not at a fixed angle: aim 30 m ahead on the line, a little below the rope, so
+    // the snow ahead (higher than the chair on the way up) and the names carved in it stay in view.
+    const ahead = along(line.up, Math.min(d + 30, line.total), new THREE.Vector3()).sub(head).applyAxisAngle(Y, look.yaw);
+    camera.lookAt(head.clone().add(ahead).add(new THREE.Vector3(0, -12 + 30 * Math.tan(look.pitch), 0)));
     sun.position.copy(head).addScaledVector(sun.userData.dir, 400);
     sun.target.position.copy(head);
+    fadeNames(names, camera);
     renderer.render(scene, camera);
   });
 }
