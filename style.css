@@ -166,3 +166,9 @@ h2 { font-size: 24px; margin: 0; flex: 1; display: flex; align-items: center; ga
 .theme-semi .legend { border-radius: 999px; }
 .theme-semi #credit { color: rgba(255, 255, 255, .7); text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
 .theme-semi .warnline { color: #ffb4a3; }
+
+/* Looking around from the chair */
+.lookBtns { position: absolute; right: 12px; top: calc(150px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 8px; }
+.lookBtns .btn { font-size: 13px; padding: 6px 10px; }
+#lookPhone.on { background: var(--ink); color: var(--paper); }
+#ride { touch-action: none; }

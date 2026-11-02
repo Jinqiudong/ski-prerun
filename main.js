@@ -512,6 +512,8 @@ function startRide(lift) {
   rider.model.visible = true;
   chair.visible = true;
   ride = { lift, d: 0, length: pathLen(lift.path), snap: true };
+  look.yaw = look.pitch = look.dragYaw = look.dragPitch = 0;
+  look.base = null; // the phone's heading when the ride starts is "straight ahead"
   $("rideName").innerHTML = `${icon("lift")}${esc(lift.name)}`;
   // Name the runs passing under this lift, carved into the snow.
   ride.names = snowNames(lift);
@@ -619,6 +621,10 @@ function snowName(run, at, fx, fz) {
   mesh.renderOrder = 3;
   return mesh;
 }
+function dropNames() {
+  scene.remove(ride.names);
+  ride.names.traverse((o) => { o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
+}
 const pathLen = (path) => path.reduce((s, p, i) => (i ? s + p.distanceTo(path[i - 1]) : 0), 0);
 function segDist(x, z, a, b) {
   const dx = b[0] - a[0], dz = b[1] - a[1];
@@ -634,12 +640,18 @@ function stepRide(dt) {
   const dir = b.clone().sub(a).setY(0).normalize();
   rider.model.position.copy(p).add(new THREE.Vector3(0, -2.95, 0.05));
   rider.model.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-  sit(rider.model);
+  // Looking around: the phone's turn (or a finger drag) swings the view around the chair, smoothed.
+  const k = Math.min(1, dt * 6);
+  look.yaw += (look.wantYaw() - look.yaw) * k;
+  look.pitch += (look.wantPitch() - look.pitch) * k;
+  sit(rider.model, Math.max(-1.2, Math.min(1.2, look.yaw * 0.8)));
   chair.position.copy(p);
   chair.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-  const want = p.clone().addScaledVector(dir, -9).add(new THREE.Vector3(0, 1.5, 0));
+  const view = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), look.yaw);
+  const want = p.clone().addScaledVector(view, -9).add(new THREE.Vector3(0, 1.5, 0));
   if (ride.snap) { camera.position.copy(want); ride.snap = false; } else camera.position.lerp(want, Math.min(1, dt * 3));
-  camera.lookAt(p.clone().addScaledVector(dir, 30).add(new THREE.Vector3(0, -14, 0))); // looking down at the runs below
+  // Looking down at the runs below; tilting the phone looks further down or up.
+  camera.lookAt(p.clone().addScaledVector(view, 30).add(new THREE.Vector3(0, -14 + 30 * Math.tan(look.pitch), 0)));
   camera.fov = 60; camera.near = 0.5; camera.updateProjectionMatrix();
   followSun(p.x, p.y, p.z);
   // A name shows only as the chair comes over it, like reading the snow below; then it falls behind.
@@ -654,17 +666,48 @@ function stepRide(dt) {
 }
 $("skipRide").addEventListener("click", () => { if (ride) ride.d = ride.length; });
 
-// Sitting on the chair: thighs level, shins hanging, facing up the line.
-function sit(model) {
+// Looking around from the chair. Yaw turns left (+) and right (-), pitch up (+) and down (-), in radians.
+// With motion access the phone's own turn and tilt drive it; a finger drag adds to it either way.
+const look = {
+  yaw: 0, pitch: 0, dragYaw: 0, dragPitch: 0, base: null, phone: null,
+  wantYaw() { return clamp(this.dragYaw + (this.phone ? this.phone.yaw : 0), -2.1, 2.1); },
+  wantPitch() { return clamp(this.dragPitch + (this.phone ? this.phone.pitch : 0), -0.6, 0.45); },
+};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+addEventListener("deviceorientation", (e) => {
+  if (e.alpha == null || mode !== "ride") return;
+  if (!look.base) look.base = { alpha: e.alpha, beta: e.beta };
+  let dy = e.alpha - look.base.alpha; // turning the phone left raises alpha
+  dy = ((dy + 540) % 360) - 180;
+  look.phone = { yaw: (dy * Math.PI) / 180, pitch: ((e.beta - look.base.beta) * Math.PI) / 180 };
+});
+async function askMotion() {
+  // iOS asks for permission, and only from a tap.
+  try { if (typeof DeviceOrientationEvent?.requestPermission === "function") await DeviceOrientationEvent.requestPermission(); } catch {}
+  look.base = null;
+  $("lookPhone").classList.add("on");
+}
+$("lookPhone").addEventListener("click", askMotion);
+$("lookCenter").addEventListener("click", () => { look.dragYaw = look.dragPitch = 0; look.base = null; });
+let lookDrag = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { if (mode === "ride") lookDrag = { x: e.clientX, y: e.clientY, yaw: look.dragYaw, pitch: look.dragPitch }; });
+addEventListener("pointermove", (e) => {
+  if (!lookDrag || mode !== "ride") return;
+  look.dragYaw = lookDrag.yaw + ((e.clientX - lookDrag.x) / innerWidth) * 2.4; // drag right to look left, like turning your head
+  look.dragPitch = lookDrag.pitch - ((e.clientY - lookDrag.y) / innerHeight) * 1.2;
+});
+addEventListener("pointerup", () => (lookDrag = null));
+
+// Sitting on the chair: thighs level, shins hanging, facing up the line; the head turns with the view.
+function sit(model, headYaw = 0) {
   const u = model.userData;
   u.yaw.rotation.set(0, 0, 0); u.pivot.rotation.set(0, 0, 0); u.stance.rotation.y = 0;
-  applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: 0, spread: 0.08 });
+  applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw, spread: 0.08 });
 }
 
 function endRide() {
   const lift = ride.lift;
-  scene.remove(ride.names);
-  ride.names.traverse((o) => { o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
+  dropNames();
   ride = null;
   chair.visible = false;
   const [x, z] = lastPt(lift.pts);
@@ -998,7 +1041,7 @@ for (const id of ["planFrom", "planTo", "planLevel"]) $(id).addEventListener("ch
 $("planGo").addEventListener("click", () => planned && startJourney(planned.legs, false));
 $("planWatch").addEventListener("click", () => planned && startJourney(planned.legs, true));
 $("exitSki").addEventListener("click", () => { enterMap(); flyTo(rider.physics.x, rider.physics.z, 1500); });
-$("exitRide").addEventListener("click", () => { ride?.below.forEach(dropLabel); ride = null; chair.visible = false; enterMap(); });
+$("exitRide").addEventListener("click", () => { if (ride) dropNames(); ride = null; chair.visible = false; enterMap(); });
 
 // Test hook for headless checks.
 window.__prerun = {
