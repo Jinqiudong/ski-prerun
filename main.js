@@ -644,15 +644,18 @@ function stepRide(dt) {
   const k = Math.min(1, dt * 6);
   look.yaw += (look.wantYaw() - look.yaw) * k;
   look.pitch += (look.wantPitch() - look.pitch) * k;
-  sit(rider.model, Math.max(-1.2, Math.min(1.2, look.yaw * 0.8)));
+  sit(rider.model, look.yaw);
   chair.position.copy(p);
   chair.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
-  const view = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), look.yaw);
-  const want = p.clone().addScaledVector(view, -9).add(new THREE.Vector3(0, 1.5, 0));
-  if (ride.snap) { camera.position.copy(want); ride.snap = false; } else camera.position.lerp(want, Math.min(1, dt * 3));
+  // Third person, close behind the rider. Looking to a side turns the rider's head and shoulders and
+  // swings the camera round behind them, so the rider stays in the shot, seen over the shoulder.
+  const up = new THREE.Vector3(0, 1, 0), head = p.clone().add(new THREE.Vector3(0, -1.5, 0));
+  const view = dir.clone().applyAxisAngle(up, look.yaw);
+  const want = head.clone().addScaledVector(view, -4).add(new THREE.Vector3(0, 1.5, 0));
+  camera.position.copy(want); // fixed to the chair (a lagging camera trails metres behind at speed); the look is smoothed above
   // Looking down at the runs below; tilting the phone looks further down or up.
-  camera.lookAt(p.clone().addScaledVector(view, 30).add(new THREE.Vector3(0, -14 + 30 * Math.tan(look.pitch), 0)));
-  camera.fov = 60; camera.near = 0.5; camera.updateProjectionMatrix();
+  camera.lookAt(head.clone().addScaledVector(view, 20).add(new THREE.Vector3(0, 20 * Math.tan(-0.38 + look.pitch), 0)));
+  camera.fov = 60; camera.near = 0.1; camera.updateProjectionMatrix();
   followSun(p.x, p.y, p.z);
   // A name shows only as the chair comes over it, like reading the snow below; then it falls behind.
   for (const m of ride.names.children) {
@@ -670,8 +673,9 @@ $("skipRide").addEventListener("click", () => { if (ride) ride.d = ride.length; 
 // The phone's own turn and tilt drive it, no button needed; a finger drag adds to it either way.
 const look = {
   yaw: 0, pitch: 0, dragYaw: 0, dragPitch: 0, base: null, phone: null,
-  wantYaw() { return clamp(this.dragYaw + (this.phone ? this.phone.yaw : 0), -2.1, 2.1); },
-  wantPitch() { return clamp(this.dragPitch + (this.phone ? this.phone.pitch : 0), -0.6, 0.45); },
+  // As far as a seated rider can turn head and shoulders: about 75° each way, 40° down, 20° up.
+  wantYaw() { return clamp(this.dragYaw + (this.phone ? this.phone.yaw : 0), -1.3, 1.3); },
+  wantPitch() { return clamp(this.dragPitch + (this.phone ? this.phone.pitch : 0), -0.7, 0.35); },
 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 addEventListener("deviceorientation", (e) => {
@@ -692,16 +696,18 @@ let lookDrag = null;
 renderer.domElement.addEventListener("pointerdown", (e) => { if (mode === "ride") lookDrag = { x: e.clientX, y: e.clientY, yaw: look.dragYaw, pitch: look.dragPitch }; });
 addEventListener("pointermove", (e) => {
   if (!lookDrag || mode !== "ride") return;
-  look.dragYaw = lookDrag.yaw + ((e.clientX - lookDrag.x) / innerWidth) * 2.4; // drag right to look left, like turning your head
-  look.dragPitch = lookDrag.pitch - ((e.clientY - lookDrag.y) / innerHeight) * 1.2;
+  look.dragYaw = clamp(lookDrag.yaw + ((e.clientX - lookDrag.x) / innerWidth) * 2.4, -1.3, 1.3); // drag right to look left, like turning your head
+  look.dragPitch = clamp(lookDrag.pitch - ((e.clientY - lookDrag.y) / innerHeight) * 1.2, -0.7, 0.35);
 });
 addEventListener("pointerup", () => (lookDrag = null));
 
-// Sitting on the chair: thighs level, shins hanging, facing up the line; the head turns with the view.
-function sit(model, headYaw = 0) {
+// Sitting on the chair: thighs level, shins hanging, facing up the line; looking to a side turns the head
+// most of the way and the shoulders the rest.
+function sit(model, lookYaw = 0) {
+  const headYaw = clamp(lookYaw * 0.75, -1.0, 1.0), twist = lookYaw * 0.25;
   const u = model.userData;
   u.yaw.rotation.set(0, 0, 0); u.pivot.rotation.set(0, 0, 0); u.stance.rotation.y = 0;
-  applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw, spread: 0.08 });
+  applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw, spread: 0.08 });
 }
 
 function endRide() {
