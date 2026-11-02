@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=7";
+import { Diorama } from "./diorama.js?v=8";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -589,6 +589,7 @@ async function main() {
       let u = dio.facing(l);
       u += Math.round(spin - u);
       mini.spinTo = u;
+      dio.aim(l);
       navigator.vibrate?.(8);
     }
     if (scroll) { mini.scrolling = performance.now(); mini.info.get(l).card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); }
@@ -659,6 +660,7 @@ async function main() {
     if (!mini) return;
     openDetail(false);
     mini.intro = true; mini.t0 = performance.now(); mini.spinTo = null;
+    dio.aim(null);
     spin = spin % 1;
     mini.spin0 = spin;
     document.body.classList.remove("picking");
@@ -672,11 +674,21 @@ async function main() {
   renderer.domElement.addEventListener("pointerdown", (e) => { if (mini && !mini.intro) { drag = { x: e.clientX, s: spin }; mini.spinTo = null; } });
   addEventListener("pointermove", (e) => { if (drag) spin = drag.s - (e.clientX - drag.x) / 600; });
   addEventListener("pointerup", () => { drag = null; });
+  // Tags in the world; the chosen lift's first, then longer lifts; a tag that would cover one already
+  // placed is hidden until the model turns.
   const placeTags = () => {
-    for (const [l, info] of mini.info) {
-      const p = dio.screenOf(l);
-      info.tag.style.display = p ? "" : "none";
-      if (p) info.tag.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
+    const placed = [];
+    const order = [...mini.info.values()].sort((a, b) => (b.l === mini.pick) - (a.l === mini.pick));
+    for (const info of order) {
+      const p = dio.screenOf(info.l), tag = info.tag;
+      if (p) {
+        tag.w ||= tag.offsetWidth; tag.h ||= tag.offsetHeight;
+        const r = { x0: p.x - tag.w / 2, x1: p.x + tag.w / 2, y0: p.y - tag.h, y1: p.y };
+        if (placed.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0)) { tag.style.visibility = "hidden"; continue; }
+        placed.push(r);
+        tag.style.visibility = "";
+        tag.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
+      } else tag.style.visibility = "hidden";
     }
   };
 
@@ -695,6 +707,7 @@ async function main() {
         spin += (mini.spinTo - spin) * (1 - Math.exp(-dt * 3.5));
         if (Math.abs(mini.spinTo - spin) < 1e-4) mini.spinTo = null;
       }
+      dio.focus.lerp(dio.focusTo, 1 - Math.exp(-dt * 3.5)); // glide to the chosen lift
       // A fixed frame between the top bar and the cards, so the model never shrinks; the detail
       // sheet only raises it.
       const topPx = 100, botPx = 150, want = document.body.classList.contains("detail") ? 0.2 : 0;

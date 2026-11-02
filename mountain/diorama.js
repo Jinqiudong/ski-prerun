@@ -60,6 +60,8 @@ export class Diorama {
     const half = Math.min(1700, Math.max(900, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2 + 450));
     const x0 = Math.max(T.x0, cx - half), x1 = Math.min(T.x1, cx + half), z0 = Math.max(T.z0, cz - half), z1 = Math.min(T.z1, cz + half);
     this.box = { x0, x1, z0, z1, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 };
+    this.focus = new THREE.Vector3(this.box.cx, 60, this.box.cz);
+    this.focusTo = this.focus.clone();
     const root = new THREE.Group();
     this.root = root;
     this.scene.add(root);
@@ -453,8 +455,9 @@ export class Diorama {
     // Start and rest at a three-quarter view (u = 0 is 45° off the base's side), slightly from above.
     const dist = (radius / Math.sin(Math.min(room, hfov) / 2)) * 0.8, // the corners may crop a little
       el = (36 * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
-    this.camera.position.set(cx + Math.cos(a) * dist * Math.cos(el), dist * Math.sin(el), cz + Math.sin(a) * dist * Math.cos(el));
-    this.camera.lookAt(cx, 60, cz);
+    const f = this.focus; // the point at the centre of the frame: the block's centre, or the chosen lift
+    this.camera.position.set(f.x + Math.cos(a) * dist * Math.cos(el), f.y + dist * Math.sin(el), f.z + Math.sin(a) * dist * Math.cos(el));
+    this.camera.lookAt(f);
     // Tilt down so the block's centre sits in the middle of the visible part, not of the whole screen.
     const centreFromTop = topPad + visible / 2 - raise, shift = Math.atan((0.5 - centreFromTop) * 2 * Math.tan(vfov / 2));
     this.camera.rotateX(-shift);
@@ -470,6 +473,13 @@ export class Diorama {
     v.copy(p).project(this.camera);
     if (v.z > 1) return null;
     return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
+  }
+
+  // Centre the frame on a lift (the middle of its line), or on the whole block when null.
+  aim(l) {
+    if (!l) return this.focusTo.set(this.box.cx, 60, this.box.cz);
+    const b = l.pts[0], t = l.pts[l.pts.length - 1];
+    this.focusTo.set((b[0] + t[0]) / 2, (this.Y(b[0], b[1]) + this.Y(t[0], t[1])) / 2, (b[1] + t[1]) / 2);
   }
 
   // The orbit position that looks at a lift from its downhill side, a little off its line.
