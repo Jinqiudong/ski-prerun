@@ -251,17 +251,76 @@ function cardSpruce(detail) {
 }
 
 // Foliage cards: cut out by the texture's alpha; snow from the mask, only on faces turned to the sky.
+// While it snows: grey thick air, a dim sun. Re-applied when the look is rebuilt.
+let snowing = false;
+function setSnowyAir() {
+  scene.fog = new THREE.FogExp2(0xd2d8e0, 0.0016);
+  sun.intensity *= 0.35;
+}
+
+// How much snow lies on the trees, 0 to 1: set from the weather (see weather()), shared by all foliage.
+const treeSnow = { value: 0.6 };
 function foliageMat(map, snowMap, upFacing) {
   const mat = new THREE.MeshStandardMaterial({ map, alphaTest: 0.42, side: THREE.DoubleSide, roughness: 0.85 });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.snowMap = { value: snowMap };
+    sh.uniforms.treeSnow = treeSnow;
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform sampler2D snowMap;")
+      .replace("#include <common>", "#include <common>\nuniform sampler2D snowMap; uniform float treeSnow;")
       .replace("#include <map_fragment>", `#include <map_fragment>
-        float sm = texture2D(snowMap, vMapUv).r * ${upFacing ? "(gl_FrontFacing ? 1.0 : 0.1)" : "0.8"};
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), smoothstep(0.04, 0.3, sm));`);
+        float up = ${upFacing ? "(gl_FrontFacing ? 1.0 : 0.08)" : "0.8"};
+        float sm = texture2D(snowMap, vMapUv).r * up;
+        // More snow: the clumps spread (lower threshold) and a frosting covers the upper faces.
+        float edge = 0.32 * (1.0 - treeSnow);
+        float cover = max(smoothstep(edge, edge + 0.18, sm), up * treeSnow * treeSnow * 0.45);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), cover);`);
   };
   return mat;
+}
+
+// Falling snow around the camera, only while it snows.
+function snowfall() {
+  const n = coarse ? 2500 : 5000, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * 80, Math.random() * 50 - 20, (Math.random() - 0.5) * 80], i * 3);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const c = document.createElement("canvas"); c.width = c.height = 32;
+  const g = c.getContext("2d"), grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd; g.fillRect(0, 0, 32, 32);
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.32, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  pts.frustumCulled = false;
+  pts.visible = false;
+  pts.userData.step = (dt, at) => {
+    const p = geo.attributes.position;
+    for (let i = 0; i < n; i++) {
+      let y = p.getY(i) - 1.3 * dt, x = p.getX(i) + Math.sin(y * 0.3 + i) * 0.3 * dt;
+      if (y < -20) y += 50;
+      p.setXY(i, x, y);
+    }
+    p.needsUpdate = true;
+    pts.position.copy(at);
+  };
+  return pts;
+}
+
+// Copper's weather: snow in the last three days whitens the trees; snowing now makes it fall.
+// ?snow=0..1 and ?falling=1 override it for previews.
+async function weather(params, flakes) {
+  let recent = null, now = false;
+  try {
+    const w = await (await fetch("https://api.open-meteo.com/v1/forecast?latitude=39.4775&longitude=-106.1605&current=weather_code,snowfall&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=America%2FDenver")).json();
+    recent = w.daily.snowfall_sum.slice(0, 3).reduce((a, b) => a + (b || 0), 0);
+    now = (w.current.snowfall || 0) > 0 || [71, 73, 75, 77, 85, 86].includes(w.current.weather_code);
+  } catch { /* offline: keep the default */ }
+  if (recent != null) treeSnow.value = Math.min(1, 0.5 + recent / 25);
+  if (now) treeSnow.value = Math.max(treeSnow.value, 0.85);
+  if (params.has("snow")) treeSnow.value = Math.min(1, Math.max(0, Number(params.get("snow"))));
+  if (params.has("falling")) now = params.get("falling") === "1";
+  flakes.visible = now;
+  snowing = now;
+  if (now && sun) setSnowyAir();
+  $("weather").textContent = `${now ? "❄️ 正在下雪 · " : ""}${recent != null ? `过去 3 天降雪 ${recent.toFixed(1)} 厘米 · ` : ""}树上积雪 ${Math.round(treeSnow.value * 100)}%`;
 }
 
 function plant(spots, geo, mat, scaleOf) {
@@ -469,6 +528,7 @@ function build(look, ctx) {
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.6;
   world.add(sun, sun.target);
+  if (snowing) setSnowyAir();
 
   // Ground and far ranges.
   const groundMat = A ? snowA(tex) : new THREE.MeshLambertMaterial({ color: 0xe9eef6, flatShading: true });
@@ -584,6 +644,9 @@ async function main() {
   build(current, ctx);
   document.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.style !== current) build((current = b.dataset.style), ctx); }));
   $("status").remove();
+  const flakes = snowfall();
+  scene.add(flakes);
+  weather(params, flakes);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = line.total * 0.22, d1 = line.total * 0.66;
@@ -593,6 +656,7 @@ async function main() {
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    if (flakes.visible) flakes.userData.step(dt, camera.position);
     if (!params.has("still")) d += SPEED * 3 * dt;
     if (d > d1) d = d0;
     along(line.up, d, p); along(line.up, d + 4, q);
