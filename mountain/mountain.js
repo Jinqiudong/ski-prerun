@@ -639,7 +639,10 @@ async function main() {
   }
   function go2(l) {
     const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
-    location.href = `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}`;
+    // Chairlifts ride in the new look; carpets and drag lifts still go to the old game.
+    location.href = l.kind === "chair_lift" || l.kind === "mixed_lift"
+      ? `../look.html?lift=${encodeURIComponent(l.name)}`
+      : `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}`;
   }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.

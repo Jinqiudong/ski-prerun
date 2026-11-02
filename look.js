@@ -33,9 +33,20 @@ let seed = 7;
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
 // ---------- Shared: the lift line, its towers and ropes ----------
-// American Flyer: Leitner-Poma detachable six-pack with blue bubbles (2018), 182 chairs, 5 m/s.
-const TOWER_EVERY = 85, ROPE_H = 11.5, HALF_GAUGE = 3.3, CHAIR_GAP = 33, SPEED = 5;
-const SEAT_X = [-1.6, -0.96, -0.32, 0.32, 0.96, 1.6], MY_SEAT = SEAT_X[1];
+// Chairs per lift. Verified: American Flyer is a Leitner-Poma detachable six-pack with blue bubbles (2018,
+// 182 chairs, 5 m/s). The other six-packs are from news of Copper's Leitner-Poma lifts; lifts not listed
+// are drawn as quads until checked.
+const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true }, "American Eagle": { seats: 6 }, "Super Bee": { seats: 6 }, "Timberline Express": { seats: 6 } };
+const TOWER_EVERY = 85, ROPE_H = 11.5, CHAIR_GAP = 33, SPEED = 5;
+let HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false;
+function setLiftKind(name) {
+  const k = LIFT_KIND[name] || { seats: 4 };
+  const gap = 0.64;
+  SEAT_X = Array.from({ length: k.seats }, (_, i) => (i - (k.seats - 1) / 2) * gap);
+  MY_SEAT = SEAT_X[1];
+  HAS_BUBBLE = !!k.bubble;
+  HALF_GAUGE = k.seats === 6 ? 3.3 : 2.7;
+}
 // The bubble hinges at its top back edge and swings up and back when raised.
 const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.1;
 
@@ -83,7 +94,7 @@ function along(path, d, out = new THREE.Vector3()) {
 // A detachable six-pack. Origin at the grip on the rope, +z the way it travels, y up.
 function chairParts() {
   const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
-  const H = 1.95; // half the chair's width
+  const H = SEAT_X[SEAT_X.length - 1] + 0.35; // half the chair's width
   const metal = [
     new THREE.BoxGeometry(0.28, 0.36, 0.7).translate(0, -0.12, 0), // grip
     tube([[0, -0.25, 0], [0, -0.75, -0.14], [0, -1.35, -0.55], [0, -1.95, -0.5], [0, -2.15, -0.32]], 0.06), // hanger
@@ -95,7 +106,8 @@ function chairParts() {
     metal.push(tube([[s * H, -2.15, -0.26], [s * H, -2.12, 0.3]], 0.035)); // armrest
     metal.push(tube([[s * H, -1.8, -0.3], [s * H, -1.88, 0.2], [s * (H - 0.03), -1.96, 0.55]], 0.035)); // safety bar arms, lowered
   }
-  for (const x of [-0.96, 0, 0.96]) { // a footrest for each pair of riders
+  for (let i = 0; i < SEAT_X.length; i += 2) { // a footrest for each pair of riders
+    const x = (SEAT_X[i] + SEAT_X[i + 1]) / 2;
     for (const d of [-0.22, 0.22]) metal.push(tube([[x + d, -1.96, 0.56], [x + d, -2.5, 0.6], [x + d, -2.88, 0.62]], 0.028));
     metal.push(new THREE.BoxGeometry(0.62, 0.04, 0.24).translate(x, -2.9, 0.68));
   }
@@ -630,8 +642,8 @@ function build(look, ctx) {
   const rimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.5 });
   bubblesUp = new THREE.InstancedMesh(parts.bubble, bubbleMat, n); bubblesDown = new THREE.InstancedMesh(parts.bubble, bubbleMat, n);
   rimsUp = new THREE.InstancedMesh(parts.rim, rimMat, n); rimsDown = new THREE.InstancedMesh(parts.rim, rimMat, n);
-  for (const m of [bubblesUp, bubblesDown]) { m.renderOrder = 2; m.frustumCulled = false; world.add(m); }
-  for (const m of [rimsUp, rimsDown]) { m.frustumCulled = false; m.castShadow = true; world.add(m); }
+  for (const m of [bubblesUp, bubblesDown]) { m.renderOrder = 2; m.frustumCulled = false; m.visible = HAS_BUBBLE; world.add(m); }
+  for (const m of [rimsUp, rimsDown]) { m.frustumCulled = false; m.castShadow = true; m.visible = HAS_BUBBLE; world.add(m); }
   for (const m of [chairsUp, padsUp, chairsDown, padsDown]) { m.castShadow = true; m.frustumCulled = false; world.add(m); }
   myChair = new THREE.Group();
   myChair.add(new THREE.Mesh(parts.metal, chairMetal), new THREE.Mesh(parts.pad, padMat));
@@ -639,12 +651,13 @@ function build(look, ctx) {
   myBubble.add(new THREE.Mesh(parts.bubble, bubbleMat), new THREE.Mesh(parts.rim, rimMat));
   myBubble.matrixAutoUpdate = false;
   myBubble.children[0].renderOrder = 2;
+  myBubble.visible = HAS_BUBBLE;
   myChair.add(myBubble);
   myChair.traverse((o) => { o.castShadow = o.receiveShadow = true; });
   rider.position.set(MY_SEAT, -2.95, 0.12);
   myChair.add(rider);
   world.add(myChair);
-  $("desc").textContent = DESC[look];
+  if (!TRIP) $("desc").textContent = DESC[look];
   document.querySelectorAll("[data-style]").forEach((b) => b.classList.toggle("on", b.dataset.style === look));
 }
 
@@ -674,6 +687,8 @@ function sit(model, lookYaw) {
   applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: lookYaw * 0.25, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: clamp(lookYaw * 0.75, -1, 1), spread: 0.08 });
 }
 
+// Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
+const params = new URLSearchParams(location.search), TRIP = params.has("lift");
 async function main() {
   const [R, far] = await Promise.all([fetch("data/copper.json").then((r) => r.json()), fetch("data/copper-far.json").then((r) => r.json())]);
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
@@ -686,11 +701,14 @@ async function main() {
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   await loadAvatar();
   const T = new Terrain(R), mask = treeMaskFn(R, T);
-  const lift = R.lifts.find((l) => l.name === "American Flyer");
+  const lift = R.lifts.find((l) => l.name === (params.get("lift") || "American Flyer")) || R.lifts.find((l) => l.name === "American Flyer");
+  setLiftKind(lift.name);
+  $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
+  $("bubble").hidden = !HAS_BUBBLE;
+  $("styles").hidden = TRIP;
   const line = liftLine(T, lift);
   const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski") };
   ctx.tex.cord.repeat.set(1, 1);
-  const params = new URLSearchParams(location.search);
   let current = params.get("style") === "C" ? "C" : "A";
   build(current, ctx);
   document.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.style !== current) build((current = b.dataset.style), ctx); }));
@@ -700,7 +718,17 @@ async function main() {
   weather(params, flakes);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
-  const d0 = line.total * 0.22, d1 = line.total * 0.66;
+  const d0 = TRIP ? 32 : line.total * 0.22, d1 = TRIP ? line.total - 28 : line.total * 0.66; // clear of the bullwheels
+  let fast = false, arrived = false;
+  const fastBtn = $("fast");
+  fastBtn.hidden = !TRIP;
+  for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
+  $("skip").hidden = !TRIP;
+  $("skip").addEventListener("click", () => (d = d1));
+  const kind = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}").kind || "ski"; } catch { return "ski"; } })();
+  $("again").addEventListener("click", () => location.reload());
+  $("skiDown").addEventListener("click", () => (location.href = `./?lift=${encodeURIComponent(lift.name)}&kind=${kind}`));
+  const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
@@ -714,8 +742,14 @@ async function main() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (flakes.visible) flakes.userData.step(dt, camera.position);
-    if (!params.has("still")) d += SPEED * 3 * dt;
-    if (d > d1) d = d0;
+    if (!params.has("still") && !arrived) d += SPEED * (fast ? 20 : 3) * dt;
+    if (d > d1) {
+      if (TRIP) {
+        d = d1;
+        if (!arrived) { arrived = true; $("arrive").hidden = false; $("fast").hidden = $("skip").hidden = true; $("arriveTitle").textContent = `到山顶了 · ${lift.name}`; }
+      } else d = d0;
+    }
+    if (TRIP && !arrived) $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3)))} · 转动手机看四周`;
     along(line.up, d, p); along(line.up, d + 4, q);
     const yaw = Math.atan2(q.x - p.x, q.z - p.z);
     myChair.position.copy(p);

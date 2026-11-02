@@ -15,6 +15,18 @@
     #styles button { font: inherit; font-size: 15px; font-weight: 600; color: #f4f7fb; padding: 10px 16px; border-radius: 999px; cursor: pointer; }
     #styles button.on { background: #2f7fe8; border-color: #2f7fe8; }
     #bubble { position: fixed; right: 10px; top: calc(118px + env(safe-area-inset-top)); font: inherit; font-size: 13px; color: #f4f7fb; padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+    #back { float: right; color: #9fc3ff; font-size: 13px; text-decoration: none; }
+    #pads { position: fixed; left: 0; right: 0; bottom: calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: center; align-items: center; gap: 14px; pointer-events: none; }
+    #pads button { pointer-events: auto; font: inherit; color: #f4f7fb; cursor: pointer; }
+    #skip { padding: 9px 14px; border-radius: 999px; font-size: 14px; }
+    #fast { width: 74px; height: 74px; border-radius: 50%; font-size: 14px; font-weight: 600; -webkit-user-select: none; user-select: none; touch-action: none; }
+    #arrive { position: fixed; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 14px 16px; }
+    #arrive b { font-size: 18px; }
+    #arrive p { margin: 4px 0 10px; font-size: 13px; color: #b9c4d3; }
+    #arrive .row { display: grid; gap: 8px; }
+    #arrive .btn { display: block; text-align: center; font: inherit; font-size: 15px; color: #f4f7fb; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 10px; text-decoration: none; cursor: pointer; }
+    #arrive .go { background: #2f7fe8; border-color: #2f7fe8; font-weight: 600; }
+    [hidden] { display: none !important; }
     #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 12px 18px; }
     #credit { position: fixed; right: 6px; bottom: 2px; font-size: 9px; color: rgba(30, 40, 55, .6); pointer-events: none; }
   </style>
@@ -22,11 +34,14 @@
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div id="top" class="glass"><b>🚡 American Flyer · 画面样稿</b><p id="desc"></p><p id="weather"></p></div>
+  <div id="top" class="glass"><b>🚡 <span id="liftName"></span></b> <a id="back" href="mountain/">← 沙盘</a><p id="desc"></p><p id="weather"></p></div>
   <button id="bubble" class="glass">🫧 放下防风罩</button>
+  <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
+  <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p>滑雪部分还在用旧版画面，正在换新。</p>
+    <div class="row"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
   <div id="styles"><button class="glass" data-style="A">A 半写实</button><button class="glass" data-style="C">C 风格化</button></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=5"></script>
+  <script type="module" src="look.js?v=6"></script>
 </body>
 </html>
