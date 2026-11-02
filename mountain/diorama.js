@@ -52,6 +52,8 @@ export class Diorama {
   build({ T, R, mask, graph, base, lifts, title }) {
     if (this.root) { this.scene.remove(this.root); this.root.traverse((o) => { o.geometry?.dispose(); }); }
     this.movers = [];
+    this.anims = [];
+    this.anchors = new Map();
     this.T = T;
     const xs = [base.x, ...lifts.map((l) => l.pts[l.pts.length - 1][0])], zs = [base.z, ...lifts.map((l) => l.pts[l.pts.length - 1][1])];
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
@@ -218,17 +220,24 @@ export class Diorama {
   runs(R, x0, x1, z0, z1, Y) {
     const group = new THREE.Group();
     const inside = (p) => p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1;
-    const ribbon = (pts, width, lift) => {
-      const pos = [], idx = [];
+    const ribbon = (pts, width, lift, area) => {
+      const pos = [], idx = [], along = [];
+      // 0 at the top of the run, 1 at the bottom: by distance for a line, by height for an outlined area.
+      const d = [0];
+      for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const hs = pts.map(([x, z]) => Y(x, z)), hmax = Math.max(...hs), hmin = Math.min(...hs);
+      const downhill = hs[0] >= hs[hs.length - 1];
+      const at = (i) => (area ? (hmax - hs[i]) / (hmax - hmin || 1) : downhill ? d[i] / d[d.length - 1] : 1 - d[i] / d[d.length - 1]);
       for (let i = 0; i < pts.length; i++) {
         const [x, z] = pts[i], [ax, az] = pts[Math.max(0, i - 1)], [bx, bz] = pts[Math.min(pts.length - 1, i + 1)];
         let dx = bx - ax, dz = bz - az;
         const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
-        for (const sd of [-1, 1]) { const px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2; pos.push(px, Y(px, pz) + lift, pz); }
+        for (const sd of [-1, 1]) { const px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2; pos.push(px, Y(px, pz) + lift, pz); along.push(at(i)); }
         if (i) { const b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
       }
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("along", new THREE.Float32BufferAttribute(along, 1));
       geo.setIndex(idx);
       geo.computeVertexNormals();
       return geo;
@@ -236,10 +245,21 @@ export class Diorama {
     for (const run of R.runs) {
       const pts = (run.outline || run.pts).filter(inside);
       if (pts.length < 3) continue;
-      const mat = new THREE.MeshStandardMaterial({ color: RUN_COLOR[run.level], roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
-      const mesh = new THREE.Mesh(ribbon(pts, run.area ? 10 : 24, 2), mat);
+      const mat = new THREE.MeshStandardMaterial({ color: RUN_COLOR[run.level], roughness: 0.5, transparent: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+      // Above uReveal the run shows at uTo, below it still at uFrom; a light band marks the front.
+      const u = { uReveal: { value: 1 }, uFrom: { value: 1 }, uTo: { value: 1 }, uFront: { value: 0 } };
+      mat.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, u);
+        sh.vertexShader = "attribute float along;\nvarying float vAlong;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvAlong = along;");
+        sh.fragmentShader = "varying float vAlong;\nuniform float uReveal, uFrom, uTo, uFront;\n" + sh.fragmentShader.replace("#include <dithering_fragment>", `#include <dithering_fragment>
+          float lit = step(vAlong, uReveal);
+          gl_FragColor.a *= mix(uFrom, uTo, lit);
+          gl_FragColor.rgb += vec3(0.75, 0.85, 1.0) * uFront * smoothstep(0.07, 0.0, abs(vAlong - uReveal));`);
+      };
+      const mesh = new THREE.Mesh(ribbon(pts, run.area ? 10 : 24, 2, run.area), mat);
       mesh.receiveShadow = true;
       mesh.userData.run = run;
+      mesh.userData.u = u;
       group.add(mesh);
     }
     return group;
@@ -254,6 +274,8 @@ export class Diorama {
       for (let k = i === 1 ? 0 : 1; k <= n; k++) dense.push(pts[i - 1].clone().lerp(pts[i], k / n));
     }
     const towerH = 34 * TOY;
+    const mid = dense[Math.round(dense.length * 0.6)] || pts[pts.length - 1];
+    this.anchors.set(l, mid.clone().add(new THREE.Vector3(0, towerH + 30, 0)));
     const steel = new THREE.MeshStandardMaterial({ color: 0x5b6270, roughness: 0.4, metalness: 0.5 });
     const rope = dense.map((p) => p.clone().add(new THREE.Vector3(0, towerH, 0)));
     for (let i = 0; i < dense.length; i++) {
@@ -376,51 +398,95 @@ export class Diorama {
   }
 
   // Light up the runs you can reach from a lift's top without taking another lift; dim the rest.
+  // Three tiers: runs leaving the top, runs you can carry on to, everything else faded. The light flows
+  // downhill: runs leaving the top first, then the ones they lead to.
   highlightFrom(lift) {
-    const reach = new Set();
+    const depth = new Map();
     if (lift && this.graph) {
-      const start = this.graph.liftNodes.get(lift).top.id, seen = new Set([start]), stack = [start];
-      while (stack.length) {
-        const u = stack.pop();
+      const start = this.graph.liftNodes.get(lift).top.id, seen = new Set([start]), queue = [[start, 0]];
+      while (queue.length) {
+        const [u, d] = queue.shift();
         for (const e of this.graph.edges[u]) {
           if (e.leg.type === "lift") continue;
-          if (e.leg.type === "run") reach.add(e.leg.run);
-          if (!seen.has(e.to)) { seen.add(e.to); stack.push(e.to); }
+          let nd = d;
+          if (e.leg.type === "run") { if (!depth.has(e.leg.run)) depth.set(e.leg.run, d); nd = d + 1; }
+          if (!seen.has(e.to)) { seen.add(e.to); queue.push([e.to, nd]); }
         }
       }
     }
-    // Three tiers: runs leaving the top, runs you can carry on to, everything else faded.
     const top = lift && lift.pts[lift.pts.length - 1];
     const fromTop = new Set(lift ? this.R.runs.filter((r) => Math.hypot(r.pts[0][0] - top[0], r.pts[0][1] - top[1]) < 160) : []);
+    for (const r of fromTop) depth.set(r, 0);
+    this.light3(lift ? (run) => (fromTop.has(run) ? 1 : depth.has(run) ? 0.5 : 0.12) : () => 1, (run) => Math.min(depth.get(run) ?? 0, 6) * 0.3);
+    return { reach: new Set(depth.keys()), fromTop };
+  }
+
+  // Light only the runs of a route, one after another in the order they are skied.
+  highlightRoute(runs) {
+    const order = new Map();
+    runs.forEach((r, i) => order.has(r) || order.set(r, i));
+    this.light3((run) => (order.has(run) ? 1 : 0.1), (run) => (order.get(run) ?? 0) * 0.45);
+  }
+
+  light3(tier, delay) {
+    const now = performance.now() / 1000;
+    this.anims = [];
     for (const m of this.runLayer.children) {
-      const run = m.userData.run;
-      m.material.transparent = true;
-      m.material.opacity = !lift || fromTop.has(run) ? 1 : reach.has(run) ? 0.5 : 0.12;
+      const u = m.userData.u, to = tier(m.userData.run);
+      if (to > 0.12) {
+        u.uFrom.value = 0.12; u.uTo.value = to; u.uReveal.value = 0; u.uFront.value = 1;
+        this.anims.push({ u, t0: now + delay(m.userData.run), dur: 0.9 });
+      } else {
+        u.uFrom.value = u.uTo.value = to; u.uReveal.value = 1; u.uFront.value = 0;
+      }
     }
-    return { reach, fromTop };
   }
 
   // Camera on a circle around the block; u in [0, 1) is the position on the circle.
   // u: position on the circle [0, 1). visible: the fraction of the screen height above the drawer;
   // the block is fitted into that part and centred in it.
-  orbit(u, visible = 1, topPad = 0) {
+  orbit(u, visible = 1, topPad = 0, raise = 0) {
     const { cx, cz, x0, x1, z0, z1 } = this.box;
     const radius = Math.hypot(x1 - x0, z1 - z0) / 2 + 150;
     const vfov = (this.camera.fov * Math.PI) / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
     const room = 2 * Math.atan(Math.tan(vfov / 2) * visible); // vertical angle of the visible part
     // Start and rest at a three-quarter view (u = 0 is 45° off the base's side), slightly from above.
-    const dist = (radius / Math.sin(Math.min(room, hfov) / 2)) * (visible < 0.7 ? 0.88 : 1.04), // a small space may crop the corners a little
+    const dist = (radius / Math.sin(Math.min(room, hfov) / 2)) * 0.8, // the corners may crop a little
       el = (36 * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
     this.camera.position.set(cx + Math.cos(a) * dist * Math.cos(el), dist * Math.sin(el), cz + Math.sin(a) * dist * Math.cos(el));
     this.camera.lookAt(cx, 60, cz);
     // Tilt down so the block's centre sits in the middle of the visible part, not of the whole screen.
-    const centreFromTop = topPad + visible / 2, shift = Math.atan((0.5 - centreFromTop) * 2 * Math.tan(vfov / 2));
+    const centreFromTop = topPad + visible / 2 - raise, shift = Math.atan((0.5 - centreFromTop) * 2 * Math.tan(vfov / 2));
     this.camera.rotateX(-shift);
     this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 1 - centreFromTop; // focus on the block
+    this.camera.updateMatrixWorld();
+    this.a = a;
+  }
+
+  // Where a lift's tag goes on screen, in CSS pixels; null when behind the camera.
+  screenOf(l, v = new THREE.Vector3()) {
+    const p = this.anchors.get(l);
+    if (!p) return null;
+    v.copy(p).project(this.camera);
+    if (v.z > 1) return null;
+    return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight };
+  }
+
+  // The orbit position that looks at a lift from its downhill side, a little off its line.
+  facing(l) {
+    const b = l.pts[0], t = l.pts[l.pts.length - 1];
+    const a = Math.atan2(b[1] - t[1], b[0] - t[0]) + 0.6;
+    return (((a + Math.PI / 4) / (Math.PI * 2)) % 1 + 1) % 1;
   }
 
   render(t) {
     for (const f of this.movers) f(t);
+    const now = performance.now() / 1000;
+    for (const a of this.anims) {
+      const k = Math.min(1, Math.max(0, (now - a.t0) / a.dur));
+      a.u.uReveal.value = 1 - (1 - k) * (1 - k);
+      if (k >= 1) a.u.uFront.value = 0;
+    }
     this.composer.render();
   }
 }

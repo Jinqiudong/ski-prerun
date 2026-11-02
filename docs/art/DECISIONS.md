@@ -40,5 +40,10 @@ Next: storyboard of the day flow (step 3 for this flow), then build.
 - Lift choice as cards: length, ride time, top altitude, runs leaving the top by difficulty. The chosen
   lift lights runs in three tiers: leaving the top, reachable without another lift, the rest faded.
 - Quick plans (warm-up green, cruise blue, challenge black) suggest one loop back to the base.
+- Lift selection UI (owner chose C+A from the comparison page): the model never shrinks or moves when
+  the UI changes. Each lift has a floating tag in the world; a horizontal card carousel sits along the
+  bottom; tag, centred card and lit runs stay in sync. Picking a lift turns the model to see it from
+  below and lights its runs flowing downhill from the top. Plan chips sit along the top. "详情" grows into
+  a sheet; the model dims and rises a little but keeps its size.
 - Proposed by Claude, pending the owner's review: nav cues at 200 m and again at 50 m; keep a compact
   slope profile in run previews.

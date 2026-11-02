@@ -47,31 +47,62 @@
     #miniTop button { font: inherit; color: var(--ink); cursor: pointer; }
     #introSkip { position: fixed; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); padding: 8px 16px; font: inherit; color: var(--ink); cursor: pointer; display: none; }
     body.mini #introSkip:not([hidden]) { display: block; }
-    /* Bottom drawer: a handle when closed, the lift cards when open. */
-    #liftPick { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 0 12px 12px; display: none; border-radius: 18px; }
-    #liftPick.show { display: block; }
-    #liftPick:not(.open) .drawerBody { display: none; }
-    .drawerBody { max-height: 48vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; } /* the miniature keeps the top half */
-    #drawerHandle { width: 100%; background: none; border: 0; color: var(--ink); font: inherit; padding: 8px 0 10px; cursor: pointer; display: grid; justify-items: center; gap: 4px; }
-    #drawerHandle i { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.45); }
-    #drawerHandle span { font-size: 14px; font-weight: 600; }
-    #liftPick.open #drawerHandle span::after { content: " ▾"; }
-    #liftPick:not(.open) #drawerHandle span::after { content: " ▴"; }
-    .next { margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,.18); display: grid; gap: 1px; }
-    .next b { color: var(--ink); font-weight: 600; }
-    #liftPick h3 { margin: 0 0 6px; font-size: 14px; color: var(--muted); font-weight: 400; }
-    .plans { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
-    .plans button { font: inherit; font-size: 13px; color: var(--ink); background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+    /* Picking a lift: tags in the world, plan chips on top, cards along the bottom, a detail sheet. */
+    #liftTags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; display: none; }
+    body.picking #liftTags { display: block; }
+    body.detail #liftTags { opacity: 0; }
+    .ltag { position: absolute; left: 0; top: 0; pointer-events: auto; font: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; transition: opacity .2s; }
+    .ltag b, .ltag small { background: rgba(14, 22, 34, .78); white-space: nowrap; }
+    .ltag b { font-size: 13px; font-weight: 600; padding: 4px 10px 2px; border-radius: 10px 10px 0 0; border: 1px solid rgba(255,255,255,.25); border-bottom: 0; transition: background .2s, transform .2s; }
+    .ltag small { font-size: 11px; color: var(--muted); padding: 0 10px 4px; border-radius: 0 0 10px 10px; border: 1px solid rgba(255,255,255,.25); border-top: 0; }
+    .ltag i { width: 2px; height: 14px; background: rgba(255,255,255,.85); }
+    .ltag.small b { font-size: 11px; } .ltag.small small { display: none; } .ltag.small b { border-radius: 10px; border-bottom: 1px solid rgba(255,255,255,.25); padding-bottom: 4px; }
+    .ltag.on { z-index: 2; }
+    .ltag.on b, .ltag.on small { background: var(--accent); color: #fff; border-color: rgba(255,255,255,.7); }
+    body.picking .ltag:not(.on) { opacity: .82; }
+    #plansBar { position: fixed; top: calc(60px + env(safe-area-inset-top)); left: 12px; right: 12px; display: none; flex-direction: column; align-items: flex-start; gap: 6px; }
+    body.picking #plansBar { display: flex; }
+    body.detail #plansBar { opacity: 0; pointer-events: none; }
+    .plans { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .plans span { font-size: 13px; color: #1d2633; text-shadow: 0 1px 2px rgba(255,255,255,.7); }
+    .plans button { font: inherit; font-size: 13px; color: var(--ink); padding: 5px 11px; border-radius: 999px; cursor: pointer; }
     .plans button.on { background: var(--accent); border-color: var(--accent); }
-    #planOut { font-size: 13px; color: var(--muted); min-height: 18px; margin-bottom: 8px; }
+    #planOut { font-size: 12px; padding: 6px 10px; max-width: 520px; color: var(--muted); }
     #planOut b { color: var(--ink); }
-    #liftCards { display: grid; gap: 6px; }
-    .liftCard { text-align: left; font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 8px 10px; cursor: pointer; display: grid; gap: 2px; }
-    .liftCard.on { border-color: var(--accent); background: rgba(47,127,232,.22); }
-    .liftCard b { font-size: 15px; }
+    #liftCards { position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom)); display: none; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 calc(50vw - min(39vw, 160px)); scrollbar-width: none; touch-action: pan-x; transition: transform .3s, opacity .3s; }
+    #liftCards::-webkit-scrollbar { display: none; }
+    body.picking #liftCards { display: flex; }
+    body.detail #liftCards { transform: translateY(30px); opacity: 0; pointer-events: none; }
+    .liftCard { flex: 0 0 min(78vw, 320px); scroll-snap-align: center; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; background: var(--glass); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); display: grid; gap: 4px; cursor: pointer; opacity: .78; transform: scale(.96); transition: transform .25s, opacity .25s, border-color .25s; }
+    .liftCard.on { opacity: 1; transform: none; border-color: var(--accent); }
+    .liftCard .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .liftCard b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .liftCard small { color: var(--muted); font-size: 12px; }
-    #liftHint { font-size: 12px; color: var(--muted); margin: 8px 0 6px; min-height: 16px; }
-    #liftGo { width: 100%; font: inherit; font-weight: 600; font-size: 16px; color: #fff; background: var(--accent); border: 0; border-radius: 12px; padding: 11px; cursor: pointer; }
+    .lvls { display: flex; gap: 6px; font-size: 12px; white-space: nowrap; }
+    .cnt { display: inline-flex; align-items: center; }
+    .acts { display: flex; gap: 8px; margin-top: 4px; }
+    .acts button { font: inherit; font-size: 14px; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+    .acts .more { color: var(--ink); background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); flex: 0 0 auto; }
+    .acts .go { flex: 1; color: #fff; background: var(--accent); border: 0; font-weight: 600; }
+    .liftCard:not(.on) .acts .go { background: rgba(47,127,232,.45); }
+    body.detail #credit { opacity: 0; }
+    body.picking #credit { bottom: calc(150px + env(safe-area-inset-bottom)); }
+    #dim { position: fixed; inset: 0; background: rgba(6, 12, 22, .38); opacity: 0; pointer-events: none; transition: opacity .3s; }
+    body.detail #dim { opacity: 1; pointer-events: auto; }
+    #detail { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 6px 16px 14px; border-radius: 18px; transform: translateY(110%); transition: transform .35s cubic-bezier(.2,.8,.2,1); display: none; }
+    body.picking #detail { display: block; }
+    body.detail #detail { transform: none; }
+    #detailClose { width: 100%; background: none; border: 0; padding: 6px 0 4px; cursor: pointer; display: grid; justify-items: center; }
+    #detailClose i { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.45); }
+    #detailBody { max-height: 44vh; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+    #detailBody h2 { margin: 2px 0; font-size: 19px; }
+    #detailBody h3 { margin: 12px 0 4px; font-size: 13px; color: var(--muted); font-weight: 400; }
+    #detailBody .meta, #detailBody .hint { margin: 0; color: var(--muted); font-size: 13px; }
+    #detailBody .hint { margin-top: 12px; font-size: 12px; }
+    #detailBody .runs { margin: 0 0 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; }
+    #detailBody .nx { margin: 0 0 6px; font-size: 14px; display: grid; }
+    #detailBody .nx small { color: var(--muted); font-size: 12px; }
+    #detailGo { width: 100%; margin-top: 10px; font: inherit; font-weight: 600; font-size: 16px; color: #fff; background: var(--accent); border: 0; border-radius: 12px; padding: 11px; cursor: pointer; }
     .lv { display: inline-block; width: 9px; height: 9px; margin-right: 3px; vertical-align: 0; }
     .lv.easy { background: #22b35a; border-radius: 50%; } .lv.intermediate { background: #1f6fe5; }
     .lv.advanced { background: #111; transform: rotate(45deg) scale(.8); outline: 1px solid #fff; } .lv.expert { background: #111; transform: rotate(45deg) scale(.8); outline: 1px solid #fff; box-shadow: 6px -6px 0 #111; margin-right: 8px; }
@@ -85,18 +116,11 @@
   <div id="vignette"></div>
   <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
   <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
-  <div id="liftPick" class="glass">
-    <button id="drawerHandle" aria-label="展开或收起缆车选择"><i></i><span>选缆车</span></button>
-    <div class="drawerBody">
-    <h3>今天想怎么滑</h3>
-    <div class="plans"><button data-plan="easy">热身（绿）</button><button data-plan="intermediate">巡航（蓝）</button><button data-plan="advanced">挑战（黑）</button></div>
-    <div id="planOut"></div>
-    <h3>选一条缆车（按住看它能通到哪）</h3>
-    <div id="liftCards"></div>
-    <div id="liftHint"></div>
-    <button id="liftGo">坐缆车上山 ›</button>
-    </div>
-  </div>
+  <div id="liftTags"></div>
+  <div id="plansBar"><div class="plans"><span>今天想怎么滑</span><button class="glass" data-plan="easy">热身（绿）</button><button class="glass" data-plan="intermediate">巡航（蓝）</button><button class="glass" data-plan="advanced">挑战（黑）</button></div><div id="planOut" class="glass" hidden></div></div>
+  <div id="liftCards"></div>
+  <div id="dim"></div>
+  <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
   <div id="pins"></div>
   <div id="now" class="glass">…</div>
   <div id="timePanel" class="glass">
@@ -115,6 +139,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=12"></script>
+  <script type="module" src="mountain.js?v=13"></script>
 </body>
 </html>
