@@ -611,6 +611,7 @@ function gradientSky(top, horizon, bottom) {
 
 // ---------- The scene for a look ----------
 let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
+let topTerm = null;
 let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
 function build(look, ctx) {
   if (world) { scene.remove(world); world.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); } }); }
@@ -705,7 +706,7 @@ function build(look, ctx) {
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
   // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
   world.add(terminal(line.towers[0].p.clone(), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
-  world.add(terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
+  world.add(topTerm = terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
 
   const parts = ctx.chair;
   const chairMetal = A ? metalMat : new THREE.MeshLambertMaterial({ color: 0x6b6f7d, flatShading: true });
@@ -734,6 +735,190 @@ function build(look, ctx) {
   myChair.add(rider);
   world.add(myChair);
   if (!TRIP) $("desc").textContent = DESC[look];
+}
+
+// ---------- At the top: get off, rise above the summit, pick a run, dive back down to ski it ----------
+const ease = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+const LEVEL_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
+const LEVEL_MARK = { easy: '<i class="lv easy"></i>', intermediate: '<i class="lv intermediate"></i>', advanced: '<i class="lv advanced"></i>', expert: '<i class="lv expert"></i>' };
+function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
+  const st = { phase: null, t0: 0, focus: new THREE.Vector3(), pick: null };
+  const g1 = line.ground[line.ground.length - 1];
+  // Runs that start at this lift's top, the longest of each name.
+  const byName = new Map();
+  R.runs.forEach((r, idx) => {
+    if (!r.name || r.area || Math.hypot(r.pts[0][0] - g1.x, r.pts[0][1] - g1.z) > 200) return;
+    if (!byName.has(r.name) || byName.get(r.name).run.length < r.length) byName.set(r.name, { run: r, idx });
+  });
+  const LV = ["easy", "intermediate", "advanced", "expert"];
+  const runs = [...byName.values()].sort((a, b) => LV.indexOf(a.run.level) - LV.indexOf(b.run.level) || b.run.length - a.run.length);
+  for (const o of runs) {
+    const r = o.run, hs = r.pts.map(([x, z]) => T.heightAt(x, z));
+    let steep = 0, dist = [0];
+    for (let i = 1; i < r.pts.length; i++) dist.push(dist[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
+    for (let i = 0, j = 0; i < r.pts.length; i++) { while (j < i && dist[i] - dist[j] > 25) j++; if (dist[i] - dist[j] > 10) steep = Math.max(steep, Math.atan2(hs[j] - hs[i], dist[i] - dist[j])); }
+    o.steep = Math.round((steep * 180) / Math.PI);
+    o.hs = hs; o.dist = dist;
+    const end = r.pts[r.pts.length - 1];
+    o.next = R.lifts.filter((l) => l !== lift && l.kind !== "magic_carpet" && Math.hypot(l.pts[0][0] - end[0], l.pts[0][1] - end[1]) < 260).map((l) => l.name);
+  }
+  // Where the rider stands after getting off: down the ramp, beside the sign.
+  const standAt = () => {
+    topTerm.updateMatrixWorld(true);
+    return topTerm.localToWorld(new THREE.Vector3(-HALF_GAUGE, 0.25, -7.5));
+  };
+  const runRibbon = (r, width, lift = 0.6) => {
+    const pos = [], idx = [];
+    r.pts.forEach(([x, z], i) => {
+      const [ax, az] = r.pts[Math.max(0, i - 1)], [bx, bz] = r.pts[Math.min(r.pts.length - 1, i + 1)];
+      let dx = bx - ax, dz = bz - az; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+      for (const sd of [-1, 1]) { const px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2; pos.push(px, T.heightAt(px, pz) + lift, pz); }
+      if (i) { const b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+    });
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    return g;
+  };
+  const marks = new THREE.Group(); // the runs from this top, in their colours; the chosen one bold
+  let chosen = null;
+  const tags = $("runTags"), cards = $("runCards");
+  let from, to, fromLook, toLook, riderFrom, riderTo, yaw0;
+  st.start = (now) => {
+    st.phase = "unload"; st.t0 = now;
+    bubbleWant = 1;
+    const rider = ctx.rider;
+    rider.updateMatrixWorld(true);
+    riderFrom = rider.getWorldPosition(new THREE.Vector3());
+    yaw0 = getChair().rotation.y;
+    scene.attach(rider);
+    riderTo = standAt();
+    $("desc").textContent = "到站了，下缆车…";
+  };
+  const camBehind = (r, ang, dist, hgt) => r.clone().add(new THREE.Vector3(Math.sin(yaw0 + ang) * -dist, hgt, Math.cos(yaw0 + ang) * -dist));
+  st.step = (now, dt) => {
+    const t = (now - st.t0) / 1000, rider = ctx.rider;
+    if (st.phase === "unload") {
+      // Stand, glide down the ramp to the sign, camera swinging round to the rider's front quarter.
+      const u = ease(Math.min(1, t / 2.6));
+      rider.position.lerpVectors(riderFrom, riderTo, u);
+      rider.position.y += Math.sin(Math.min(1, t / 0.6) * Math.PI) * 0.15 * (1 - u);
+      rider.rotation.set(0, yaw0, 0);
+      const ud = rider.userData;
+      ud.yaw.rotation.set(0, 0, 0); ud.pivot.rotation.set(0, 0, 0); ud.stance.rotation.y = 0;
+      applyPose(rider, u < 0.25 ? { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: 0, spread: 0.08 }
+        : { knee: 0.25 + 0.25 * (1 - u), fwd: 0.15, twist: 0, armsOut: 0.25, armsFwd: 0.3, elbow: 0.4, headYaw: 0, spread: 0.12 });
+      const c = rider.position.clone();
+      camera.position.copy(camBehind(c, u * 2.4, 5.5, 2.2));
+      camera.lookAt(c.clone().add(new THREE.Vector3(0, 1.1, 0)));
+      st.focus.copy(c);
+      if (t > 2.8) { st.phase = "rise"; st.t0 = now; setupPick(); }
+    } else if (st.phase === "rise" || st.phase === "dive") {
+      const u = ease(Math.min(1, t / (st.phase === "rise" ? 2.6 : 1.6)));
+      const a = st.phase === "rise" ? from : to, b = st.phase === "rise" ? to : from;
+      const la = st.phase === "rise" ? fromLook : toLook, lb = st.phase === "rise" ? toLook : fromLook;
+      camera.position.lerpVectors(a, b, u);
+      camera.lookAt(new THREE.Vector3().lerpVectors(la, lb, u));
+      if (u >= 1) {
+        if (st.phase === "rise") { st.phase = "pick"; $("pick").hidden = false; document.body.classList.add("picking"); select(runs[0]); }
+        else location.href = `./?run=${chosen.idx}&kind=${kind}`;
+      }
+    } else if (st.phase === "pick") {
+      camera.position.copy(to); camera.lookAt(toLook);
+      placeTags();
+      if (marks.userData.reveal) {
+        const m = marks.userData.reveal, k = Math.min(1, (now - m.t0) / 1100);
+        m.mesh.geometry.setDrawRange(0, Math.floor(m.count * k / 6) * 6);
+      }
+    }
+    st.focus.copy(camera.position);
+  };
+  function setupPick() {
+    // From the rider at the sign, rise and pull back above the summit, looking down the runs.
+    from = camera.position.clone();
+    fromLook = ctx.rider.position.clone().add(new THREE.Vector3(0, 1.1, 0));
+    const pts = runs.flatMap((o) => o.run.pts.slice(0, Math.ceil(o.run.pts.length * 0.6)));
+    const c = pts.reduce((acc, [x, z]) => acc.add(new THREE.Vector3(x, T.heightAt(x, z), z)), new THREE.Vector3()).multiplyScalar(1 / Math.max(1, pts.length));
+    if (!pts.length) c.copy(riderTo);
+    const back = new THREE.Vector3(c.x - riderTo.x, 0, c.z - riderTo.z).normalize();
+    to = riderTo.clone().addScaledVector(back, -380).add(new THREE.Vector3(0, 420, 0));
+    toLook = c.clone().lerp(riderTo, 0.25);
+    for (const o of runs) {
+      const m = new THREE.Mesh(runRibbon(o.run, 9, 2.0), new THREE.MeshBasicMaterial({ color: LEVEL_COLOR[o.run.level], transparent: true, opacity: 0.55, depthWrite: false, fog: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 }));
+      m.renderOrder = 4; o.mark = m; marks.add(m);
+    }
+    scene.add(marks);
+    $("desc").textContent = `${runs.length} 条雪道从 ${lift.name} 山顶出发 · 左右滑卡片选一条`;
+    tags.innerHTML = ""; cards.innerHTML = "";
+    for (const o of runs) {
+      const tag = document.createElement("button");
+      tag.className = "rtag"; tag.innerHTML = `${LEVEL_MARK[o.run.level]}${o.run.name}`;
+      tag.onclick = () => select(o, true);
+      tags.append(tag); o.tag = tag;
+      const card = document.createElement("div");
+      card.className = "rcard";
+      card.innerHTML = `<div class="r1">${LEVEL_MARK[o.run.level]}<b>${o.run.name}</b></div>
+        <small>${(o.run.length / 1000).toFixed(1)} 公里 · 落差 ${o.run.drop} 米 · 最陡约 ${o.steep}°</small>
+        <canvas width="300" height="46"></canvas>
+        <small>${o.next.length ? `滑到底接：${o.next.slice(0, 3).join("、")}` : "滑到底：回到山下"}</small>
+        <button class="go">从这条滑下去 ›</button>`;
+      drawProfile(card.querySelector("canvas"), o);
+      card.onclick = (e) => { if (!e.target.closest("button")) select(o, true); };
+      card.querySelector(".go").onclick = () => { st.phase = "dive"; st.t0 = performance.now(); $("pick").hidden = true; tags.innerHTML = ""; };
+      cards.append(card); o.card = card;
+    }
+    let settle = 0;
+    cards.onscroll = () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        const mid = cards.getBoundingClientRect().left + cards.clientWidth / 2;
+        let best = null, bd = Infinity;
+        for (const o of runs) { const r = o.card.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < bd) { bd = d; best = o; } }
+        if (best && best !== chosen) select(best);
+      }, 90);
+    };
+  }
+  function select(o, scroll) {
+    if (!o) return;
+    chosen = o;
+    for (const r of runs) {
+      r.card.classList.toggle("on", r === o); r.tag.classList.toggle("on", r === o);
+      r.mark.material.opacity = r === o ? 0 : 0.35;
+    }
+    // The chosen run, bold, drawn from the top down.
+    if (marks.userData.reveal) { marks.remove(marks.userData.reveal.mesh); marks.userData.reveal.mesh.geometry.dispose(); }
+    const geo = runRibbon(o.run, 20, 2.5);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: LEVEL_COLOR[o.run.level], transparent: true, opacity: 0.95, depthWrite: false, fog: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 }));
+    mesh.renderOrder = 5;
+    marks.add(mesh);
+    marks.userData.reveal = { mesh, count: geo.index.count, t0: performance.now() };
+    geo.setDrawRange(0, 0);
+    navigator.vibrate?.(8);
+    if (scroll) o.card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }
+  function drawProfile(cv, o) {
+    const g = cv.getContext("2d"), W = cv.width, H = cv.height, hs = o.hs, ds = o.dist;
+    const hi = Math.max(...hs), lo = Math.min(...hs), L = ds[ds.length - 1] || 1;
+    g.beginPath(); g.moveTo(0, H);
+    hs.forEach((h, i) => g.lineTo((ds[i] / L) * W, 4 + (1 - (h - lo) / (hi - lo || 1)) * (H - 8)));
+    g.lineTo(W, H); g.closePath();
+    g.fillStyle = "rgba(255,255,255,0.18)"; g.fill();
+    g.strokeStyle = "#" + new THREE.Color(LEVEL_COLOR[o.run.level] === 0x15171c ? 0xdfe6ef : LEVEL_COLOR[o.run.level]).getHexString(); g.lineWidth = 2.5; g.stroke();
+  }
+  const v = new THREE.Vector3();
+  function placeTags() {
+    for (const o of runs) {
+      const i = Math.min(o.run.pts.length - 1, Math.floor(o.run.pts.length * 0.18));
+      const [x, z] = o.run.pts[i];
+      v.set(x, T.heightAt(x, z) + 6, z).project(camera);
+      const on = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+      o.tag.style.display = on ? "" : "none";
+      if (on) o.tag.style.transform = `translate(${(v.x * 0.5 + 0.5) * innerWidth}px, ${(-v.y * 0.5 + 0.5) * innerHeight}px) translate(-50%, -100%)`;
+    }
+  }
+  st.runs = runs;
+  st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, marks: marks.children.length, inScene: !!marks.parent, cam: camera.position.toArray().map((v) => Math.round(v)),
+    first: marks.children[0] && (() => { const g = marks.children[0].geometry, v = new THREE.Vector3().fromBufferAttribute(g.attributes.position, 0); const w = v.clone(); v.project(camera); return { world: w.toArray().map(Math.round), ndc: v.toArray().map((x) => +x.toFixed(2)), drawn: g.drawRange.count, n: g.index.count }; })(),
+    bold: marks.userData.reveal && marks.userData.reveal.mesh.geometry.drawRange.count });
+  return st;
 }
 
 // ---------- Looking around (same as the game: phone turn or drag, limited like a seated rider) ----------
@@ -807,6 +992,8 @@ async function main() {
   $("again").addEventListener("click", () => location.reload());
   $("skiDown").addEventListener("click", () => (location.href = `./?lift=${encodeURIComponent(lift.name)}&kind=${kind}`));
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
+  const top = topOfLift({ T, R, lift, line, ctx, kind, getChair: () => myChair });
+  window.__top = top;
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
@@ -824,7 +1011,7 @@ async function main() {
     if (d > d1) {
       if (TRIP) {
         d = d1;
-        if (!arrived) { arrived = true; $("arrive").hidden = false; $("fast").hidden = $("skip").hidden = true; $("arriveTitle").textContent = `到山顶了 · ${lift.name}`; }
+        if (!arrived) { arrived = true; $("fast").hidden = $("skip").hidden = true; top.start(now); }
       } else d = d0;
     }
     if (TRIP && !arrived) $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3)))} · 转动手机看四周`;
@@ -853,6 +1040,7 @@ async function main() {
     const k = Math.min(1, dt * 6);
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
+    if (top.phase) { top.step(now, dt); sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); fadeNames(names, camera); renderer.render(scene, camera); return; }
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.

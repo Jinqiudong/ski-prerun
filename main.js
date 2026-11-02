@@ -908,7 +908,14 @@ async function main() {
   requestAnimationFrame(frame);
   // Arriving from the mountain page's lift choice: go straight onto that lift.
   const q = new URLSearchParams(location.search), wanted = R.lifts.find((l) => l.name === q.get("lift"));
-  if (wanted) {
+  // Arriving from the new-look ride's top-of-lift choice: ski that run (index into R.runs) from its top.
+  const runPick = q.has("run") ? R.runs[Number(q.get("run"))] : null;
+  if (runPick) {
+    if (q.get("kind") && q.get("kind") !== settings.kind) { settings.kind = q.get("kind") === "board" ? "board" : "ski"; saveSettings(); buildRider(); }
+    $("intro").classList.add("hidden");
+    enterMap();
+    startJourney([{ type: "run", run: runPick, from: 0, to: runPick.pts.length - 1, length: runPick.length }]);
+  } else if (wanted) {
     if (q.get("kind") && q.get("kind") !== settings.kind) { settings.kind = q.get("kind") === "board" ? "board" : "ski"; saveSettings(); buildRider(); }
     $("intro").classList.add("hidden");
     enterMap();
