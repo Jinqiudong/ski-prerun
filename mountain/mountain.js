@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=8";
+import { Diorama } from "./diorama.js?v=9";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -582,14 +582,13 @@ async function main() {
       info.tag.classList.toggle("on", x === l);
       info.card.classList.toggle("on", x === l);
     }
-    if (route) dio.highlightRoute(route);
-    else if (changed) { dio.highlightFrom(l); $("planOut").hidden = true; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
+    if (route) { dio.highlightRoute(route); dio.aim(l, route); }
+    else if (changed) { dio.aim(l, [...dio.highlightFrom(l).fromTop]); $("planOut").hidden = true; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
     if (changed) {
       // Turn the model so the lift is seen from below, the short way round.
       let u = dio.facing(l);
       u += Math.round(spin - u);
       mini.spinTo = u;
-      dio.aim(l);
       navigator.vibrate?.(8);
     }
     if (scroll) { mini.scrolling = performance.now(); mini.info.get(l).card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); }
@@ -707,7 +706,9 @@ async function main() {
         spin += (mini.spinTo - spin) * (1 - Math.exp(-dt * 3.5));
         if (Math.abs(mini.spinTo - spin) < 1e-4) mini.spinTo = null;
       }
-      dio.focus.lerp(dio.focusTo, 1 - Math.exp(-dt * 3.5)); // glide to the chosen lift
+      const glide = 1 - Math.exp(-dt * 3.5); // glide and zoom to the chosen lift
+      dio.focus.lerp(dio.focusTo, glide);
+      dio.size += (dio.sizeTo - dio.size) * glide;
       // A fixed frame between the top bar and the cards, so the model never shrinks; the detail
       // sheet only raises it.
       const topPx = 100, botPx = 150, want = document.body.classList.contains("detail") ? 0.2 : 0;

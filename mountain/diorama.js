@@ -62,6 +62,8 @@ export class Diorama {
     this.box = { x0, x1, z0, z1, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 };
     this.focus = new THREE.Vector3(this.box.cx, 60, this.box.cz);
     this.focusTo = this.focus.clone();
+    this.whole = (Math.hypot(x1 - x0, z1 - z0) / 2 + 150) * 0.8; // the block's corners may crop a little
+    this.size = this.sizeTo = this.whole;
     const root = new THREE.Group();
     this.root = root;
     this.scene.add(root);
@@ -448,12 +450,11 @@ export class Diorama {
   // u: position on the circle [0, 1). visible: the fraction of the screen height above the drawer;
   // the block is fitted into that part and centred in it.
   orbit(u, visible = 1, topPad = 0, raise = 0) {
-    const { cx, cz, x0, x1, z0, z1 } = this.box;
-    const radius = Math.hypot(x1 - x0, z1 - z0) / 2 + 150;
+    const radius = this.size; // how much to fit: the whole block, or a lift and its runs
     const vfov = (this.camera.fov * Math.PI) / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
     const room = 2 * Math.atan(Math.tan(vfov / 2) * visible); // vertical angle of the visible part
     // Start and rest at a three-quarter view (u = 0 is 45° off the base's side), slightly from above.
-    const dist = (radius / Math.sin(Math.min(room, hfov) / 2)) * 0.8, // the corners may crop a little
+    const dist = radius / Math.sin(Math.min(room, hfov) / 2),
       el = (36 * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
     const f = this.focus; // the point at the centre of the frame: the block's centre, or the chosen lift
     this.camera.position.set(f.x + Math.cos(a) * dist * Math.cos(el), f.y + dist * Math.sin(el), f.z + Math.sin(a) * dist * Math.cos(el));
@@ -476,16 +477,24 @@ export class Diorama {
   }
 
   // Centre the frame on a lift (the middle of its line), or on the whole block when null.
-  aim(l) {
-    if (!l) return this.focusTo.set(this.box.cx, 60, this.box.cz);
-    const b = l.pts[0], t = l.pts[l.pts.length - 1];
-    this.focusTo.set((b[0] + t[0]) / 2, (this.Y(b[0], b[1]) + this.Y(t[0], t[1])) / 2, (b[1] + t[1]) / 2);
+  // Frame a lift and the runs it leads to: centre on them and zoom so they fill the frame (small
+  // lifts come closer, up to twice the size of the whole block). Null frames the whole block.
+  aim(l, runs = []) {
+    if (!l) { this.focusTo.set(this.box.cx, 60, this.box.cz); this.sizeTo = this.whole; return; }
+    const { x0, x1, z0, z1 } = this.box;
+    const pts = [...l.pts, ...runs.flatMap((r) => r.pts)].filter(([x, z]) => x > x0 && x < x1 && z > z0 && z < z1);
+    const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]), ys = pts.map(([x, z]) => this.Y(x, z));
+    const c = new THREE.Vector3((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2);
+    let r = 0;
+    for (let i = 0; i < pts.length; i++) r = Math.max(r, Math.hypot(xs[i] - c.x, ys[i] - c.y, zs[i] - c.z));
+    this.focusTo.copy(c);
+    this.sizeTo = Math.min(this.whole, Math.max(this.whole * 0.5, r * 1.08));
   }
 
-  // The orbit position that looks at a lift from its downhill side, a little off its line.
+  // The orbit position that looks up a lift from below, facing the slope its runs come down.
   facing(l) {
     const b = l.pts[0], t = l.pts[l.pts.length - 1];
-    const a = Math.atan2(b[1] - t[1], b[0] - t[0]) + 0.6;
+    const a = Math.atan2(b[1] - t[1], b[0] - t[0]) + 0.2;
     return (((a + Math.PI / 4) / (Math.PI * 2)) % 1 + 1) % 1;
   }
 
