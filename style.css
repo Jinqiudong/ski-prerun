@@ -170,5 +170,4 @@ h2 { font-size: 24px; margin: 0; flex: 1; display: flex; align-items: center; ga
 /* Looking around from the chair */
 .lookBtns { position: absolute; right: 12px; top: calc(150px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 8px; }
 .lookBtns .btn { font-size: 13px; padding: 6px 10px; }
-#lookPhone.on { background: var(--ink); color: var(--paper); }
 #ride { touch-action: none; }

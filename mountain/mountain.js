@@ -630,6 +630,14 @@ async function main() {
   $("dim").addEventListener("click", () => openDetail(false));
   $("detailGo").addEventListener("click", () => go(mini.pick));
   function go(l) {
+    // Ask for motion access on this tap (iOS), so turning the phone looks around on the chair.
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") {
+      DeviceOrientationEvent.requestPermission().catch(() => "denied").finally(() => go2(l));
+      return;
+    }
+    go2(l);
+  }
+  function go2(l) {
     const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
     location.href = `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}`;
   }

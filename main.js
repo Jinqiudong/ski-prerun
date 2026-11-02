@@ -667,7 +667,7 @@ function stepRide(dt) {
 $("skipRide").addEventListener("click", () => { if (ride) ride.d = ride.length; });
 
 // Looking around from the chair. Yaw turns left (+) and right (-), pitch up (+) and down (-), in radians.
-// With motion access the phone's own turn and tilt drive it; a finger drag adds to it either way.
+// The phone's own turn and tilt drive it, no button needed; a finger drag adds to it either way.
 const look = {
   yaw: 0, pitch: 0, dragYaw: 0, dragPitch: 0, base: null, phone: null,
   wantYaw() { return clamp(this.dragYaw + (this.phone ? this.phone.yaw : 0), -2.1, 2.1); },
@@ -681,13 +681,12 @@ addEventListener("deviceorientation", (e) => {
   dy = ((dy + 540) % 360) - 180;
   look.phone = { yaw: (dy * Math.PI) / 180, pitch: ((e.beta - look.base.beta) * Math.PI) / 180 };
 });
-async function askMotion() {
-  // iOS asks for permission, and only from a tap.
-  try { if (typeof DeviceOrientationEvent?.requestPermission === "function") await DeviceOrientationEvent.requestPermission(); } catch {}
-  look.base = null;
-  $("lookPhone").classList.add("on");
+// Android sends motion straight away. iOS needs permission asked from a tap: the miniature's "ride up"
+// tap asks it, and the first tap anywhere here asks again in case that did not carry over.
+function askMotion() {
+  if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {});
 }
-$("lookPhone").addEventListener("click", askMotion);
+for (const ev of ["touchend", "click"]) addEventListener(ev, askMotion, { once: true, capture: true });
 $("lookCenter").addEventListener("click", () => { look.dragYaw = look.dragPitch = 0; look.base = null; });
 let lookDrag = null;
 renderer.domElement.addEventListener("pointerdown", (e) => { if (mode === "ride") lookDrag = { x: e.clientX, y: e.clientY, yaw: look.dragYaw, pitch: look.dragPitch }; });
