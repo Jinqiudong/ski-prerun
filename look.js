@@ -882,6 +882,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
     phys = new Rider(T, "ski");
     phys.place(path[0][0], path[0][1], pathDir(path, 0), 2);
+    const h0 = pathDir(path, 0);
+    camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks = new Tracks(scene, T, "ski");
     prog = 0; ended = false; auto = true;
     st.phase = "ski";
@@ -1024,9 +1026,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       st.focus.copy(c);
       if (t > 2.8) { st.phase = "rise"; st.t0 = now; setupPick(); }
     } else if (st.phase === "rise" || st.phase === "dive") {
-      const u = ease(Math.min(1, t / (st.phase === "rise" ? 2.6 : 1.6)));
+      const u = ease(Math.min(1, t / (st.phase === "rise" ? 1.3 : 1.6)));
       if (st.phase === "rise") {
-        cur.pos.lerpVectors(from, want.pos, u); cur.look.lerpVectors(fromLook, want.look, u); cur.ox = want.ox * u; cur.oy = want.oy * u;
+        cur.pos.lerpVectors(from, st.rise.pos, u); cur.look.lerpVectors(fromLook, st.rise.look, u);
       } else {
         cur.pos.lerpVectors(st.diveFrom.pos, from, u); cur.look.lerpVectors(st.diveFrom.look, fromLook, u); cur.ox = st.diveFrom.ox * (1 - u); cur.oy = st.diveFrom.oy * (1 - u);
       }
@@ -1133,6 +1135,12 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     fromLook = ctx.rider.position.clone().add(new THREE.Vector3(0, 1.1, 0));
     cur.pos.copy(from); cur.look.copy(fromLook);
     tagBox.hidden = true;
+    // Only a short lift-off above the rider before the cut to the miniature.
+    const riseTo = () => {
+      const r = ctx.rider.position, back = new THREE.Vector3(r.x - from.x, 0, r.z - from.z).normalize();
+      return { pos: r.clone().addScaledVector(back, -14).add(new THREE.Vector3(0, 22, 0)), look: r.clone().addScaledVector(back, 60).add(new THREE.Vector3(0, -15, 0)), ox: 0, oy: 0 };
+    };
+    st.rise = riseTo();
     // One fixed overview per tab, framing every option at once, so they can be compared side by side.
     const endV = (P) => new THREE.Vector3(P.end[0], T.heightAt(P.end[0], P.end[1]), P.end[1]);
     for (const [m, L] of [["dest", dests], ["runs", runs]]) {
@@ -1213,7 +1221,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       drawProfile(card.querySelector("canvas"), P);
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
       card.querySelector(".go").onclick = () => {
-        st.phase = "dive"; st.t0 = performance.now(); st.diveFrom = { pos: cur.pos.clone(), look: cur.look.clone(), ox: cur.ox, oy: cur.oy };
+        camera.clearViewOffset();
+        startSki();
         $("pick").hidden = true; clearTags(); flash();
       };
       cards.append(card); P.card = card;
@@ -1244,22 +1253,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       const via = P.legs.find((l) => l.type === "lift")?.lift || (P.kind === "lift" ? P.lift : null);
       dio.focusLift(via);
     }
-    // The chosen plan, bold, drawn from the top down: runs in their colours, lifts gold in the air.
-    for (const m of routeMarks) { marks.remove(m); m.geometry.dispose(); }
-    routeMarks = [];
     ctx.addRunsNear((pts) => P.legs.some((l) => l.type === "run" && l.run.pts === pts));
-    for (const l of P.legs) {
-      let m;
-      if (l.type === "run") m = new THREE.Mesh(ribbon(l.run.pts.slice(l.from, l.to + 1), want.width, 2.5), markMat(LEVEL_COLOR[l.run.level], 0.95));
-      else if (l.type === "lift") {
-        const pts = l.lift.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z) + 14, z));
-        m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 4, want.width * 0.18, 6), markMat(ROUTE_GOLD, 0.95));
-      } else continue;
-      m.renderOrder = 5; m.userData.len = Math.max(30, l.length || 0); m.userData.route = true;
-      routeMarks.push(m); marks.add(m);
-    }
-    reveal = { t0: performance.now(), total: routeMarks.reduce((a, m) => a + m.userData.len, 0) || 1 };
-    for (const m of routeMarks) m.geometry.setDrawRange(0, 0);
     // Tags: in run mode every run from here (tap to pick); the chosen plan's steps and where it ends.
     clearTags();
     if (mode === "runs") for (const o of runs) {
