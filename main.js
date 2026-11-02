@@ -511,15 +511,81 @@ function startRide(lift) {
   scene.fog.near = 1500; scene.fog.far = 12000;
   rider.model.visible = true;
   chair.visible = true;
-  ride = { lift, d: 0, length: pathLen(lift.path), below: [], snap: true };
+  ride = { lift, d: 0, length: pathLen(lift.path), snap: true };
   $("rideName").innerHTML = `${icon("lift")}${esc(lift.name)}`;
-  // Name the runs passing under this lift.
-  const names = new Set();
+  // Name the runs passing under this lift, written on the snow.
+  ride.names = snowNames(lift);
+  scene.add(ride.names);
+}
+
+// Run names lying on the snow along a lift, glowing in the run's colour, facing the rider riding up.
+// Each name sits where its run passes within 160 m of the line (a phone held upright sees little to the sides), repeated every 500 m along a long run;
+// it fades in as the chair comes closer.
+function snowNames(lift) {
+  const group = new THREE.Group(), placed = [];
+  // The direction the chair travels, from the ride path (the OSM line may be drawn either way).
+  const p0 = lift.path[0], p1 = lift.path[lift.path.length - 1], fx = p1.x - p0.x, fz = p1.z - p0.z;
+  const nearLine = (x, z) => {
+    let d = Infinity;
+    for (let i = 1; i < lift.pts.length; i++) d = Math.min(d, segDist(x, z, lift.pts[i - 1], lift.pts[i]));
+    return { d };
+  };
   for (const run of R.runs) {
-    if (!run.name || names.has(run.name)) continue;
-    const close = run.pts.find(([x, z]) => lift.pts.some((p, i) => i && segDist(x, z, lift.pts[i - 1], p) < 120));
-    if (close) { names.add(run.name); ride.below.push(label(`${icon(run.level)}${esc(run.name)}`, "run", ptV(close, 8))); }
+    if (!run.name || run.area) continue;
+    let along = 0, lastAt = -Infinity, n = 0;
+    for (let k = 0; k < run.pts.length && n < 3; k++) {
+      const [x, z] = run.pts[k];
+      if (k) along += Math.hypot(x - run.pts[k - 1][0], z - run.pts[k - 1][1]);
+      const { d } = nearLine(x, z);
+      if (d > 160 || along - lastAt < 500 || placed.some((q) => Math.hypot(q[0] - x, q[1] - z) < 140)) continue;
+      group.add(snowName(run, x, z, fx, fz));
+      placed.push([x, z]); lastAt = along; n++;
+    }
   }
+  return group;
+}
+function snowName(run, cx, cz, fx, fz) {
+  const font = 96, pad = 40, c = document.createElement("canvas"), g = c.getContext("2d");
+  g.font = `700 ${font}px "Noto Sans SC", -apple-system, sans-serif`;
+  const sym = 90, w = Math.ceil(g.measureText(run.name).width) + sym + pad * 2, h = font + pad * 2;
+  c.width = w; c.height = h;
+  const col = "#" + new THREE.Color(LEVEL[run.level].color).getHexString();
+  g.font = `700 ${font}px "Noto Sans SC", -apple-system, sans-serif`;
+  g.textBaseline = "middle";
+  // A soft glow in the run's colour, then the letters in white over it.
+  g.shadowColor = run.level === "advanced" || run.level === "expert" ? "#9fb4d8" : col;
+  g.shadowBlur = 28;
+  g.fillStyle = "#fff";
+  const y = h / 2, x0 = pad;
+  // The difficulty mark in front of the name.
+  g.save(); g.fillStyle = col; g.shadowColor = "#fff"; g.shadowBlur = 12;
+  if (run.level === "easy") { g.beginPath(); g.arc(x0 + 32, y, 30, 0, Math.PI * 2); g.fill(); }
+  else if (run.level === "intermediate") g.fillRect(x0 + 4, y - 28, 56, 56);
+  else { g.fillStyle = "#15171c"; g.translate(x0 + 32, y); g.rotate(Math.PI / 4); g.fillRect(-24, -24, 48, 48); }
+  g.restore();
+  for (let i = 0; i < 2; i++) g.fillText(run.name, x0 + sym, y); // twice for a stronger glow
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  // Letters 9 m wide, stretched 2.5 times along the line like road markings, since the chair sees them
+  // at a low angle; the baseline runs across the lift so they read the right way up from the chair.
+  const W = 9 * w / font, H = 9 * h / font * 2.5;
+  const L = Math.hypot(fx, fz); fx /= L; fz /= L;
+  const rx = -fz, rz = fx; // right of the rider facing up the line
+  const nu = Math.max(2, Math.ceil(W / 8)), nv = 3, pos = [], uv = [], idx = [];
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+    const u = i / nu, v = j / nv, x = cx + rx * (u - 0.5) * W + fx * (v - 0.5) * H, z = cz + rz * (u - 0.5) * W + fz * (v - 0.5) * H;
+    pos.push(x, T.heightAt(x, z) + 0.8, z); uv.push(u, v);
+    if (i < nu && j < nv) { const q = j * (nu + 1) + i; idx.push(q, q + 1, q + nu + 1, q + 1, q + nu + 2, q + nu + 1); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, toneMapped: false }));
+  mesh.userData.at = new THREE.Vector3(cx, T.heightAt(cx, cz), cz);
+  mesh.renderOrder = 3;
+  return mesh;
 }
 const pathLen = (path) => path.reduce((s, p, i) => (i ? s + p.distanceTo(path[i - 1]) : 0), 0);
 function segDist(x, z, a, b) {
@@ -541,9 +607,15 @@ function stepRide(dt) {
   chair.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
   const want = p.clone().addScaledVector(dir, -9).add(new THREE.Vector3(0, 1.5, 0));
   if (ride.snap) { camera.position.copy(want); ride.snap = false; } else camera.position.lerp(want, Math.min(1, dt * 3));
-  camera.lookAt(p.clone().addScaledVector(dir, 30).add(new THREE.Vector3(0, -4, 0)));
+  camera.lookAt(p.clone().addScaledVector(dir, 30).add(new THREE.Vector3(0, -9, 0))); // looking down at the runs below
   camera.fov = 60; camera.near = 0.5; camera.updateProjectionMatrix();
   followSun(p.x, p.y, p.z);
+  // Names far ahead are faint and soft; they sharpen as the chair comes over them.
+  for (const m of ride.names.children) {
+    const d = camera.position.distanceTo(m.userData.at);
+    m.material.opacity = 0.95 * Math.min(1, Math.max(0, (1400 - d) / 700));
+    m.visible = m.material.opacity > 0.01;
+  }
   const secs = (ride.length - ride.d) / (4.5 * mult);
   $("rideMeta").textContent = `还有 ${fmtLen(ride.length - ride.d)} · 约 ${Math.ceil(secs)} 秒 · ${mult} 倍速`;
   if (ride.d >= ride.length) endRide();
@@ -559,7 +631,8 @@ function sit(model) {
 
 function endRide() {
   const lift = ride.lift;
-  ride.below.forEach(dropLabel);
+  scene.remove(ride.names);
+  ride.names.traverse((o) => { o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
   ride = null;
   chair.visible = false;
   const [x, z] = lastPt(lift.pts);
@@ -897,7 +970,7 @@ $("exitRide").addEventListener("click", () => { ride?.below.forEach(dropLabel); 
 
 // Test hook for headless checks.
 window.__prerun = {
-  get R() { return R; }, get graph() { return graph; }, get mode() { return mode; }, get journey() { return journey; },
+  get R() { return R; }, get graph() { return graph; }, get mode() { return mode; }, get ride() { return ride; }, get journey() { return journey; },
   rider, settings, startJourney, planRoute, nodesNear, stepRun, stepRide, openPlan, select,
   continueRoute: () => { leaveArrival(); nextLeg(); }, get T() { return T; }, reachableLifts, scene, renderer, camera, controls, applyPose,
 };
