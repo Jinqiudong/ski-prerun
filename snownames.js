@@ -137,6 +137,15 @@ export function trailSigns(T, R, lift, fx, fz, renderer) {
   const ends = [lift.pts[0], lift.pts[lift.pts.length - 1]];
   const post = new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.9 });
   const cap = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.9 });
+  // Is a point on any run? (Runs are drawn 30 m wide; 16 m from a centreline counts as on it.)
+  const segs = [];
+  for (const r of R.runs) { const ps = r.outline || r.pts; for (let i = 1; i < ps.length; i++) segs.push([ps[i - 1], ps[i], r.area ? 3 : 16]); }
+  const onAnyRun = (x, z) => segs.some(([a, b, w]) => {
+    const dx = b[0] - a[0], dz = b[1] - a[1];
+    if (Math.abs(x - a[0]) > 300 && Math.abs(x - b[0]) > 300) return false;
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+    return Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z) < w;
+  });
   const nearLine = (x, z) => {
     let best = { d: Infinity };
     for (let i = 1; i < lift.pts.length; i++) {
@@ -156,8 +165,19 @@ export function trailSigns(T, R, lift, fx, fz, renderer) {
       const { d, px, pz } = nearLine(x, z);
       if (d < 18 || d > 90 || along - lastAt < 600) continue;
       if (ends.some(([ex, ez]) => Math.hypot(x - ex, z - ez) < 50) || placed.some(([qx, qz]) => Math.hypot(qx - x, qz - z) < 45)) continue;
-      // At the run's edge nearer the lift.
-      const k2 = 14 / d, sx = x + (px - x) * k2, sz = z + (pz - z) * k2;
+      // Just off the piste, beside it (runs are drawn 30 m wide): try the side toward the lift, then the
+      // other; never on any run.
+      const nxt = run.pts[Math.min(run.pts.length - 1, k + 1)], prv = run.pts[Math.max(0, k - 1)];
+      let ax = nxt[0] - prv[0], az = nxt[1] - prv[1];
+      const al = Math.hypot(ax, az) || 1; ax /= al; az /= al;
+      let nx = -az, nz = ax;
+      if ((px - x) * nx + (pz - z) * nz < 0) { nx = -nx; nz = -nz; }
+      let sx = null, sz = null;
+      for (const side of [1, -1]) {
+        const cx = x + nx * side * 18, cz = z + nz * side * 18;
+        if (!onAnyRun(cx, cz)) { sx = cx; sz = cz; break; }
+      }
+      if (sx === null) continue;
       // Face a point on the line 70 m before this one: where the riders are coming from.
       const tx = px - fx * 70, tz = pz - fz * 70;
       group.add(sign(run, sx, sz, Math.atan2(tx - sx, tz - sz)));
