@@ -6,7 +6,7 @@ import { Terrain, sky, lights, treeMaskFn, forest, runLayers, highlight, signs, 
 import { Rider, riderModel, Tracks, Spray, loadAvatar, applyPose } from "./rider.js?v=5";
 import { buildGraph, planRoute, nodesNear, lengthAlong, LEVELS } from "./route.js?v=5";
 import { applyStyle, miniature } from "./styles.js?v=5";
-import { snowNames, fadeNames } from "./snownames.js?v=1";
+import { snowNames, fadeNames } from "./snownames.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const icon = (level) => `<i class="lv ${level}"></i>`;

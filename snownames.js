@@ -9,6 +9,8 @@ import { LEVEL } from "./world.js?v=5";
 // it appears as the chair comes within a few hundred metres and is gone once passed.
 export function snowNames(T, R, lift, fx, fz, renderer) {
   const group = new THREE.Group(), placed = [];
+  const ends = [lift.pts[0], lift.pts[lift.pts.length - 1]];
+  const nearEnd = (x, z) => ends.some(([ex, ez]) => Math.hypot(x - ex, z - ez) < 50); // keep stations clear
   // (fx, fz): the direction the chair travels (the OSM line may be drawn either way).
   // The closest point on the lift line to (x, z), and how far it is.
   const nearLine = (x, z) => {
@@ -28,7 +30,7 @@ export function snowNames(T, R, lift, fx, fz, renderer) {
       const [x, z] = run.pts[k];
       if (k) along += Math.hypot(x - run.pts[k - 1][0], z - run.pts[k - 1][1]);
       const { d } = nearLine(x, z);
-      if (d > 120 || along - lastAt < 500) continue;
+      if (d > 120 || along - lastAt < 500 || nearEnd(x, z)) continue;
       if (placed.some((q) => Math.hypot(q[0] - x, q[1] - z) < 60)) continue;
       const mesh = snowName(T, run, along, fx, fz, renderer);
       if (!mesh) continue;
@@ -124,4 +126,75 @@ export function fadeNames(group, camera) {
     m.material.opacity = Math.min(1, Math.max(0, (430 - d) / 120)); // clear for the last ~300 m
     m.visible = m.material.opacity > 0.01;
   }
+}
+
+// Trail signs beside the runs near the lift, as at a resort: a timber post, a dark board with the
+// difficulty mark and the run's name, a cap of snow. Each turns to face riders coming up the lift, so it
+// reads from the chair even where the name in the snow is foreshortened.
+export function trailSigns(T, R, lift, fx, fz, renderer) {
+  const group = new THREE.Group(), placed = [];
+  const fl = Math.hypot(fx, fz); fx /= fl; fz /= fl;
+  const ends = [lift.pts[0], lift.pts[lift.pts.length - 1]];
+  const post = new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.9 });
+  const cap = new THREE.MeshStandardMaterial({ color: 0xf4f7fb, roughness: 0.9 });
+  const nearLine = (x, z) => {
+    let best = { d: Infinity };
+    for (let i = 1; i < lift.pts.length; i++) {
+      const a = lift.pts[i - 1], b = lift.pts[i], dx = b[0] - a[0], dz = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+      const px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz);
+      if (d < best.d) best = { d, px, pz };
+    }
+    return best;
+  };
+  for (const run of R.runs) {
+    if (!run.name || run.area) continue;
+    let along = 0, lastAt = -Infinity;
+    for (let k = 0; k < run.pts.length; k++) {
+      const [x, z] = run.pts[k];
+      if (k) along += Math.hypot(x - run.pts[k - 1][0], z - run.pts[k - 1][1]);
+      const { d, px, pz } = nearLine(x, z);
+      if (d < 18 || d > 90 || along - lastAt < 600) continue;
+      if (ends.some(([ex, ez]) => Math.hypot(x - ex, z - ez) < 50) || placed.some(([qx, qz]) => Math.hypot(qx - x, qz - z) < 45)) continue;
+      // At the run's edge nearer the lift.
+      const k2 = 14 / d, sx = x + (px - x) * k2, sz = z + (pz - z) * k2;
+      // Face a point on the line 70 m before this one: where the riders are coming from.
+      const tx = px - fx * 70, tz = pz - fz * 70;
+      group.add(sign(run, sx, sz, Math.atan2(tx - sx, tz - sz)));
+      placed.push([x, z]); lastAt = along;
+    }
+  }
+  function sign(run, x, z, yaw) {
+    const c = document.createElement("canvas"); c.width = 640; c.height = 200;
+    const g = c.getContext("2d");
+    g.fillStyle = "#1d2a22"; g.fillRect(0, 0, 640, 200);
+    g.strokeStyle = "#e8e2d2"; g.lineWidth = 8; g.strokeRect(10, 10, 620, 180);
+    const col = "#" + new THREE.Color(LEVEL[run.level].color).getHexString();
+    g.fillStyle = run.level === "easy" || run.level === "intermediate" ? col : "#0d0f12";
+    if (run.level === "easy") { g.beginPath(); g.arc(85, 100, 46, 0, Math.PI * 2); g.fill(); }
+    else if (run.level === "intermediate") g.fillRect(42, 57, 86, 86);
+    else { g.save(); g.translate(85, 100); g.rotate(Math.PI / 4); g.strokeStyle = "#fff"; g.lineWidth = 5; g.fillRect(-34, -34, 68, 68); g.strokeRect(-34, -34, 68, 68); g.restore(); }
+    g.fillStyle = "#f4efe2"; g.textBaseline = "middle";
+    let size = 76;
+    do { g.font = `700 ${size}px -apple-system, "Helvetica Neue", sans-serif`; size -= 4; } while (g.measureText(run.name).width > 470 && size > 30);
+    g.fillText(run.name, 152, 104);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const s = new THREE.Group();
+    const y = T.heightAt(x, z);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 0.08), [post, post, cap, post, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }), post]);
+    board.position.y = 3.0;
+    const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 3.6, 8), post);
+    p1.position.set(-1.1, 1.8, -0.06);
+    const p2 = p1.clone(); p2.position.x = 1.1;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.1, 0.22), cap);
+    top.position.y = 3.55;
+    s.add(board, p1, p2, top);
+    s.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    s.position.set(x, y - 0.2, z);
+    s.rotation.y = yaw;
+    return s;
+  }
+  return group;
 }

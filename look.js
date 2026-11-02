@@ -7,7 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose } from "./rider.js?v=5";
-import { snowNames, fadeNames } from "./snownames.js?v=1";
+import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -70,6 +70,21 @@ function liftLine(T, lift) {
     const p = dense[i];
     towers.push({ s, p: new THREE.Vector3(p.x, T.heightAt(p.x, p.z), p.z) });
   }
+  // Stations sit level at the highest ground under them, so no slope pokes through the deck.
+  for (const t of [towers[0], towers[towers.length - 1]]) {
+    let hi = -Infinity;
+    for (let dx = -16; dx <= 16; dx += 4) for (let dz = -16; dz <= 16; dz += 4) hi = Math.max(hi, T.heightAt(t.p.x + dx, t.p.z + dz));
+    t.p.y = hi;
+    t.h = STATION_H;
+  }
+  // The rope runs level through each station (20 m), then climbs to the first tower.
+  const pointAtS = (s) => { const i = Math.min(dense.length - 1, Math.max(0, cum.findIndex((c) => c >= s))); return dense[i].clone(); };
+  const inA = pointAtS(20), inB = pointAtS(total - 20);
+  inA.y = towers[0].p.y; inB.y = towers[towers.length - 1].p.y;
+  towers.splice(1, 0, { s: 20, p: inA, h: STATION_H, station: true });
+  towers.splice(towers.length - 1, 0, { s: total - 20, p: inB, h: STATION_H, station: true });
+  while (towers.length > 4 && towers[2].s < 40) towers.splice(2, 1); // no tower inside a station
+  while (towers.length > 4 && towers[towers.length - 3].s > total - 40) towers.splice(towers.length - 3, 1);
   const dir = new THREE.Vector3().subVectors(ground[ground.length - 1], ground[0]).setY(0).normalize();
   const side = new THREE.Vector3(dir.z, 0, -dir.x);
   const ropeAt = (s, off) => {
@@ -77,8 +92,8 @@ function liftLine(T, lift) {
     while (k < towers.length - 1 && towers[k].s < s) k++;
     const a = towers[k - 1], b = towers[k], t = (s - a.s) / (b.s - a.s || 1), span = b.s - a.s;
     const p = a.p.clone().lerp(b.p, t);
-    const ha = k - 1 === 0 || k - 1 === towers.length - 1 ? STATION_H : ROPE_H, hb = k === towers.length - 1 ? STATION_H : ROPE_H;
-    p.y += ha + (hb - ha) * t - span * 0.014 * 4 * t * (1 - t); // sag; low through the stations
+    const ha = a.h ?? ROPE_H, hb = b.h ?? ROPE_H;
+    p.y += ha + (hb - ha) * t - (a.station || b.station ? 0 : span * 0.014 * 4 * t * (1 - t)); // sag between towers
     return p.addScaledVector(side, off);
   };
   const up = [], down = [];
@@ -490,6 +505,7 @@ function runRibbon(T, pts, width, lift) {
 function towerGeometries(line, look) {
   const metal = [], dark = [];
   for (let i = 1; i < line.towers.length - 1; i++) {
+    if (line.towers[i].station) continue;
     const { p } = line.towers[i];
     const top = ROPE_H - 0.9;
     const yaw = Math.atan2(line.dir.x, line.dir.z);
@@ -561,11 +577,11 @@ function terminal(p, dir, look, mats, { name, alt, top, upSide }) {
   add(new THREE.BoxGeometry(3.0, 0.3, 3.0), mats.roof, bx, 3.05, 6);
   add(new THREE.BoxGeometry(2.7, 0.35, 2.7), mats.dark, bx, 0.2, 6);
   // The deck riders stand on, level snow.
-  add(new THREE.BoxGeometry(W * 2 + 6, 0.5, 26), snow, 0, 0.0, 6);
+  add(new THREE.BoxGeometry(W * 2 + 6, 8, 26), snow, 0, -3.75, 6); // deep, so it meets the slope below
   const signAt = new THREE.Vector3(upSide * HALF_GAUGE, 0, -11);
   if (top) {
     // Unload ramp: from under the arriving chairs, sloping down and away past the wheel.
-    const ramp = add(new THREE.BoxGeometry(4.2, 0.6, 16), snow, upSide * HALF_GAUGE, 0.55, -1);
+    const ramp = add(new THREE.BoxGeometry(4.2, 0.6, 16), snow, upSide * HALF_GAUGE, 0.05, -1); // skis just clear it
     ramp.rotation.x = -0.06;
   }
   // The sign, facing the riders as they come in (or wait to load).
@@ -688,8 +704,8 @@ function build(look, ctx) {
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
   // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
-  world.add(terminal(new THREE.Vector3(g0.x, T.heightAt(g0.x, g0.z), g0.z), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
-  world.add(terminal(new THREE.Vector3(g1.x, T.heightAt(g1.x, g1.z), g1.z), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
+  world.add(terminal(line.towers[0].p.clone(), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
+  world.add(terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
 
   const parts = ctx.chair;
   const chairMetal = A ? metalMat : new THREE.MeshLambertMaterial({ color: 0x6b6f7d, flatShading: true });
@@ -774,6 +790,7 @@ async function main() {
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
   const names = snowNames(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer);
   scene.add(names);
+  scene.add(trailSigns(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer));
   const flakes = snowfall();
   scene.add(flakes);
   weather(params, flakes);
