@@ -48,17 +48,19 @@ export class Diorama {
     this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 0.5;
   }
 
-  // Build the block for a base: the area covering the base and the tops of its lifts.
-  build({ T, R, mask, graph, base, lifts, title }) {
+  // Build the block for a base: the area covering the base and the tops of its lifts. Or, given
+  // `points` ([x, z] pairs), the area covering them (a lift top and where you can go from it).
+  build({ T, R, mask, graph, base, lifts, title, points, lodges = [], maxHalf = 1700, runWidth = 24 }) {
     if (this.root) { this.scene.remove(this.root); this.root.traverse((o) => { o.geometry?.dispose(); }); }
     this.movers = [];
     this.anims = [];
     this.anchors = new Map();
     this.liftParts = new Map();
     this.T = T;
-    const xs = [base.x, ...lifts.map((l) => l.pts[l.pts.length - 1][0])], zs = [base.z, ...lifts.map((l) => l.pts[l.pts.length - 1][1])];
+    const xs = points ? points.map((p) => p[0]) : [base.x, ...lifts.map((l) => l.pts[l.pts.length - 1][0])];
+    const zs = points ? points.map((p) => p[1]) : [base.z, ...lifts.map((l) => l.pts[l.pts.length - 1][1])];
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    const half = Math.min(1700, Math.max(900, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2 + 450));
+    const half = Math.min(maxHalf, Math.max(900, Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)) / 2 + (points ? 250 : 450)));
     const x0 = Math.max(T.x0, cx - half), x1 = Math.min(T.x1, cx + half), z0 = Math.max(T.z0, cz - half), z1 = Math.min(T.z1, cz + half);
     this.box = { x0, x1, z0, z1, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 };
     this.focus = new THREE.Vector3(this.box.cx, 60, this.box.cz);
@@ -80,10 +82,10 @@ export class Diorama {
     root.add(this.sides(x0, x1, z0, z1, Y));
     root.add(this.plinth(x0, x1, z0, z1, title));
     root.add(this.trees(x0, x1, z0, z1, Y, mask));
-    root.add(this.runs(R, x0, x1, z0, z1, Y));
+    root.add(this.runs(R, x0, x1, z0, z1, Y, runWidth));
     this.runLayer = root.children[root.children.length - 1];
     for (const l of lifts) root.add(this.lift(l, Y));
-    root.add(this.lodge(base, Y));
+    for (const b of base ? [base] : lodges) root.add(this.lodge(b, Y));
     this.skiers(R, x0, x1, z0, z1, Y, root);
     this.light(x0, x1, z0, z1);
     this.graph = graph;
@@ -222,7 +224,7 @@ export class Diorama {
     return mesh;
   }
 
-  runs(R, x0, x1, z0, z1, Y) {
+  runs(R, x0, x1, z0, z1, Y, runWidth = 24) {
     const group = new THREE.Group();
     const inside = (p) => p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1;
     const ribbon = (pts, width, lift, area) => {
@@ -261,7 +263,7 @@ export class Diorama {
           gl_FragColor.a *= mix(uFrom, uTo, lit);
           gl_FragColor.rgb += vec3(0.75, 0.85, 1.0) * uFront * smoothstep(0.07, 0.0, abs(vAlong - uReveal));`);
       };
-      const mesh = new THREE.Mesh(ribbon(pts, run.area ? 10 : 24, 2, run.area), mat);
+      const mesh = new THREE.Mesh(ribbon(pts, run.area ? 10 : runWidth, 2, run.area), mat);
       mesh.receiveShadow = true;
       mesh.userData.run = run;
       mesh.userData.u = u;
@@ -471,13 +473,13 @@ export class Diorama {
   // Camera on a circle around the block; u in [0, 1) is the position on the circle.
   // u: position on the circle [0, 1). visible: the fraction of the screen height above the drawer;
   // the block is fitted into that part and centred in it.
-  orbit(u, visible = 1, topPad = 0, raise = 0) {
+  orbit(u, visible = 1, topPad = 0, raise = 0, elevation = 36) {
     const radius = this.size; // how much to fit: the whole block, or a lift and its runs
     const vfov = (this.camera.fov * Math.PI) / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
     const room = 2 * Math.atan(Math.tan(vfov / 2) * visible); // vertical angle of the visible part
     // Start and rest at a three-quarter view (u = 0 is 45° off the base's side), slightly from above.
     const dist = radius / Math.sin(Math.min(room, hfov) / 2),
-      el = (36 * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
+      el = (elevation * Math.PI) / 180, a = -Math.PI / 2 + Math.PI / 4 + u * Math.PI * 2;
     const f = this.focus; // the point at the centre of the frame: the block's centre, or the chosen lift
     this.camera.position.set(f.x + Math.cos(a) * dist * Math.cos(el), f.y + dist * Math.sin(el), f.z + Math.sin(a) * dist * Math.cos(el));
     this.camera.lookAt(f);

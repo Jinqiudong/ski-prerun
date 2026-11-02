@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=11";
+import { Diorama } from "./diorama.js?v=13";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
