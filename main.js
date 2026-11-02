@@ -513,22 +513,29 @@ function startRide(lift) {
   chair.visible = true;
   ride = { lift, d: 0, length: pathLen(lift.path), snap: true };
   $("rideName").innerHTML = `${icon("lift")}${esc(lift.name)}`;
-  // Name the runs passing under this lift, written on the snow.
+  // Name the runs passing under this lift, carved into the snow.
   ride.names = snowNames(lift);
   scene.add(ride.names);
 }
 
-// Run names lying on the snow along a lift, glowing in the run's colour, facing the rider riding up.
-// Each name sits where its run passes within 160 m of the line (a phone held upright sees little to the sides), repeated every 500 m along a long run;
-// it fades in as the chair comes closer.
+// Run names carved into the snow along a lift, facing the rider riding up.
+// Each name follows its run's path where the run passes within 120 m of the line (a phone held upright
+// sees little to the sides), repeated every 500 m along a long run;
+// it appears only as the chair passes over it.
 function snowNames(lift) {
   const group = new THREE.Group(), placed = [];
   // The direction the chair travels, from the ride path (the OSM line may be drawn either way).
   const p0 = lift.path[0], p1 = lift.path[lift.path.length - 1], fx = p1.x - p0.x, fz = p1.z - p0.z;
+  // The closest point on the lift line to (x, z), and how far it is.
   const nearLine = (x, z) => {
-    let d = Infinity;
-    for (let i = 1; i < lift.pts.length; i++) d = Math.min(d, segDist(x, z, lift.pts[i - 1], lift.pts[i]));
-    return { d };
+    let best = { d: Infinity };
+    for (let i = 1; i < lift.pts.length; i++) {
+      const a = lift.pts[i - 1], b = lift.pts[i], dx = b[0] - a[0], dz = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+      const px = a[0] + dx * t, pz = a[1] + dz * t, d = Math.hypot(x - px, z - pz);
+      if (d < best.d) best = { d, px, pz };
+    }
+    return best;
   };
   for (const run of R.runs) {
     if (!run.name || run.area) continue;
@@ -537,14 +544,17 @@ function snowNames(lift) {
       const [x, z] = run.pts[k];
       if (k) along += Math.hypot(x - run.pts[k - 1][0], z - run.pts[k - 1][1]);
       const { d } = nearLine(x, z);
-      if (d > 160 || along - lastAt < 500 || placed.some((q) => Math.hypot(q[0] - x, q[1] - z) < 140)) continue;
-      group.add(snowName(run, x, z, fx, fz));
+      if (d > 120 || along - lastAt < 500) continue;
+      if (placed.some((q) => Math.hypot(q[0] - x, q[1] - z) < 60)) continue;
+      const mesh = snowName(run, along, fx, fz);
+      if (!mesh) continue;
+      group.add(mesh);
       placed.push([x, z]); lastAt = along; n++;
     }
   }
   return group;
 }
-function snowName(run, cx, cz, fx, fz) {
+function snowName(run, at, fx, fz) {
   const font = 96, pad = 40, c = document.createElement("canvas"), g = c.getContext("2d");
   g.font = `700 ${font}px "Noto Sans SC", -apple-system, sans-serif`;
   const sym = 90, w = Math.ceil(g.measureText(run.name).width) + sym + pad * 2, h = font + pad * 2;
@@ -552,32 +562,54 @@ function snowName(run, cx, cz, fx, fz) {
   const col = "#" + new THREE.Color(LEVEL[run.level].color).getHexString();
   g.font = `700 ${font}px "Noto Sans SC", -apple-system, sans-serif`;
   g.textBaseline = "middle";
-  // A soft glow in the run's colour, then the letters in white over it.
-  g.shadowColor = run.level === "advanced" || run.level === "expert" ? "#9fb4d8" : col;
-  g.shadowBlur = 28;
-  g.fillStyle = "#fff";
-  const y = h / 2, x0 = pad;
-  // The difficulty mark in front of the name.
-  g.save(); g.fillStyle = col; g.shadowColor = "#fff"; g.shadowBlur = 12;
+  // Carved into the snow: the groove in blue-grey shade, a dark lip on the far edge and a lit lip on the
+  // near edge, as if the letters were cut a hand deep and the sun came from behind the rider.
+  const y = h / 2, x0 = pad, tx = x0 + sym;
+  g.fillStyle = "rgba(40, 60, 95, 0.7)"; g.fillText(run.name, tx, y - 6);
+  g.fillStyle = "rgba(255, 255, 255, 0.95)"; g.fillText(run.name, tx, y + 5);
+  g.fillStyle = "rgba(112, 136, 172, 0.92)"; g.fillText(run.name, tx, y);
+  // The difficulty mark in front of the name, pressed in in its colour.
+  g.fillStyle = run.level === "easy" || run.level === "intermediate" ? col : "#20242c";
+  g.globalAlpha = 0.8;
   if (run.level === "easy") { g.beginPath(); g.arc(x0 + 32, y, 30, 0, Math.PI * 2); g.fill(); }
   else if (run.level === "intermediate") g.fillRect(x0 + 4, y - 28, 56, 56);
-  else { g.fillStyle = "#15171c"; g.translate(x0 + 32, y); g.rotate(Math.PI / 4); g.fillRect(-24, -24, 48, 48); }
-  g.restore();
-  for (let i = 0; i < 2; i++) g.fillText(run.name, x0 + sym, y); // twice for a stronger glow
+  else { g.translate(x0 + 32, y); g.rotate(Math.PI / 4); g.fillRect(-24, -24, 48, 48); }
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  // Letters 9 m wide, stretched 2.5 times along the line like road markings, since the chair sees them
-  // at a low angle; the baseline runs across the lift so they read the right way up from the chair.
-  const W = 9 * w / font, H = 9 * h / font * 2.5;
-  const L = Math.hypot(fx, fz); fx /= L; fz /= L;
-  const rx = -fz, rz = fx; // right of the rider facing up the line
-  const nu = Math.max(2, Math.ceil(W / 8)), nv = 3, pos = [], uv = [], idx = [];
-  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
-    const u = i / nu, v = j / nv, x = cx + rx * (u - 0.5) * W + fx * (v - 0.5) * H, z = cz + rz * (u - 0.5) * W + fz * (v - 0.5) * H;
-    pos.push(x, T.heightAt(x, z) + 0.8, z); uv.push(u, v);
-    if (i < nu && j < nv) { const q = j * (nu + 1) + i; idx.push(q, q + 1, q + nu + 1, q + 1, q + nu + 2, q + nu + 1); }
+  // The name follows the run's curve, centred at distance `at` along it: letters 4 m wide along the run,
+  // twice as tall across it since the chair sees the snow at a low angle.
+  const W = 4 * w / font, H = 4 * h / font * 2;
+  const cum = [0];
+  for (let i = 1; i < run.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(run.pts[i][0] - run.pts[i - 1][0], run.pts[i][1] - run.pts[i - 1][1]));
+  const total = cum[cum.length - 1];
+  if (total < W) return null;
+  const s0 = Math.min(total - W / 2, Math.max(W / 2, at));
+  const pointAt = (sd) => {
+    sd = Math.min(total, Math.max(0, sd));
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < sd) i++;
+    const t = (sd - cum[i - 1]) / (cum[i] - cum[i - 1] || 1), a = run.pts[i - 1], b = run.pts[i];
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  };
+  // Read left to right from the chair: run the text the way that points to the rider's right.
+  const fl = Math.hypot(fx, fz), rx = -fz / fl, rz = fx / fl;
+  const e0 = pointAt(s0 - W / 2), e1 = pointAt(s0 + W / 2);
+  const sign = (e1[0] - e0[0]) * rx + (e1[1] - e0[1]) * rz >= 0 ? 1 : -1;
+  const nu = Math.max(4, Math.ceil(W / 2)), pos = [], uv = [], idx = [];
+  for (let i = 0; i <= nu; i++) {
+    const u = i / nu, sd = s0 + sign * (u - 0.5) * W;
+    const [x, z] = pointAt(sd), p = pointAt(sd - sign * 6), q = pointAt(sd + sign * 6); // a smoothed tangent
+    let tx = q[0] - p[0], tz = q[1] - p[1];
+    const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+    const ux = tz, uz = -tx; // the letters' up: to the left of the reading direction, seen from above
+    for (const v of [0, 1]) {
+      const px = x + ux * (v - 0.5) * H, pz = z + uz * (v - 0.5) * H;
+      pos.push(px, T.heightAt(px, pz) + 0.8, pz); uv.push(u, v);
+    }
+    if (i < nu) { const k = i * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
   }
+  const [cx, cz] = pointAt(s0);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
@@ -607,13 +639,13 @@ function stepRide(dt) {
   chair.rotation.set(0, Math.atan2(dir.x, dir.z), 0);
   const want = p.clone().addScaledVector(dir, -9).add(new THREE.Vector3(0, 1.5, 0));
   if (ride.snap) { camera.position.copy(want); ride.snap = false; } else camera.position.lerp(want, Math.min(1, dt * 3));
-  camera.lookAt(p.clone().addScaledVector(dir, 30).add(new THREE.Vector3(0, -9, 0))); // looking down at the runs below
+  camera.lookAt(p.clone().addScaledVector(dir, 30).add(new THREE.Vector3(0, -14, 0))); // looking down at the runs below
   camera.fov = 60; camera.near = 0.5; camera.updateProjectionMatrix();
   followSun(p.x, p.y, p.z);
-  // Names far ahead are faint and soft; they sharpen as the chair comes over them.
+  // A name shows only as the chair comes over it, like reading the snow below; then it falls behind.
   for (const m of ride.names.children) {
     const d = camera.position.distanceTo(m.userData.at);
-    m.material.opacity = 0.95 * Math.min(1, Math.max(0, (1400 - d) / 700));
+    m.material.opacity = Math.min(1, Math.max(0, (280 - d) / 100));
     m.visible = m.material.opacity > 0.01;
   }
   const secs = (ride.length - ride.d) / (4.5 * mult);
