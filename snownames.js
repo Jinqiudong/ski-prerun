@@ -6,7 +6,7 @@ import { LEVEL } from "./world.js?v=5";
 // Run names carved into the snow along a lift, facing the rider riding up.
 // Each name follows its run's path where the run passes within 120 m of the line (a phone held upright
 // sees little to the sides), repeated every 500 m along a long run;
-// it appears only as the chair passes over it.
+// it appears as the chair comes within a few hundred metres and is gone once passed.
 export function snowNames(T, R, lift, fx, fz, renderer) {
   const group = new THREE.Group(), placed = [];
   // (fx, fz): the direction the chair travels (the OSM line may be drawn either way).
@@ -49,9 +49,9 @@ function snowName(T, run, at, fx, fz, renderer) {
   // Carved into the snow: the groove in blue-grey shade, a dark lip on the far edge and a lit lip on the
   // near edge, as if the letters were cut a hand deep and the sun came from behind the rider.
   const y = h / 2, x0 = pad, tx = x0 + sym;
-  g.fillStyle = "rgba(40, 60, 95, 0.7)"; g.fillText(run.name, tx, y - 6);
-  g.fillStyle = "rgba(255, 255, 255, 0.95)"; g.fillText(run.name, tx, y + 5);
-  g.fillStyle = "rgba(112, 136, 172, 0.92)"; g.fillText(run.name, tx, y);
+  g.fillStyle = "rgba(20, 34, 62, 0.9)"; g.fillText(run.name, tx, y - 7);
+  g.fillStyle = "rgba(255, 255, 255, 1)"; g.fillText(run.name, tx, y + 6);
+  g.fillStyle = "rgba(70, 96, 140, 0.98)"; g.fillText(run.name, tx, y);
   // The difficulty mark in front of the name, pressed in in its colour.
   g.fillStyle = run.level === "easy" || run.level === "intermediate" ? col : "#20242c";
   g.globalAlpha = 0.8;
@@ -63,7 +63,7 @@ function snowName(T, run, at, fx, fz, renderer) {
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   // The name follows the run's curve, centred at distance `at` along it: letters 4 m wide along the run,
   // twice as tall across it since the chair sees the snow at a low angle.
-  const W = 4 * w / font, H = 4 * h / font * 2;
+  const W = 5 * w / font, H = 5 * h / font * 2;
   const cum = [0];
   for (let i = 1; i < run.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(run.pts[i][0] - run.pts[i - 1][0], run.pts[i][1] - run.pts[i - 1][1]));
   const total = cum[cum.length - 1];
@@ -77,16 +77,29 @@ function snowName(T, run, at, fx, fz, renderer) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   };
   // Read left to right from the chair: run the text the way that points to the rider's right.
-  const fl = Math.hypot(fx, fz), rx = -fz / fl, rz = fx / fl;
+  const fl = Math.hypot(fx, fz), rx = -fz / fl, rz = fx / fl, ffx = fx / fl, ffz = fz / fl;
   const e0 = pointAt(s0 - W / 2), e1 = pointAt(s0 + W / 2);
-  const sign = (e1[0] - e0[0]) * rx + (e1[1] - e0[1]) * rz >= 0 ? 1 : -1;
+  const el = Math.hypot(e1[0] - e0[0], e1[1] - e0[1]) || 1;
+  const across = ((e1[0] - e0[0]) * rx + (e1[1] - e0[1]) * rz) / el; // 1: the run crosses under the chair
+  const sign = across >= 0 ? 1 : -1;
   const nu = Math.max(4, Math.ceil(W / 2)), pos = [], uv = [], idx = [];
+  // A run that climbs alongside the lift would put the name sideways or upside down: there the name
+  // lies straight across the run like a road marking, letters standing away from the rider.
+  const straight = Math.abs(across) < 0.6;
+  const [mx, mz] = pointAt(s0);
   for (let i = 0; i <= nu; i++) {
-    const u = i / nu, sd = s0 + sign * (u - 0.5) * W;
-    const [x, z] = pointAt(sd), p = pointAt(sd - sign * 6), q = pointAt(sd + sign * 6); // a smoothed tangent
-    let tx = q[0] - p[0], tz = q[1] - p[1];
-    const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
-    const ux = tz, uz = -tx; // the letters' up: to the left of the reading direction, seen from above
+    const u = i / nu;
+    let x, z, ux, uz;
+    if (straight) {
+      x = mx + rx * (u - 0.5) * W; z = mz + rz * (u - 0.5) * W; ux = ffx; uz = ffz;
+    } else {
+      const sd = s0 + sign * (u - 0.5) * W;
+      [x, z] = pointAt(sd);
+      const p = pointAt(sd - sign * 6), q = pointAt(sd + sign * 6); // a smoothed tangent
+      let tx = q[0] - p[0], tz = q[1] - p[1];
+      const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+      ux = tz; uz = -tx; // the letters' up: to the left of the reading direction, seen from above
+    }
     for (const v of [0, 1]) {
       const px = x + ux * (v - 0.5) * H, pz = z + uz * (v - 0.5) * H;
       pos.push(px, T.heightAt(px, pz) + 0.8, pz); uv.push(u, v);
@@ -108,7 +121,7 @@ function snowName(T, run, at, fx, fz, renderer) {
 export function fadeNames(group, camera) {
   for (const m of group.children) {
     const d = camera.position.distanceTo(m.userData.at);
-    m.material.opacity = Math.min(1, Math.max(0, (280 - d) / 100));
+    m.material.opacity = Math.min(1, Math.max(0, (430 - d) / 120)); // clear for the last ~300 m
     m.visible = m.material.opacity > 0.01;
   }
 }

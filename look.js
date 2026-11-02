@@ -38,7 +38,7 @@ const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 // 182 chairs, 5 m/s). The other six-packs are from news of Copper's Leitner-Poma lifts; lifts not listed
 // are drawn as quads until checked.
 const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true }, "American Eagle": { seats: 6 }, "Super Bee": { seats: 6 }, "Timberline Express": { seats: 6 } };
-const TOWER_EVERY = 85, ROPE_H = 11.5, CHAIR_GAP = 33, SPEED = 5;
+const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, CHAIR_GAP = 33, SPEED = 5;
 let HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false;
 function setLiftKind(name) {
   const k = LIFT_KIND[name] || { seats: 4 };
@@ -77,7 +77,8 @@ function liftLine(T, lift) {
     while (k < towers.length - 1 && towers[k].s < s) k++;
     const a = towers[k - 1], b = towers[k], t = (s - a.s) / (b.s - a.s || 1), span = b.s - a.s;
     const p = a.p.clone().lerp(b.p, t);
-    p.y += ROPE_H - span * 0.014 * 4 * t * (1 - t); // sag
+    const ha = k - 1 === 0 || k - 1 === towers.length - 1 ? STATION_H : ROPE_H, hb = k === towers.length - 1 ? STATION_H : ROPE_H;
+    p.y += ha + (hb - ha) * t - span * 0.014 * 4 * t * (1 - t); // sag; low through the stations
     return p.addScaledVector(side, off);
   };
   const up = [], down = [];
@@ -430,10 +431,11 @@ function snowA(tex) {
       .replace("#include <color_fragment>", `#include <color_fragment>
         float d = length(vWP - cameraPosition);
         float fade = smoothstep(300.0, 3000.0, d);
-        vec3 sn = mix(texture2D(snowD, vWP.xz / 6.0).rgb * 1.1, vec3(0.96), fade);
-        sn = mix(sn, texture2D(snowD, vWP.xz / 90.0).rgb * 1.08, 0.35);
+        // Snow stays snow-white: the texture only adds a little grain, rock shows on the steepest faces.
+        vec3 sn = mix(texture2D(snowD, vWP.xz / 6.0).rgb * 1.25, vec3(0.97), max(fade, 0.45));
+        sn = mix(sn, vec3(0.97), 0.25);
         float steep = 1.0 - vWN.y;
-        float rockW = smoothstep(0.4, 0.58, steep + (texture2D(rockD, vWP.xz / 300.0).r - 0.5) * 0.15);
+        float rockW = smoothstep(0.55, 0.7, steep + (texture2D(rockD, vWP.xz / 300.0).r - 0.5) * 0.12);
         vec3 rk = texture2D(rockD, vWP.xz / 40.0).rgb;
         diffuseColor.rgb *= mix(sn, rk * 1.2, rockW);`)
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
@@ -506,19 +508,74 @@ function towerGeometries(line, look) {
   return { metal: mergeGeometries(metal.map(strip)), dark: dark.length ? mergeGeometries(dark.map(strip)) : null };
 }
 
-function terminal(p, dir, look, mats) {
+// A detachable terminal, after photos of American Flyer's top ("unload area with exposed bullwheel",
+// "unloading ramp"): an exposed horizontal bullwheel, a steel carrier along the rope, a canopy on posts
+// wrapped in grey foam pads, the operator's glass booth, and at the top an unload ramp ending at a big sign
+// with the lift's name. Local frame: the bullwheel at the origin, +z toward the line.
+function liftSign(lines, w = 6.4, h = 1.9) {
+  const c = document.createElement("canvas");
+  c.width = 1024; c.height = Math.round(1024 * h / w);
+  const g = c.getContext("2d");
+  g.fillStyle = "#123a6b"; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = "#ffffff"; g.lineWidth = 10; g.strokeRect(14, 14, c.width - 28, c.height - 28);
+  g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = `800 ${Math.round(c.height * 0.36)}px -apple-system, "Helvetica Neue", sans-serif`;
+  g.fillText(lines[0], c.width / 2, c.height * 0.38);
+  g.font = `600 ${Math.round(c.height * 0.2)}px -apple-system, "PingFang SC", sans-serif`;
+  g.fillText(lines[1], c.width / 2, c.height * 0.74);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
+}
+
+function terminal(p, dir, look, mats, { name, alt, top, upSide }) {
   const g = new THREE.Group();
-  const house = new THREE.Mesh(look === "A" ? new RoundedBoxGeometry(12, 5, 9, 3, 0.6) : new THREE.BoxGeometry(12, 5, 9), mats.house);
-  house.position.y = 4.5;
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(13.5, 0.6, 10.5), mats.roof);
-  roof.position.y = 7.3;
-  const wheel = new THREE.Mesh(new THREE.TorusGeometry(HALF_GAUGE, 0.25, 8, 40), mats.metal);
+  const W = HALF_GAUGE + 2.2, steel = mats.metal;
+  const foam = new THREE.MeshStandardMaterial({ color: 0x8d939b, roughness: 0.95 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xe9ecef, roughness: 0.5 });
+  const snow = new THREE.MeshStandardMaterial({ color: 0xf6f8fb, roughness: 0.9 });
+  const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
+  // Bullwheel: rim, spokes, hub, at rope height.
+  const wheel = new THREE.Group();
+  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(HALF_GAUGE, 0.16, 10, 64), steel));
+  for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(HALF_GAUGE * 2, 0.12, 0.18), steel); sp.rotation.z = (i / 8) * Math.PI; wheel.add(sp); }
+  wheel.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.6, 16).rotateX(Math.PI / 2), mats.dark));
   wheel.rotation.x = Math.PI / 2;
-  wheel.position.y = ROPE_H;
-  g.add(house, roof, wheel);
+  wheel.position.y = STATION_H;
+  g.add(wheel);
+  // Carrier: the steel beam the chairs run under through the station, on a column over the wheel.
+  add(new THREE.BoxGeometry(W * 2 - 1.6, 0.7, 16), steel, 0, STATION_H + 0.9, 8);
+  add(new THREE.CylinderGeometry(0.45, 0.6, STATION_H + 0.6, 12), steel, 0, (STATION_H + 0.6) / 2, 0);
+  // Canopy on four posts, each post wrapped in a grey foam pad at rider height.
+  // A flat canopy well above a rider's head on the chair (and the camera behind them).
+  const roof = add(new RoundedBoxGeometry(W * 2 + 1.2, 0.35, 19, 2, 0.12), white, 0, STATION_H + 4.2, 6);
+  roof.rotation.x = 0.03;
+  for (const x of [-W, W]) for (const z of [-3, 15]) {
+    add(new THREE.CylinderGeometry(0.22, 0.22, STATION_H + 4.2, 10), steel, x, (STATION_H + 4.2) / 2, z);
+    add(new RoundedBoxGeometry(0.75, 2.0, 0.75, 2, 0.2), foam, x, 1.1, z);
+  }
+  // Operator booth on the other side from where riders get on or off.
+  const bx = -upSide * (W + 2.6);
+  add(new THREE.BoxGeometry(2.6, 2.6, 2.6), new THREE.MeshStandardMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.45, roughness: 0.05, metalness: 0.3 }), bx, 1.6, 6);
+  add(new THREE.BoxGeometry(3.0, 0.3, 3.0), mats.roof, bx, 3.05, 6);
+  add(new THREE.BoxGeometry(2.7, 0.35, 2.7), mats.dark, bx, 0.2, 6);
+  // The deck riders stand on, level snow.
+  add(new THREE.BoxGeometry(W * 2 + 6, 0.5, 26), snow, 0, 0.0, 6);
+  const signAt = new THREE.Vector3(upSide * HALF_GAUGE, 0, -11);
+  if (top) {
+    // Unload ramp: from under the arriving chairs, sloping down and away past the wheel.
+    const ramp = add(new THREE.BoxGeometry(4.2, 0.6, 16), snow, upSide * HALF_GAUGE, 0.55, -1);
+    ramp.rotation.x = -0.06;
+  }
+  // The sign, facing the riders as they come in (or wait to load).
+  for (const x of [-2.8, 2.8]) add(new THREE.CylinderGeometry(0.1, 0.1, 4.2, 8), mats.dark, signAt.x + x, 2.1, signAt.z);
+  const sign = liftSign([name.toUpperCase(), top ? `顶站 · 海拔 ${alt.toLocaleString()} 米` : `底站 · 海拔 ${alt.toLocaleString()} 米`]);
+  sign.position.set(signAt.x, 3.3, signAt.z + 0.06);
+  g.add(sign);
   g.position.copy(p);
   g.rotation.y = Math.atan2(dir.x, dir.z);
-  g.traverse((o) => { o.castShadow = o.receiveShadow = true; });
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
 
@@ -629,8 +686,10 @@ function build(look, ctx) {
   for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, A ? 0.03 : 0.045, 5), ropeMat));
   const houseMats = { house: A ? new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }) : new THREE.MeshLambertMaterial({ color: 0xd98c6a, flatShading: true }), roof: A ? new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 }) : new THREE.MeshLambertMaterial({ color: 0x4f5f78 }), metal: metalMat };
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
-  world.add(terminal(new THREE.Vector3(g0.x, T.heightAt(g0.x, g0.z), g0.z), line.dir, look, houseMats));
-  world.add(terminal(new THREE.Vector3(g1.x, T.heightAt(g1.x, g1.z), g1.z), line.dir.clone().negate(), look, houseMats));
+  const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
+  // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
+  world.add(terminal(new THREE.Vector3(g0.x, T.heightAt(g0.x, g0.z), g0.z), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
+  world.add(terminal(new THREE.Vector3(g1.x, T.heightAt(g1.x, g1.z), g1.z), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
 
   const parts = ctx.chair;
   const chairMetal = A ? metalMat : new THREE.MeshLambertMaterial({ color: 0x6b6f7d, flatShading: true });
@@ -659,7 +718,6 @@ function build(look, ctx) {
   myChair.add(rider);
   world.add(myChair);
   if (!TRIP) $("desc").textContent = DESC[look];
-  document.querySelectorAll("[data-style]").forEach((b) => b.classList.toggle("on", b.dataset.style === look));
 }
 
 // ---------- Looking around (same as the game: phone turn or drag, limited like a seated rider) ----------
@@ -706,13 +764,11 @@ async function main() {
   setLiftKind(lift.name);
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE;
-  $("styles").hidden = TRIP;
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski") };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski"), lift };
   ctx.tex.cord.repeat.set(1, 1);
-  let current = params.get("style") === "C" ? "C" : "A";
+  const current = "A"; // semi-realistic, decided 2026-11-01
   build(current, ctx);
-  document.querySelectorAll("[data-style]").forEach((b) => b.addEventListener("click", () => { if (b.dataset.style !== current) build((current = b.dataset.style), ctx); }));
   $("status").remove();
   // Run names carved into the snow, met on the way up.
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
@@ -723,7 +779,7 @@ async function main() {
   weather(params, flakes);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
-  const d0 = TRIP ? 32 : line.total * 0.22, d1 = TRIP ? line.total - 28 : line.total * 0.66; // clear of the bullwheels
+  const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - 9 : line.total * 0.66; // from the loading point to the unload ramp
   let fast = false, arrived = false;
   const fastBtn = $("fast");
   fastBtn.hidden = !TRIP;
@@ -787,7 +843,8 @@ async function main() {
     camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
     // Look up the slope, not at a fixed angle: aim 30 m ahead on the line, a little below the rope, so
     // the snow ahead (higher than the chair on the way up) and the names carved in it stay in view.
-    const ahead = along(line.up, Math.min(d + 30, line.total), new THREE.Vector3()).sub(head).applyAxisAngle(Y, look.yaw);
+    const e = Math.min(d + 30, line.total); // 30 m of line ahead, even at the very top
+    const ahead = along(line.up, e, new THREE.Vector3()).sub(along(line.up, e - 30, new THREE.Vector3())).add(along(line.up, d, new THREE.Vector3())).sub(head).applyAxisAngle(Y, look.yaw);
     camera.lookAt(head.clone().add(ahead).add(new THREE.Vector3(0, -12 + 30 * Math.tan(look.pitch), 0)));
     sun.position.copy(head).addScaledVector(sun.userData.dir, 400);
     sun.target.position.copy(head);
