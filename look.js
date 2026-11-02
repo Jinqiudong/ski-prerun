@@ -194,6 +194,76 @@ function treeSpots(T, R, mask, line) {
   return spots;
 }
 
+// A: a spruce built from branch cards (tools/make_branch.py paints them from Poly Haven's fir twigs).
+// Tiers of drooping branches around a trunk, a crossed crown on top. Unit height. Normals lean outward
+// and up so the crown shades like a volume rather than flat cards. detail: 1 near the lift, 0 far away.
+function cardSpruce(detail) {
+  const N = detail ? 13 : 7, K = detail ? 7 : 5, segs = detail ? 2 : 1;
+  const pos = [], nor = [], uv = [], idx = [];
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1), y = 0.09 + t * 0.66, L = 0.34 * Math.pow(1 - t, 0.95) + 0.06, w = L * 0.55;
+    const rot = rand() * 6.28;
+    for (let k = 0; k < K; k++) {
+      const yaw = rot + (k / K) * Math.PI * 2 + (rand() - 0.5) * 0.4, c = Math.cos(yaw), sn = Math.sin(yaw);
+      const base = pos.length / 3;
+      // The branch bends down along its length: a gentle slope near the trunk, steeper at the tip.
+      let x = 0, h = 0;
+      const prof = [[0, 0]];
+      for (let g = 1; g <= segs; g++) {
+        const a = (detail ? [0.22, 0.6][g - 1] : 0.4) + (rand() - 0.5) * 0.15, l = L / segs;
+        x += Math.cos(a) * l; h -= Math.sin(a) * l;
+        prof.push([x, h]);
+      }
+      prof.forEach(([px, py], g) => {
+        for (const v of [0, 1]) {
+          const z = (v - 0.5) * w * (1 - 0.25 * (g / segs));
+          pos.push(px * c - z * sn, y + py, px * sn + z * c);
+          const n = new THREE.Vector3(c * 0.45, 0.9, sn * 0.45).normalize();
+          nor.push(n.x, n.y, n.z);
+          uv.push(g / segs, v);
+        }
+      });
+      for (let g = 0; g < segs; g++) { const a = base + g * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  // The crown: two crossed upright cards.
+  const cp = [], cn = [], cu = [], ci = [];
+  for (const a of [0, Math.PI / 2]) {
+    const b = cp.length / 3, c = Math.cos(a), sn = Math.sin(a), h0 = 0.62, h1 = 1.0, w = (h1 - h0) / 2;
+    for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      cp.push((u - 0.5) * w * c, h0 + v * (h1 - h0), (u - 0.5) * w * sn);
+      cn.push(0, 1, 0); cu.push(u, v);
+    }
+    ci.push(b, b + 1, b + 2, b + 1, b + 3, b + 2);
+  }
+  const crown = new THREE.BufferGeometry();
+  crown.setAttribute("position", new THREE.Float32BufferAttribute(cp, 3));
+  crown.setAttribute("normal", new THREE.Float32BufferAttribute(cn, 3));
+  crown.setAttribute("uv", new THREE.Float32BufferAttribute(cu, 2));
+  crown.setIndex(ci);
+  const trunk = new THREE.CylinderGeometry(0.008, 0.022, 0.8, 6).translate(0, 0.4, 0);
+  return { branches: geo, crown, trunk };
+}
+
+// Foliage cards: cut out by the texture's alpha; snow from the mask, only on faces turned to the sky.
+function foliageMat(map, snowMap, upFacing) {
+  const mat = new THREE.MeshStandardMaterial({ map, alphaTest: 0.42, side: THREE.DoubleSide, roughness: 0.85 });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.snowMap = { value: snowMap };
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform sampler2D snowMap;")
+      .replace("#include <map_fragment>", `#include <map_fragment>
+        float sm = texture2D(snowMap, vMapUv).r * ${upFacing ? "(gl_FrontFacing ? 1.0 : 0.1)" : "0.8"};
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), smoothstep(0.04, 0.3, sm));`);
+  };
+  return mat;
+}
+
 function plant(spots, geo, mat, scaleOf) {
   const group = new THREE.Group(), CH = 300, buckets = new Map();
   for (const s of spots) {
@@ -425,8 +495,12 @@ function build(look, ctx) {
   const treeMat = A ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }) : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const height = (s) => 13 + s.v * 13;
   if (A) {
-    world.add(plant(spots.filter((s) => s.d < 420), spruceA(), treeMat, height));
-    world.add(plant(spots.filter((s) => s.d >= 420), coneTree(0x1d3a2a, 0xe8eef6, 7), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true }), height));
+    const branchMat = foliageMat(tex.branch, tex.branchSnow, true), crownMat = foliageMat(tex.crown, tex.crownSnow, false);
+    const bark = new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.95 });
+    for (const [list, detail] of [[spots.filter((s) => s.d < 380), 1], [spots.filter((s) => s.d >= 380), 0]]) {
+      const tree = cardSpruce(detail);
+      world.add(plant(list, tree.branches, branchMat, height), plant(list, tree.crown, crownMat, height), plant(list, tree.trunk, bark, height));
+    }
   } else {
     world.add(plant(spots, coneTree(0x3f8574, 0xfaf6f2, 6), treeMat, height));
   }
@@ -496,12 +570,14 @@ async function main() {
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     res(t);
   }));
-  const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
+  const [snowD, snowN, rockD, branch, branchSnow, crown, crownSnow] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true),
+    load("spruce_branch.png", true), load("spruce_snow.png"), load("spruce_crown.png", true), load("spruce_crown_snow.png")]);
+  for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   await loadAvatar();
   const T = new Terrain(R), mask = treeMaskFn(R, T);
   const lift = R.lifts.find((l) => l.name === "American Flyer");
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski") };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski") };
   ctx.tex.cord.repeat.set(1, 1);
   const params = new URLSearchParams(location.search);
   let current = params.get("style") === "C" ? "C" : "A";

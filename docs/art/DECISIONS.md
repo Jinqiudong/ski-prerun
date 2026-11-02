@@ -47,3 +47,13 @@ Next: storyboard of the day flow (step 3 for this flow), then build.
   a sheet; the model dims and rises a little but keeps its size.
 - Proposed by Claude, pending the owner's review: nav cues at 200 m and again at 50 m; keep a compact
   slope profile in run previews.
+
+## Art direction for the ride (2026-11-01)
+
+- Owner compared two looks of the American Flyer ride (`/look.html`): A semi-realistic (reference: Grand
+  Mountain Adventure 2) and C stylised (reference: Lonely Mountains: Snow Riders). **Chose A.**
+- Assets: only sources that need no login and allow commercial use (CC0 first: Poly Haven, ambientCG).
+  Sketchfab is out (download needs an account).
+- Trees: spruce built from branch cards painted from Poly Haven's fir_tree_01 twig textures
+  (`tools/make_branch.py`), snow only on sky-facing faces; fewer tiers far from the lift.
+- Next: vertical slice of this stretch in A until the owner is happy, then roll out to the game.
