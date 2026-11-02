@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose } from "./rider.js?v=5";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=5";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 
 const $ = (id) => document.getElementById(id);
@@ -223,8 +223,8 @@ function coneTree(green, snowCol, sides) {
 }
 
 // Where trees stand: the OSM woods near the lift, kept off the runs and out of the cleared lift line.
-function treeSpots(T, R, mask, line) {
-  const xs = line.ground.map((p) => p.x), zs = line.ground.map((p) => p.z), M = 900;
+function treeSpots(T, R, mask, line, M = 900, clear = 16, skip = null) {
+  const xs = line.ground.map((p) => p.x), zs = line.ground.map((p) => p.z);
   const x0 = Math.max(T.x0, Math.min(...xs) - M), x1 = Math.min(T.x1, Math.max(...xs) + M);
   const z0 = Math.max(T.z0, Math.min(...zs) - M), z1 = Math.min(T.z1, Math.max(...zs) + M);
   const onRun = new Set(), C = 8, key = (x, z) => `${Math.floor(x / C)},${Math.floor(z / C)}`;
@@ -254,7 +254,8 @@ function treeSpots(T, R, mask, line) {
     const woods = mask(px, pz);
     if ((woods ? rand() > 0.62 : rand() > 0.012) || onRun.has(key(px, pz))) continue;
     const d = segDist(px, pz);
-    if (d < 16) continue; // the lift line is cleared
+    if (d < clear) continue; // the lift line is cleared
+    if (skip && skip(px, pz)) continue;
     if (d > 420 && rand() > 0.45) continue; // thinner far away, where fog softens it anyway
     spots.push({ x: px, z: pz, y: T.heightAt(px, pz), d, v: rand() });
   }
@@ -577,7 +578,9 @@ function terminal(p, dir, look, mats, { name, alt, top, upSide }) {
   add(new THREE.BoxGeometry(3.0, 0.3, 3.0), mats.roof, bx, 3.05, 6);
   add(new THREE.BoxGeometry(2.7, 0.35, 2.7), mats.dark, bx, 0.2, 6);
   // The deck riders stand on, level snow.
-  add(new THREE.BoxGeometry(W * 2 + 6, 8, 26), snow, 0, -3.75, 6); // deep, so it meets the slope below
+  // A snow-covered deck on a concrete foundation that reaches down to the slope.
+  add(new THREE.BoxGeometry(W * 2 + 6, 0.5, 26), snow, 0, 0, 6);
+  add(new THREE.BoxGeometry(W * 2 + 5, 8, 25), new THREE.MeshStandardMaterial({ color: 0x8f8b85, roughness: 0.95 }), 0, -4.2, 6);
   const signAt = new THREE.Vector3(upSide * HALF_GAUGE, 0, -11);
   if (top) {
     // Unload ramp: from under the arriving chairs, sloping down and away past the wheel.
@@ -670,12 +673,18 @@ function build(look, ctx) {
     ? new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })
     : new THREE.MeshLambertMaterial({ color: 0xfbfcff, flatShading: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   const near = (pts) => pts.some(([x, z]) => line.up.some((g, i) => i % 25 === 0 && Math.hypot(g.x - x, g.z - z) < 1400));
-  for (const run of R.runs) {
-    if (run.area || !near(run.pts)) continue;
-    const m = new THREE.Mesh(runRibbon(T, run.pts, 30, 0.25), runMat);
-    m.receiveShadow = true;
-    world.add(m);
-  }
+  const drawn = new Set();
+  // Groomed runs; more can be added later along the way down (see addRunsNear).
+  ctx.addRunsNear = (test) => {
+    for (const run of R.runs) {
+      if (run.area || drawn.has(run) || !test(run.pts)) continue;
+      drawn.add(run);
+      const m = new THREE.Mesh(runRibbon(T, run.pts, 30, 0.25), runMat);
+      m.receiveShadow = true;
+      world.add(m);
+    }
+  };
+  ctx.addRunsNear(near);
 
   // Forest: detailed spruce near the lift in A, cones further out; cones everywhere in C.
   const treeMat = A ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }) : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
@@ -683,10 +692,18 @@ function build(look, ctx) {
   if (A) {
     const branchMat = foliageMat(tex.branch, tex.branchSnow, true), crownMat = foliageMat(tex.crown, tex.crownSnow, false);
     const bark = new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.95 });
-    for (const [list, detail] of [[spots.filter((s) => s.d < 380), 1], [spots.filter((s) => s.d >= 380), 0]]) {
-      const tree = cardSpruce(detail);
-      world.add(plant(list, tree.branches, branchMat, height), plant(list, tree.crown, crownMat, height), plant(list, tree.trunk, bark, height));
-    }
+    // Detailed trees near the line, simpler ones further out. Reused for the forest along a run.
+    ctx.forest = (spots, near = 380) => {
+      const g = new THREE.Group();
+      for (const [list, detail] of [[spots.filter((s) => s.d < near), 1], [spots.filter((s) => s.d >= near), 0]]) {
+        if (!list.length) continue;
+        const tree = cardSpruce(detail);
+        g.add(plant(list, tree.branches, branchMat, height), plant(list, tree.crown, crownMat, height), plant(list, tree.trunk, bark, height));
+      }
+      world.add(g);
+      return g;
+    };
+    ctx.forest(spots);
   } else {
     world.add(plant(spots, coneTree(0x3f8574, 0xfaf6f2, 6), treeMat, height));
   }
@@ -762,6 +779,73 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const end = r.pts[r.pts.length - 1];
     o.next = R.lifts.filter((l) => l !== lift && l.kind !== "magic_carpet" && Math.hypot(l.pts[0][0] - end[0], l.pts[0][1] - end[1]) < 260).map((l) => l.name);
   }
+  // ---- Skiing the chosen run: the game's slope physics, auto by default; drag to steer, pull down to brake.
+  let phys = null, tracks = null, prog = 0, auto = true, steerIn = 0, brakeIn = false, ended = false;
+  const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  const runDir = (run, i) => { const a = run.pts[Math.max(0, i - 1)], b = run.pts[Math.min(run.pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
+  const nearestOn = (run, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (run.pts[i][0] - x) ** 2 + (run.pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
+  function startSki() {
+    const run = chosen.run;
+    document.body.classList.remove("picking");
+    marks.visible = false;
+    // The forest and runs along this run, beyond what was planted around the lift.
+    const lineXs = line.ground.map((p) => p.x), lineZs = line.ground.map((p) => p.z), M = 900;
+    const inLiftArea = (x, z) => x > Math.min(...lineXs) - M && x < Math.max(...lineXs) + M && z > Math.min(...lineZs) - M && z < Math.max(...lineZs) + M;
+    const runLine = { ground: run.pts.map(([x, z]) => ({ x, z })) };
+    ctx.forest(treeSpots(T, R, ctx.mask, runLine, 450, 0, inLiftArea), 300);
+    ctx.addRunsNear((pts) => pts.some(([x, z]) => run.pts.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
+    phys = new Rider(T, "ski");
+    phys.place(run.pts[0][0], run.pts[0][1], runDir(run, 0), 2);
+    tracks = new Tracks(scene, T, "ski");
+    prog = 0; ended = false; auto = true;
+    st.phase = "ski";
+    $("skiHud").hidden = false;
+    $("liftName").innerHTML = `${LEVEL_MARK[run.level]}${run.name}`;
+    $("desc").textContent = `${run.name} · 自动滑行中，拖动屏幕就由你来滑`;
+  }
+  let sdrag = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "ski") sdrag = { x: e.clientX, y: e.clientY }; });
+  addEventListener("pointermove", (e) => {
+    if (!sdrag || st.phase !== "ski") return;
+    steerIn = clamp((e.clientX - sdrag.x) / 90, -1, 1);
+    brakeIn = e.clientY - sdrag.y > 60;
+    if (auto) { auto = false; $("desc").textContent = `${chosen.run.name} · 你在滑：左右拖转弯，往下拉刹车`; }
+  });
+  addEventListener("pointerup", () => { sdrag = null; steerIn = 0; brakeIn = false; });
+  function stepSki(dt) {
+    const run = chosen.run, r = phys, last = run.pts.length - 1;
+    const near = nearestOn(run, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
+    if (near.d < 70) prog = Math.max(prog, near.i);
+    let steer = steerIn, brake = brakeIn;
+    if (auto) {
+      const [tx, tz] = run.pts[Math.min(near.i + 4, last)];
+      steer = clamp(-angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1);
+      brake = r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[run.level];
+    }
+    r.step(dt, { steer, brake, push: auto && r.speed < 4, offPiste: near.d > 45 });
+    r.pose(ctx.rider);
+    tracks.add(r);
+    // Chase camera, like the game's.
+    const back = new THREE.Vector3(-Math.sin(r.heading), 0, -Math.cos(r.heading));
+    const want = new THREE.Vector3(r.x, r.y, r.z).addScaledVector(back, 6.5 + r.speed * 0.08);
+    want.y = Math.max(T.heightAt(want.x, want.z) + 1.2, r.y + 2.6);
+    camera.position.lerp(want, Math.min(1, dt * 4));
+    camera.lookAt(r.x + Math.sin(r.heading) * 5, r.y + 1.1, r.z + Math.cos(r.heading) * 5);
+    const left = Math.max(0, chosen.dist[last] - chosen.dist[prog]);
+    $("skiSpeed").textContent = Math.round(r.speed * 3.6);
+    $("skiLeft").textContent = left > 1000 ? `${(left / 1000).toFixed(1)} 公里` : `${Math.round(left)} 米`;
+    $("skiCue").innerHTML = near.d > 60 ? `<b>偏离雪道 ${Math.round(near.d)} 米</b>，回到 ${chosen.run.name}` : left > 220 ? `沿 ${LEVEL_MARK[run.level]}${run.name} 一直滑` : `<b>快到了</b> · 还有 ${Math.round(left)} 米`;
+    if (!ended && prog >= last - 1 && near.d < 60) {
+      ended = true;
+      $("skiHud").hidden = true;
+      $("arrive").hidden = false;
+      $("arriveTitle").textContent = `滑到底了 · ${run.name}`;
+      $("arriveNote").textContent = chosen.next.length ? `这里能坐 ${chosen.next.join("、")}` : "这条雪道滑回山下了";
+      $("arriveRow").innerHTML = chosen.next.map((n) => `<a class="btn go" href="look.html?lift=${encodeURIComponent(n)}">坐 ${n} 上山 ›</a>`).join("")
+        + `<a class="btn" href="mountain/">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
+    }
+  }
+
   // Where the rider stands after getting off: down the ramp, beside the sign.
   const standAt = () => {
     topTerm.updateMatrixWorld(true);
@@ -791,6 +875,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     yaw0 = getChair().rotation.y;
     scene.attach(rider);
     riderTo = standAt();
+    $("bubble").hidden = true;
     $("desc").textContent = "到站了，下缆车…";
   };
   const camBehind = (r, ang, dist, hgt) => r.clone().add(new THREE.Vector3(Math.sin(yaw0 + ang) * -dist, hgt, Math.cos(yaw0 + ang) * -dist));
@@ -819,8 +904,10 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       camera.lookAt(new THREE.Vector3().lerpVectors(la, lb, u));
       if (u >= 1) {
         if (st.phase === "rise") { st.phase = "pick"; $("pick").hidden = false; document.body.classList.add("picking"); select(runs[0]); }
-        else location.href = `./?run=${chosen.idx}&kind=${kind}`;
+        else startSki();
       }
+    } else if (st.phase === "ski") {
+      stepSki(Math.min(dt, 0.05));
     } else if (st.phase === "pick") {
       camera.position.copy(to); camera.lookAt(toLook);
       placeTags();
@@ -829,7 +916,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
         m.mesh.geometry.setDrawRange(0, Math.floor(m.count * k / 6) * 6);
       }
     }
-    st.focus.copy(camera.position);
+    st.focus.copy(st.phase === "ski" ? ctx.rider.position : camera.position);
   };
   function setupPick() {
     // From the rider at the sign, rise and pull back above the summit, looking down the runs.
@@ -966,7 +1053,7 @@ async function main() {
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE;
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski"), lift };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski"), lift, mask };
   ctx.tex.cord.repeat.set(1, 1);
   const current = "A"; // semi-realistic, decided 2026-11-01
   build(current, ctx);
