@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>坐缆车画面样稿 · A / C</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcea; font-family: -apple-system, "PingFang SC", sans-serif; color: #f4f7fb; touch-action: none; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .glass { background: rgba(14, 22, 34, .62); border: 1px solid rgba(255, 255, 255, .16); border-radius: 14px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+    #top { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 10px; right: 10px; padding: 10px 12px; }
+    #top b { font-size: 16px; }
+    #top p { margin: 4px 0 0; font-size: 12px; color: #b9c4d3; }
+    #styles { position: fixed; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 10px; }
+    #styles button { font: inherit; font-size: 15px; font-weight: 600; color: #f4f7fb; padding: 10px 16px; border-radius: 999px; cursor: pointer; }
+    #styles button.on { background: #2f7fe8; border-color: #2f7fe8; }
+    #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 12px 18px; }
+    #credit { position: fixed; right: 6px; bottom: 2px; font-size: 9px; color: rgba(30, 40, 55, .6); pointer-events: none; }
+  </style>
+  <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="top" class="glass"><b>🚡 American Flyer · 画面样稿</b><p id="desc"></p></div>
+  <div id="styles"><button class="glass" data-style="A">A 半写实</button><button class="glass" data-style="C">C 风格化</button></div>
+  <div id="status" class="glass">加载中…</div>
+  <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
+  <script type="module" src="look.js?v=1"></script>
+</body>
+</html>
