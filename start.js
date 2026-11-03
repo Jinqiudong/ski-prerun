@@ -5,11 +5,12 @@ import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } f
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SLOTS = 4; // the four default riders; the ones not made yet show as coming
+// A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
 const SWATCHES = {
-  jacket: ["#464e3f", "#2f5a3f", "#1f2f55", "#4f8fd6", "#c23a32", "#e0782e", "#e8c13a", "#d97aa6", "#8b7bc8", "#eceae4", "#3a3f46", "#1b1d21"],
-  pants: ["#c5c4b6", "#eceae4", "#1b1d21", "#3a3f46", "#464e3f", "#1f2f55", "#4f8fd6", "#c23a32", "#e0782e", "#d97aa6", "#8b6b4a"],
-  helmet: ["#161819", "#eceae4", "#3a3f46", "#1f2f55", "#c23a32", "#e8c13a", "#d97aa6", "#4f8fd6", "#464e3f"],
-  lens: ["#ad5599", "#d9a43a", "#3a6fd9", "#9aa3ad", "#2b2d33", "#3fae7a", "#e0603a"],
+  jacket: ["#464e3f", "#6f7a62", "#8e9681", "#4a5a6e", "#2f3a4c", "#7b8a96", "#a39d8f", "#c2b49a", "#a8674f", "#8e4a36", "#a88584", "#6e5f6e", "#3b3d40", "#dcd7cc"],
+  pants: ["#c5c4b6", "#dcd7cc", "#a39d8f", "#8f8670", "#4f5645", "#4a5a6e", "#2f3a4c", "#9c6a55", "#3b3d40", "#222326"],
+  helmet: ["#161819", "#3b3d40", "#d9d6ce", "#8f8b82", "#4a5a6e", "#55604b", "#b8a98c", "#9a5f4a"],
+  lens: ["#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
 };
 
 // ---- Saved state: { kind, rider (an id or a default's key), riders: [{ id, base, name, colors }] }
@@ -44,7 +45,7 @@ function resize() {
   const w = innerWidth, h = innerHeight * 0.58;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.35, 4.6); camera.lookAt(0, 0.5, 0);
+  camera.position.set(0, 1.3, 5.4); camera.lookAt(0, 0.62, 0);
 }
 addEventListener("resize", resize); resize();
 canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, a: turntable.rotation.y }; });
@@ -125,11 +126,6 @@ function openEdit() {
       s.onclick = () => { draft.colors[part] = c; mark(); show(draft); };
       row.append(s);
     }
-    const pick = document.createElement("label");
-    pick.className = "sw pick"; pick.title = "自选颜色";
-    pick.innerHTML = `<input type="color" value="${draft.colors[part] || p.color}">`;
-    pick.querySelector("input").oninput = (e) => { draft.colors[part] = e.target.value; mark(); show(draft); };
-    row.append(pick);
     mark();
     $("parts").append(wrap);
   }
