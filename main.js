@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Terrain, sky, lights, treeMaskFn, forest, runLayers, highlight, signs, Lifts, LEVEL, at, chairMesh, farTerrain } from "./world.js?v=5";
-import { Rider, riderModel, Tracks, Spray, loadAvatar, applyPose } from "./rider.js?v=5";
+import { Rider, riderModel, Tracks, Spray, loadAvatar, applyPose } from "./rider.js?v=6";
 import { buildGraph, planRoute, nodesNear, lengthAlong, LEVELS } from "./route.js?v=5";
 import { applyStyle, miniature } from "./styles.js?v=5";
 import { snowNames, fadeNames } from "./snownames.js?v=3";

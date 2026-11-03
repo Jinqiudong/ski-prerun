@@ -16,9 +16,10 @@ export async function loadBoarder(url = "assets/riders/rider_a.glb") {
 }
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+const HALF_WIDTH = 0.185; // from the middle of the base to its edge, as measured on the model
 
 // root sits at the board's base with local +z the direction of travel, like rider.js's models:
-//   root → yaw (board skidding across) → lean (inclination into the turn) → model
+//   root → yaw (board skidding across) → lean (board on its edge, rider inclined into the turn) → model
 export function boarderModel() {
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group();
   const model = gltf.scene; // one rider on the mountain, so no clone
@@ -32,6 +33,10 @@ export function boarderModel() {
   const box = new THREE.Box3().setFromObject(model);
   model.rotation.y = fl.x > fr.x ? -Math.PI / 2 : Math.PI / 2; // regular (left foot first) or goofy
   model.position.y = -box.min.y;
+  root.updateMatrixWorld(true);
+  // Which side the toes point to (+1: +x, -1: -x): the foot bones run heel to toe.
+  const toes = new THREE.Vector3(0, 1, 0).applyQuaternion(bone("Foot.L").getWorldQuaternion(new THREE.Quaternion()));
+  const toeX = Math.sign(root.worldToLocal(toes.add(root.getWorldPosition(new THREE.Vector3()))).x) || 1;
   const mixer = new THREE.AnimationMixer(model);
   const clip = (n) => {
     const c = gltf.animations.find((a) => a.name === n);
@@ -39,28 +44,66 @@ export function boarderModel() {
     a.play(); a.paused = true; a.time = c.duration / 2; a.setEffectiveWeight(0); // held at its peak
     return a;
   };
+  // Left_Turn and Right_Turn shift the weight toward the nose or the tail; Knee_Bend sinks the hips.
   const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend") };
-  root.userData = { kind: "board", yaw, lean, model, mixer, A, s: { turn: 0, knee: 0, skid: 0, lean: 0 } };
+  const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R") };
+  const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
+  root.userData = { kind: "board", yaw, lean, model, mixer, A, B, toeX, armZ, s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
   return root;
 }
 
-// Pose from the physics state (rider.js's Rider), like Rider.pose does for the built-in models.
+const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _ax = new THREE.Vector3();
+// Rotate a bone about an axis given in `frame`'s space (after the mixer has set its pose).
+function turn(bone, frame, axis, angle) {
+  if (!bone || !angle) return;
+  _ax.copy(axis).transformDirection(frame.matrixWorld);
+  bone.parent.getWorldQuaternion(_pq);
+  _ax.applyQuaternion(_pq.invert()).normalize();
+  bone.quaternion.premultiply(_q.setFromAxisAngle(_ax, angle));
+  bone.updateMatrixWorld(true);
+}
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+
+// Pose from the physics state (rider.js's Rider). The whole rider and board incline into the turn by the
+// angle that balances it, so the board rides its inside edge: the toe edge when the turn's inside is the
+// side the toes point to, the heel edge otherwise. To slow down the board swings across the way you move
+// and the rider sits back onto the heel edge, uphill. The legs come from the clips (so the feet stay on
+// the bindings); the upper body angulates (stays more upright than the legs) and the arms balance.
 export function poseBoarder(root, r) {
-  const u = root.userData, s = u.s, dt = r.dt || 0.016;
-  root.position.set(r.x, r.y + 0.01, r.z);
-  root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), r.n);
+  const u = root.userData, s = u.s, dt = r.dt || 0.016, tx = u.toeX;
+  root.position.set(r.x, r.y, r.z);
+  root.quaternion.setFromUnitVectors(Y, r.n);
   root.rotateY(r.heading);
-  // Steer > 0 turns right. The turn clips are weight shifts, so they follow the steering input.
-  s.turn = damp(s.turn, Math.max(-1, Math.min(1, r.steer * 1.4)), 6, dt);
-  s.skid = damp(s.skid, r.braking ? 1 : 0, 5, dt);
-  s.knee = damp(s.knee, Math.min(1, 0.25 + s.skid * 0.5 + Math.abs(s.turn) * 0.3 + (r.speed > 14 ? 0.3 : 0)), 5, dt);
-  s.lean = damp(s.lean, Math.max(-0.45, Math.min(0.45, r.lean)), 6, dt);
-  const right = Math.max(0, s.turn), left = Math.max(0, -s.turn);
-  u.A.right.setEffectiveWeight(right);
-  u.A.left.setEffectiveWeight(left);
-  u.A.knee.setEffectiveWeight(s.knee * (1 - right - left) * 0.8);
-  u.A.stance.setEffectiveWeight(Math.max(0, 1 - right - left - s.knee * 0.8));
+  // Steer > 0 turns toward local -x, which is where a positive lean (rotation about +z) tilts the rider.
+  s.edge = damp(s.edge, Math.max(-0.9, Math.min(0.9, r.lean)), 8, dt);
+  s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
+  s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
+  s.fore = damp(s.fore, Math.max(-1, Math.min(1, r.steer)) * 0.35, 4, dt); // weight forward into a turn
+  const toeSide = Math.max(0, -s.edge * tx), heelSide = Math.max(0, s.edge * tx); // 0..0.9 rad
+  s.knee = damp(s.knee, Math.min(1, 0.25 + heelSide * 0.9 + toeSide * 0.4 + s.skid * 0.5 + s.tuck * 0.6), 5, dt);
+  const fwd = Math.max(0, s.fore), back = Math.max(0, -s.fore);
+  u.A.right.setEffectiveWeight(fwd);
+  u.A.left.setEffectiveWeight(back);
+  u.A.knee.setEffectiveWeight(s.knee * (1 - fwd - back));
+  u.A.stance.setEffectiveWeight(Math.max(0, 1 - fwd - back - s.knee * (1 - fwd - back)));
+  // The mixer only writes a bone when the blend changes, so put back its last output before our own
+  // turns go on top (or they would pile up frame after frame while the pose holds still).
+  for (const b of Object.values(u.B)) if (b.userData.mixed) b.quaternion.copy(b.userData.mixed);
   u.mixer.update(0);
-  u.yaw.rotation.y = 1.1 * s.skid; // braking: board slides across the fall line
-  u.lean.rotation.z = s.lean * 0.8;
+  for (const b of Object.values(u.B)) (b.userData.mixed ||= new THREE.Quaternion()).copy(b.quaternion);
+  // Skid: the board swings so the toes face the way you are going and the heel edge trails uphill.
+  u.yaw.rotation.y = -tx * 1.2 * s.skid;
+  const tilt = s.edge * (1 - s.skid) - tx * 0.3 * s.skid; // about the board's long axis; + leans toward -x
+  u.lean.rotation.z = tilt;
+  u.lean.position.y = HALF_WIDTH * Math.abs(Math.sin(tilt)); // pivot on the edge that's in the snow, not under it
+  u.lean.updateMatrixWorld(true);
+  // Angulation: the chest comes back toward upright by about a third of the inclination.
+  turn(u.B.spine, u.lean, Z, -tilt * 0.2);
+  turn(u.B.chest, u.lean, Z, -tilt * 0.15);
+  // Toe side: chest over the toes. Heel side: sit back, chest a little forward to stay over the board.
+  turn(u.B.spine, u.lean, Z, -tx * (toeSide * 0.25 + s.tuck * 0.15));
+  // Arms out toward the nose and the tail for balance as the edge grows.
+  const arms = Math.min(1, Math.abs(tilt) * 1.2 + s.skid * 0.4) * 0.6;
+  turn(u.B.armL, u.lean, X, -u.armZ * arms);
+  turn(u.B.armR, u.lean, X, u.armZ * arms);
 }

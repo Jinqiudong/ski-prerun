@@ -139,37 +139,50 @@ export class Rider {
     this.y = this.terrain.heightAt(x, z);
   }
 
-  // input: steer -1..1 (right positive), brake, push; offPiste adds deep-snow drag.
-  step(dt, { steer, brake, push, offPiste }) {
+  // input: steer -1..1 (right positive): how hard to edge into a turn. pace -1..1: -1 skids the board or
+  // skis across the way you are going to slow down, +1 tucks for speed (brake is pace -1). push: skate or
+  // walk on the flat. offPiste adds deep-snow drag.
+  step(dt, { steer, pace = 0, brake, push, offPiste }) {
     const t = this.terrain, n = t.normalAt(this.x, this.z, this.n);
     const board = this.kind === "board";
+    if (brake) pace = -1;
     this.steer = damp(this.steer, steer, board ? 5 : 7, dt);
+    this.pace = damp(this.pace ?? 0, pace, 4, dt);
+    const skid = Math.max(0, -this.pace), tuck = Math.max(0, this.pace);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     const drop = (n.x * fx + n.z * fz) / n.y; // meters of drop per meter along the heading; negative = uphill
     const along = (9.8 * drop) / Math.sqrt(1 + drop * drop);
-    const mu = 0.045 + (brake ? 0.7 : 0) + (offPiste ? 0.1 : 0);
-    let a = along - mu * 9.8 * n.y - 0.0032 * this.speed * this.speed - Math.abs(this.steer) * this.speed * 0.07;
+    // The turn: the stick asks for a sideways pull of up to g·tan 50° from the edge. The rider has to
+    // incline into it to balance (tan lean = pull / g), so a fast turn is a wide one and a slow one a pivot.
+    const pull = Math.abs(this.steer) * 9.8 * Math.tan((50 * Math.PI) / 180) * (1 - 0.4 * skid);
+    const rate = Math.min(board ? 1.6 : 2.0, pull / Math.max(this.speed, 2.5));
+    // Snow friction grows as the base turns across the way you move (a skid); a tuck cuts the air drag.
+    const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 : 0);
+    let a = along - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - (this.speed * rate * Math.abs(this.steer)) * 0.05;
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
     this.pushing = push && this.speed < (board ? 3 : 5.5) && drop > -0.03;
     if (this.pushing) a += board ? 1.0 : 1.8;
     this.speed = Math.max(0, Math.min(30, this.speed + a * dt));
+    // Up a short rise you don't slide: you walk (or side-step) it at walking pace.
+    this.walking = push && drop <= -0.03 && this.speed < 1.2;
+    if (this.walking) this.speed = 1.2;
     if (this.speed < 0.5 && drop < 0.05 && !this.pushing) {
       // Stopped across or facing up the hill: turn back toward the fall line instead of standing still.
       const fall = Math.atan2(n.x, n.z);
       const diff = Math.atan2(Math.sin(fall - this.heading), Math.cos(fall - this.heading));
       this.heading += Math.sign(diff) * Math.min(Math.abs(diff), dt * 1.2);
     }
-    const turn = (board ? 1.6 : 2.0) / (1 + this.speed / 16);
-    this.heading -= this.steer * turn * dt;
+    this.heading -= Math.sign(this.steer) * rate * dt;
     const horiz = this.speed / Math.sqrt(1 + drop * drop);
     this.x += Math.sin(this.heading) * horiz * dt;
     this.z += Math.cos(this.heading) * horiz * dt;
     this.x = Math.min(Math.max(this.x, t.x0 + 30), t.x1 - 30);
     this.z = Math.min(Math.max(this.z, t.z0 + 30), t.z1 - 30);
     this.y = t.heightAt(this.x, this.z);
-    // Inclination into the turn grows with speed (balance against the turn's pull).
-    this.lean = damp(this.lean, Math.atan((this.speed * this.speed * Math.abs(this.steer) * turn) / (9.8 * Math.max(this.speed, 1))) * Math.sign(this.steer), 6, dt);
-    this.braking = brake;
+    // Inclination that balances the turn's pull: tan(lean) = speed · turn rate / g.
+    this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6, dt);
+    this.skid = skid; this.tuck = tuck;
+    this.braking = skid > 0.35;
     this.dt = dt;
     return this;
   }

@@ -73,6 +73,12 @@
     #vignette { position: fixed; inset: 0; pointer-events: none; display: none; background: radial-gradient(ellipse 72% 62% at 50% 46%, rgba(233,237,242,0) 58%, rgba(233,237,242,.55) 82%, rgba(233,237,242,.92) 100%); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, transparent 55%, #000 85%); mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, transparent 55%, #000 85%); }
     body.picking #vignette { display: block; }
     .rtag.me { pointer-events: none; z-index: 4; background: #e8453c; border-color: #fff; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+    #stick { position: fixed; left: 0; top: 0; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: rgba(14,22,34,.28); border: 2px solid rgba(255,255,255,.55); touch-action: none; opacity: .7; }
+    #stick.on { opacity: 1; background: rgba(14,22,34,.38); }
+    #stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 2px 8px rgba(0,0,0,.3); pointer-events: none; }
+    #stick b { position: absolute; left: 0; right: 0; font-size: 11px; text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); pointer-events: none; }
+    #autoBtn { position: fixed; left: 12px; top: calc(118px + env(safe-area-inset-top)); font: inherit; font-size: 13px; color: #f4f7fb; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+    #autoBtn.on { background: #2f7fe8; border-color: #2f7fe8; }
     #flash { position: fixed; inset: 0; background: #f4f6f9; opacity: 0; pointer-events: none; }
     #flash.go { animation: flash .7s ease-out; }
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -89,12 +95,14 @@
   <div id="runTags"></div>
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a id="kindBtn" href="javascript:void 0"></a><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
   <div id="skiHud" class="glass" hidden><div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
+  <div id="stick" hidden><b style="top:5px">↑ 减速</b><i></i><b style="bottom:5px">↓ 加速</b></div>
+  <button id="autoBtn" class="glass" hidden></button>
   <canvas id="minimap" width="264" height="264" hidden></canvas>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=29"></script>
+  <script type="module" src="look.js?v=30"></script>
 </body>
 </html>

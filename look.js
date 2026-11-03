@@ -6,8 +6,8 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=5";
-import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=1";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=6";
+import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=2";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=14";
@@ -484,19 +484,30 @@ function corduroy() {
 }
 
 function runRibbon(T, pts, width, lift) {
+  // Draped on the snow across its width as well as along it (every few metres both ways): a strip
+  // stretched flat between its edges would float above a crowned run and swallow the rider's legs.
+  const dense = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (i) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], n = Math.ceil(Math.hypot(bx - ax, bz - az) / 4);
+      for (let k = 1; k < n; k++) dense.push([ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n]);
+    }
+    dense.push(pts[i]);
+  }
+  const across = Math.max(2, Math.ceil(width / 3)), cols = across + 1;
   const pos = [], uv = [], idx = [];
   let s = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const [x, z] = pts[i], [ax, az] = pts[Math.max(0, i - 1)], [bx, bz] = pts[Math.min(pts.length - 1, i + 1)];
+  for (let i = 0; i < dense.length; i++) {
+    const [x, z] = dense[i], [ax, az] = dense[Math.max(0, i - 1)], [bx, bz] = dense[Math.min(dense.length - 1, i + 1)];
     let dx = bx - ax, dz = bz - az;
     const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
-    if (i) s += Math.hypot(x - pts[i - 1][0], z - pts[i - 1][1]);
-    for (const sd of [-1, 1]) {
-      const px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2;
+    if (i) s += Math.hypot(x - dense[i - 1][0], z - dense[i - 1][1]);
+    for (let c = 0; c < cols; c++) {
+      const sd = (c / across) * 2 - 1, px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2;
       pos.push(px, T.heightAt(px, pz) + lift, pz);
-      uv.push(sd < 0 ? 0 : width / 4, s / 20);
+      uv.push(((sd + 1) / 2) * (width / 4), s / 20);
     }
-    if (i) { const b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+    if (i) for (let c = 0; c < across; c++) { const b = (i - 1) * cols + c; idx.push(b, b + cols, b + 1, b + 1, b + cols, b + cols + 1); }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
@@ -674,8 +685,8 @@ function build(look, ctx) {
 
   // Runs near the lift.
   const runMat = A
-    ? new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })
-    : new THREE.MeshLambertMaterial({ color: 0xfbfcff, flatShading: true, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    ? new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 })
+    : new THREE.MeshLambertMaterial({ color: 0xfbfcff, flatShading: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
   const near = (pts) => pts.some(([x, z]) => line.up.some((g, i) => i % 25 === 0 && Math.hypot(g.x - x, g.z - z) < 1400));
   const drawn = new Set();
   // Groomed runs; more can be added later along the way down (see addRunsNear).
@@ -683,7 +694,7 @@ function build(look, ctx) {
     for (const run of R.runs) {
       if (run.area || drawn.has(run) || !test(run.pts)) continue;
       drawn.add(run);
-      const m = new THREE.Mesh(runRibbon(T, run.pts, 30, 0.25), runMat);
+      const m = new THREE.Mesh(runRibbon(T, run.pts, 30, 0.03), runMat);
       m.receiveShadow = true;
       world.add(m);
     }
@@ -867,8 +878,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   const boxOf = (xs, zs, M) => [Math.min(...xs) - M, Math.max(...xs) + M, Math.min(...zs) - M, Math.max(...zs) + M];
   boxes.push(boxOf(line.ground.map((p) => p.x), line.ground.map((p) => p.z), 900));
   const planted = (x, z) => boxes.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
-  // ---- Skiing the chosen plan: the game's slope physics, auto by default; drag to steer, pull down to brake.
-  let phys = null, tracks = null, prog = 0, auto = true, steerIn = 0, brakeIn = false, ended = false;
+  // ---- Skiing the chosen plan: the game's slope physics, steered with a thumb stick (or the autopilot).
+  let phys = null, tracks = null, prog = 0, auto = false, steerIn = 0, paceIn = 0, ended = false;
   const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const pathDir = (pts, i) => { const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
   const nearestOn = (pts, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
@@ -910,12 +921,14 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const h0 = pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks = new Tracks(scene, T, st.kind);
-    prog = i0; ended = false; auto = true;
+    prog = i0; ended = false;
     st.phase = "ski";
     $("skiHud").hidden = false;
     $("minimap").hidden = false;
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
-    $("desc").textContent = "自动滑行中，拖动屏幕就由你来滑";
+    setAuto(auto);
+    $("stick").hidden = $("autoBtn").hidden = false;
+    restStick();
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
@@ -974,31 +987,65 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     return best;
   }
+  // The thumb stick: put your thumb down anywhere on the slope and it comes to you. Left and right edge
+  // into a turn, down lets it run (tuck), up slows you down (skid). Let go and it goes back to rest.
+  const stick = $("stick"), knob = stick.querySelector("i"), STICK_R = 48;
   let sdrag = null;
-  renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "ski") sdrag = { x: e.clientX, y: e.clientY }; });
-  addEventListener("pointermove", (e) => {
-    if (!sdrag || st.phase !== "ski") return;
-    steerIn = clamp((e.clientX - sdrag.x) / 90, -1, 1);
-    brakeIn = e.clientY - sdrag.y > 60;
-    if (auto) { auto = false; $("desc").textContent = "你在滑：左右拖转弯，往下拉刹车"; }
-  });
-  addEventListener("pointerup", () => { sdrag = null; steerIn = 0; brakeIn = false; });
+  const restStick = () => {
+    const hud = $("skiHud").getBoundingClientRect();
+    stick.style.left = `${innerWidth - 74}px`; stick.style.top = `${hud.top - 74}px`;
+    knob.style.transform = "";
+    stick.classList.remove("on");
+  };
+  function setAuto(on) {
+    auto = on;
+    $("autoBtn").textContent = on ? "🤖 自动滑中 · 点这里自己滑" : "🤖 自动滑";
+    $("autoBtn").classList.toggle("on", on);
+    $("desc").textContent = on ? "自动滑行中，碰一下摇杆就由你来滑" : "摇杆：左右压刃转弯 · 往下加速 · 往上减速";
+  }
+  st.setAuto = setAuto;
+  $("autoBtn").onclick = () => setAuto(!auto);
+  const stickStart = (e) => {
+    if (st.phase !== "ski" || ended) return;
+    e.preventDefault();
+    if (auto) setAuto(false);
+    const x = clamp(e.clientX, 60, innerWidth - 60), y = clamp(e.clientY, 120, innerHeight - 60);
+    sdrag = { id: e.pointerId, x, y };
+    stick.style.left = `${x}px`; stick.style.top = `${y}px`;
+    stick.classList.add("on");
+    stickMove(e);
+  };
+  const stickMove = (e) => {
+    if (!sdrag || e.pointerId !== sdrag.id) return;
+    let dx = e.clientX - sdrag.x, dy = e.clientY - sdrag.y;
+    const L = Math.hypot(dx, dy);
+    if (L > STICK_R) { dx *= STICK_R / L; dy *= STICK_R / L; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    // A little dead zone in the middle, then a smooth response to the rim.
+    const curve = (v) => Math.sign(v) * Math.max(0, (Math.abs(v) - 0.12) / 0.88);
+    steerIn = curve(dx / STICK_R); paceIn = curve(dy / STICK_R);
+  };
+  renderer.domElement.addEventListener("pointerdown", stickStart);
+  stick.addEventListener("pointerdown", stickStart);
+  addEventListener("pointermove", stickMove);
+  const stickEnd = (e) => { if (!sdrag || e.pointerId !== sdrag.id) return; sdrag = null; steerIn = 0; paceIn = 0; restStick(); };
+  addEventListener("pointerup", stickEnd);
+  addEventListener("pointercancel", stickEnd);
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   function stepSki(dt) {
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
     if (near.d < 70) prog = Math.max(prog, near.i);
     const k = segAt(P, prog), seg = P.segs[k], nextSeg = P.segs[k + 1];
-    let steer = steerIn, brake = brakeIn;
+    let steer = steerIn, pace = paceIn;
     if (auto) {
       const [tx, tz] = path[Math.min(near.i + 4, last)];
       steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
-      brake = r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level];
+      pace = r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] ? -1 : 0;
     }
-    // A short rise or a flat on the way (common near lift tops): skate and walk through it at a crawl
-    // instead of standing still, as a real skier would. Braking still stops you.
-    if (!brake && r.speed < 1.6) r.speed = 1.6;
-    r.step(dt, { steer, brake, push: auto && r.speed < 4, offPiste: near.d > 45 });
+    // On a flat or a short rise (common near lift tops) you skate, or walk up it: the autopilot always,
+    // you by pushing the stick down. Gravity does the rest; nothing pulls you uphill.
+    r.step(dt, { steer, pace, push: auto ? pace >= 0 && r.speed < 4 : pace > 0.4 && r.speed < 3, offPiste: near.d > 45 });
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
     // Chase camera, like the game's.
@@ -1035,6 +1082,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   }
   function arrive(P) {
     $("skiHud").hidden = true;
+    $("stick").hidden = $("autoBtn").hidden = true;
     $("minimap").hidden = true;
     $("arrive").hidden = false;
     const link = (l, to, label) => `<a class="btn go" href="look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}">${label}</a>`;
@@ -1441,7 +1489,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   // Testing: ski `secs` seconds at 30 fps without drawing; report where the rider went.
   st.sim = (secs, every = 5) => {
-    const out = []; simClock = performance.now();
+    const out = []; simClock = performance.now(); if (!sdrag) setAuto(true);
     for (let t = 0; t < secs && !ended; t += 1 / 30) {
       simClock += 1000 / 30; stepSki(1 / 30);
       if (Math.abs(t % every) < 1 / 60) out.push(`${Math.round(t)}s ${Math.round(phys.x)},${Math.round(phys.z)} v${Math.round(phys.speed * 3.6)} prog${prog}/${chosen.path.length} | ${$("skiCue").innerText.replace(/\n/g, " ")}`);
