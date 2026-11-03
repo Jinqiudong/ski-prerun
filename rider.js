@@ -294,10 +294,11 @@ export class Spray {
     geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
     const dot = document.createElement("canvas");
     dot.width = dot.height = 32;
+    // A soft dot drawn as an alpha map (white to black): no dark fringe around each puff on white snow.
     const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-    grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
+    grad.addColorStop(0, "#fff"); grad.addColorStop(1, "#000");
     g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, alphaMap: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false }));
     this.points.frustumCulled = false;
     this.next = 0;
     scene.add(this.points);

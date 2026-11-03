@@ -1,7 +1,7 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } from "./boarder.js?v=5";
+import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } from "./boarder.js?v=6";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SLOTS = 4; // the four default riders; the ones not made yet show as coming
@@ -59,9 +59,15 @@ renderer.setAnimationLoop((now) => {
   renderer.render(scene, camera);
 });
 
+// Regular (left foot forward) or goofy, per rider; the model is rebuilt to face the other way.
+const stanceOf = (r) => ((st.stances || {})[r.id] === "goofy" ? "goofy" : "regular");
+let shownStance = null;
 async function show(r) {
   await loadBoarder(RIDERS[r.base].file);
+  if (rider && shownStance !== stanceOf(r)) { turntable.remove(rider); rider = null; }
   if (!rider) {
+    if (r.id) { st.rider = r.id; save(); } // boarderModel reads the stance of the saved rider
+    shownStance = stanceOf(r);
     rider = boarderModel();
     rider.rotation.y = Math.PI / 2; // the board across the view, the rider facing the camera
     turntable.add(rider);
@@ -81,7 +87,7 @@ function renderPick() {
     const key = keys[i], b = document.createElement("button");
     b.className = "card" + (key && cur.isDefault && cur.base === key ? " on" : "");
     if (key) {
-      b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>单板</small>`;
+      b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>单板 · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
       b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
     } else { b.disabled = true; b.innerHTML = `<b>制作中</b><small>新人物</small>`; }
     $("defaults").append(b);
@@ -90,7 +96,7 @@ function renderPick() {
   for (const r of st.riders) {
     const b = document.createElement("div");
     b.className = "card" + (r.id === cur.id ? " on" : "");
-    b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${RIDERS[r.base].name}</small><button class="del" aria-label="删除">🗑</button>`;
+    b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${RIDERS[r.base].name} · ${stanceOf(r) === "goofy" ? "Goofy" : "Regular"}</small><button class="del" aria-label="删除">🗑</button>`;
     b.onclick = (e) => {
       if (e.target.closest(".del")) {
         if (!confirm(`删除「${r.name}」？`)) return;
@@ -102,6 +108,7 @@ function renderPick() {
     };
     $("mine").append(b);
   }
+  for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
   $("editBtn").textContent = cur.isDefault ? "🎨 换装 · 存成新人物" : "🎨 换装";
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -133,6 +140,11 @@ function openEdit() {
   view("edit");
 }
 $("editBtn").onclick = openEdit;
+for (const b of $("stance").children) b.onclick = () => {
+  const cur = chosen();
+  st.stances = { ...(st.stances || {}), [cur.id]: b.dataset.s }; save();
+  renderPick(); show(chosen());
+};
 $("cancelBtn").onclick = () => { view("pick"); show(chosen()); };
 $("saveBtn").onclick = () => {
   const name = $("name").value.trim();
@@ -163,7 +175,7 @@ $("backBtn").onclick = () => view("pick");
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit"; $("resortView").hidden = v !== "resort";
   $("headTitle").textContent = { pick: "选你的 Rider", edit: "换装", resort: "去哪个雪场" }[v];
-  $("headSub").textContent = { pick: "先选人物，再选雪场", edit: "改颜色，取个名字，保存到这台手机", resort: `${chosen().name} · 单板` }[v];
+  $("headSub").textContent = { pick: "先选人物，再选雪场", edit: "改颜色，取个名字，保存到这台手机", resort: `${chosen().name} · 单板 · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
 
 renderPick();

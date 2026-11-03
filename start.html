@@ -35,6 +35,9 @@
     .btns { display: flex; gap: 8px; margin-top: 14px; }
     .btns button { flex: 1; font: inherit; font-size: 15px; white-space: nowrap; font-weight: 600; border-radius: 12px; padding: 12px; cursor: pointer; border: 1px solid rgba(255,255,255,.22); color: var(--ink); background: rgba(255,255,255,.1); }
     .btns .go { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .seg { display: flex; gap: 6px; }
+    .seg button { flex: 1; font: inherit; font-size: 14px; color: var(--ink); background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.14); border-radius: 12px; padding: 9px 6px; cursor: pointer; }
+    .seg button.on { border-color: var(--accent); background: rgba(47,127,232,.25); font-weight: 600; }
     .part { margin: 4px 0 10px; }
     .part .lbl { font-size: 14px; margin: 0 4px 6px; display: flex; justify-content: space-between; }
     .sw { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); cursor: pointer; padding: 0; }
@@ -59,6 +62,7 @@
     <section id="pickView">
       <h3>默认人物</h3><div class="row" id="defaults"></div>
       <h3>我的人物</h3><div class="row" id="mine"></div>
+      <h3>哪只脚在前</h3><div class="seg" id="stance"><button data-s="regular">左脚在前 · Regular</button><button data-s="goofy">右脚在前 · Goofy</button></div>
       <div class="btns"><button id="editBtn">🎨 换装</button><button class="go" id="useBtn">用这个人物 ›</button></div>
     </section>
     <section id="editView" hidden>
@@ -71,6 +75,6 @@
       <div class="btns"><button id="backBtn">‹ 换人物</button></div>
     </section>
   </div>
-  <script type="module" src="start.js?v=5"></script>
+  <script type="module" src="start.js?v=6"></script>
 </body>
 </html>

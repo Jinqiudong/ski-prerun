@@ -6,8 +6,8 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=8";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=5";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=9";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=6";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=16";
@@ -392,10 +392,11 @@ function snowfall() {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const c = document.createElement("canvas"); c.width = c.height = 32;
+  // A soft dot drawn as an alpha map (white to black), so its edge has no dark fringe on the snow.
   const g = c.getContext("2d"), grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-  grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  grd.addColorStop(0, "#fff"); grd.addColorStop(1, "#000");
   g.fillStyle = grd; g.fillRect(0, 0, 32, 32);
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.32, map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.32, color: 0xffffff, alphaMap: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
   pts.frustumCulled = false;
   pts.visible = false;
   pts.userData.step = (dt, at) => {
@@ -1060,7 +1061,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     idleFor = touching ? 0 : idleFor + dt;
     if (!touching) latIn *= Math.exp(-dt * 0.35);
     // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
-    const weave = auto ? 0 : 5 * Math.sin((P.dist[ti] / 24) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1);
+    // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: about 7 m either side
+    // of the line, a turn every 30 m.
+    const weave = auto ? 0 : 7 * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1);
     const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
     // The rider's right on screen is local -x: (−cos h, +sin h).
     const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
