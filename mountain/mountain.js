@@ -5,7 +5,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=14";
+import { Diorama } from "./diorama.js?v=15";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -551,8 +551,12 @@ async function main() {
   const tagBox = $("liftTags"), cards = $("liftCards");
   function openBase(base) {
     const ls = liftsAt(base);
-    dio.build({ T, R, mask, graph, base, lifts: ls, title: base.name });
-    mini = { base, lifts: ls, info: new Map(ls.map((l) => [l, liftInfo(l)])), t0: performance.now(), intro: true, pick: null, spinTo: null, raise: 0 };
+    // Seen from the base looking up its main lift: the turn starts and ends there, the name plate on that side.
+    const main = [...ls].sort((a, b) => b.rise - a.rise)[0];
+    const u0 = main ? dio.facing(main) : 0;
+    dio.build({ T, R, mask, graph, base, lifts: ls, title: base.name, front: -Math.PI / 4 + u0 * Math.PI * 2 });
+    spin = u0;
+    mini = { base, lifts: ls, info: new Map(ls.map((l) => [l, liftInfo(l)])), t0: performance.now(), intro: true, pick: null, spinTo: null, raise: 0, spin0: u0 };
     document.body.classList.add("mini");
     document.body.classList.remove("picking", "detail");
     $("introSkip").hidden = false;
@@ -657,8 +661,8 @@ async function main() {
   }
   function go2(l) {
     const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
-    // Chairlifts ride in the new look; carpets and drag lifts still go to the old game.
-    location.href = l.kind === "chair_lift" || l.kind === "mixed_lift"
+    // Chairlifts and gondolas ride in the new look; carpets and drag lifts still go to the old game.
+    location.href = ["chair_lift", "mixed_lift", "gondola", "cable_car"].includes(l.kind)
       ? `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`
       : `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}&resort=${RESORT_ID}`;
   }

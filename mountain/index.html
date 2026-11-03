@@ -52,7 +52,8 @@
     #miniTop { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; display: none; justify-content: space-between; align-items: center; gap: 8px; }
     body.mini #miniTop { display: flex; }
     #miniTop .glass { padding: 8px 14px; font-weight: 600; }
-    #miniTop button { font: inherit; color: var(--ink); cursor: pointer; }
+    #miniTop > .glass { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #miniTop button { font: inherit; color: var(--ink); cursor: pointer; white-space: nowrap; }
     #introSkip { position: fixed; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom)); padding: 8px 16px; font: inherit; color: var(--ink); cursor: pointer; display: none; }
     body.mini #introSkip:not([hidden]) { display: block; }
     /* Picking a lift: tags in the world, plan chips on top, cards along the bottom, a detail sheet. */
@@ -155,6 +156,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=22"></script>
+  <script type="module" src="mountain.js?v=23"></script>
 </body>
 </html>

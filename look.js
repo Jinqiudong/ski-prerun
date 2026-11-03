@@ -10,7 +10,7 @@ import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider
 import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=3";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
-import { Diorama } from "./mountain/diorama.js?v=14";
+import { Diorama } from "./mountain/diorama.js?v=15";
 import { junctions, junctionSign, chevrons, Minimap, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -42,15 +42,19 @@ const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 // 182 chairs, 5 m/s). The other six-packs are from news of Copper's Leitner-Poma lifts; lifts not listed
 // are drawn as quads until checked.
 const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true }, "American Eagle": { seats: 6 }, "Super Bee": { seats: 6 }, "Timberline Express": { seats: 6 } };
-const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, CHAIR_GAP = 33, SPEED = 5;
-let HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false;
-function setLiftKind(name) {
-  const k = LIFT_KIND[name] || { seats: 4 };
+// Elsewhere the seats and bubbles come from OpenStreetMap (aerialway:occupancy, aerialway:bubble); a
+// gondola is drawn as a closed cabin with glass all round.
+const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, SPEED = 5;
+let CHAIR_GAP = 33, HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false;
+function setLiftKind(lift) {
+  CABIN = lift.kind === "gondola" || lift.kind === "cable_car";
+  const k = LIFT_KIND[lift.name] || { seats: Math.min(8, Math.max(2, lift.seats || 4)), bubble: !!lift.bubble };
   const gap = 0.64;
-  SEAT_X = Array.from({ length: k.seats }, (_, i) => (i - (k.seats - 1) / 2) * gap);
+  SEAT_X = CABIN ? [-0.45, 0.45] : Array.from({ length: k.seats }, (_, i) => (i - (k.seats - 1) / 2) * gap);
   MY_SEAT = SEAT_X[1];
-  HAS_BUBBLE = !!k.bubble;
-  HALF_GAUGE = k.seats === 6 ? 3.3 : 2.7;
+  HAS_BUBBLE = CABIN || !!k.bubble;
+  HALF_GAUGE = CABIN ? 3.0 : k.seats >= 6 ? 3.3 : k.seats >= 4 ? 2.7 : 2.3;
+  CHAIR_GAP = CABIN ? 55 : 33;
 }
 // The bubble hinges at its top back edge and swings up and back when raised.
 const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.35;
@@ -113,7 +117,38 @@ function along(path, d, out = new THREE.Vector3()) {
 
 // ---------- Chairs ----------
 // A detachable six-pack. Origin at the grip on the rope, +z the way it travels, y up.
+// A gondola cabin around the same seat: the rider on the back bench facing the way up, a bench opposite,
+// glass from the seats up. Same parts as a chair (metal, pads, glass, frames) so it is drawn the same way.
+function cabinParts() {
+  const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
+  const X = 1.05, Z0 = -0.5, Z1 = 1.65, CZ = (Z0 + Z1) / 2, YT = -0.95, YW = -2.5, YB = -3.05;
+  const metal = [
+    new THREE.BoxGeometry(0.28, 0.36, 0.7).translate(0, -0.12, 0), // grip
+    tube([[0, -0.25, 0], [0, -0.6, CZ * 0.5], [0, YT, CZ]], 0.07), // hanger
+    new RoundedBoxGeometry(2 * X + 0.1, 0.16, Z1 - Z0 + 0.1, 2, 0.06).translate(0, YT, CZ), // roof
+    new RoundedBoxGeometry(2 * X + 0.1, 0.1, Z1 - Z0 + 0.1, 2, 0.04).translate(0, YB, CZ), // floor
+  ];
+  // Solid lower walls, waist high.
+  for (const s of [-1, 1]) metal.push(new THREE.BoxGeometry(0.05, YW - YB, Z1 - Z0).translate(s * X, (YW + YB) / 2, CZ));
+  for (const z of [Z0, Z1]) metal.push(new THREE.BoxGeometry(2 * X, YW - YB, 0.05).translate(0, (YW + YB) / 2, z));
+  const pad = [];
+  for (const [z, back] of [[0.07, -1], [Z1 - 0.32, 1]]) { // two benches, facing each other
+    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.11, 0.5, 2, 0.04).translate(0, -2.41, z));
+    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.5, 0.09, 2, 0.04).translate(0, -2.1, z + back * 0.3));
+  }
+  // Glass all round from the walls to the roof.
+  const glass = [];
+  for (const s of [-1, 1]) glass.push(new THREE.PlaneGeometry(Z1 - Z0, YT - YW).rotateY(Math.PI / 2).translate(s * X, (YT + YW) / 2, CZ));
+  for (const z of [Z0, Z1]) glass.push(new THREE.PlaneGeometry(2 * X, YT - YW).translate(0, (YT + YW) / 2, z));
+  const rim = [];
+  for (const x of [-X, X]) for (const z of [Z0, Z1]) rim.push(tube([[x, YW, z], [x, YT, z]], 0.035)); // corner posts
+  for (const y of [YW, YT + 0.05]) rim.push(tube([[-X, y, Z0], [X, y, Z0], [X, y, Z1], [-X, y, Z1], [-X, y, Z0]], 0.03));
+  const merge = (list) => mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)).map((g) => { g.deleteAttribute("uv"); return g; }));
+  return { metal: merge(metal), pad: merge(pad), bubble: merge(glass), rim: merge(rim) };
+}
+
 function chairParts() {
+  if (CABIN) return cabinParts();
   const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
   const H = SEAT_X[SEAT_X.length - 1] + 0.35; // half the chair's width
   const metal = [
@@ -747,7 +782,7 @@ function build(look, ctx) {
   chairsUp = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsUp = new THREE.InstancedMesh(parts.pad, padMat, n);
   chairsDown = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsDown = new THREE.InstancedMesh(parts.pad, padMat, n);
   // Copper's signature blue bubbles: tinted, glossy, see-through.
-  const bubbleMat = new THREE.MeshStandardMaterial({ color: 0x2a6fe0, transparent: true, opacity: A ? 0.42 : 0.6, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
+  const bubbleMat = new THREE.MeshStandardMaterial({ color: CABIN ? 0xa9c4d8 : 0x2a6fe0, transparent: true, opacity: CABIN ? 0.22 : A ? 0.42 : 0.6, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
   const rimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.5 });
   bubblesUp = new THREE.InstancedMesh(parts.bubble, bubbleMat, n); bubblesDown = new THREE.InstancedMesh(parts.bubble, bubbleMat, n);
   rimsUp = new THREE.InstancedMesh(parts.rim, rimMat, n); rimsDown = new THREE.InstancedMesh(parts.rim, rimMat, n);
@@ -1554,9 +1589,9 @@ async function main() {
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
   const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
-  setLiftKind(lift.name);
+  setLiftKind(lift);
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
-  $("bubble").hidden = !HAS_BUBBLE;
+  $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
   const kind = KIND;
   const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel(kind), lift, mask };
@@ -1627,7 +1662,7 @@ async function main() {
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
       chairsUp.setMatrixAt(i, m.compose(p, rot, one)); padsUp.setMatrixAt(i, m);
       // Riders going up keep some bubbles down, some up; empty chairs come down with them closed.
-      bm2.copy(m).multiply((i * 7) % 5 < 3 ? bOpen : bShut); bubblesUp.setMatrixAt(i, bm2); rimsUp.setMatrixAt(i, bm2);
+      bm2.copy(m).multiply((i * 7) % 5 < 3 && !CABIN ? bOpen : bShut); bubblesUp.setMatrixAt(i, bm2); rimsUp.setMatrixAt(i, bm2);
       const s2 = (line.total - d + i * CHAIR_GAP + CHAIR_GAP / 2) % line.total;
       along(line.down, s2, p); along(line.down, s2 + 4, q);
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
@@ -1635,7 +1670,7 @@ async function main() {
       bm2.copy(m).multiply(bShut); bubblesDown.setMatrixAt(i, bm2); rimsDown.setMatrixAt(i, bm2);
     }
     for (const c of [chairsUp, padsUp, chairsDown, padsDown, bubblesUp, bubblesDown, rimsUp, rimsDown]) c.instanceMatrix.needsUpdate = true;
-    bubbleOpen += (bubbleWant - bubbleOpen) * Math.min(1, dt * 2.5);
+    bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
     bubbleMatrix(bubbleOpen, myBubble.matrix);
 
     const k = Math.min(1, dt * 6);
@@ -1646,7 +1681,9 @@ async function main() {
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
     const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, -1.5, -Math.sin(yaw) * MY_SEAT));
-    camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
+    // Behind and above a chair; inside a cabin, from the middle of the back bench, under the roof.
+    if (CABIN) camera.position.copy(myChair.position).add(new THREE.Vector3(0, -1.85, 0)).addScaledVector(view, 0.3);
+    else camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
     // Look up the slope, not at a fixed angle: aim 30 m ahead on the line, a little below the rope, so
     // the snow ahead (higher than the chair on the way up) and the names carved in it stay in view.
     const e = Math.min(d + 30, line.total); // 30 m of line ahead, even at the very top

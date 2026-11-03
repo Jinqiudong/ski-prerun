@@ -50,7 +50,7 @@ export class Diorama {
 
   // Build the block for a base: the area covering the base and the tops of its lifts. Or, given
   // `points` ([x, z] pairs), the area covering them (a lift top and where you can go from it).
-  build({ T, R, mask, graph, base, lifts, title, points, lodges = [], maxHalf = 1700, runWidth = 24 }) {
+  build({ T, R, mask, graph, base, lifts, title, points, lodges = [], maxHalf = 1700, runWidth = 24, front = -Math.PI / 4 }) {
     if (this.root) { this.scene.remove(this.root); this.root.traverse((o) => { o.geometry?.dispose(); }); }
     this.movers = [];
     this.anims = [];
@@ -80,7 +80,7 @@ export class Diorama {
 
     root.add(this.ground(x0, x1, z0, z1, Y, mask));
     root.add(this.sides(x0, x1, z0, z1, Y));
-    root.add(this.plinth(x0, x1, z0, z1, title));
+    root.add(this.plinth(x0, x1, z0, z1, title, front));
     root.add(this.trees(x0, x1, z0, z1, Y, mask));
     root.add(this.runs(R, x0, x1, z0, z1, Y, runWidth));
     this.runLayer = root.children[root.children.length - 1];
@@ -151,7 +151,8 @@ export class Diorama {
     return group;
   }
 
-  plinth(x0, x1, z0, z1, title) {
+  // front: the bearing (atan2 of z, x from the block's centre) the camera looks from; the plate faces it.
+  plinth(x0, x1, z0, z1, title, front = -Math.PI / 4) {
     const group = new THREE.Group();
     const w = x1 - x0 + 120, d = z1 - z0 + 120, h = 260;
     const base = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 6, 40), new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 0.35 }));
@@ -170,8 +171,11 @@ export class Diorama {
     tex.colorSpace = THREE.SRGBColorSpace;
     const pw = Math.min(w * 0.55, 1300);
     const plate = new THREE.Mesh(new THREE.BoxGeometry(pw, pw * 0.215, 14), [0, 0, 0, 0, 1, 0].map((i) => (i ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.3 }) : new THREE.MeshStandardMaterial({ color: 0x3d434d }))));
-    plate.position.set((x0 + x1) / 2, -40 - h / 2, z0 - 60 - 8);
-    plate.rotation.y = Math.PI;
+    // On the side facing the camera: the side the bearing points through.
+    const fx = Math.cos(front), fz = Math.sin(front), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    if (Math.abs(fx) * d > Math.abs(fz) * w) { plate.position.set(fx > 0 ? x1 + 68 : x0 - 68, -40 - h / 2, cz); plate.rotation.y = fx > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    else { plate.position.set(cx, -40 - h / 2, fz > 0 ? z1 + 68 : z0 - 68); plate.rotation.y = fz > 0 ? 0 : Math.PI; }
+    if (Math.abs(fx) * d > Math.abs(fz) * w) plate.scale.x = Math.min(1, (d * 0.55) / pw);
     group.add(plate);
     // A table to throw soft shadows on.
     const table = new THREE.Mesh(new THREE.CircleGeometry(Math.max(w, d) * 3, 48), new THREE.MeshStandardMaterial({ color: 0xe4e8ee, roughness: 1 }));

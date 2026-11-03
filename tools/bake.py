@@ -121,9 +121,14 @@ for e in elements:
     elif "aerialway" in tags and tags["aerialway"] not in {"zip_line", "goods", "station", "pylon"}:
         if height_at(*pts[0]) > height_at(*pts[-1]):
             pts.reverse()  # ride it uphill
-        lifts.append({"id": e["id"], "name": tags.get("name") or "Lift", "kind": tags["aerialway"],
-                      "pts": [[round(x, 1), round(z, 1)] for x, z in pts],
-                      "rise": round(height_at(*pts[-1]) - height_at(*pts[0]))})
+        lift = {"id": e["id"], "name": tags.get("name") or "Lift", "kind": tags["aerialway"],
+                "pts": [[round(x, 1), round(z, 1)] for x, z in pts],
+                "rise": round(height_at(*pts[-1]) - height_at(*pts[0]))}
+        try: lift["seats"] = int(tags.get("aerialway:occupancy", "").split(";")[0])  # chairs drawn to match
+        except ValueError: pass
+        if tags.get("aerialway:bubble") == "yes": lift["bubble"] = True
+        if tags.get("aerialway:detachable") == "yes": lift["detachable"] = True
+        lifts.append(lift)
 
 # Tree mask: where the forest is (mapped woods when given, else everything below treeline),
 # minus runs and lifts.
