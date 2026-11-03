@@ -938,7 +938,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     return true;
   }
   let cueHold = 0, cueText = "";
-  const flashCue = (t) => { cueText = t; cueHold = performance.now() + 3500; };
+  let simClock = null; // testing: a fake clock while st.sim runs the ski without drawing
+  const clock = () => simClock ?? performance.now();
+  const flashCue = (t) => { cueText = t; cueHold = clock() + 3500; };
   // The named run nearest to (x, z) within `max` metres, and the index of its nearest point.
   function runNear(x, z, max) {
     let best = null, bd = max * max;
@@ -968,9 +970,12 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     let steer = steerIn, brake = brakeIn;
     if (auto) {
       const [tx, tz] = path[Math.min(near.i + 4, last)];
-      steer = clamp(-angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1);
+      steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
       brake = r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level];
     }
+    // A short rise or a flat on the way (common near lift tops): skate and walk through it at a crawl
+    // instead of standing still, as a real skier would. Braking still stops you.
+    if (!brake && r.speed < 1.6) r.speed = 1.6;
     r.step(dt, { steer, brake, push: auto && r.speed < 4, offPiste: near.d > 45 });
     r.pose(ctx.rider);
     tracks.add(r);
@@ -985,7 +990,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("skiLeft").textContent = fmtLen(left);
     const name = (s) => `${LEVEL_MARK[s.run.level]}${s.run.name || "无名雪道"}`;
     const nameR = (run) => `${LEVEL_MARK[run.level]}${run.name || "无名雪道"}`;
-    const now = performance.now();
+    const now = clock();
     // Which run am I on, really? (Twice a second is plenty.)
     if (now - lastLook > 500) { lastLook = now; onRun = runNear(r.x, r.z, 26); }
     $("skiWhere").innerHTML = onRun ? `你在 ${nameR(onRun.run)}` : "雪道外";
@@ -1365,6 +1370,15 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     if (run) { const r = R.runs.find((x) => x.name === run), q = r.pts[Math.min(r.pts.length - 1, 4)]; phys.place(q[0], q[1], pathDir(r.pts, 4), 8); return; }
     const P = chosen; let i = 0; while (i < P.path.length - 2 && P.dist[i] < m) i++;
     phys.place(P.path[i][0], P.path[i][1], pathDir(P.path, i), 8); prog = i;
+  };
+  // Testing: ski `secs` seconds at 30 fps without drawing; report where the rider went.
+  st.sim = (secs, every = 5) => {
+    const out = []; simClock = performance.now();
+    for (let t = 0; t < secs && !ended; t += 1 / 30) {
+      simClock += 1000 / 30; stepSki(1 / 30);
+      if (Math.abs(t % every) < 1 / 60) out.push(`${Math.round(t)}s ${Math.round(phys.x)},${Math.round(phys.z)} v${Math.round(phys.speed * 3.6)} prog${prog}/${chosen.path.length} | ${$("skiCue").innerText.replace(/\n/g, " ")}`);
+    }
+    simClock = null; out.push(ended ? "ARRIVED" : "not arrived"); return out;
   };
   st.state = () => ({ x: Math.round(phys?.x), z: Math.round(phys?.z), prog, plan: chosen?.steps.map((s) => s.name).join(">"), junctions: nav?.js.map((j) => `${Math.round(chosen.dist[j.i])}m: ${j.options.map((o) => (o.route ? "*" : "") + o.run.name).join(", ")}`) });
   st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, mode, chosen: chosen?.key, dests: dests.map((d) => `${d.key} ${Math.round(d.seconds)}s ${d.steps.map((s) => s.name).join(">")}`), cam: camera.position.toArray().map(Math.round), want: { ox: +want.ox.toFixed(2), oy: +want.oy.toFixed(2) } });
