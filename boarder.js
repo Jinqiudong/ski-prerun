@@ -76,8 +76,10 @@ export function boarderModel() {
   const fl = bone("Foot.L").getWorldPosition(new THREE.Vector3());
   const fr = bone("Foot.R").getWorldPosition(new THREE.Vector3());
   const box = new THREE.Box3().setFromObject(model);
-  // The leading foot to the nose (+z): the left for a regular rider, the right for goofy.
-  model.rotation.y = (fl.x > fr.x ? -Math.PI / 2 : Math.PI / 2) + (me.stance === "goofy" ? Math.PI : 0);
+  // The leading (left) foot to the nose, +z. A goofy rider is this rider's mirror image (not the same
+  // rider turned round, which would be riding switch): poses are worked out as regular, then root is
+  // mirrored across the way of travel (see `finish`), so the right foot leads and she looks to the nose.
+  model.rotation.y = fl.x > fr.x ? -Math.PI / 2 : Math.PI / 2;
   model.position.y = -box.min.y;
   root.updateMatrixWorld(true);
   // Which side the toes point to (+1: +x, -1: -x): the foot bones run heel to toe.
@@ -104,7 +106,7 @@ export function boarderModel() {
   // The leading foot (the one nearer the nose, +z): it stays strapped in on the chairlift.
   const lead = root.worldToLocal(B.footL.getWorldPosition(new THREE.Vector3())).z > 0 ? "L" : "R";
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", yaw, lean, model, mixer, A, B, bones, lead, toeX, armZ, edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
+  root.userData = { kind: "board", goofy: me.stance === "goofy", yaw, lean, model, mixer, A, B, bones, lead, toeX, armZ, edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
   return root;
 }
 
@@ -115,6 +117,9 @@ function mix(u) {
   u.mixer.update(0);
   for (const b of u.bones) { const m = (b.userData.mixed ||= { p: new THREE.Vector3(), q: new THREE.Quaternion() }); m.p.copy(b.position); m.q.copy(b.quaternion); }
 }
+// Work every pose out unmirrored, then mirror a goofy rider (three.js flips the faces' winding for it).
+const start = (root) => { root.scale.set(1, 1, 1); root.updateMatrixWorld(true); };
+const finish = (root) => { root.scale.x = root.userData.goofy ? -1 : 1; root.updateMatrixWorld(true); };
 const weights = (u, w) => { for (const [k, a] of Object.entries(u.A)) a.setEffectiveWeight(w[k] || 0); };
 
 const _q = new THREE.Quaternion(), _pq = new THREE.Quaternion(), _ax = new THREE.Vector3();
@@ -179,15 +184,18 @@ function hipsTo(u, F, shift, knees) {
 // - either way the chest stays more upright than the legs (angulation) and the arms balance.
 // To slow down the board swings across the way you move and the rider sits back onto the heel edge.
 export function poseBoarder(root, r) {
-  const u = root.userData, s = u.s, dt = r.dt || 0.016, tx = u.toeX;
+  const u = root.userData, s = u.s, dt = r.dt || 0.016, tx = u.toeX, g = u.goofy ? -1 : 1;
+  start(root);
   root.position.set(r.x, r.y, r.z);
   root.quaternion.setFromUnitVectors(Y, r.n);
   root.rotateY(r.heading);
+  root.updateMatrixWorld(true);
   // Steer > 0 turns toward local -x, which is where a positive lean (rotation about +z) tilts the rider.
-  s.edge = damp(s.edge, Math.max(-0.9, Math.min(0.9, r.lean)), 8, dt);
+  // Goofy: posed as the mirror turn (g), then mirrored back.
+  s.edge = damp(s.edge, Math.max(-0.9, Math.min(0.9, g * r.lean)), 8, dt);
   s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
   s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
-  s.fore = damp(s.fore, Math.max(-1, Math.min(1, r.steer)) * 0.3, 4, dt); // weight forward into a turn
+  s.fore = damp(s.fore, Math.max(-1, Math.min(1, g * r.steer)) * 0.3, 4, dt); // weight forward into a turn
   const toe = Math.min(1, Math.max(0, -s.edge * tx) / 0.7), heel = Math.min(1, Math.max(0, s.edge * tx) / 0.7) + s.skid * 0.6;
   s.knee = damp(s.knee, Math.min(1, 0.2 + s.tuck * 0.5), 5, dt);
   const fwd = Math.max(0, s.fore), back = Math.max(0, -s.fore);
@@ -217,6 +225,7 @@ export function poseBoarder(root, r) {
   turn(u.B.armR, u.lean, X, u.armZ * arms);
   turn(u.B.armL, u.lean, Z, tx * 0.35 * Math.min(1, heel));
   turn(u.B.armR, u.lean, Z, tx * 0.35 * Math.min(1, heel));
+  finish(root);
 }
 
 // Riding the lift and getting off: the rider faces the way the chair goes (root +z), not the board.
@@ -230,6 +239,8 @@ function faceForward(u) {
 }
 export function sitBoarder(root, lookYaw = 0, seat = new THREE.Vector3(0, 0.45, 0)) {
   const u = root.userData, B = u.B, tx = u.toeX, F = u.yaw; // F: the frame we turn bones in (board axes)
+  start(root);
+  if (u.goofy) { lookYaw = -lookYaw; seat = seat.clone(); seat.x = -seat.x; }
   faceForward(u);
   u.model.position.x = u.model.position.z = 0;
   weights(u, { stand: 1 });
@@ -262,6 +273,7 @@ export function sitBoarder(root, lookYaw = 0, seat = new THREE.Vector3(0, 0.45, 
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
   u.model.position.x -= h.x - seat.x; u.model.position.z -= h.z - seat.z;
   u.yaw.position.y = seat.y - h.y;
+  finish(root);
 }
 export function standBoarder(root) {
   const u = root.userData;
@@ -269,5 +281,5 @@ export function standBoarder(root) {
   u.yaw.rotation.y = 0; // gliding off: the board along the ramp
   u.model.position.x = u.model.position.z = 0;
   weights(u, { stance: 0.6, knee: 0.4 });
-  mix(u);
+  start(root); mix(u); finish(root);
 }
