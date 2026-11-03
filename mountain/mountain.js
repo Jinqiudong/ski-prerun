@@ -358,11 +358,13 @@ function chooseBase(T, R, base, basePins) {
   $("base").classList.add("show");
 }
 
-// Offsets in metres for Copper's size; c.k scales them to the resort (its runs' spread).
+// Offsets in metres for Copper, seen from its villages to the north; c.k scales them to the resort's size
+// and c.rot turns them so every resort is seen from the side its bases are on, looking up the slopes.
+const at = (c, dx, dz) => [c.x + (dx * c.rot.c - dz * c.rot.s) * c.k, c.z + (dx * c.rot.s + dz * c.rot.c) * c.k];
 const VIEWS = {
-  hero: (c) => ({ target: [c.x, c.y * EXAG + 500 * c.k, c.z + 500 * c.k], pos: [c.x + 3200 * c.k, c.y * EXAG + 2200 * c.k, c.z - 7800 * c.k] }),
-  close: (c) => ({ target: [c.x - 300 * c.k, c.y * EXAG + 600 * c.k, c.z + 300 * c.k], pos: [c.x + 900 * c.k, c.y * EXAG + 1700 * c.k, c.z - 2400 * c.k] }),
-  top: (c) => ({ target: [c.x, c.y * EXAG, c.z], pos: [c.x + 200 * c.k, c.y * EXAG + 10000 * c.k, c.z - 1200 * c.k] }),
+  hero: (c) => { const [tx, tz] = at(c, 0, 500), [px, pz] = at(c, 3200, -7800); return { target: [tx, c.y * EXAG + 500 * c.k, tz], pos: [px, c.y * EXAG + 2200 * c.k, pz] }; },
+  close: (c) => { const [tx, tz] = at(c, -300, 300), [px, pz] = at(c, 900, -2400); return { target: [tx, c.y * EXAG + 600 * c.k, tz], pos: [px, c.y * EXAG + 1700 * c.k, pz] }; },
+  top: (c) => { const [px, pz] = at(c, 200, -1200); return { target: [c.x, c.y * EXAG, c.z], pos: [px, c.y * EXAG + 10000 * c.k, pz] }; },
 };
 let center;
 function setView(name) {
@@ -477,7 +479,15 @@ async function main() {
   const all = R.runs.flatMap((r) => r.pts);
   const cx = all.reduce((a, p) => a + p[0], 0) / all.length, cz = all.reduce((a, p) => a + p[1], 0) / all.length;
   const span = Math.max(Math.max(...all.map((p) => p[0])) - Math.min(...all.map((p) => p[0])), Math.max(...all.map((p) => p[1])) - Math.min(...all.map((p) => p[1])));
-  center = { x: cx, z: cz, y: T.heightAt(cx, cz), k: Math.min(1.6, Math.max(0.4, span / 4850)) };
+  // Which way the resort faces: from the middle of its runs toward its bases. Copper keeps its view.
+  const vil = R.places.filter((p) => p.kind === "village");
+  let rot = { c: 1, s: 0 };
+  if (RESORT_ID !== "copper" && vil.length) {
+    const bx = vil.reduce((a, p) => a + p.x, 0) / vil.length - cx, bz = vil.reduce((a, p) => a + p.z, 0) / vil.length - cz;
+    const want = Math.atan2(bz, bx), copper = Math.atan2(-7800, 3200); // the hero camera's bearing at Copper
+    if (Math.hypot(bx, bz) > 200) rot = { c: Math.cos(want - copper), s: Math.sin(want - copper) };
+  }
+  center = { x: cx, z: cz, y: T.heightAt(cx, cz), k: Math.min(1.6, Math.max(0.4, span / 4850)), rot };
   setView("hero");
   $("status").remove();
 
