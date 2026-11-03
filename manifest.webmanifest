@@ -1,0 +1,15 @@
+{
+  "name": "雪场预滑 · Copper Mountain",
+  "short_name": "雪场预滑",
+  "start_url": "./mountain/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9edf2",
+  "theme_color": "#2f7fe8",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
