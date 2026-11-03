@@ -38,6 +38,7 @@ def overpass(query, out):
 print(f"{rid}: box {bbox}")
 overpass('(way["piste:type"="downhill"]BBOX;way["aerialway"]BBOX;);out geom;', work / "osm.json")
 overpass('(node["amenity"~"restaurant|cafe|bar|fast_food"]BBOX;way["amenity"~"restaurant|cafe|bar|fast_food"]BBOX;);out center tags;', work / "poi.json")
+overpass('(nwr["amenity"="parking"]BBOX;nwr["building"]["name"]BBOX;nwr["tourism"]["name"]BBOX;);out center tags;', work / "base.json")
 overpass('(way["natural"="wood"]BBOX;way["landuse"="forest"]BBOX;relation["natural"="wood"]BBOX;relation["landuse"="forest"]BBOX;);out geom;', work / "forest.json")
 
 Z = 14
@@ -57,5 +58,5 @@ print(f"  {(tx1 - tx0 + 1) * (ty1 - ty0 + 1)} terrain tiles")
 conf = work / "resort.json"
 conf.write_text(json.dumps({"name": cfg["name"], "bbox": bbox, "villages": cfg.get("villages", []), **({"treeline": cfg["treeline"]} if "treeline" in cfg else {})}))
 data = here.parent / "data"
-subprocess.run([sys.executable, str(here / "bake.py"), str(work / "osm.json"), str(tiles), str(data / f"{rid}.json"), str(work / "poi.json"), str(work / "forest.json"), str(conf)], check=True)
+subprocess.run([sys.executable, str(here / "bake.py"), str(work / "osm.json"), str(tiles), str(data / f"{rid}.json"), str(work / "poi.json"), str(work / "forest.json"), str(conf), str(work / "base.json")], check=True)
 subprocess.run([sys.executable, str(here / "bake_far.py"), str(data / f"{rid}.json"), str(data / f"{rid}-far.json")], check=True)

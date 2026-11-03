@@ -1,11 +1,65 @@
 [
-  { "id": "copper", "name": "Copper Mountain", "zh": "铜山", "state": "科罗拉多", "ready": true },
-  { "id": "winterpark", "name": "Winter Park", "zh": "冬季公园", "state": "科罗拉多", "ready": false },
-  { "id": "steamboat", "name": "Steamboat", "zh": "斯廷博特", "state": "科罗拉多", "ready": false },
-  { "id": "abasin", "name": "Arapahoe Basin", "zh": "阿拉帕霍盆地", "state": "科罗拉多", "ready": false },
-  { "id": "eldora", "name": "Eldora", "zh": "埃尔多拉", "state": "科罗拉多", "ready": false },
-  { "id": "snowmass", "name": "Snowmass", "zh": "阿斯本 · 雪堆山", "state": "科罗拉多", "ready": false },
-  { "id": "aspenmountain", "name": "Aspen Mountain", "zh": "阿斯本山", "state": "科罗拉多", "ready": false },
-  { "id": "highlands", "name": "Aspen Highlands", "zh": "阿斯本高地", "state": "科罗拉多", "ready": false },
-  { "id": "buttermilk", "name": "Buttermilk", "zh": "阿斯本 · 酪乳山", "state": "科罗拉多", "ready": false }
+  {
+    "id": "copper",
+    "name": "Copper Mountain",
+    "zh": "铜山",
+    "state": "科罗拉多",
+    "ready": true
+  },
+  {
+    "id": "winterpark",
+    "name": "Winter Park",
+    "zh": "冬季公园",
+    "state": "科罗拉多",
+    "ready": true
+  },
+  {
+    "id": "steamboat",
+    "name": "Steamboat",
+    "zh": "斯廷博特",
+    "state": "科罗拉多",
+    "ready": true
+  },
+  {
+    "id": "abasin",
+    "name": "Arapahoe Basin",
+    "zh": "阿拉帕霍盆地",
+    "state": "科罗拉多",
+    "ready": true
+  },
+  {
+    "id": "eldora",
+    "name": "Eldora",
+    "zh": "埃尔多拉",
+    "state": "科罗拉多",
+    "ready": true
+  },
+  {
+    "id": "snowmass",
+    "name": "Snowmass",
+    "zh": "阿斯本 · 雪堆山",
+    "state": "科罗拉多",
+    "ready": false
+  },
+  {
+    "id": "aspenmountain",
+    "name": "Aspen Mountain",
+    "zh": "阿斯本山",
+    "state": "科罗拉多",
+    "ready": false
+  },
+  {
+    "id": "highlands",
+    "name": "Aspen Highlands",
+    "zh": "阿斯本高地",
+    "state": "科罗拉多",
+    "ready": false
+  },
+  {
+    "id": "buttermilk",
+    "name": "Buttermilk",
+    "zh": "阿斯本 · 酪乳山",
+    "state": "科罗拉多",
+    "ready": false
+  }
 ]

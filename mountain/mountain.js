@@ -358,10 +358,11 @@ function chooseBase(T, R, base, basePins) {
   $("base").classList.add("show");
 }
 
+// Offsets in metres for Copper's size; c.k scales them to the resort (its runs' spread).
 const VIEWS = {
-  hero: (c) => ({ target: [c.x, c.y * EXAG + 500, c.z + 500], pos: [c.x + 3200, c.y * EXAG + 2200, c.z - 7800] }),
-  close: (c) => ({ target: [c.x - 300, c.y * EXAG + 600, c.z + 300], pos: [c.x + 900, c.y * EXAG + 1700, c.z - 2400] }),
-  top: (c) => ({ target: [c.x, c.y * EXAG, c.z], pos: [c.x + 200, c.y * EXAG + 10000, c.z - 1200] }),
+  hero: (c) => ({ target: [c.x, c.y * EXAG + 500 * c.k, c.z + 500 * c.k], pos: [c.x + 3200 * c.k, c.y * EXAG + 2200 * c.k, c.z - 7800 * c.k] }),
+  close: (c) => ({ target: [c.x - 300 * c.k, c.y * EXAG + 600 * c.k, c.z + 300 * c.k], pos: [c.x + 900 * c.k, c.y * EXAG + 1700 * c.k, c.z - 2400 * c.k] }),
+  top: (c) => ({ target: [c.x, c.y * EXAG, c.z], pos: [c.x + 200 * c.k, c.y * EXAG + 10000 * c.k, c.z - 1200 * c.k] }),
 };
 let center;
 function setView(name) {
@@ -475,7 +476,8 @@ async function main() {
 
   const all = R.runs.flatMap((r) => r.pts);
   const cx = all.reduce((a, p) => a + p[0], 0) / all.length, cz = all.reduce((a, p) => a + p[1], 0) / all.length;
-  center = { x: cx, z: cz, y: T.heightAt(cx, cz) };
+  const span = Math.max(Math.max(...all.map((p) => p[0])) - Math.min(...all.map((p) => p[0])), Math.max(...all.map((p) => p[1])) - Math.min(...all.map((p) => p[1])));
+  center = { x: cx, z: cz, y: T.heightAt(cx, cz), k: Math.min(1.6, Math.max(0.4, span / 4850)) };
   setView("hero");
   $("status").remove();
 

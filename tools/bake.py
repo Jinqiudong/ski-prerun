@@ -118,7 +118,7 @@ for e in elements:
         if outline:
             run["outline"] = [[round(x, 1), round(z, 1)] for x, z in outline]
         runs.append(run)
-    elif "aerialway" in tags and tags["aerialway"] not in {"zip_line", "goods"}:
+    elif "aerialway" in tags and tags["aerialway"] not in {"zip_line", "goods", "station", "pylon"}:
         if height_at(*pts[0]) > height_at(*pts[-1]):
             pts.reverse()  # ride it uphill
         lifts.append({"id": e["id"], "name": tags.get("name") or "Lift", "kind": tags["aerialway"],
@@ -168,21 +168,30 @@ for name, anchor in CFG.get("villages") or []:
     else:
         print(f"village {name}: no lift named {anchor}")
 if not CFG.get("villages"):
-    # Not listed: the low lift stations are the bases. Group lift bottoms within 350 m; a group in the lowest
-    # third of the bottoms' height range is a base, named after its longest lift (fix names in resorts.json).
-    big = [l for l in lifts if l["kind"] not in {"magic_carpet", "rope_tow", "platter", "t-bar", "j-bar", "drag_lift"}] or lifts
-    bottoms = sorted(big, key=lambda l: height_at(*l["pts"][0]))
-    lo_h, hi_h = height_at(*bottoms[0]["pts"][0]), height_at(*bottoms[-1]["pts"][0])
+    # Not listed: a base is where lifts start next to a car park. Group lift bottoms within 350 m; a group
+    # with a parking lot within 300 m is a base, named after the nearest named lodge or building (else
+    # after its longest lift). Check the names and pin them in resorts.json when they're off.
+    near = json.load(open(sys.argv[7]))["elements"] if len(sys.argv) > 7 else []
+    pts_of = lambda e: to_local(*(lambda c: (c["lat"], c["lon"]))(e.get("center") or e))
+    parks = [pts_of(e) for e in near if e.get("tags", {}).get("amenity") == "parking"]
+    import re
+    lodgey = re.compile(r"lodge|base|village|center|centre|plaza|chalet|station", re.I)
+    named = [(e["tags"]["name"], *pts_of(e)) for e in near if lodgey.search(e.get("tags", {}).get("name", "")) and e["tags"].get("amenity") != "parking"]
+    big = [l for l in lifts if l["kind"] not in {"magic_carpet", "rope_tow"}] or lifts
     groups = []
-    for l in bottoms:
+    for l in sorted(big, key=lambda l: height_at(*l["pts"][0])):
         x, z = l["pts"][0]
         g = next((g for g in groups if math.hypot(g["x"] - x, g["z"] - z) < 350), None)
         if g: g["lifts"].append(l)
-        elif height_at(x, z) <= lo_h + (hi_h - lo_h) / 3: groups.append({"x": x, "z": z, "lifts": [l]})
+        else: groups.append({"x": x, "z": z, "lifts": [l]})
     for g in groups:
+        if not any(math.hypot(px - g["x"], pz - g["z"]) < 300 for px, pz in parks):
+            continue
         main = max(g["lifts"], key=lambda l: l["rise"])
-        places.append({"name": f"{main['name']} Base", "kind": "village", "x": g["x"], "z": g["z"]})
-        print(f"base: {main['name']} Base  ({', '.join(l['name'] for l in g['lifts'])})")
+        lodge = min(((n, math.hypot(x - g["x"], z - g["z"])) for n, x, z in named), key=lambda t: t[1], default=(None, 1e9))
+        name = lodge[0] if lodge[1] < 300 else f"{main['name']} Base"
+        places.append({"name": name, "kind": "village", "x": g["x"], "z": g["z"]})
+        print(f"base: {name}  ({', '.join(l['name'] for l in g['lifts'])})")
 if poi_path:
     for e in json.load(open(poi_path))["elements"]:
         tags = e.get("tags", {}); c = e.get("center") or e
