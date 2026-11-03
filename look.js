@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=6";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=7";
 import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=2";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
@@ -878,8 +878,11 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   const boxOf = (xs, zs, M) => [Math.min(...xs) - M, Math.max(...xs) + M, Math.min(...zs) - M, Math.max(...zs) + M];
   boxes.push(boxOf(line.ground.map((p) => p.x), line.ground.map((p) => p.z), 900));
   const planted = (x, z) => boxes.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
-  // ---- Skiing the chosen plan: the game's slope physics, steered with a thumb stick (or the autopilot).
-  let phys = null, tracks = null, prog = 0, auto = false, steerIn = 0, paceIn = 0, ended = false;
+  // ---- Skiing the chosen plan: real slope physics, guided along the route. You choose where on the piste
+  // to ride (slide a finger left or right) and how fast (drag up to slow, down to let it run); the way
+  // itself is always the route's, so you can't get lost. Leave it alone and the rider links easy turns.
+  let phys = null, tracks = null, spray = null, prog = 0, auto = false, latIn = 0, paceIn = 0, touching = false, idleFor = 9, ended = false;
+  let alerted = null; // the junction already announced (and how close)
   const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const pathDir = (pts, i) => { const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
   const nearestOn = (pts, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
@@ -921,14 +924,14 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const h0 = pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks = new Tracks(scene, T, st.kind);
+    spray ||= new Spray(scene);
+    latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
     st.phase = "ski";
     $("skiHud").hidden = false;
     $("minimap").hidden = false;
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
-    setAuto(auto);
-    $("stick").hidden = $("autoBtn").hidden = false;
-    restStick();
+    $("desc").textContent = "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
@@ -987,67 +990,53 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     return best;
   }
-  // The thumb stick: put your thumb down anywhere on the slope and it comes to you. Left and right edge
-  // into a turn, down lets it run (tuck), up slows you down (skid). Let go and it goes back to rest.
-  const stick = $("stick"), knob = stick.querySelector("i"), STICK_R = 48;
+  // Touch: a finger's sideways slide moves where on the piste you ride (up to 11 m either side of the
+  // route's line); dragging up slows you down, down lets it run. Let go and you drift back to the line.
   let sdrag = null;
-  const restStick = () => {
-    const hud = $("skiHud").getBoundingClientRect();
-    stick.style.left = `${innerWidth - 74}px`; stick.style.top = `${hud.top - 74}px`;
-    knob.style.transform = "";
-    stick.classList.remove("on");
-  };
-  function setAuto(on) {
-    auto = on;
-    $("autoBtn").textContent = on ? "🤖 自动滑中 · 点这里自己滑" : "🤖 自动滑";
-    $("autoBtn").classList.toggle("on", on);
-    $("desc").textContent = on ? "自动滑行中，碰一下摇杆就由你来滑" : "摇杆：左右压刃转弯 · 往下加速 · 往上减速";
-  }
-  st.setAuto = setAuto;
-  $("autoBtn").onclick = () => setAuto(!auto);
-  const stickStart = (e) => {
+  const LAT = 11;
+  renderer.domElement.addEventListener("pointerdown", (e) => {
     if (st.phase !== "ski" || ended) return;
-    e.preventDefault();
-    if (auto) setAuto(false);
-    const x = clamp(e.clientX, 60, innerWidth - 60), y = clamp(e.clientY, 120, innerHeight - 60);
-    sdrag = { id: e.pointerId, x, y };
-    stick.style.left = `${x}px`; stick.style.top = `${y}px`;
-    stick.classList.add("on");
-    stickMove(e);
-  };
-  const stickMove = (e) => {
+    sdrag = { id: e.pointerId, x: e.clientX, y: e.clientY, lat: latIn };
+    touching = true;
+  });
+  addEventListener("pointermove", (e) => {
     if (!sdrag || e.pointerId !== sdrag.id) return;
-    let dx = e.clientX - sdrag.x, dy = e.clientY - sdrag.y;
-    const L = Math.hypot(dx, dy);
-    if (L > STICK_R) { dx *= STICK_R / L; dy *= STICK_R / L; }
-    knob.style.transform = `translate(${dx}px, ${dy}px)`;
-    // A little dead zone in the middle, then a smooth response to the rim.
-    const curve = (v) => Math.sign(v) * Math.max(0, (Math.abs(v) - 0.12) / 0.88);
-    steerIn = curve(dx / STICK_R); paceIn = curve(dy / STICK_R);
-  };
-  renderer.domElement.addEventListener("pointerdown", stickStart);
-  stick.addEventListener("pointerdown", stickStart);
-  addEventListener("pointermove", stickMove);
-  const stickEnd = (e) => { if (!sdrag || e.pointerId !== sdrag.id) return; sdrag = null; steerIn = 0; paceIn = 0; restStick(); };
-  addEventListener("pointerup", stickEnd);
-  addEventListener("pointercancel", stickEnd);
+    latIn = clamp(sdrag.lat + ((e.clientX - sdrag.x) / innerWidth) * 2.4 * LAT, -LAT, LAT);
+    paceIn = clamp((e.clientY - sdrag.y) / 110, -1, 1);
+  });
+  const touchEnd = (e) => { if (!sdrag || e.pointerId !== sdrag.id) return; sdrag = null; touching = false; paceIn = 0; idleFor = 0; };
+  addEventListener("pointerup", touchEnd);
+  addEventListener("pointercancel", touchEnd);
+  st.setAuto = (on) => { auto = on; };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   function stepSki(dt) {
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
     if (near.d < 70) prog = Math.max(prog, near.i);
     const k = segAt(P, prog), seg = P.segs[k], nextSeg = P.segs[k + 1];
-    let steer = steerIn, pace = paceIn;
-    if (auto) {
-      const [tx, tz] = path[Math.min(near.i + 4, last)];
-      steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
-      pace = r.speed > { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] ? -1 : 0;
-    }
-    // On a flat or a short rise (common near lift tops) you skate, or walk up it: the autopilot always,
-    // you by pushing the stick down. Gravity does the rest; nothing pulls you uphill.
-    r.step(dt, { steer, pace, push: auto ? pace >= 0 && r.speed < 4 : pace > 0.4 && r.speed < 3, offPiste: near.d > 45 });
+    // Aim at a point on the route a little ahead (further when faster), shifted across the piste to where
+    // you want to ride. Untouched for a moment, that place swings side to side: easy linked turns.
+    const ahead = 8 + r.speed * 1.2;
+    let ti = near.i; while (ti < last && P.dist[ti] - P.dist[near.i] < ahead) ti++;
+    idleFor = touching ? 0 : idleFor + dt;
+    if (!touching) latIn *= Math.exp(-dt * 0.35);
+    const weave = auto ? 0 : 5 * Math.sin((P.dist[ti] / 24) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1);
+    const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
+    // The rider's right on screen is local -x: (−cos h, +sin h).
+    const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
+    const steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
+    // Speed: held to an easy pace for the run's level unless you drag for more or less.
+    const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level];
+    const pace = touching && Math.abs(paceIn) > 0.15 ? (paceIn > 0 && r.speed > cap * 1.6 ? -0.5 : paceIn) : r.speed > cap ? -1 : 0;
+    // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
+    // nothing pulls you uphill.
+    r.step(dt, { steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45 });
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
+    // Snow thrown up off the edge: a little in every turn, a cloud when you skid to slow down.
+    const carve = Math.abs(r.lean) * r.speed;
+    spray.emit(r, (r.skid || 0) * r.speed * 55 + (carve > 2 ? carve * 9 : 0), dt);
+    spray.update(dt);
     // Chase camera, like the game's.
     const back = new THREE.Vector3(-Math.sin(r.heading), 0, -Math.cos(r.heading));
     const want = new THREE.Vector3(r.x, r.y, r.z).addScaledVector(back, 6.5 + r.speed * 0.08);
@@ -1078,11 +1067,23 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     } else if (left < 220) cue = `<b>快到了</b> · ${P.next ? `${P.next.name} 底站` : P.short || "雪道尽头"}还有 ${Math.round(left)} 米`;
     else cue = `沿 ${name(seg)} 滑${nextSeg ? ` · 接着进 ${name(nextSeg)}` : P.next ? ` · 到底坐 🚡${P.next.name}` : P.kind === "base" ? ` · 到底就是 🏠${P.short}` : ""}`;
     $("skiCue").innerHTML = cue;
+    // The next turn-off, big at the top of the screen, with a buzz as it comes up and again close to it.
+    const way = J && toJ < 160 ? J.options.find((o) => o.route) : null;
+    const tc = $("turnCue");
+    if (way) {
+      tc.hidden = false;
+      tc.innerHTML = `<span class="arr">${arrowText(way.bearing)}</span><span><b>${Math.abs(way.bearing) > 0.18 ? turnWord(way.bearing) + "进" : "直行"} ${nameR(way.run)}</b><small>${Math.round(toJ)} 米后岔口</small></span>`;
+      const stage = toJ < 50 ? 2 : 1;
+      // The big card repeats the line below, so that line lists only the other ways.
+      $("skiCue").innerHTML = J.options.length > 1 ? `<small>别走错：${J.options.filter((o) => o !== way).map((o) => `${arrowText(o.bearing)} ${nameR(o.run)}`).join("　")}</small>` : cue;
+      const turning = Math.abs(way.bearing) > 0.18; // only a real turn-off buzzes; straight on stays quiet
+      if (!alerted || alerted.j !== J || alerted.stage < stage) { if (turning) navigator.vibrate?.(stage === 2 ? [60, 60, 60] : 40); tc.classList.remove("pop"); void tc.offsetWidth; tc.classList.add("pop"); alerted = { j: J, stage }; }
+    } else tc.hidden = true;
     if (!ended && prog >= last - 1 && near.d < 60) { ended = true; arrive(P); }
   }
   function arrive(P) {
     $("skiHud").hidden = true;
-    $("stick").hidden = $("autoBtn").hidden = true;
+    $("turnCue").hidden = true;
     $("minimap").hidden = true;
     $("arrive").hidden = false;
     const link = (l, to, label) => `<a class="btn go" href="look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}">${label}</a>`;
@@ -1489,7 +1490,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   // Testing: ski `secs` seconds at 30 fps without drawing; report where the rider went.
   st.sim = (secs, every = 5) => {
-    const out = []; simClock = performance.now(); if (!sdrag) setAuto(true);
+    const out = []; simClock = performance.now(); if (!sdrag) st.setAuto(true);
     for (let t = 0; t < secs && !ended; t += 1 / 30) {
       simClock += 1000 / 30; stepSki(1 / 30);
       if (Math.abs(t % every) < 1 / 60) out.push(`${Math.round(t)}s ${Math.round(phys.x)},${Math.round(phys.z)} v${Math.round(phys.speed * 3.6)} prog${prog}/${chosen.path.length} | ${$("skiCue").innerText.replace(/\n/g, " ")}`);

@@ -284,7 +284,7 @@ export class Tracks {
 // Snow spray kicked up when carving hard or braking.
 export class Spray {
   constructor(scene) {
-    this.n = 260;
+    this.n = 900;
     this.life = new Float32Array(this.n);
     this.vel = new Float32Array(this.n * 3);
     const geo = new THREE.BufferGeometry();
@@ -295,30 +295,36 @@ export class Spray {
     const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
     grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.16, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.85, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false }));
     this.points.frustumCulled = false;
     this.next = 0;
     scene.add(this.points);
   }
 
+  // Snow leaves the edge toward the outside of the turn; in a skid it sprays ahead of the board, the way
+  // you are sliding. Then it falls under gravity and air drag.
   emit(r, rate, dt) {
-    const count = Math.floor(rate * dt + Math.random());
+    const count = Math.min(80, Math.floor(rate * dt + Math.random()));
+    const skid = r.skid || 0, fx = Math.sin(r.heading), fz = Math.cos(r.heading);
     for (let c = 0; c < count; c++) {
       const i = this.next = (this.next + 1) % this.n;
       const side = Math.sign(r.steer || 1);
       const sx = Math.cos(r.heading) * side, sz = -Math.sin(r.heading) * side;
-      this.pos.set([r.x + (Math.random() - 0.5) * 0.4, r.y + 0.1, r.z + (Math.random() - 0.5) * 0.4], i * 3);
-      this.vel.set([sx * (2 + Math.random() * 3) - Math.sin(r.heading) * r.speed * 0.2, 1.5 + Math.random() * 2.5, sz * (2 + Math.random() * 3) - Math.cos(r.heading) * r.speed * 0.2], i * 3);
-      this.life[i] = 0.6 + Math.random() * 0.4;
+      const out = 1.5 + Math.random() * 3, fwd = r.speed * (0.3 + skid * 0.5) * (0.6 + Math.random() * 0.6);
+      this.pos.set([r.x + (Math.random() - 0.5) * 0.8, r.y + 0.08, r.z + (Math.random() - 0.5) * 0.8], i * 3);
+      this.vel.set([sx * out * (1 - skid * 0.6) + fx * fwd + (Math.random() - 0.5) * 2, 1 + Math.random() * (2 + skid * 2.5), sz * out * (1 - skid * 0.6) + fz * fwd + (Math.random() - 0.5) * 2], i * 3);
+      this.life[i] = 0.5 + Math.random() * (0.5 + skid * 0.5);
     }
   }
 
   update(dt) {
+    const drag = Math.exp(-dt * 1.6);
     for (let i = 0; i < this.n; i++) {
       if (this.life[i] <= 0) continue;
       this.life[i] -= dt;
       if (this.life[i] <= 0) { this.pos[i * 3 + 1] = -1e5; continue; }
-      this.vel[i * 3 + 1] -= 9.8 * dt;
+      this.vel[i * 3] *= drag; this.vel[i * 3 + 2] *= drag;
+      this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * drag - 9.8 * dt;
       for (let k = 0; k < 3; k++) this.pos[i * 3 + k] += this.vel[i * 3 + k] * dt;
     }
     this.points.geometry.attributes.position.needsUpdate = true;
