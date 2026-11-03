@@ -42,7 +42,7 @@ export class Diorama {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
     this.composer.setSize(innerWidth, innerHeight);
-    const amount = 1.2; // a light tilt-shift: only the far top and bottom soften
+    const amount = this.blur ?? 1.2; // a light tilt-shift: only the far top and bottom soften
     this.hTilt.uniforms.h.value = amount / innerWidth;
     this.vTilt.uniforms.v.value = amount / innerHeight;
     this.hTilt.uniforms.r.value = this.vTilt.uniforms.r.value = 0.5;

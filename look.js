@@ -10,7 +10,7 @@ import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=5
 import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=1";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
-import { Diorama } from "./mountain/diorama.js?v=13";
+import { Diorama } from "./mountain/diorama.js?v=14";
 import { junctions, junctionSign, chevrons, Minimap, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1208,7 +1208,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   const v = new THREE.Vector3();
   // Tags sit above their spot, kept on screen, and nudged up out of each other's way (earlier tags win).
-  const RANK = { dest: 0, on: 0, via: 1, pin: 2, leg: 3 };
+  const RANK = { me: -1, dest: 0, on: 0, via: 1, pin: 2, leg: 3 };
   function placeTags() {
     const camera = dio.camera;
     liveTags.sort((a, b) => (RANK[a.cls] ?? 2) - (RANK[b.cls] ?? 2));
@@ -1271,13 +1271,20 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     flag.add(pole, cloth);
     flag.position.set(g1.x, dio.Y(g1.x, g1.z), g1.z);
     dio.root.add(flag);
+    // You are here: a ring on the snow around the flag, pulsing (and a tag above it).
+    here = new THREE.Mesh(new THREE.RingGeometry(46, 66, 40), new THREE.MeshBasicMaterial({ color: 0xe8453c, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }));
+    here.rotation.x = -Math.PI / 2;
+    here.position.set(g1.x, dio.Y(g1.x, g1.z) + 4, g1.z);
+    here.renderOrder = 3;
+    dio.root.add(here);
+    dio.blur = 3.2; dio.resize(); // a stronger tilt-shift than the base view: the far edges go soft
     $("pickTabs").innerHTML = `<button data-m="dest">去哪儿 · ${dests.length}</button><button data-m="runs">选一条雪道 · ${runs.length}</button>`;
     for (const b of $("pickTabs").children) b.onclick = () => setMode(b.dataset.m);
     setMode(mode, [...dests, ...runs].find((P) => P.key === wantKey));
   }
   const list = () => (mode === "dest" ? dests : runs);
   const views = {};
-  let dio = null, spin = 0, spin0 = 0, pdrag = null;
+  let dio = null, here = null, spin = 0, spin0 = 0, pdrag = null;
   renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "pick") pdrag = { x: e.clientX, s: spin }; });
   addEventListener("pointermove", (e) => { if (pdrag) spin = pdrag.s - (e.clientX - pdrag.x) / 600; });
   addEventListener("pointerup", () => (pdrag = null));
@@ -1286,8 +1293,44 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
     dio.orbit(spin, Math.max(0.35, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, 0, 58); // steep: over the summit, down the slopes
   };
+  // Zoom the miniature onto a plan: centred on it and close enough that it just fills the space between
+  // the top panel and the cards. The rest of the block runs on past the screen's softened edges.
+  function aimAt(P) {
+    const flat = [[g1.x, g1.z], P.end];
+    for (const l of P.legs) {
+      const list = l.type === "run" ? l.run.pts.slice(l.from, l.to + 1) : l.type === "lift" ? l.lift.pts : [];
+      list.forEach((p, i) => { if (i % 3 === 0 || i === list.length - 1) flat.push(p); });
+    }
+    const pts = flat.map(([x, z]) => new THREE.Vector3(x, dio.Y(x, z), z));
+    const lo = pts.reduce((a, p) => a.min(p), pts[0].clone()), hi = pts.reduce((a, p) => a.max(p), pts[0].clone());
+    const saved = { size: dio.size, focus: dio.focus.clone() };
+    dio.focus.lerpVectors(lo, hi, 0.5);
+    dio.size = dio.whole;
+    const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
+    const roomY = Math.max(0.35, 1 - (topPx + botPx) / innerHeight) * 2 * 0.86, roomX = 2 * 0.86;
+    const at = (p) => v.copy(p).project(dio.camera).clone();
+    for (let k = 0; k < 4; k++) { // the projected size goes about as 1 / distance: a few rounds settle it
+      dioFrame();
+      let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+      for (const p of pts) { v.copy(p).project(dio.camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+      // Perspective pushes the plan off centre: slide the focus over the snow until the plan's middle
+      // sits where the focus does (the middle of the space between the panel and the cards).
+      const c = at(dio.focus), right = new THREE.Vector3().setFromMatrixColumn(dio.camera.matrixWorld, 0).setY(0).normalize();
+      const up = new THREE.Vector3(-right.z, 0, right.x), dx = at(dio.focus.clone().addScaledVector(right, 100)), dy = at(dio.focus.clone().addScaledVector(up, 100));
+      if (Math.abs(dy.y - c.y) < 1e-4) dy.y += 1e-4;
+      dio.focus.addScaledVector(right, (((x0 + x1) / 2 - c.x) / (dx.x - c.x || 1e-4)) * 100).addScaledVector(up, (((y0 + y1) / 2 - c.y) / (dy.y - c.y)) * 100);
+      dio.size = clamp(dio.size * Math.max((x1 - x0) / roomX, (y1 - y0) / roomY), dio.whole * 0.18, dio.whole * 1.12);
+    }
+    dio.focusTo.copy(dio.focus); dio.sizeTo = dio.size;
+    dio.size = saved.size; dio.focus.copy(saved.focus);
+  }
+  let lastT = 0;
   st.render = (t) => {
     if (st.phase !== "pick") return false;
+    const glide = 1 - Math.exp(-Math.min(0.1, t - lastT || 0) * 4); lastT = t;
+    dio.focus.lerp(dio.focusTo, glide);
+    dio.size += (dio.sizeTo - dio.size) * glide;
+    here.scale.setScalar(1 + 0.25 * Math.sin(t * 3)); // you are here: a slow pulse
     dioFrame();
     placeTags();
     dio.render(t);
@@ -1347,15 +1390,16 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     P.legs.forEach((l, i) => l.type === "run" && !order.has(l.run) && order.set(l.run, order.size));
     for (const o of list()) for (const l of o.legs) if (l.type === "run") others.add(l.run);
     if (dio) {
-      dio.light3((run) => (order.has(run) ? 1 : others.has(run) ? 0.3 : 0), (run) => (order.get(run) ?? 0) * 0.35);
+      dio.light3((run) => (order.has(run) ? 1 : others.has(run) ? 0.22 : 0), (run) => (order.get(run) ?? 0) * 0.35);
       const via = P.legs.find((l) => l.type === "lift")?.lift || (P.kind === "lift" ? P.lift : null);
       dio.focusLift(via);
+      aimAt(P);
     }
     ctx.addRunsNear((pts) => P.legs.some((l) => l.type === "run" && l.run.pts === pts));
     // Tags: in run mode every run from here (tap to pick); the chosen plan's steps and where it ends.
     clearTags();
     if (mode === "runs") for (const o of runs) {
-      const i = Math.min(o.first.pts.length - 1, Math.floor(o.first.pts.length * 0.18));
+      const i = Math.min(o.first.pts.length - 1, Math.floor(o.first.pts.length * 0.3));
       addTag(`${LEVEL_MARK[o.first.level]}${o.title}`, o === P ? "on" : "", o.first.pts[i][0], o.first.pts[i][1], 6, () => select(o, true));
     }
     P.segs.forEach((s, k) => {
@@ -1363,6 +1407,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       const b = k + 1 < P.segs.length ? P.segs[k + 1].at : P.path.length - 1, i = Math.round(s.at + (b - s.at) * 0.4);
       addTag(`${LEVEL_MARK[s.run.level]}${s.run.name}`, "leg", P.path[i][0], P.path[i][1], 6);
     });
+    addTag("📍 你在这里", "me", g1.x, g1.z, 34);
     for (const l of P.legs) if (l.type === "lift" && P.kind !== "run") addTag(`🚡 坐 ${l.lift.name}`, "via", l.lift.pts[0][0], l.lift.pts[0][1], 10);
     if (mode === "dest") for (const o of [P, ...dests.filter((d) => d !== P)]) addTag(o === P ? `🏁 ${o.short} <small>${fmtMin(o.seconds)}</small>` : `${o.icon} ${o.short}`, o === P ? "dest" : "pin", o.end[0], o.end[1], 10, () => select(o, true));
     else addTag(P.leads.lifts.length ? `→ 🚡 ${P.leads.lifts.slice(0, 2).join("、")}` : P.leads.base ? `→ 🏠 ${P.leads.base}` : "雪道尽头", "dest", P.end[0], P.end[1], 10);

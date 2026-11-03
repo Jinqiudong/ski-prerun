@@ -69,6 +69,10 @@
     .lv.advanced, .lv.expert { background: #111; transform: rotate(45deg) scale(.85); outline: 1px solid #fff; }
     .lv.expert { box-shadow: 7px -7px 0 #111; margin-right: 10px; }
     #status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 12px 18px; }
+    /* The miniature runs to the screen's edges while choosing; the edges blur and fade into the backdrop. */
+    #vignette { position: fixed; inset: 0; pointer-events: none; display: none; background: radial-gradient(ellipse 72% 62% at 50% 46%, rgba(233,237,242,0) 58%, rgba(233,237,242,.55) 82%, rgba(233,237,242,.92) 100%); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); -webkit-mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, transparent 55%, #000 85%); mask-image: radial-gradient(ellipse 72% 62% at 50% 46%, transparent 55%, #000 85%); }
+    body.picking #vignette { display: block; }
+    .rtag.me { pointer-events: none; z-index: 4; background: #e8453c; border-color: #fff; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
     #flash { position: fixed; inset: 0; background: #f4f6f9; opacity: 0; pointer-events: none; }
     #flash.go { animation: flash .7s ease-out; }
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -78,6 +82,7 @@
 </head>
 <body>
   <canvas id="c"></canvas>
+  <div id="vignette"></div>
   <div id="top" class="glass"><b>🚡 <span id="liftName"></span></b> <a id="back" href="mountain/">← 沙盘</a><p id="desc"></p><p id="weather"></p></div>
   <button id="bubble" class="glass">🫧 放下防风罩</button>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
@@ -90,6 +95,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=28"></script>
+  <script type="module" src="look.js?v=29"></script>
 </body>
 </html>
