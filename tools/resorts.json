@@ -1,0 +1,10 @@
+{
+  "winterpark": { "name": "Winter Park", "area": [39.8339, -105.8139, 39.9086, -105.7513] },
+  "steamboat": { "name": "Steamboat", "area": [40.4305, -106.8039, 40.4814, -106.7363] },
+  "abasin": { "name": "Arapahoe Basin", "area": [39.6103, -105.8913, 39.6456, -105.8574] },
+  "eldora": { "name": "Eldora", "area": [39.9322, -105.6102, 39.9504, -105.5766] },
+  "snowmass": { "name": "Snowmass", "area": [39.1589, -106.9850, 39.2130, -106.9139] },
+  "aspenmountain": { "name": "Aspen Mountain", "area": [39.1438, -106.8311, 39.1866, -106.8076] },
+  "highlands": { "name": "Aspen Highlands", "area": [39.1260, -106.8783, 39.1818, -106.8503] },
+  "buttermilk": { "name": "Buttermilk", "area": [39.1792, -106.8856, 39.2064, -106.8544] }
+}

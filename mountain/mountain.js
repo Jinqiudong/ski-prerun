@@ -9,7 +9,9 @@ import { Diorama } from "./diorama.js?v=14";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
-const RESORT = { lat: 39.4775, lon: -106.1605, tz: "America/Denver" };
+// Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
+const RESORT_ID = (() => { try { return new URLSearchParams(location.search).get("resort") || JSON.parse(localStorage.getItem("prerun") || "{}").resort || "copper"; } catch { return "copper"; } })().replace(/[^a-z0-9-]/g, "");
+const RESORT = { lat: 39.4775, lon: -106.1605, tz: "America/Denver", name: "Copper Mountain" };
 const RUN_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
 const $ = (id) => document.getElementById(id);
 const status = (t) => { $("status").textContent = t; return new Promise((r) => setTimeout(r, 20)); };
@@ -371,7 +373,11 @@ function setView(name) {
 
 async function main() {
   await status("下载地形…");
-  const [R, far] = await Promise.all([fetch("../data/copper.json").then((r) => r.json()), fetch("../data/copper-far.json").then((r) => r.json())]);
+  const [R, far] = await Promise.all([fetch(`../data/${RESORT_ID}.json`).then((r) => r.json()), fetch(`../data/${RESORT_ID}-far.json`).then((r) => r.json())]);
+  Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // all Colorado so far: Denver time
+  document.title = `${R.name} · 雪场预滑`;
+  document.querySelector("#title b").textContent = R.name;
+  document.querySelector('label[for="hour"]').textContent = `拖动看一天中不同时间（${R.name} 当地时间）`;
   const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
   await status("生成山体和阴影…");
   const T = new Terrain(R);
@@ -443,7 +449,7 @@ async function main() {
     const key = `${Math.round(elDeg / 3)}:${Math.round((s0.az * 180) / Math.PI / 6)}:${look.kind}`;
     if (key !== shadedFor) { shadedFor = key; shadeTerrain(geo, T, mask, lightDir, day ? p.shadow : 0.4); }
     const local = look.date.toLocaleTimeString("zh-CN", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" });
-    $("now").textContent = `${look.live ? "实时" : "预览"} · Copper 当地 ${local} · ${WEATHER_ZH[look.kind]}${look.temp !== null && look.live ? ` · ${Math.round(look.temp)}°C` : ""}`;
+    $("now").textContent = `${look.live ? "实时" : "预览"} · ${RESORT.name} 当地 ${local} · ${WEATHER_ZH[look.kind]}${look.temp !== null && look.live ? ` · ${Math.round(look.temp)}°C` : ""}`;
   };
   await fetchWeather();
   applyLook();
@@ -641,8 +647,8 @@ async function main() {
     const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
     // Chairlifts ride in the new look; carpets and drag lifts still go to the old game.
     location.href = l.kind === "chair_lift" || l.kind === "mixed_lift"
-      ? `../look.html?lift=${encodeURIComponent(l.name)}`
-      : `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}`;
+      ? `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`
+      : `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}&resort=${RESORT_ID}`;
   }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.

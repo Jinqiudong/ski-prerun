@@ -376,12 +376,12 @@ function snowfall() {
   return pts;
 }
 
-// Copper's weather: snow in the last three days whitens the trees; snowing now makes it fall.
+// The resort's weather: snow in the last three days whitens the trees; snowing now makes it fall.
 // ?snow=0..1 and ?falling=1 override it for previews.
-async function weather(params, flakes) {
+async function weather(params, flakes, at) {
   let recent = null, now = false;
   try {
-    const w = await (await fetch("https://api.open-meteo.com/v1/forecast?latitude=39.4775&longitude=-106.1605&current=weather_code,snowfall&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=America%2FDenver")).json();
+    const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(4)}&longitude=${at.lon.toFixed(4)}&current=weather_code,snowfall&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=auto`)).json();
     recent = w.daily.snowfall_sum.slice(0, 3).reduce((a, b) => a + (b || 0), 0);
     now = (w.current.snowfall || 0) > 0 || [71, 73, 75, 77, 85, 86].includes(w.current.weather_code);
   } catch { /* offline: keep the default */ }
@@ -1086,7 +1086,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("turnCue").hidden = true;
     $("minimap").hidden = true;
     $("arrive").hidden = false;
-    const link = (l, to, label) => `<a class="btn go" href="look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}">${label}</a>`;
+    const link = (l, to, label) => `<a class="btn go" href="${withResort(`look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}`)}">${label}</a>`;
     let title, note, row = "";
     if (P.next) {
       title = `到 ${P.next.name} 底站了`;
@@ -1108,7 +1108,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     $("arriveTitle").textContent = title;
     $("arriveNote").textContent = note;
-    $("arriveRow").innerHTML = row + `<a class="btn" href="mountain/">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
+    $("arriveRow").innerHTML = row + `<a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
   }
 
   // Where the rider stands after getting off: down the ramp, beside the sign.
@@ -1533,10 +1533,14 @@ function sit(model, lookYaw) {
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
 // Ski or snowboard: ?kind= wins, else the saved setting (shared with the old game).
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
+// Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
+const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
+const withResort = (url) => url + (url.includes("?") ? "&" : "?") + `resort=${RESORT}`;
+for (const a of document.querySelectorAll('a[href="mountain/"]')) a.href = withResort("mountain/");
 const KIND = params.get("kind") === "board" || params.get("kind") === "ski" ? params.get("kind") : settings.kind === "board" ? "board" : "ski";
 if (KIND === "board") loadBoarder().catch((e) => console.warn("Rider A did not load", e)); // start early, it is a few MB
 async function main() {
-  const [R, far] = await Promise.all([fetch("data/copper.json").then((r) => r.json()), fetch("data/copper-far.json").then((r) => r.json())]);
+  const [R, far] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json())]);
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
@@ -1547,7 +1551,9 @@ async function main() {
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   await loadAvatar();
   const T = new Terrain(R), mask = treeMaskFn(R, T);
-  const lift = R.lifts.find((l) => l.name === (params.get("lift") || "American Flyer")) || R.lifts.find((l) => l.name === "American Flyer");
+  // The lift asked for, else the chairlift that climbs highest.
+  const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
+  const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
   setLiftKind(lift.name);
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE;
@@ -1566,7 +1572,7 @@ async function main() {
   scene.add(trailSigns(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer));
   const flakes = snowfall();
   scene.add(flakes);
-  weather(params, flakes);
+  weather(params, flakes, R.origin);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - 9 : line.total * 0.66; // from the loading point to the unload ramp
