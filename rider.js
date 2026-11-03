@@ -142,7 +142,8 @@ export class Rider {
   // input: steer -1..1 (right positive): how hard to edge into a turn. pace -1..1: -1 skids the board or
   // skis across the way you are going to slow down, +1 tucks for speed (brake is pace -1). push: skate or
   // walk on the flat. offPiste adds deep-snow drag.
-  step(dt, { steer, pace = 0, brake, push, offPiste }) {
+  // guided: the route does the steering, so don't swing round to the fall line when stopped.
+  step(dt, { steer, pace = 0, brake, push, offPiste, guided }) {
     const t = this.terrain, n = t.normalAt(this.x, this.z, this.n);
     const board = this.kind === "board";
     if (brake) pace = -1;
@@ -160,13 +161,14 @@ export class Rider {
     const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 : 0);
     let a = along - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - (this.speed * rate * Math.abs(this.steer)) * 0.05;
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
-    this.pushing = push && this.speed < (board ? 3 : 5.5) && drop > -0.03;
-    if (this.pushing) a += board ? 1.0 : 1.8;
+    this.pushing = push && this.speed < (board ? 3.4 : 5.5) && drop > -0.03;
+    if (this.pushing) a += board ? 1.2 : 1.8;
     this.speed = Math.max(0, Math.min(30, this.speed + a * dt));
-    // Up a short rise you don't slide: you walk (or side-step) it at walking pace.
-    this.walking = push && drop <= -0.03 && this.speed < 1.2;
-    if (this.walking) this.speed = 1.2;
-    if (this.speed < 0.5 && drop < 0.05 && !this.pushing) {
+    // Up a short rise you don't slide: you skate up a gentle one (about 8 km/h) and walk a steep one.
+    const climb = drop > -0.08 ? 2.2 : 1.2;
+    this.walking = push && drop <= -0.03 && this.speed < climb;
+    if (this.walking) this.speed = climb;
+    if (this.speed < 0.5 && drop < 0.05 && !this.pushing && !guided) {
       // Stopped across or facing up the hill: turn back toward the fall line instead of standing still.
       const fall = Math.atan2(n.x, n.z);
       const diff = Math.atan2(Math.sin(fall - this.heading), Math.cos(fall - this.heading));

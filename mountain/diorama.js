@@ -165,7 +165,9 @@ export class Diorama {
     const g = c.getContext("2d");
     g.fillStyle = "#3d434d"; g.fillRect(0, 0, 1024, 220);
     g.strokeStyle = "#9aa3ae"; g.lineWidth = 10; g.strokeRect(10, 10, 1004, 200);
-    g.fillStyle = "#eef1f4"; g.font = "600 92px Helvetica, Arial, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillStyle = "#eef1f4"; g.textAlign = "center"; g.textBaseline = "middle";
+    let px = 92; // shrink long names until they fit the plate
+    do g.font = `600 ${px}px Helvetica, Arial, sans-serif`; while (g.measureText(title).width > 940 && (px -= 4) > 36);
     g.fillText(title, 512, 112);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;

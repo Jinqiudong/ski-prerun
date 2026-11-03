@@ -6,11 +6,11 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=7";
-import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=4";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=8";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=5";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
-import { Diorama } from "./mountain/diorama.js?v=15";
+import { Diorama } from "./mountain/diorama.js?v=16";
 import { junctions, junctionSign, chevrons, Minimap, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -132,9 +132,9 @@ function cabinParts() {
   for (const s of [-1, 1]) metal.push(new THREE.BoxGeometry(0.05, YW - YB, Z1 - Z0).translate(s * X, (YW + YB) / 2, CZ));
   for (const z of [Z0, Z1]) metal.push(new THREE.BoxGeometry(2 * X, YW - YB, 0.05).translate(0, (YW + YB) / 2, z));
   const pad = [];
-  for (const [z, back] of [[0.07, -1], [Z1 - 0.32, 1]]) { // two benches, facing each other
+  for (const [z, back] of [[0.07, -1], [Z1 - 0.32, 1]]) { // two benches, facing each other (low backs, so the view stays open)
     pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.11, 0.5, 2, 0.04).translate(0, -2.41, z));
-    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.5, 0.09, 2, 0.04).translate(0, -2.1, z + back * 0.3));
+    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.26, 0.08, 2, 0.03).translate(0, -2.24, z + back * 0.3));
   }
   // Glass all round from the walls to the roof.
   const glass = [];
@@ -799,6 +799,7 @@ function build(look, ctx) {
   myChair.add(myBubble);
   myChair.traverse((o) => { o.castShadow = o.receiveShadow = true; });
   rider.position.set(MY_SEAT, -2.95, 0.12);
+  rider.visible = !CABIN; // in a cabin you look out with your own eyes
   myChair.add(rider);
   world.add(myChair);
   if (!TRIP) $("desc").textContent = DESC[look];
@@ -931,7 +932,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     ctx.rider.parent?.add(next); ctx.rider.parent?.remove(ctx.rider);
     ctx.rider = next;
   }
-  let boarderLoaded = false;
+  let boarderLoaded = ctx.rider.userData.look === "riderA";
   st.kind = kind;
   const prepBoard = () => loadBoarder().then(() => { boarderLoaded = true; }).catch(() => {});
   if (kind === "board") prepBoard();
@@ -1037,7 +1038,10 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   addEventListener("pointermove", (e) => {
     if (!sdrag || e.pointerId !== sdrag.id) return;
     latIn = clamp(sdrag.lat + ((e.clientX - sdrag.x) / innerWidth) * 2.4 * LAT, -LAT, LAT);
-    paceIn = clamp((e.clientY - sdrag.y) / 110, -1, 1);
+    // Up and down only count when the finger mostly moves up or down, past a dead zone: a sideways slide
+    // that drifts a little must not brake.
+    const dx = e.clientX - sdrag.x, dy = e.clientY - sdrag.y;
+    paceIn = Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(dy) > 28 ? clamp((dy - Math.sign(dy) * 28) / 90, -1, 1) : 0;
   });
   const touchEnd = (e) => { if (!sdrag || e.pointerId !== sdrag.id) return; sdrag = null; touching = false; paceIn = 0; idleFor = 0; };
   addEventListener("pointerup", touchEnd);
@@ -1055,7 +1059,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     let ti = near.i; while (ti < last && P.dist[ti] - P.dist[near.i] < ahead) ti++;
     idleFor = touching ? 0 : idleFor + dt;
     if (!touching) latIn *= Math.exp(-dt * 0.35);
-    const weave = auto ? 0 : 5 * Math.sin((P.dist[ti] / 24) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1);
+    // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
+    const weave = auto ? 0 : 5 * Math.sin((P.dist[ti] / 24) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1);
     const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
     // The rider's right on screen is local -x: (−cos h, +sin h).
     const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
@@ -1065,7 +1070,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const pace = touching && Math.abs(paceIn) > 0.15 ? (paceIn > 0 && r.speed > cap * 1.6 ? -0.5 : paceIn) : r.speed > cap ? -1 : 0;
     // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
     // nothing pulls you uphill.
-    r.step(dt, { steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45 });
+    // Stopped on purpose (holding the brake): stand still rather than pivot on the spot.
+    const parked = pace < -0.2 && r.speed < 0.8;
+    r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true });
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
     // Snow thrown up off the edge: a little in every turn, a cloud when you skid to slow down.
@@ -1175,6 +1182,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     riderFrom = rider.getWorldPosition(new THREE.Vector3());
     yaw0 = getChair().rotation.y;
     scene.attach(rider);
+    rider.visible = true;
     riderTo = standAt();
     $("bubble").hidden = true;
     $("desc").textContent = "到站了，下缆车…";
@@ -1197,9 +1205,12 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       rider.position.y += Math.sin(Math.min(1, t / 0.6) * Math.PI) * 0.15 * (1 - u);
       rider.rotation.set(0, yaw0, 0);
       const ud = rider.userData;
+      if (ud.mixer) { if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider); }
+      else {
       ud.yaw.rotation.set(0, 0, 0); ud.pivot.rotation.set(0, 0, 0); ud.stance.rotation.y = 0;
       applyPose(rider, u < 0.25 ? { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: 0, spread: 0.08 }
         : { knee: 0.8, fwd: 0.35, twist: 0, armsOut: 0.35, armsFwd: 0.55, elbow: 0.6, headYaw: 0, spread: 0.06 });
+      }
       rider.position.y = Math.max(rider.position.y, T.heightAt(rider.position.x, rider.position.z));
       const c = rider.position.clone();
       camera.position.copy(camBehind(c, u * 2.4, 5.5, 2.2));
@@ -1524,11 +1535,11 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     phys.place(P.path[i][0], P.path[i][1], pathDir(P.path, i), 8); prog = i;
   };
   // Testing: ski `secs` seconds at 30 fps without drawing; report where the rider went.
-  st.sim = (secs, every = 5) => {
-    const out = []; simClock = performance.now(); if (!sdrag) st.setAuto(true);
-    for (let t = 0; t < secs && !ended; t += 1 / 30) {
+  st.sim = (secs, every = 5, guided = false) => {
+    const out = []; simClock = performance.now(); if (!sdrag) st.setAuto(!guided);
+    for (let f = 0, t = 0; t < secs && !ended; f++, t = f / 30) {
       simClock += 1000 / 30; stepSki(1 / 30);
-      if (Math.abs(t % every) < 1 / 60) out.push(`${Math.round(t)}s ${Math.round(phys.x)},${Math.round(phys.z)} v${Math.round(phys.speed * 3.6)} prog${prog}/${chosen.path.length} | ${$("skiCue").innerText.replace(/\n/g, " ")}`);
+      if (f % Math.round(every * 30) === 0) out.push(`${Math.round(t)}s ${Math.round(phys.x)},${Math.round(phys.z)} v${Math.round(phys.speed * 3.6)} prog${prog}/${chosen.path.length} | ${$("skiCue").innerText.replace(/\n/g, " ")}`);
     }
     simClock = null; out.push(ended ? "ARRIVED" : "not arrived"); return out;
   };
@@ -1560,6 +1571,8 @@ addEventListener("pointerup", () => (drag = null));
 
 function sit(model, lookYaw) {
   const u = model.userData;
+  // Rider A: hips on the cushion (it stands on the chair at the feet's height, 0.59 m under the seat).
+  if (u.mixer) { sitBoarder(model, lookYaw, new THREE.Vector3(0, 0.6, -0.08)); return; }
   u.yaw.rotation.set(0, 0, 0); u.pivot.rotation.set(0, 0, 0); u.stance.rotation.y = 0;
   applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: lookYaw * 0.25, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: clamp(lookYaw * 0.75, -1, 1), spread: 0.08 });
 }
@@ -1585,6 +1598,9 @@ async function main() {
     load("spruce_branch.png", true), load("spruce_snow.png"), load("spruce_crown.png", true), load("spruce_crown_snow.png")]);
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   await loadAvatar();
+  // Snowboarding: Rider A rides the lift too (when the model loads; else the built-in rider).
+  let riderA = false;
+  if (KIND === "board") try { await loadBoarder(); riderA = true; } catch (e) { console.warn("Rider A did not load", e); }
   const T = new Terrain(R), mask = treeMaskFn(R, T);
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
@@ -1594,8 +1610,8 @@ async function main() {
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
   const kind = KIND;
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel(kind), lift, mask };
-  ctx.rider.userData.look = kind;
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderA ? boarderModel() : riderModel(kind), lift, mask };
+  ctx.rider.userData.look = riderA ? "riderA" : kind;
   ctx.tex.cord.repeat.set(1, 1);
   const current = "A"; // semi-realistic, decided 2026-11-01
   build(current, ctx);

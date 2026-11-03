@@ -99,7 +99,9 @@
     .acts .go { flex: 1; color: #fff; background: var(--accent); border: 0; font-weight: 600; }
     .liftCard:not(.on) .acts .go { background: rgba(47,127,232,.45); }
     body.detail #credit { opacity: 0; }
-    body.picking #credit { bottom: calc(150px + env(safe-area-inset-bottom)); }
+    /* Choosing a lift: the credit sits under the cards instead of floating over the miniature. */
+    body.picking #liftCards { bottom: calc(16px + env(safe-area-inset-bottom)); }
+    body.picking #credit { bottom: calc(1px + env(safe-area-inset-bottom)); color: rgba(30, 40, 55, .55); text-shadow: none; }
     #dim { position: fixed; inset: 0; background: rgba(6, 12, 22, .38); opacity: 0; pointer-events: none; transition: opacity .3s; }
     body.detail #dim { opacity: 1; pointer-events: auto; }
     #detail { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; padding: 6px 16px 14px; border-radius: 18px; transform: translateY(110%); transition: transform .35s cubic-bezier(.2,.8,.2,1); display: none; }
@@ -156,6 +158,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0)</div>
-  <script type="module" src="mountain.js?v=23"></script>
+  <script type="module" src="mountain.js?v=24"></script>
 </body>
 </html>
