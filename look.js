@@ -7,6 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose, Rider, Tracks } from "./rider.js?v=5";
+import { loadBoarder, boarderModel, poseBoarder } from "./boarder.js?v=1";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=13";
@@ -871,6 +872,26 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const pathDir = (pts, i) => { const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
   const nearestOn = (pts, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
+  // Put the rider in the gear for `k`: Rider A on a snowboard (once loaded), the built-in skier otherwise.
+  function wearFor(k) {
+    const want = k === "board" ? (boarderLoaded ? "riderA" : "board") : "ski";
+    if (ctx.rider.userData.look === want) return;
+    const next = want === "riderA" ? boarderModel() : riderModel(k);
+    next.userData.look = want;
+    next.position.copy(ctx.rider.position);
+    ctx.rider.parent?.add(next); ctx.rider.parent?.remove(ctx.rider);
+    ctx.rider = next;
+  }
+  let boarderLoaded = false;
+  st.kind = kind;
+  const prepBoard = () => loadBoarder().then(() => { boarderLoaded = true; }).catch(() => {});
+  if (kind === "board") prepBoard();
+  st.setKind = (k) => {
+    st.kind = k;
+    try { localStorage.setItem("prerun", JSON.stringify({ ...JSON.parse(localStorage.getItem("prerun") || "{}"), kind: k })); } catch {}
+    if (k === "board") prepBoard();
+    const b = $("kindBtn"); if (b) b.textContent = k === "board" ? "🏂 单板（点这里换双板）" : "⛷ 双板（点这里换单板）";
+  };
   function startSki() {
     const P = chosen, path = P.path;
     document.body.classList.remove("picking");
@@ -880,14 +901,15 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     routeMarks = []; reveal = null;
     clearTags();
     dress(P);
-    phys = new Rider(T, "ski");
+    wearFor(st.kind);
+    phys = new Rider(T, st.kind);
     // Start a little way down, clear of the top station.
     let i0 = 0;
     while (i0 < path.length - 2 && P.dist[i0] < 25) i0++;
     phys.place(path[i0][0], path[i0][1], pathDir(path, i0), 2);
     const h0 = pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
-    tracks = new Tracks(scene, T, "ski");
+    tracks = new Tracks(scene, T, st.kind);
     prog = i0; ended = false; auto = true;
     st.phase = "ski";
     $("skiHud").hidden = false;
@@ -977,7 +999,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     // instead of standing still, as a real skier would. Braking still stops you.
     if (!brake && r.speed < 1.6) r.speed = 1.6;
     r.step(dt, { steer, brake, push: auto && r.speed < 4, offPiste: near.d > 45 });
-    r.pose(ctx.rider);
+    if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
     // Chase camera, like the game's.
     const back = new THREE.Vector3(-Math.sin(r.heading), 0, -Math.cos(r.heading));
@@ -1295,7 +1317,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
           <button class="go">按这条路线滑 ›</button>`;
       drawProfile(card.querySelector("canvas"), P);
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
-      card.querySelector(".go").onclick = () => {
+      card.querySelector(".go").onclick = async (e) => {
+        if (st.kind === "board" && !boarderLoaded) { e.target.textContent = "人物加载中…"; await prepBoard(); }
         camera.clearViewOffset();
         startSki();
         $("pick").hidden = true; clearTags(); flash();
@@ -1414,6 +1437,10 @@ function sit(model, lookYaw) {
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
+// Ski or snowboard: ?kind= wins, else the saved setting (shared with the old game).
+const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
+const KIND = params.get("kind") === "board" || params.get("kind") === "ski" ? params.get("kind") : settings.kind === "board" ? "board" : "ski";
+if (KIND === "board") loadBoarder().catch((e) => console.warn("Rider A did not load", e)); // start early, it is a few MB
 async function main() {
   const [R, far] = await Promise.all([fetch("data/copper.json").then((r) => r.json()), fetch("data/copper-far.json").then((r) => r.json())]);
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
@@ -1431,7 +1458,9 @@ async function main() {
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE;
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel("ski"), lift, mask };
+  const kind = KIND;
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderModel(kind), lift, mask };
+  ctx.rider.userData.look = kind;
   ctx.tex.cord.repeat.set(1, 1);
   const current = "A"; // semi-realistic, decided 2026-11-01
   build(current, ctx);
@@ -1453,12 +1482,13 @@ async function main() {
   for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
   $("skip").hidden = !TRIP;
   $("skip").addEventListener("click", () => (d = d1));
-  const kind = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}").kind || "ski"; } catch { return "ski"; } })();
   $("again").addEventListener("click", () => location.reload());
   $("skiDown").addEventListener("click", () => (location.href = `./?lift=${encodeURIComponent(lift.name)}&kind=${kind}`));
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
   const top = topOfLift({ T, R, lift, line, ctx, kind, getChair: () => myChair });
   window.__top = top;
+  $("kindBtn").onclick = () => top.setKind(top.kind === "board" ? "ski" : "board");
+  top.setKind(kind);
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
