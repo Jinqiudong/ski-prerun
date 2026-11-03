@@ -161,7 +161,8 @@ export class Rider {
     const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 : 0);
     let a = along - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - (this.speed * rate * Math.abs(this.steer)) * 0.05;
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
-    this.pushing = push && this.speed < (board ? 3.4 : 5.5) && drop > -0.03;
+    // Only where gravity won't do it (a flat, at a crawl): going downhill you ride, both feet strapped in.
+    this.pushing = push && this.speed < (board ? 3.4 : 5.5) && drop > -0.03 && drop < 0.04;
     if (this.pushing) a += board ? 1.2 : 1.8;
     this.speed = Math.max(0, Math.min(30, this.speed + a * dt));
     // Up a short rise you don't slide: you skate up a gentle one (about 8 km/h) and walk a steep one.

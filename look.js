@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=9";
+import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=10";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=9";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
@@ -800,7 +800,6 @@ function build(look, ctx) {
   myChair.add(myBubble);
   myChair.traverse((o) => { o.castShadow = o.receiveShadow = true; });
   rider.position.set(MY_SEAT, -2.95, 0.12);
-  rider.visible = !CABIN; // in a cabin you look out with your own eyes
   myChair.add(rider);
   world.add(myChair);
   if (!TRIP) $("desc").textContent = DESC[look];
@@ -1185,7 +1184,6 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     riderFrom = rider.getWorldPosition(new THREE.Vector3());
     yaw0 = getChair().rotation.y;
     scene.attach(rider);
-    rider.visible = true;
     riderTo = standAt();
     $("bubble").hidden = true;
     $("desc").textContent = "到站了，下缆车…";
@@ -1700,8 +1698,8 @@ async function main() {
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
     const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, -1.5, -Math.sin(yaw) * MY_SEAT));
-    // Behind and above a chair; inside a cabin, from the middle of the back bench, under the roof.
-    if (CABIN) camera.position.copy(myChair.position).add(new THREE.Vector3(0, -1.85, 0)).addScaledVector(view, 0.3);
+    // Behind and above a chair; behind a cabin at window height, looking in through its back glass.
+    if (CABIN) camera.position.copy(head).addScaledVector(view, -4.2).add(new THREE.Vector3(0, 0.35, 0));
     else camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
     // Look up the slope, not at a fixed angle: aim 30 m ahead on the line, a little below the rope, so
     // the snow ahead (higher than the chair on the way up) and the names carved in it stay in view.
