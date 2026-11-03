@@ -1438,7 +1438,7 @@ async function main() {
   $("status").remove();
   // Run names carved into the snow, met on the way up.
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
-  const names = snowNames(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer);
+  const names = snowNames(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer); // read from the chair; while skiing, the junction signs say it instead
   scene.add(names);
   scene.add(trailSigns(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer));
   const flakes = snowfall();
@@ -1511,7 +1511,7 @@ async function main() {
     const k = Math.min(1, dt * 6);
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
-    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); fadeNames(names, camera); renderer.render(scene, camera); return; }
+    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); renderer.render(scene, camera); return; }
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
