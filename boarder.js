@@ -11,7 +11,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 export const RIDERS = {
   rider_a: {
     // Claude's rebuild (2026-11-03): same rig, clips and axes as the first cut, one skinned mesh.
-    name: "Rider A", file: "assets/riders/rider_a_claude.glb",
+    name: "Rider A", file: "assets/riders/rider_a_v2.glb", // v2: rebuilt rig and 16 clips (2026-11-03)
     hide: /Jacket_chest_logo|Pants_back_ellipse/, // the owner wants no logos on the jacket or pants
     parts: {
       jacket: { mats: ["V02_JACKET_new_photo_gray_olive"], trim: ["V02_olive_stitch", "V02_zip_tape_olive_charcoal", "RAC_zip_tape_olive_dark", "RAC_seam_shadow"], color: "#525942" },
@@ -93,12 +93,16 @@ export function boarderModel() {
   const mixer = new THREE.AnimationMixer(model);
   const clip = (n) => {
     const c = gltf.animations.find((a) => a.name === n);
+    if (!c) return null;
     const a = mixer.clipAction(c);
     a.play(); a.paused = true; a.time = c.duration / 2; a.setEffectiveWeight(0); // held at its peak
     return a;
   };
   // Left_Turn and Right_Turn shift the weight toward the nose or the tail; Knee_Bend sinks the hips.
-  const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend"), stand: clip("Neutral_Standing") };
+  // Each held at its peak and blended by weight, except Skate_Push, which plays (one push per clip).
+  const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend"), stand: clip("Neutral_Standing"),
+    toe: clip("Toeside_Carve"), heel: clip("Heelside_Carve"), sit: clip("Chairlift_Sit"), idle: clip("Stand_Idle"), push: clip("Skate_Push"), exit: clip("Lift_Exit") };
+  for (const k of Object.keys(A)) if (!A[k]) delete A[k];
   const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R"),
     board: bone("Board"), hips: bone("Hips"), head: bone("Head"), thighL: bone("Thigh.L"), thighR: bone("Thigh.R"), shinL: bone("Shin.L"), shinR: bone("Shin.R"),
     footL: bone("Foot.L"), footR: bone("Foot.R"), foreL: bone("Forearm.L"), foreR: bone("Forearm.R") };
@@ -106,7 +110,7 @@ export function boarderModel() {
   // The leading foot (the one nearer the nose, +z): it stays strapped in on the chairlift.
   const lead = root.worldToLocal(B.footL.getWorldPosition(new THREE.Vector3())).z > 0 ? "L" : "R";
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", goofy: me.stance === "goofy", yaw, lean, model, mixer, A, B, bones, lead, toeX, armZ, edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
+  root.userData = { kind: "board", goofy: me.stance === "goofy", pushT: 0, yaw, lean, model, mixer, A, B, bones, lead, toeX, armZ, edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
   return root;
 }
 
@@ -153,13 +157,15 @@ export function poseBoarder(root, r) {
   s.edge = damp(s.edge, Math.max(-0.9, Math.min(0.9, g * r.lean)), 8, dt);
   s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
   s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
-  s.fore = damp(s.fore, Math.max(-1, Math.min(1, g * r.steer)) * 0.3, 4, dt); // weight forward into a turn
-  const toe = Math.min(1, Math.max(0, -s.edge * tx) / 0.7), heel = Math.min(1, Math.max(0, s.edge * tx) / 0.7) + s.skid * 0.6;
-  // Legs come from the clips only (bending them by hand bowed the knees): the knee bend deepens on the
-  // heel side, in a skid and in a tuck. Toe- and heel-side clips from the model would do this properly.
-  s.knee = damp(s.knee, Math.min(1, 0.25 + Math.min(1, heel) * 0.6 + toe * 0.3 + s.tuck * 0.5), 5, dt);
-  const fwd = Math.max(0, s.fore), back = Math.max(0, -s.fore);
-  weights(u, { right: fwd, left: back, knee: s.knee * (1 - fwd - back), stance: Math.max(0, 1 - fwd - back - s.knee * (1 - fwd - back)) });
+  s.push = damp(s.push || 0, r.pushing || r.walking ? 1 : 0, 6, dt);
+  // How far onto each edge, 0..1 (full at about 30° of inclination): the model's carve clips.
+  const toe = Math.min(1, Math.max(0, -s.edge * tx) / 0.5), heel = Math.min(1, Math.max(0, s.edge * tx) / 0.5 + s.skid * 0.7);
+  const push = A_(u, "push") ? s.push * (1 - Math.max(toe, heel)) : 0;
+  const knee = Math.min(1, s.tuck * 0.7 + (A_(u, "toe") ? 0 : 0.3 * (toe + heel))) * (1 - toe - heel) * (1 - push);
+  const w = { toe: A_(u, "toe") ? toe : 0, heel: A_(u, "heel") ? Math.min(1, heel) : 0, push, knee };
+  w.stance = Math.max(0, 1 - w.toe - w.heel - w.push - w.knee);
+  weights(u, w);
+  if (push > 0.01) { u.pushT = (u.pushT + dt * 0.9) % 1; u.A.push.time = u.pushT * u.A.push.getClip().duration; } // a push every ~1.1 s
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
   mix(u);
   // Skid: the board swings so the toes face the way you are going and the heel edge trails uphill.
@@ -168,62 +174,33 @@ export function poseBoarder(root, r) {
   u.lean.rotation.z = tilt;
   u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);
-  // Upper body: back toward upright (angulation); stacked over the hips on the heel side, a touch over
-  // the toes on the toe side; shoulders open toward the nose on the heel side.
-  turn(u.B.spine, u.lean, Z, -tilt * 0.22);
-  turn(u.B.chest, u.lean, Z, -tilt * 0.18);
-  turn(u.B.spine, u.lean, Z, -tx * (0.12 * toe + 0.16 * Math.min(1, heel) + 0.12 * s.tuck));
-  turn(u.B.chest, u.lean, Y, -tx * 0.3 * Math.min(1, heel)); // the nose is always +z
-  turn(u.B.head, u.lean, Y, -tx * 0.15 * (toe + heel));
-  // Arms: out toward the nose and tail as the edge grows; on the heel side reaching forward over the toes.
-  const arms = Math.min(1, Math.abs(tilt) * 1.2 + s.skid * 0.4) * 0.6;
-  turn(u.B.armL, u.lean, X, -u.armZ * arms);
-  turn(u.B.armR, u.lean, X, u.armZ * arms);
-  turn(u.B.armL, u.lean, Z, tx * 0.35 * Math.min(1, heel));
-  turn(u.B.armR, u.lean, Z, tx * 0.35 * Math.min(1, heel));
+  // Angulation: the chest comes back toward upright by part of the inclination (the clips are posed on a
+  // flat board; the inclination comes from tilting the whole rider).
+  turn(u.B.spine, u.lean, Z, -tilt * 0.18);
+  turn(u.B.chest, u.lean, Z, -tilt * 0.14);
   finish(root);
 }
+const A_ = (u, k) => !!u.A[k];
 
 // Riding the lift and getting off: the rider faces the way the chair goes (root +z), not the board.
 // On the chair: seated, the leading foot still strapped in so the board hangs off it, the back foot free;
 // hands on the lap; lookYaw turns the head (and a little of the chest). The hips land on `seat`, a point
 // in root's frame. Off the chair: standing on the board, gliding down the ramp.
-const _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _v = new THREE.Vector3();
+const _v = new THREE.Vector3();
 function faceForward(u) {
   u.yaw.rotation.set(0, u.toeX < 0 ? Math.PI / 2 : -Math.PI / 2, 0); // chest (the toes' side) to +z
   u.lean.rotation.set(0, 0, 0); u.lean.position.set(0, 0, 0);
 }
 export function sitBoarder(root, lookYaw = 0, seat = new THREE.Vector3(0, 0.45, 0)) {
-  const u = root.userData, B = u.B, tx = u.toeX, F = u.yaw; // F: the frame we turn bones in (board axes)
+  const u = root.userData, B = u.B, F = u.yaw;
   start(root);
   if (u.goofy) { lookYaw = -lookYaw; seat = seat.clone(); seat.x = -seat.x; }
   faceForward(u);
-  u.model.position.x = u.model.position.z = 0;
-  weights(u, { stand: 1 });
+  u.model.position.x = u.model.position.z = 0; u.yaw.position.y = 0;
+  weights(u, { sit: 1 }); // Chairlift_Sit: front foot strapped in, board hanging, hands on the knees
   mix(u);
-  root.updateMatrixWorld(true);
-  const lead = u.lead === "L" ? B.footL : B.footR;
-  // Where the board sits relative to the leading foot while standing: it keeps that when the leg moves.
-  const rel = _m.copy(lead.matrixWorld).invert().multiply(B.board.matrixWorld);
-  for (const [th, sh, ft] of [[B.thighL, B.shinL, B.footL], [B.thighR, B.shinR, B.footR]]) {
-    turn(th, F, Z, tx * 1.45); // thighs forward along the seat
-    turn(sh, F, Z, -tx * 1.45); // shins hang down
-  }
-  turn(B.spine, F, Z, -tx * 0.08); // sit back a touch
   turn(B.spine, F, Y, lookYaw * 0.25);
   turn(B.head, F, Y, Math.max(-1, Math.min(1, lookYaw * 0.75)));
-  for (const [arm, fore, side] of [[B.armL, B.foreL, 1], [B.armR, B.foreR, -1]]) {
-    turn(arm, F, Z, tx * 0.7); // arms forward, hands to the lap
-    turn(fore, F, Z, tx * 0.9);
-    turn(arm, F, X, u.armZ * side * 0.55); // in from the A-pose, toward the body
-  }
-  root.updateMatrixWorld(true);
-  // Move the board to hang off the leading foot, keeping the hips (and so the legs) where they are.
-  const hips = _m2.copy(B.hips.matrixWorld);
-  const board = new THREE.Matrix4().multiplyMatrices(lead.matrixWorld, rel);
-  B.board.matrix.copy(B.board.parent.matrixWorld).invert().multiply(board).decompose(B.board.position, B.board.quaternion, B.board.scale);
-  B.board.updateMatrixWorld(true);
-  B.hips.matrix.copy(B.board.matrixWorld).invert().multiply(hips).decompose(B.hips.position, B.hips.quaternion, B.hips.scale);
   root.updateMatrixWorld(true);
   // Hips onto the seat.
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
@@ -231,11 +208,21 @@ export function sitBoarder(root, lookYaw = 0, seat = new THREE.Vector3(0, 0.45, 
   u.yaw.position.y = seat.y - h.y;
   finish(root);
 }
-export function standBoarder(root) {
+// Getting off (k 0..1 down the ramp): Lift_Exit, settling into Stand_Idle on the board.
+export function standBoarder(root, k = 1) {
   const u = root.userData;
   faceForward(u); u.yaw.position.y = 0;
   u.yaw.rotation.y = 0; // gliding off: the board along the ramp
   u.model.position.x = u.model.position.z = 0;
-  weights(u, { stance: 0.6, knee: 0.4 });
+  const exit = A_(u, "exit") ? 1 - k : 0;
+  weights(u, A_(u, "idle") ? { exit, idle: 1 - exit } : { stance: 0.6, knee: 0.4 });
   start(root); mix(u); finish(root);
+}
+// Standing on the board, as on the start screen.
+export function idleBoarder(root) {
+  const u = root.userData;
+  start(root);
+  u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
+  weights(u, A_(u, "idle") ? { idle: 1 } : { stance: 1 });
+  mix(u); finish(root);
 }

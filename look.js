@@ -7,7 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=9";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=8";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=9";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=16";
@@ -1208,7 +1208,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       rider.position.y += Math.sin(Math.min(1, t / 0.6) * Math.PI) * 0.15 * (1 - u);
       rider.rotation.set(0, yaw0, 0);
       const ud = rider.userData;
-      if (ud.mixer) { if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider); }
+      if (ud.mixer) { if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider, (u - 0.25) / 0.75); }
       else {
       ud.yaw.rotation.set(0, 0, 0); ud.pivot.rotation.set(0, 0, 0); ud.stance.rotation.y = 0;
       applyPose(rider, u < 0.25 ? { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: 0, spread: 0.08 }

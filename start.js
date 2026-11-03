@@ -1,7 +1,7 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } from "./boarder.js?v=8";
+import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=9";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SLOTS = 4; // the four default riders; the ones not made yet show as coming
@@ -40,7 +40,6 @@ scene.add(disc);
 const turntable = new THREE.Group();
 scene.add(turntable);
 let rider = null, spin = 0.6, drag = null;
-const still = { x: 0, y: 0, z: 0, n: new THREE.Vector3(0, 1, 0), heading: 0, steer: 0, lean: 0, skid: 0, tuck: 0, speed: 0, dt: 1 / 30 };
 function resize() {
   const w = innerWidth, h = innerHeight * 0.58;
   renderer.setSize(w, h, false);
@@ -55,7 +54,7 @@ let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!drag) turntable.rotation.y += spin * dt;
-  if (rider) poseBoarder(rider, still);
+  if (rider) idleBoarder(rider);
   renderer.render(scene, camera);
 });
 
