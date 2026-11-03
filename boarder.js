@@ -134,54 +134,12 @@ function turn(bone, frame, axis, angle) {
 }
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
-// Two-bone IK, so the hips can move while the boots stay in the bindings: each leg's thigh and shin are
-// turned to reach the foot's old place, the knee bending toward `pole`; the foot keeps its old angle.
-const _h = new THREE.Vector3(), _k = new THREE.Vector3(), _f = new THREE.Vector3(), _e = new THREE.Vector3(), _n = new THREE.Vector3(), _t = new THREE.Vector3();
-const _wq = new THREE.Quaternion(), _rq = new THREE.Quaternion();
-function aim(bone, from, to) { // turn bone (in world space) so the direction `from` becomes `to`
-  _rq.setFromUnitVectors(from.normalize(), to.normalize());
-  bone.getWorldQuaternion(_wq).premultiply(_rq);
-  bone.parent.getWorldQuaternion(_pq);
-  bone.quaternion.copy(_pq.invert().multiply(_wq));
-  bone.updateMatrixWorld(true);
-}
-function legIK(thigh, shin, foot, target, footQ, pole) {
-  thigh.getWorldPosition(_h); shin.getWorldPosition(_k); foot.getWorldPosition(_f);
-  const a = _k.distanceTo(_h), b = _f.distanceTo(_k);
-  _e.subVectors(target, _h); const d = Math.min(_e.length(), a + b - 1e-4); _e.normalize();
-  const along = (a * a - b * b + d * d) / (2 * d), up = Math.sqrt(Math.max(0, a * a - along * along));
-  _n.subVectors(pole, _h); _n.addScaledVector(_e, -_n.dot(_e)).normalize();
-  const knee = _t.copy(_h).addScaledVector(_e, along).addScaledVector(_n, up);
-  aim(thigh, _k.clone().sub(_h), knee.clone().sub(_h));
-  shin.getWorldPosition(_k); foot.getWorldPosition(_f);
-  aim(shin, _f.clone().sub(_k), target.clone().sub(_k));
-  foot.parent.getWorldQuaternion(_pq);
-  foot.quaternion.copy(_pq.invert().multiply(footQ));
-  foot.updateMatrixWorld(true);
-}
-// Move the hips by `shift` (in the frame `F`, metres) and bend the knees toward `knees` (a direction in F)
-// with both boots kept where they were.
-const _s = new THREE.Vector3();
-function hipsTo(u, F, shift, knees) {
-  const B = u.B, legs = [[B.thighL, B.shinL, B.footL], [B.thighR, B.shinR, B.footR]];
-  const saved = legs.map(([, , f]) => [f.getWorldPosition(new THREE.Vector3()), f.getWorldQuaternion(new THREE.Quaternion())]);
-  B.hips.getWorldPosition(_s).add(_t.copy(shift).transformDirection(F.matrixWorld).multiplyScalar(shift.length()));
-  B.hips.position.copy(B.hips.parent.worldToLocal(_s));
-  B.hips.updateMatrixWorld(true);
-  const kneeDir = _t.copy(knees).transformDirection(F.matrixWorld);
-  legs.forEach(([th, sh, ft], i) => {
-    const pole = sh.getWorldPosition(new THREE.Vector3()).addScaledVector(kneeDir, 0.5);
-    legIK(th, sh, ft, saved[i][0], saved[i][1], pole);
-  });
-}
-
 // Pose from the physics state (rider.js's Rider). The whole rider and board incline into the turn by the
 // angle that balances it, so the board rides its inside edge: the toe edge when the turn's inside is the
-// side the toes point to, the heel edge otherwise. On top of that, as coaches teach it:
-// - toe side: ankles and knees drive toward the toe edge, hips over the toes, upper body stacked upright;
-// - heel side: knees and hips flex, hips drop behind the heels as if sitting, upper body upright over the
-//   hips (not folded at the waist), shoulders opened toward the nose;
-// - either way the chest stays more upright than the legs (angulation) and the arms balance.
+// side the toes point to, the heel edge otherwise. On top of that, as coaches teach it: on the toe side
+// the upper body stays stacked upright over the toes; on the heel side the rider sinks lower (knee bend)
+// with the chest upright over the hips and the shoulders opened toward the nose; either way the chest
+// stays more upright than the legs (angulation) and the arms balance.
 // To slow down the board swings across the way you move and the rider sits back onto the heel edge.
 export function poseBoarder(root, r) {
   const u = root.userData, s = u.s, dt = r.dt || 0.016, tx = u.toeX, g = u.goofy ? -1 : 1;
@@ -197,7 +155,9 @@ export function poseBoarder(root, r) {
   s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
   s.fore = damp(s.fore, Math.max(-1, Math.min(1, g * r.steer)) * 0.3, 4, dt); // weight forward into a turn
   const toe = Math.min(1, Math.max(0, -s.edge * tx) / 0.7), heel = Math.min(1, Math.max(0, s.edge * tx) / 0.7) + s.skid * 0.6;
-  s.knee = damp(s.knee, Math.min(1, 0.2 + s.tuck * 0.5), 5, dt);
+  // Legs come from the clips only (bending them by hand bowed the knees): the knee bend deepens on the
+  // heel side, in a skid and in a tuck. Toe- and heel-side clips from the model would do this properly.
+  s.knee = damp(s.knee, Math.min(1, 0.25 + Math.min(1, heel) * 0.6 + toe * 0.3 + s.tuck * 0.5), 5, dt);
   const fwd = Math.max(0, s.fore), back = Math.max(0, -s.fore);
   weights(u, { right: fwd, left: back, knee: s.knee * (1 - fwd - back), stance: Math.max(0, 1 - fwd - back - s.knee * (1 - fwd - back)) });
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
@@ -208,10 +168,6 @@ export function poseBoarder(root, r) {
   u.lean.rotation.z = tilt;
   u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);
-  // Legs: hips toward the toes and a little down on the toe edge; back behind the heels and down on the
-  // heel edge; lower in a tuck. Knees always bend toward the toes (that's how legs work on a board).
-  const shift = new THREE.Vector3(tx * (0.09 * toe - 0.13 * Math.min(1, heel)), -(0.07 * toe + 0.16 * Math.min(1, heel) + 0.08 * s.tuck), 0);
-  if (shift.lengthSq() > 1e-6) hipsTo(u, u.lean, shift, new THREE.Vector3(tx, 0, 0));
   // Upper body: back toward upright (angulation); stacked over the hips on the heel side, a touch over
   // the toes on the toe side; shoulders open toward the nose on the heel side.
   turn(u.B.spine, u.lean, Z, -tilt * 0.22);

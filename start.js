@@ -1,7 +1,7 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } from "./boarder.js?v=7";
+import { RIDERS, PART_ZH, loadBoarder, boarderModel, poseBoarder, dressRider } from "./boarder.js?v=8";
 
 const $ = (id) => document.getElementById(id);
 const DEFAULT_SLOTS = 4; // the four default riders; the ones not made yet show as coming
