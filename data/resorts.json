@@ -39,27 +39,27 @@
     "name": "Snowmass",
     "zh": "阿斯本 · 雪堆山",
     "state": "科罗拉多",
-    "ready": false
+    "ready": true
   },
   {
     "id": "aspenmountain",
     "name": "Aspen Mountain",
     "zh": "阿斯本山",
     "state": "科罗拉多",
-    "ready": false
+    "ready": true
   },
   {
     "id": "highlands",
     "name": "Aspen Highlands",
     "zh": "阿斯本高地",
     "state": "科罗拉多",
-    "ready": false
+    "ready": true
   },
   {
     "id": "buttermilk",
     "name": "Buttermilk",
     "zh": "阿斯本 · 酪乳山",
     "state": "科罗拉多",
-    "ready": false
+    "ready": true
   }
 ]

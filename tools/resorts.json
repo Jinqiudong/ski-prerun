@@ -70,6 +70,16 @@
       -106.985,
       39.213,
       -106.9139
+    ],
+    "villages": [
+      [
+        "Snowmass Base Village",
+        "Village Express"
+      ],
+      [
+        "Two Creeks",
+        "Two Creeks"
+      ]
     ]
   },
   "aspenmountain": {
@@ -79,6 +89,12 @@
       -106.8311,
       39.1866,
       -106.8076
+    ],
+    "villages": [
+      [
+        "Gondola Plaza",
+        "Silver Queen"
+      ]
     ]
   },
   "highlands": {
@@ -88,6 +104,12 @@
       -106.8783,
       39.1818,
       -106.8503
+    ],
+    "villages": [
+      [
+        "Highlands Village",
+        "Exhibition"
+      ]
     ]
   },
   "buttermilk": {
@@ -97,6 +119,16 @@
       -106.8856,
       39.2064,
       -106.8544
+    ],
+    "villages": [
+      [
+        "Buttermilk Base",
+        "Summit Express"
+      ],
+      [
+        "Tiehack",
+        "Tiehack Express"
+      ]
     ]
   }
 }
