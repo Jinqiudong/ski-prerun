@@ -10,12 +10,14 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 // tape) follow the part's colour a shade darker. More riders (men's and women's) get added here.
 export const RIDERS = {
   rider_a: {
-    name: "Rider A", file: "assets/riders/rider_a.glb",
+    // Claude's rebuild (2026-11-03): same rig, clips and axes as the first cut, one skinned mesh.
+    name: "Rider A", file: "assets/riders/rider_a_claude.glb",
+    hide: /Jacket_chest_logo|Pants_back_ellipse/, // the owner wants no logos on the jacket or pants
     parts: {
-      jacket: { mats: ["V02_JACKET_new_photo_gray_olive"], trim: ["V02_olive_stitch", "V02_zip_tape_olive_charcoal"], color: "#464e3f" },
-      pants: { mats: ["V02_PANTS_ivory_shell", "V02_PANTS_ivory_shell.001"], color: "#c5c4b6" },
-      helmet: { mats: ["Helmet matte charcoal"], color: "#161819" },
-      lens: { mats: ["MVP_pink_purple_mirrored_lens"], color: "#ad5599" },
+      jacket: { mats: ["V02_JACKET_new_photo_gray_olive"], trim: ["V02_olive_stitch", "V02_zip_tape_olive_charcoal", "RAC_zip_tape_olive_dark", "RAC_seam_shadow"], color: "#525942" },
+      pants: { mats: ["V02_PANTS_ivory_shell", "V02_PANTS_ivory_shell.001"], color: "#c5bcaa" },
+      helmet: { mats: ["Helmet matte charcoal"], color: "#272729" },
+      lens: { mats: ["RAC_lens_blue_violet_mirror", "MVP_pink_purple_mirrored_lens"], color: "#95a2f9" },
     },
   },
 };
@@ -53,10 +55,10 @@ export function dressRider(scene, base, colors = {}) {
     const dark = c.clone().multiplyScalar(0.72);
     for (const n of p.trim || []) byName.get(n)?.color.copy(dark);
   }
+  if (def.hide) scene.traverse((o) => { if (o.isMesh && [].concat(o.material).some((m) => def.hide.test(m.name))) o.visible = false; });
 }
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
-const HALF_WIDTH = 0.185; // from the middle of the base to its edge, as measured on the model
 
 // root sits at the board's base with local +z the direction of travel, like rider.js's models:
 //   root → yaw (board skidding across) → lean (board on its edge, rider inclined into the turn) → model
@@ -77,6 +79,11 @@ export function boarderModel() {
   model.position.y = -box.min.y;
   root.updateMatrixWorld(true);
   // Which side the toes point to (+1: +x, -1: -x): the foot bones run heel to toe.
+  // Where the board's edges are (across it, in the rider's frame), measured on the model: the board pivots
+  // on whichever edge is in the snow.
+  const edges = new THREE.Box3();
+  model.traverse((o) => { if (o.isMesh && /Snowboard/i.test([].concat(o.material)[0].name)) edges.expandByObject(o, true); });
+  if (edges.isEmpty()) edges.min.x = -(edges.max.x = 0.13);
   const toes = new THREE.Vector3(0, 1, 0).applyQuaternion(bone("Foot.L").getWorldQuaternion(new THREE.Quaternion()));
   const toeX = Math.sign(root.worldToLocal(toes.add(root.getWorldPosition(new THREE.Vector3()))).x) || 1;
   const mixer = new THREE.AnimationMixer(model);
@@ -90,7 +97,7 @@ export function boarderModel() {
   const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend") };
   const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R") };
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", yaw, lean, model, mixer, A, B, toeX, armZ, s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
+  root.userData = { kind: "board", yaw, lean, model, mixer, A, B, toeX, armZ, edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0 } };
   return root;
 }
 
@@ -137,7 +144,7 @@ export function poseBoarder(root, r) {
   u.yaw.rotation.y = -tx * 1.2 * s.skid;
   const tilt = s.edge * (1 - s.skid) - tx * 0.3 * s.skid; // about the board's long axis; + leans toward -x
   u.lean.rotation.z = tilt;
-  u.lean.position.y = HALF_WIDTH * Math.abs(Math.sin(tilt)); // pivot on the edge that's in the snow, not under it
+  u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);
   // Angulation: the chest comes back toward upright by about a third of the inclination.
   turn(u.B.spine, u.lean, Z, -tilt * 0.2);
