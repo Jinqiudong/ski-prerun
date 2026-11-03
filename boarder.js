@@ -6,13 +6,53 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
+// The riders you can pick. Each part you can recolour lists its materials; `trim` materials (seams, zip
+// tape) follow the part's colour a shade darker. More riders (men's and women's) get added here.
+export const RIDERS = {
+  rider_a: {
+    name: "Rider A", file: "assets/riders/rider_a.glb",
+    parts: {
+      jacket: { mats: ["V02_JACKET_new_photo_gray_olive"], trim: ["V02_olive_stitch", "V02_zip_tape_olive_charcoal"], color: "#464e3f" },
+      pants: { mats: ["V02_PANTS_ivory_shell", "V02_PANTS_ivory_shell.001"], color: "#c5c4b6" },
+      helmet: { mats: ["Helmet matte charcoal"], color: "#161819" },
+      lens: { mats: ["MVP_pink_purple_mirrored_lens"], color: "#ad5599" },
+    },
+  },
+};
+export const PART_ZH = { jacket: "外套", pants: "雪裤", helmet: "头盔", lens: "雪镜" };
+
+// The rider saved on this phone (see start.html): { base, name, colors }. Falls back to Rider A as made.
+export function myRider() {
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { /* fresh */ }
+  const mine = (st.riders || []).find((r) => r.id === st.rider);
+  const base = RIDERS[mine?.base] ? mine.base : RIDERS[st.rider] ? st.rider : "rider_a";
+  return { base, name: mine?.name || RIDERS[base].name, colors: mine?.colors || {} };
+}
+
+const gltfs = {};
 let gltf = null;
-export async function loadBoarder(url = "assets/riders/rider_a.glb") {
-  if (!gltf) {
+export async function loadBoarder(url) {
+  const base = myRider().base;
+  url ||= (location.pathname.includes("/mountain/") ? "../" : "") + RIDERS[base].file;
+  if (!gltfs[url]) {
     const draco = new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/");
-    gltf = await new GLTFLoader().setDRACOLoader(draco).loadAsync(url);
+    gltfs[url] = new GLTFLoader().setDRACOLoader(draco).loadAsync(url);
   }
+  gltf = await gltfs[url];
   return gltf;
+}
+
+// Recolour a loaded rider: { jacket: "#hex", ... }; parts left out go back to how the model was made.
+export function dressRider(scene, base, colors = {}) {
+  const def = RIDERS[base] || RIDERS.rider_a, byName = new Map();
+  scene.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) byName.set(m.name, m); });
+  for (const [part, p] of Object.entries(def.parts)) {
+    const c = new THREE.Color(colors[part] || p.color);
+    for (const n of p.mats) byName.get(n)?.color.copy(c);
+    const dark = c.clone().multiplyScalar(0.72);
+    for (const n of p.trim || []) byName.get(n)?.color.copy(dark);
+  }
 }
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
@@ -23,6 +63,8 @@ const HALF_WIDTH = 0.185; // from the middle of the base to its edge, as measure
 export function boarderModel() {
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group();
   const model = gltf.scene; // one rider on the mountain, so no clone
+  const me = myRider();
+  dressRider(model, me.base, me.colors);
   root.add(yaw); yaw.add(lean); lean.add(model);
   model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
   // The board runs along the model's x axis; the leading foot's end is the nose. Turn that to +z.

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+  <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="雪场预滑">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#2f7fe8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>雪场预滑 · 选人物</title>
+  <style>
+    :root { --glass: rgba(14, 22, 34, .66); --ink: #f4f7fb; --muted: #b9c4d3; --accent: #2f7fe8; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: linear-gradient(#bcd3ee, #eef2f7 60%); font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; color: var(--ink); }
+    #c { position: fixed; left: 0; right: 0; top: 0; height: 58vh; width: 100%; display: block; touch-action: none; }
+    .glass { background: var(--glass); border: 1px solid rgba(255,255,255,.16); border-radius: 16px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+    #head { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+    #head b { font-size: 17px; } #head small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    #who { position: fixed; top: calc(46.5vh); left: 0; right: 0; text-align: center; color: #142033; font-size: 22px; font-weight: 700; text-shadow: 0 1px 3px rgba(255,255,255,.8); pointer-events: none; }
+    #sheet { position: fixed; left: 0; right: 0; bottom: 0; top: 52vh; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); overflow-y: auto; border-radius: 20px 20px 0 0; }
+    h3 { margin: 6px 4px 8px; font-size: 13px; color: var(--muted); font-weight: 500; }
+    .row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .row::-webkit-scrollbar { display: none; }
+    .card { flex: 0 0 96px; height: 92px; box-sizing: border-box; border-radius: 14px; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.14); color: var(--ink); font: inherit; padding: 8px; cursor: pointer; position: relative; display: flex; flex-direction: column; justify-content: space-between; text-align: left; }
+    .card.on { border-color: var(--accent); background: rgba(47,127,232,.25); }
+    .card[disabled] { opacity: .45; cursor: default; }
+    .card b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card small { font-size: 11px; color: var(--muted); }
+    .card .dots { display: flex; gap: 3px; }
+    .card .dots i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); }
+    .card .del { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0,0,0,.35); color: #fff; font-size: 13px; cursor: pointer; }
+    .btns { display: flex; gap: 8px; margin-top: 14px; }
+    .btns button { flex: 1; font: inherit; font-size: 15px; white-space: nowrap; font-weight: 600; border-radius: 12px; padding: 12px; cursor: pointer; border: 1px solid rgba(255,255,255,.22); color: var(--ink); background: rgba(255,255,255,.1); }
+    .btns .go { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .part { margin: 4px 0 10px; }
+    .part .lbl { font-size: 14px; margin: 0 4px 6px; display: flex; justify-content: space-between; }
+    .sw { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); cursor: pointer; padding: 0; }
+    .sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+    .sw.pick { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); position: relative; overflow: hidden; }
+    .sw.pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    #name { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); color: var(--ink); }
+    .resort { display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; margin-bottom: 8px; font: inherit; color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 14px; padding: 12px 14px; cursor: pointer; text-align: left; }
+    .resort b { font-size: 16px; display: block; } .resort small { color: var(--muted); font-size: 12px; }
+    .resort[disabled] { opacity: .45; cursor: default; }
+    [hidden] { display: none !important; }
+    #status { position: fixed; top: 26vh; left: 50%; transform: translateX(-50%); color: #142033; font-size: 14px; }
+  </style>
+  <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="head" class="glass"><div><b id="headTitle">选你的 Rider</b><small id="headSub">先选人物，再选雪场</small></div></div>
+  <div id="status">人物加载中…</div>
+  <div id="who"></div>
+  <div id="sheet" class="glass">
+    <section id="pickView">
+      <h3>默认人物</h3><div class="row" id="defaults"></div>
+      <h3>我的人物</h3><div class="row" id="mine"></div>
+      <div class="btns"><button id="editBtn">🎨 换装</button><button class="go" id="useBtn">用这个人物 ›</button></div>
+    </section>
+    <section id="editView" hidden>
+      <div id="parts"></div>
+      <h3>给人物取个名字</h3><input id="name" maxlength="16" placeholder="比如：周末的我">
+      <div class="btns"><button id="cancelBtn">取消</button><button class="go" id="saveBtn">保存</button></div>
+    </section>
+    <section id="resortView" hidden>
+      <div id="resorts"></div>
+      <div class="btns"><button id="backBtn">‹ 换人物</button></div>
+    </section>
+  </div>
+  <script type="module" src="start.js?v=1"></script>
+</body>
+</html>

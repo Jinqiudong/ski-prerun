@@ -1,7 +1,7 @@
 {
   "name": "雪场预滑 · Copper Mountain",
   "short_name": "雪场预滑",
-  "start_url": "./mountain/",
+  "start_url": "./start.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

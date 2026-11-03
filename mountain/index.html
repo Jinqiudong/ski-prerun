@@ -120,6 +120,10 @@
     .lv.advanced { background: #111; transform: rotate(45deg) scale(.8); outline: 1px solid #fff; } .lv.expert { background: #111; transform: rotate(45deg) scale(.8); outline: 1px solid #fff; box-shadow: 6px -6px 0 #111; margin-right: 8px; }
     #credit { position: fixed; right: 8px; bottom: 2px; font-size: 9px; color: rgba(255, 255, 255, .75); text-shadow: 0 1px 2px rgba(0, 0, 0, .4); pointer-events: none; }
   </style>
+  <script>
+    // The app starts by picking a rider; anyone arriving here without one goes there first.
+    try { if (!JSON.parse(localStorage.getItem("prerun") || "{}").rider) location.replace("../start.html"); } catch { /* storage off: carry on */ }
+  </script>
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
