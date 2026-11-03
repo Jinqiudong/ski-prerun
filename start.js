@@ -146,6 +146,7 @@ $("saveBtn").onclick = () => {
 
 // ---- Resorts
 $("useBtn").onclick = async () => {
+  st.rider = chosen().id; // the one on show, even if it was never tapped (the miniature checks for it)
   st.kind = "board"; save();
   view("resort");
   const list = await (await fetch("data/resorts.json")).json();
