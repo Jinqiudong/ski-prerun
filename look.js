@@ -12,7 +12,7 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=2";
+import { TrailMap } from "./mapview.js?v=3";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1637,7 +1637,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     // No getting-off scene: arriving at the top cuts straight to choosing the way down.
     rider.position.copy(riderTo); rider.rotation.set(0, yaw0, 0);
     if (rider.userData.mixer) standBoarder(rider, 1);
-    st.phase = "rise"; st.t0 = now - 1e5;
+    st.phase = "rise"; st.t0 = now; // a short lift up and back from the rider, then the cut to the miniature
     setupPick();
   };
   const camBehind = (r, ang, dist, hgt) => r.clone().add(new THREE.Vector3(Math.sin(yaw0 + ang) * -dist, hgt, Math.cos(yaw0 + ang) * -dist));
@@ -2157,7 +2157,9 @@ async function main() {
   fastBtn.hidden = !TRIP;
   for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
   $("skip").hidden = !TRIP;
-  $("skip").addEventListener("click", () => (d = d1));
+  // Skip: the chair speeds up the line and glides into the top station (about two seconds).
+  let skipping = null;
+  $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
   $("again").addEventListener("click", () => location.reload());
   $("skiDown").addEventListener("click", () => (location.href = `./?lift=${encodeURIComponent(lift.name)}&kind=${kind}`));
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
@@ -2178,7 +2180,8 @@ async function main() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (flakes.visible) flakes.userData.step(dt, camera.position);
-    if (!params.has("still") && !arrived) d += SPEED * (fast ? 20 : 3) * dt;
+    if (skipping && !arrived) { const u = Math.min(1, (now - skipping.t0) / 2200); d = skipping.from + (d1 - skipping.from) * ease(u) + (u >= 1 ? 1 : 0); }
+    else if (!params.has("still") && !arrived) d += SPEED * (fast ? 20 : 3) * dt;
     if (d > d1) {
       if (TRIP) {
         d = d1;

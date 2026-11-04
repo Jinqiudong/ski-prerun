@@ -102,8 +102,8 @@ export class TrailMap {
     if (route.length > 1) {
       g.lineCap = g.lineJoin = "round";
       g.beginPath(); route.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p))));
-      const w = px(14, 2.5, 9);
-      g.strokeStyle = "rgba(60,40,10,.75)"; g.lineWidth = w + 2.5 * dpr; g.stroke();
+      const w = px(14, 1, 14); // the outline too keeps to scale
+      g.strokeStyle = "rgba(60,40,10,.75)"; g.lineWidth = w * 1.45 + 0.6 * dpr; g.stroke();
       g.strokeStyle = "#f2b632"; g.lineWidth = w; g.stroke();
       const [ex, ez] = route[route.length - 1], [u, v] = S(ex, ez), f = px(60, 10, 18); // the end: a little flag
       g.fillStyle = "#3a3f4a"; g.fillRect(u - 0.06 * f, v - f, 0.12 * f, f);
