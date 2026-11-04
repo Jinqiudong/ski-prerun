@@ -2,6 +2,7 @@
 // you can follow it. The base you set out from, each lift, at each top the ways you could have gone and the
 // one you took, the runs in order, where you came out. Steps a few hours apart start a new day.
 // Drawn as a page of the journal: a map of the day's way at the top, then the steps as a path with forks.
+import { t, EN_ON } from "./i18n.js?v=2";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -64,36 +65,36 @@ export function renderBook(box, resort, host) {
   style();
   const days = daysOf(resort);
   box.classList.add("book");
-  if (!days.length) { box.innerHTML = `<div class="bh">📜 预滑路书</div><div class="empty">还没有。去预滑一趟，坐的缆车、在山顶的选择、滑的雪道都会一步一步记在这里。</div>`; return; }
+  if (!days.length) { box.innerHTML = `<div class="bh">${t("📜 预滑路书")}</div><div class="empty">${t("还没有。去预滑一趟，坐的缆车、在山顶的选择、滑的雪道都会一步一步记在这里。")}</div>`; return; }
   let pick = days.length - 1, me = null;
   const draw = () => {
     const day = days[pick], d = new Date(day.t0);
     let n = 0;
     const steps = day.steps.map((s) => {
       n++;
-      if (s.k === "base") return `<li data-n="${n}"><b>🏠 从 ${esc(s.name)} 出发</b></li>`;
-      if (s.k === "lift") return `<li data-n="${n}"><b>🚡 坐 ${esc(s.name)} 上山</b>${s.mins ? `<small>约 ${s.mins} 分钟</small>` : ""}</li>`;
+      if (s.k === "base") return `<li data-n="${n}"><b>🏠 ${t("从 {x} 出发", { x: esc(s.name) })}</b></li>`;
+      if (s.k === "lift") return `<li data-n="${n}"><b>🚡 ${t("坐 {x} 上山", { x: esc(s.name) })}</b></li>`;
       if (s.k === "top") {
         const opts = s.options.slice(0, 7), more = s.options.length - opts.length;
         if (!opts.includes(s.chose)) opts.unshift(s.chose);
-        return `<li data-n="${n}"><b>🏔 到 ${esc(s.at)} 山顶</b><small>这里可以：</small><div class="fork">${opts.map((o) => `<div class="${o === s.chose ? "took" : ""}">${esc(o)}</div>`).join("")}${more > 0 ? `<div>…还有 ${more} 条</div>` : ""}</div></li>`;
+        return `<li data-n="${n}"><b>🏔 ${t("到 {x} 山顶", { x: esc(s.at) })}</b><small>${t("这里可以：")}</small><div class="fork">${opts.map((o) => `<div class="${o === s.chose ? "took" : ""}">${esc(o)}</div>`).join("")}${more > 0 ? `<div>${t("…还有 {n} 条", { n: more })}</div>` : ""}</div></li>`;
       }
       if (s.k === "route") {
         const runs = s.segs.map((g) => `<span>${MARK[g.l] || ""} ${esc(g.n)}</span>`).join(" › ");
-        return `<li data-n="${n}"><b>${s.changed ? "↩ 改路线" : "⛷ 滑下去"}</b><div class="runs">${runs}</div>${s.next ? `<small>到底坐 🚡 ${esc(s.next)}</small>` : ""}</li>`;
+        return `<li data-n="${n}"><b>${t(s.changed ? "↩ 改路线" : "⛷ 滑下去")}</b><div class="runs">${runs}</div>${s.next ? `<small>${t("到底坐 🚡 {x}", { x: esc(s.next) })}</small>` : ""}</li>`;
       }
-      if (s.k === "jump") return `<li data-n="${n}"><b>⏭ 跳到 ${esc(s.to)}</b><small>中间这段算看过了</small></li>`;
+      if (s.k === "jump") return `<li data-n="${n}"><b>⏭ ${t("跳到 {x}", { x: esc(s.to) })}</b><small>${t("中间这段算看过了")}</small></li>`;
       if (s.k === "arrive") return `<li data-n="${n}"><b>📍 ${esc(s.title)}</b></li>`;
       n--; return "";
     }).join("");
-    box.innerHTML = `<div class="bh">📜 预滑路书</div><div class="bs">${esc(host.name)} · ${d.getMonth() + 1} 月 ${d.getDate()} 日预滑 · 明天照着走</div>
+    box.innerHTML = `<div class="bh">${t("📜 预滑路书")}</div><div class="bs">${esc(host.name)} · ${EN_ON ? `pre-run ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()} · follow it on the day` : `${d.getMonth() + 1} 月 ${d.getDate()} 日预滑 · 明天照着走`}</div>
       ${days.length > 1 ? `<div class="days">${days.map((x, i) => { const t = new Date(x.t0); return `<button data-i="${i}" class="${i === pick ? "on" : ""}">${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}</button>`; }).reverse().join("")}</div>` : ""}
-      <div class="photo"><i class="tape"></i><canvas></canvas><span class="cap">金色是这一趟的路线</span>${host.locate ? `<button class="me">${me ? "📍 我在这" : "📍 显示我在哪"}</button>` : ""}</div>
+      <div class="photo"><i class="tape"></i><canvas></canvas><span class="cap">${t("金色是这一趟的路线")}</span>${host.locate ? `<button class="me">${t(me ? "📍 我在这" : "📍 显示我在哪")}</button>` : ""}</div>
       <ol>${steps}</ol>`;
     for (const b of box.querySelectorAll(".days button")) b.onclick = () => { pick = +b.dataset.i; draw(); };
     const cv = box.querySelector("canvas");
     requestAnimationFrame(() => host.drawMap(cv, day, me));
-    box.querySelector(".me")?.addEventListener("click", () => host.locate((p) => { me = p; host.drawMap(cv, day, me); box.querySelector(".me").textContent = p ? "📍 我在这" : "📍 找不到位置"; }));
+    box.querySelector(".me")?.addEventListener("click", () => host.locate((p) => { me = p; host.drawMap(cv, day, me); box.querySelector(".me").textContent = t(p ? "📍 我在这" : "📍 找不到位置"); }));
   };
   draw();
 }

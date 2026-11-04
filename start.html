@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#2f7fe8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>雪场预滑</title>
-  <link href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Caveat:wght@500;700&family=Oswald:wght@500;700&family=Special+Elite&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root { --glass: rgba(14, 22, 34, .66); --ink: #f4f7fb; --muted: #b9c4d3; --accent: #2f7fe8; }
     html, body { margin: 0; height: 100%; overflow: hidden; background: linear-gradient(#bcd3ee, #eef2f7 60%); font-family: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; color: var(--ink); }
@@ -53,6 +53,8 @@
     #tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); background: rgba(14,22,34,.88); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,.12); }
     #tabs button { flex: 1; font: inherit; font-size: 12px; color: #9aa6b6; background: none; border: 0; padding: 4px; cursor: pointer; display: grid; justify-items: center; gap: 2px; }
     #tabs button span { font-size: 22px; } #tabs button.on { color: #fff; font-weight: 700; }
+    #tabs .langSwitch button { flex: none; display: block; padding: 4px 9px; font: 600 12px Oswald, sans-serif; color: #22344d; }
+    #tabs .langSwitch button.on { color: #fdfbf6; background: #22344d; }
     #sheet { bottom: 62px !important; }
     #world, #records { position: fixed; inset: 0; bottom: 62px; z-index: 5; }
     #world { background: #eee9df; } #world canvas { width: 100%; height: 100%; display: block; touch-action: none; }
@@ -82,44 +84,12 @@
     #jMap { position: fixed; inset: 0; bottom: 62px; z-index: 15; background: #e9edf2; } #jMap canvas { width: 100%; height: 100%; display: block; touch-action: none; }
     #jMap .bar { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35; font-size: 14px; }
     #jMap .bar b { flex: 1; } #jMap .bar button { font: inherit; color: #3b2a1a; background: #fff; border: 2px solid #8a5a35; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
-    /* Trips: a journal page, each trip and each day a lift ticket. */
-    #trips { position: fixed; inset: 0; bottom: 62px; z-index: 5; overflow-y: auto; -webkit-overflow-scrolling: touch; color: #4a3626; padding: calc(40px + env(safe-area-inset-top)) 18px 30px;
-      background-color: #f4ecd9; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .42  0 0 0 0 .33  0 0 0 0 .2  0 0 0 .12 0'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>"); font-family: "Noto Serif SC", serif; }
-    #trips .jhead { margin-bottom: 14px; padding-right: 84px; } #trips .jt { font-family: "Long Cang", cursive; font-size: 38px; line-height: 1.05; } #trips .js { font-family: "Long Cang"; font-size: 19px; color: #7a5a3a; }
-    #trips .jsec { font-family: "Long Cang"; font-size: 22px; margin: 18px 0 8px; } #trips .jnote { font-family: "Long Cang"; font-size: 18px; color: #7a5a3a; margin: 10px 2px; } #trips .jnote.warn { color: #b5482f; }
-    #trips .newtrip { width: 100%; font: inherit; text-align: left; font-family: "Long Cang"; font-size: 26px; color: #4a3626; background: transparent; border: 1.8px dashed #8a6a4a; border-radius: 12px; padding: 12px 16px; cursor: pointer; }
-    #trips .newtrip small { display: block; font-size: 16px; color: #7a5a3a; }
-    #trips .tk-wrap { position: relative; margin: 0 0 14px; }
-    .tk { display: flex; background: #fffaf0; border-radius: 6px; box-shadow: 2px 4px 8px rgba(60,40,20,.28); overflow: hidden; min-height: 96px; cursor: pointer; }
-    .tk-band { background: #c8452f; color: #fff5e1; writing-mode: vertical-rl; text-align: center; font-family: Oswald; letter-spacing: .25em; font-size: 12px; padding: 8px 4px; }
-    .tk.epic .tk-band { background: #2b3a55; } .tk.day .tk-band { background: #6a8a5a; } .tk.none .tk-band { background: #8a7a66; }
-    .tk-body { flex: 1; padding: 8px 12px; border-right: 2px dashed #d9c9a8; position: relative; }
-    .tk-top { font-family: Oswald; font-size: 10px; letter-spacing: .25em; color: #9a7a5a; } .tk-title { font-family: Oswald; font-size: 22px; line-height: 1.1; color: #2a1d12; } .tk-sub { font-size: 12px; color: #6a5040; margin-top: 3px; line-height: 1.5; }
-    .tk-count { display: inline-block; margin-top: 6px; padding: 0 10px; border: 1.5px solid #b5482f; color: #b5482f; border-radius: 999px; font-family: Caveat; font-size: 17px; transform: rotate(-3deg); }
-    .tk-stub { width: 52px; background: repeating-linear-gradient(0deg, #3a2a1a 0 2px, #fffaf0 2px 4px, #3a2a1a 4px 5px, #fffaf0 5px 8px); background-clip: content-box; padding: 12px; }
-    .tk-hole { position: absolute; top: 10px; width: 14px; height: 14px; border-radius: 50%; background: #f4ecd9; box-shadow: inset 1px 1px 2px rgba(0,0,0,.35); }
-    .clip { position: absolute; right: 64px; top: -14px; width: 22px; height: 54px; border: 3px solid #8d96a3; border-radius: 11px; transform: rotate(8deg); }
-    .clip::after { content: ""; position: absolute; left: 3px; top: 8px; width: 10px; height: 34px; border: 3px solid #8d96a3; border-radius: 6px; }
-    #trips .ride { position: absolute; right: 64px; bottom: 10px; font-family: "Long Cang"; font-size: 18px; color: #fff5e1; background: #7a4b25; border: 0; border-radius: 999px; padding: 2px 12px; cursor: pointer; }
-    #trips .maybe { display: flex; flex-wrap: wrap; gap: 8px; }
-    #trips .ride2 { font-family: "Long Cang"; font-size: 19px; color: #4a3626; background: #fffaf0; border: 1.8px solid #5a4636; border-radius: 999px; padding: 3px 14px; cursor: pointer; box-shadow: 2px 2px 0 rgba(74,54,38,.18); }
-    #trips .chip.wx.on { background: #4a5a6e; border-color: #4a5a6e; }
-    #trips .back { font-family: "Long Cang"; font-size: 20px; color: #7a5a3a; background: none; border: 0; padding: 0; margin-bottom: 4px; cursor: pointer; }
-    #trips .stamp { position: absolute; right: 20px; top: calc(48px + env(safe-area-inset-top)); width: 78px; height: 78px; border-radius: 50%; border: 3px double #b5482f; color: #b5482f; display: grid; place-items: center; text-align: center; font-family: "Special Elite"; font-size: 13px; transform: rotate(12deg); opacity: .85; }
-    #trips .slips { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
-    #trips .slip { background: #fbf4e2; border: 1.5px solid #5a4636; border-radius: 4px; padding: 8px 10px; font-family: "Long Cang"; font-size: 17px; box-shadow: 2px 3px 0 rgba(74,54,38,.2); }
-    #trips .slip b { display: block; font-size: 20px; font-weight: 400; } #trips .slip span { margin-right: 8px; }
-    #trips .slip:first-child { transform: rotate(-1.5deg); } #trips .slip:last-child { transform: rotate(1.5deg); }
-    #trips .acts { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
-    #trips .acts button { font-family: "Long Cang"; font-size: 20px; color: #4a3626; background: #fffaf0; border: 1.8px solid #5a4636; border-radius: 999px; padding: 6px 16px; cursor: pointer; }
-    #trips .acts .go { background: #7a4b25; color: #fff5e1; border-color: #7a4b25; flex: 1; }
-    #trips .form label { display: block; font-family: "Long Cang"; font-size: 20px; margin: 12px 0 4px; }
-    #trips .form input, #trips .form select { width: 100%; font: inherit; font-size: 16px; color: #3b2a1a; background: #fffaf0; border: 1.5px solid #5a4636; border-radius: 8px; padding: 8px 10px; }
-    #trips .row2 { display: flex; gap: 8px; align-items: center; } #trips .row2 input { flex: 1; }
-    #trips .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    #trips .chip { font: inherit; font-size: 13px; color: #4a3626; background: #fffaf0; border: 1.5px solid #8a6a4a; border-radius: 999px; padding: 5px 11px; cursor: pointer; }
-    #trips .chip.on { background: #c8452f; border-color: #c8452f; color: #fff5e1; }
-    #trips .dayrow { display: flex; gap: 8px; align-items: center; margin: 6px 0; font-family: "Long Cang"; font-size: 17px; } #trips .dayrow span { width: 150px; flex: none; white-space: nowrap; } #trips .dayrow select { flex: 1; }
+    /* Trips: a quiet watercolour page (trips.js styles its insides). */
+    #trips { position: fixed; inset: 0; bottom: 62px; z-index: 5; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(22px + env(safe-area-inset-top)) 18px 40px; background-color: #f6f1e7;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .3  0 0 0 .07 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>"); }
+    .langSwitch { align-self: center; flex: none; margin: 0 10px 0 2px; display: flex; border: 1px solid #b9ad99; border-radius: 999px; overflow: hidden; background: rgba(253,251,246,.92); }
+    .langSwitch button { font: 600 12px Oswald, sans-serif; color: #22344d; background: none; border: 0; padding: 4px 10px; cursor: pointer; }
+    .langSwitch button.on { background: #22344d; color: #fdfbf6; }
     [hidden] { display: none !important; }
     #status { position: fixed; top: 26vh; left: 50%; transform: translateX(-50%); color: #142033; font-size: 14px; }
   </style>
@@ -150,6 +120,6 @@
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><span>🧑</span>人物</button><button data-tab="resort"><span>🏔</span>雪场</button><button data-tab="trip"><span>🧳</span>行程</button><button data-tab="log"><span>📖</span>记录</button></nav>
-  <script type="module" src="start.js?v=22"></script>
+  <script type="module" src="start.js?v=24"></script>
 </body>
 </html>

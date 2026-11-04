@@ -2,7 +2,8 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=1";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=2";
+import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -197,8 +198,9 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=5");
-    trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
+    const { Trips } = await import("./trips.js?v=7");
+    const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
+    trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);
   }
@@ -265,3 +267,6 @@ show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textC
 // ?tab=resort or ?tab=log (from the game's menu); a rider already chosen starts on the map.
 const askTab = new URLSearchParams(location.search).get("tab");
 setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log", resort: "resort", trip: "trip" })[askTab] || "rider");
+// Chinese or English: the switch sits at the end of the tab bar.
+$("tabs").append(langSwitch());
+translatePage();

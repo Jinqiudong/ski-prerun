@@ -6,7 +6,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.4775,
-    "lon": -106.1605
+    "lon": -106.1605,
+    "stats": {
+      "base": 2962,
+      "top": 3760,
+      "runs": {
+        "easy": 31,
+        "intermediate": 37,
+        "advanced": 51,
+        "expert": 24
+      },
+      "lifts": 19
+    }
   },
   {
     "id": "winterpark",
@@ -15,7 +26,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.8713,
-    "lon": -105.7826
+    "lon": -105.7826,
+    "stats": {
+      "base": 2767,
+      "top": 3652,
+      "runs": {
+        "easy": 33,
+        "intermediate": 41,
+        "advanced": 65,
+        "expert": 26
+      },
+      "lifts": 22
+    }
   },
   {
     "id": "steamboat",
@@ -24,7 +46,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 40.456,
-    "lon": -106.7701
+    "lon": -106.7701,
+    "stats": {
+      "base": 2104,
+      "top": 3208,
+      "runs": {
+        "easy": 26,
+        "intermediate": 71,
+        "advanced": 75,
+        "expert": 9
+      },
+      "lifts": 18
+    }
   },
   {
     "id": "abasin",
@@ -33,7 +66,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.6279,
-    "lon": -105.8743
+    "lon": -105.8743,
+    "stats": {
+      "base": 3281,
+      "top": 3796,
+      "runs": {
+        "easy": 5,
+        "intermediate": 30,
+        "advanced": 52,
+        "expert": 69
+      },
+      "lifts": 7
+    }
   },
   {
     "id": "eldora",
@@ -42,7 +86,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.9413,
-    "lon": -105.5934
+    "lon": -105.5934,
+    "stats": {
+      "base": 2819,
+      "top": 3228,
+      "runs": {
+        "easy": 9,
+        "intermediate": 30,
+        "advanced": 11,
+        "expert": 3
+      },
+      "lifts": 8
+    }
   },
   {
     "id": "snowmass",
@@ -51,7 +106,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.1859,
-    "lon": -106.9494
+    "lon": -106.9494,
+    "stats": {
+      "base": 2474,
+      "top": 3819,
+      "runs": {
+        "easy": 10,
+        "intermediate": 55,
+        "advanced": 25,
+        "expert": 37
+      },
+      "lifts": 18
+    }
   },
   {
     "id": "aspenmountain",
@@ -60,7 +126,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.1652,
-    "lon": -106.8194
+    "lon": -106.8194,
+    "stats": {
+      "base": 2425,
+      "top": 3431,
+      "runs": {
+        "easy": 0,
+        "intermediate": 47,
+        "advanced": 28,
+        "expert": 61
+      },
+      "lifts": 6
+    }
   },
   {
     "id": "highlands",
@@ -69,7 +146,18 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.1539,
-    "lon": -106.8643
+    "lon": -106.8643,
+    "stats": {
+      "base": 2459,
+      "top": 3528,
+      "runs": {
+        "easy": 2,
+        "intermediate": 36,
+        "advanced": 21,
+        "expert": 53
+      },
+      "lifts": 7
+    }
   },
   {
     "id": "buttermilk",
@@ -78,6 +166,17 @@
     "state": "科罗拉多",
     "ready": true,
     "lat": 39.1928,
-    "lon": -106.87
+    "lon": -106.87,
+    "stats": {
+      "base": 2401,
+      "top": 3012,
+      "runs": {
+        "easy": 12,
+        "intermediate": 21,
+        "advanced": 17,
+        "expert": 6
+      },
+      "lifts": 7
+    }
   }
 ]
