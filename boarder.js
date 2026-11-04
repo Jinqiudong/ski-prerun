@@ -23,14 +23,24 @@ export const RIDERS = {
   },
 };
 export const PART_ZH = { jacket: "外套", pants: "雪裤", helmet: "头盔", lens: "雪镜" };
+// Outfit templates for Rider A: pick one to wear, or start from one and save your own. For now these are
+// colourways of the one model; the owner is modelling four preset outfits (on a man's and a woman's base)
+// that will take their place.
+export const OUTFITS = {
+  o_pine: { zh: "松林", en: "Pine", colors: {} }, // as made: olive jacket, ivory pants
+  o_night: { zh: "夜航", en: "Night Flight", colors: { jacket: "#2f3a4c", pants: "#c5c4b6", helmet: "#d9d6ce", lens: "#b8873e" } },
+  o_wine: { zh: "热红酒", en: "Mulled Wine", colors: { jacket: "#8e4a36", pants: "#dcd7cc", helmet: "#3b3d40", lens: "#ad5599" } },
+  o_glacier: { zh: "冰川", en: "Glacier", colors: { jacket: "#7b8a96", pants: "#3b3d40", helmet: "#d9d6ce", lens: "#7f9fb8" } },
+};
 
 // The rider saved on this phone (see start.html): { base, name, colors }. Falls back to Rider A as made.
 export function myRider() {
   let st = {};
   try { st = JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { /* fresh */ }
-  const mine = (st.riders || []).find((r) => r.id === st.rider);
-  const base = RIDERS[mine?.base] ? mine.base : RIDERS[st.rider] ? st.rider : "rider_a";
-  return { base, name: mine?.name || RIDERS[base].name, colors: mine?.colors || {}, stance: (st.stances || {})[mine?.id || base] === "goofy" ? "goofy" : "regular" };
+  const mine = (st.riders || []).find((r) => r.id === st.rider), outfit = OUTFITS[st.rider];
+  const base = RIDERS[mine?.base] ? mine.base : "rider_a", id = mine?.id || (outfit ? st.rider : "o_pine");
+  const stance = (st.stances || {})[id] ?? (st.stances || {})[base];
+  return { base, name: mine?.name || outfit?.zh || RIDERS[base].name, colors: mine?.colors || outfit?.colors || {}, stance: stance === "goofy" ? "goofy" : "regular" };
 }
 
 const gltfs = {};

@@ -98,19 +98,19 @@
 <body>
   <svg width="0" height="0" style="position:absolute"><defs><filter id="wct" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.2" result="d"/><feGaussianBlur in="d" stdDeviation=".25"/></filter></defs></svg>
   <canvas id="c"></canvas>
-  <div id="head" class="glass"><div><b id="headTitle">选你的 Rider</b><small id="headSub">先选人物，再选雪场</small></div></div>
-  <div id="status">人物加载中…</div>
+  <div id="head" class="glass"><div><b id="headTitle">选你的穿搭</b><small id="headSub">先选一套穿搭，再选雪场</small></div></div>
+  <div id="status">穿搭加载中…</div>
   <div id="who"></div>
   <div id="sheet" class="glass">
     <section id="pickView">
-      <h3>默认人物</h3><div class="row" id="defaults"></div>
-      <h3>我的人物</h3><div class="row" id="mine"></div>
+      <h3>穿搭模版</h3><div class="row" id="defaults"></div>
+      <h3>我的穿搭</h3><div class="row" id="mine"></div>
       <h3>哪只脚在前</h3><div class="seg" id="stance"><button data-s="regular">左脚在前 · Regular</button><button data-s="goofy">右脚在前 · Goofy</button></div>
-      <div class="btns"><button id="editBtn">🎨 换装</button><button class="go" id="useBtn">用这个人物 ›</button></div>
+      <div class="btns"><button id="editBtn">🎨 改颜色</button><button class="go" id="useBtn">穿这套去滑 ›</button></div>
     </section>
     <section id="editView" hidden>
       <div id="parts"></div>
-      <h3>给人物取个名字</h3><input id="name" maxlength="16" placeholder="比如：周末的我">
+      <h3>给这套穿搭取个名字</h3><input id="name" maxlength="16" placeholder="比如：周末粉雪">
       <div class="btns"><button id="cancelBtn">取消</button><button class="go" id="saveBtn">保存</button></div>
     </section>
   </div>
@@ -121,6 +121,6 @@
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><path d="M10 30 L11 19 C11 15 21 15 21 19 L22 30Z" fill="#7f9e88"/><circle cx="16" cy="10.5" r="6.2" fill="#22344d"/><rect x="10.4" y="9" width="11.2" height="3.6" rx="1.8" fill="#c98f9f"/><path d="M6 30 h20" stroke="#8eaec4" stroke-width="2.6" stroke-linecap="round"/></g></svg>人物</button><button data-tab="resort"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><path d="M2 28 L12 11 L17 18 L21 12 L30 28Z" fill="#8eaec4"/><path d="M12 11 L15 16 L13.5 15.5 L12 17 L10 15Z M21 12 L23.5 16.5 L21.5 15.5 L20 17 L19 15.5Z" fill="#fbfaf7"/><path d="M2 28 L12 11 L17 18 L21 12 L30 28" fill="none" stroke="#22344d" stroke-width="1.3" stroke-linejoin="round"/><path d="M4 28 h24" stroke="#4a6a5c" stroke-width="2" stroke-linecap="round"/></g></svg>雪场</button><button data-tab="trip"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><rect x="3" y="9" width="26" height="15" rx="2" fill="#efe6d6" stroke="#22344d" stroke-width="1.2"/><rect x="3" y="9" width="26" height="4.2" rx="1.5" fill="#22344d"/><path d="M22 13.5 V24" stroke="#b9a98f" stroke-width="1.1" stroke-dasharray="1.6 1.6"/><path d="M7 19 h7 M7 21.5 h5" stroke="#6e2f36" stroke-width="1.4" stroke-linecap="round"/><path d="M14 18 l3 -2 l1.5 .6 l-2.6 2.2" fill="#b6463b"/></g></svg>行程</button><button data-tab="log"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><rect x="7" y="4" width="18" height="20" rx="2" fill="#d9e2ea" transform="rotate(-8 16 14)"/><rect x="6" y="7" width="20" height="22" rx="2" fill="#fbfaf7" stroke="#22344d" stroke-width="1.2"/><path d="M8.5 22 L13 15 L16 19 L19 14.5 L23.5 22Z" fill="#8eaec4"/><circle cx="21" cy="11.5" r="2" fill="#b6463b" opacity=".85"/></g></svg>记录</button></nav>
-  <script type="module" src="start.js?v=29"></script>
+  <script type="module" src="start.js?v=30"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
+import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=12";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=2";
 import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=5";
 
@@ -14,13 +14,15 @@ const SWATCHES = {
   lens: ["#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
 };
 
-// ---- Saved state: { rider (an id or a default's key), riders: [{ id, base, name, colors }], stances, resort }
+// ---- Saved state: { rider (one of your outfits' ids or a template's key), riders: [{ id, base, name, colors }] (your
+// outfits), stances, resort }
 const load = () => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } };
 const st = load();
 st.riders = (st.riders || []).filter((r) => r.base in RIDERS); // riders on a base model since removed are dropped
 delete st.kind; // everyone snowboards now
 const save = () => localStorage.setItem("prerun", JSON.stringify(st));
-const chosen = () => st.riders.find((r) => r.id === st.rider) || { id: st.rider in RIDERS ? st.rider : "rider_a", base: st.rider in RIDERS ? st.rider : "rider_a", name: RIDERS[st.rider]?.name || RIDERS.rider_a.name, colors: {}, isDefault: true };
+const template = (k) => ({ id: k, base: "rider_a", name: EN_ON ? OUTFITS[k].en : OUTFITS[k].zh, colors: { ...OUTFITS[k].colors }, isDefault: true });
+const chosen = () => st.riders.find((r) => r.id === st.rider) || template(OUTFITS[st.rider] ? st.rider : "o_pine");
 
 // ---- The 3D preview: the rider on a little snow disc, turning slowly; drag to turn it yourself.
 const canvas = $("c");
@@ -83,23 +85,23 @@ const dots = (r) => `<span class="dots">${Object.keys(RIDERS[r.base].parts).map(
 function renderPick() {
   const cur = chosen();
   $("defaults").innerHTML = "";
-  for (const key of Object.keys(RIDERS)) {
-    const b = document.createElement("button");
-    b.className = "card" + (cur.isDefault && cur.base === key ? " on" : "");
-    b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>${t("单板")} · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
+  for (const key of Object.keys(OUTFITS)) {
+    const o = template(key), b = document.createElement("button");
+    b.className = "card" + (cur.id === key ? " on" : "");
+    b.innerHTML = `<b>${o.name}</b>${dots(o)}<small>${t("单板")} · ${stanceOf(o) === "goofy" ? "Goofy" : "Regular"}</small>`;
     b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
     $("defaults").append(b);
   }
-  $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>${t("还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。")}</small></div>`;
+  $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>${t("还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。")}</small></div>`;
   for (const r of st.riders) {
     const b = document.createElement("div");
     b.className = "card" + (r.id === cur.id ? " on" : "");
-    b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${RIDERS[r.base].name} · ${stanceOf(r) === "goofy" ? "Goofy" : "Regular"}</small><button class="del" aria-label="删除">🗑</button>`;
+    b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${t("单板")} · ${stanceOf(r) === "goofy" ? "Goofy" : "Regular"}</small><button class="del" aria-label="删除">🗑</button>`;
     b.onclick = (e) => {
       if (e.target.closest(".del")) {
         if (!confirm(`${t("删除")}「${r.name}」？`)) return;
         st.riders = st.riders.filter((x) => x !== r);
-        if (st.rider === r.id) st.rider = r.base;
+        if (st.rider === r.id) st.rider = "o_pine";
         save(); renderPick(); show(chosen()); return;
       }
       st.rider = r.id; save(); renderPick(); show(r);
@@ -107,7 +109,7 @@ function renderPick() {
     $("mine").append(b);
   }
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
-  $("editBtn").textContent = t(cur.isDefault ? "🎨 换装 · 存成新人物" : "🎨 换装");
+  $("editBtn").textContent = t(cur.isDefault ? "🎨 改颜色 · 存成我的" : "🎨 改颜色");
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -200,7 +202,7 @@ async function openTrips() {
   if (!trips) {
     const { Trips } = await import("./trips.js?v=9");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
-    trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
+    trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);
   }
@@ -260,8 +262,8 @@ async function openJournal(r) {
 }
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
-  $("headTitle").textContent = t({ pick: "选你的 Rider", edit: "换装", resort: "去哪个雪场" }[v]);
-  $("headSub").textContent = { pick: t("先选人物，再选雪场"), edit: t("改颜色，取个名字，保存到这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
+  $("headTitle").textContent = t({ pick: "选你的穿搭", edit: "改颜色", resort: "去哪个雪场" }[v]);
+  $("headSub").textContent = { pick: t("先选一套穿搭，再选雪场"), edit: t("改颜色，取个名字，保存到这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
 
 renderPick();
