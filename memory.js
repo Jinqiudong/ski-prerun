@@ -1,7 +1,7 @@
 // Snow memory: every pre-run day and every trip you've been on becomes a card (that mountain in
 // watercolour, the day's words, its stamp), stacked into a season you can flip back through: swipe up to
 // send the front card to the back. Tap one for the day: the painting, its stickers, the way you went.
-import { t, EN_ON } from "./i18n.js?v=7";
+import { t, EN_ON } from "./i18n.js?v=8";
 import { daysOf } from "./roadbook.js?v=3";
 
 const C = { ink: "#22344d", red: "#b6463b", card: "#f8f1e4", mute: "#8a8278" };
@@ -32,7 +32,7 @@ const CSS = `
 .memday .k { font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: ${C.mute}; }
 .memday .h { font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.ink}; margin: 4px 0 2px; }
 .memday .s { font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.mute}; }
-.memday .row { display: flex; gap: 12px; margin-top: 16px; align-items: flex-start; }
+.memday .mrow { display: flex; gap: 12px; margin-top: 16px; align-items: flex-start; }
 .memday .frame { flex: 0 0 210px; background: #fdfbf6; padding: 12px 12px 8px; box-shadow: 0 8px 18px rgba(90,70,40,.16); }
 .memday .frame .pic { height: 230px; background: center/cover; }
 .memday .frame .cap { text-align: center; font: 14px "Cormorant Garamond", serif; color: #7b746b; margin-top: 8px; line-height: 1.3; }
@@ -112,7 +112,7 @@ function openDay(c, openBook) {
   el.className = "memday";
   const way = c.kind === "prerun" ? c.day.steps.map((s) => (s.k === "base" ? s.name : s.k === "lift" ? `🚡 ${s.name}` : s.k === "route" ? s.segs.map((g) => g.n).join(" → ") : s.k === "arrive" ? `📍 ${s.title}` : "")).filter(Boolean).join(" → ") : c.words;
   el.innerHTML = `<button class="x" aria-label="close">×</button><div class="k">SNOW MEMORY · ${t("雪的记忆")}</div><div class="h">${esc(c.title)}</div><div class="s">${when(c.t)}${c.kind === "prerun" ? ` · ${t("预滑")}` : ""}</div>
-    <div class="row"><div class="frame"><div class="pic" style="background-image:url(${paint(c.id)})"></div><div style="text-align:center;color:#c3b59d;font-size:10px;margin-top:6px">• • •</div><div class="cap">${esc(c.words)}</div></div>
+    <div class="mrow"><div class="frame"><div class="pic" style="background-image:url(${paint(c.id)})"></div><div style="text-align:center;color:#c3b59d;font-size:10px;margin-top:6px">• • •</div><div class="cap">${esc(c.words)}</div></div>
       <div class="stk"><div style="left:0;top:0;transform:rotate(-6deg)">${stub(`${c.title} · ${monthOf(c.t)}`)}</div>
         <div style="left:14px;top:62px;width:86px;height:86px;transform:rotate(9deg)">${seal(dayOf(c.t), "")}</div>
         ${c.lifts?.length ? `<div style="left:6px;top:160px;transform:rotate(4deg)">${stub(`🚡 ${c.lifts[0]}`)}</div>` : ""}</div></div>

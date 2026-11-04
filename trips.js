@@ -3,7 +3,7 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=7";
+import { t, EN_ON } from "./i18n.js?v=8";
 import { daysOf } from "./roadbook.js?v=3";
 
 const KEY = "prerunTrips";
@@ -162,9 +162,9 @@ const CSS = `
 /* List */
 .pl .new { width: 100%; text-align: left; padding: 14px 16px; margin-top: 16px; background: ${C.card}; border: 1px dashed #c7bba7; color: ${C.ink}; font-family: ${SERIF}; font-size: 20px; }
 .pl .new small { display: block; font-size: 13px; color: ${C.mute}; }
-.pl .row { position: relative; margin-top: 18px; cursor: pointer; }
-.pl .row .bp { position: relative; }
-.pl .row .count { position: absolute; right: 74px; top: 30px; font-family: ${SERIF}; font-size: 14px; color: ${C.red}; border: 1px solid ${C.red}; border-radius: 999px; padding: 0 8px; transform: rotate(-4deg); background: ${C.card}; }
+.pl .triprow { position: relative; margin-top: 18px; cursor: pointer; }
+.pl .triprow .bp { position: relative; }
+.pl .triprow .count { position: absolute; left: 34%; top: 54px; font-family: ${SERIF}; font-size: 14px; color: ${C.red}; border: 1px solid ${C.red}; border-radius: 999px; padding: 0 8px; transform: rotate(-4deg); background: ${C.card}; }
 /* Form */
 .pl .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .pl .chip { font-family: ${SERIF}; font-size: 16px; font-weight: 600; color: ${C.ink}; background: ${C.card}; border: 1px solid #cbbfa9; border-radius: 6px; padding: 8px 14px; box-shadow: 0 3px 6px rgba(90,70,40,.1); }
@@ -278,14 +278,14 @@ export class Trips {
     if (this.shared) return this.show(this.shared, true);
     const list = this.list.sort((a, b) => a.from.localeCompare(b.from)), now = today();
     const coming = list.filter((x) => x.to >= now), past = list.filter((x) => x.to < now);
-    const row = (tr) => { const n = between(now, tr.from); return `<div class="row" data-id="${tr.id}"><div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0">${esc(tr.name)} · ${this.maybeOf(tr).map((id) => this.name(id)).join(" · ")}</div></div>`; };
+    const row = (tr) => { const n = between(now, tr.from); return `<div class="triprow" data-id="${tr.id}"><div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0">${esc(tr.name)} · ${tr.maybe.length ? tr.maybe.map((id) => this.name(id)).join(" · ") : t("看雪定山")}</div></div>`; };
     this.box.innerHTML = `<div class="kicker">MY TRIPS</div><div class="h1">${t("我的行程")}</div>
       <button class="new">${t("＋ 新建行程")}<small>${t("先选雪卡，再看能去哪些山")}</small></button>
       ${coming.length ? `<div class="sec">${t("即将出发")}</div>${coming.map(row).join("")}` : ""}
       ${past.length ? `<div class="sec">${t("去过的")}</div>${past.map(row).join("")}` : ""}
       ${list.length ? "" : `<div class="note">${t("还没有行程。建一个，生成链接发给朋友，大家就能看到同一份计划。")}</div>`}`;
     this.box.querySelector(".new").onclick = () => this.edit();
-    for (const el of this.box.querySelectorAll(".row")) el.onclick = () => this.show(this.list.find((x) => x.id === el.dataset.id));
+    for (const el of this.box.querySelectorAll(".triprow")) el.onclick = () => this.show(this.list.find((x) => x.id === el.dataset.id));
     this.box.scrollTop = 0;
   }
 
