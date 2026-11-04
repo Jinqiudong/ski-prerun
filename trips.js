@@ -3,7 +3,7 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=3";
+import { t, EN_ON } from "./i18n.js?v=4";
 import { daysOf } from "./roadbook.js?v=2";
 
 const KEY = "prerunTrips";

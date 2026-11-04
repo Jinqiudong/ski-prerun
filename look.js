@@ -16,6 +16,7 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
+import { translatePage } from "./i18n.js?v=4";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -2328,3 +2329,4 @@ async function main() {
   });
 }
 main().catch((e) => { $("status").textContent = `加载失败：${e.message}`; console.error(e); });
+translatePage(); // English, if chosen on the start page

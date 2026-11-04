@@ -8,6 +8,7 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
 import { Diorama } from "./diorama.js?v=17";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
 import { addStep } from "../roadbook.js?v=2";
+import { translatePage } from "../i18n.js?v=4";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -674,3 +675,4 @@ async function main() {
   });
 }
 main().catch((e) => { $("status").textContent = `加载失败：${e.message}`; console.error(e); });
+translatePage(); // English, if chosen on the start page

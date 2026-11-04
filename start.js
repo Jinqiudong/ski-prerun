@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=2";
-import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=3";
+import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=4";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -198,7 +198,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=8");
+    const { Trips } = await import("./trips.js?v=9");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -208,7 +208,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=2");
+  const { renderMemory } = await import("./memory.js?v=3");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
