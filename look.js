@@ -992,6 +992,18 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   const boxOf = (xs, zs, M) => [Math.min(...xs) - M, Math.max(...xs) + M, Math.min(...zs) - M, Math.max(...zs) + M];
   boxes.push(boxOf(line.ground.map((p) => p.x), line.ground.map((p) => p.z), 900));
   const planted = (x, z) => boxes.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
+  // Trees you can hit: every tree planted so far, in a 10 m grid.
+  const treeGrid = new Map(), TG = 10, tkey = (x, z) => `${Math.floor(x / TG)},${Math.floor(z / TG)}`;
+  const addTrees = (list) => { for (const t of list) { const k = tkey(t.x, t.z); if (!treeGrid.has(k)) treeGrid.set(k, []); treeGrid.get(k).push(t); } };
+  addTrees(ctx.spots);
+  if (ctx.forest) { const plantForest = ctx.forest; ctx.forest = (list, near) => { addTrees(list); return plantForest(list, near); }; }
+  const treeAt = (x, z, rad) => {
+    let best = null, bd = rad * rad;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const t of treeGrid.get(`${Math.floor(x / TG) + i},${Math.floor(z / TG) + j}`) || []) {
+      const d = (t.x - x) ** 2 + (t.z - z) ** 2; if (d < bd) { bd = d; best = t; }
+    }
+    return best;
+  };
   // ---- Skiing the chosen plan: real slope physics, guided along the route. You choose where on the piste
   // to ride (slide a finger left or right) and how fast (drag up to slow, down to let it run); the way
   // itself is always the route's, so you can't get lost. Leave it alone and the rider links easy turns.
@@ -1022,6 +1034,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   function startSki() {
     const P = chosen, path = P.path;
+    origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true;
     document.body.classList.remove("picking");
     camera.clearViewOffset();
     // Keep the route on the snow, faint, as the line to follow.
@@ -1060,7 +1073,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // where you are, turning with you (the way ahead up). Rendered small into a texture every other frame
   // and drawn as a disc over the view. Tap it for a bigger one.
   let mini = null;
-  $("minimap").onclick = () => $("minimap").classList.toggle("big");
+  $("minimap").onclick = () => openReplan();
   function drawMini(r) {
     if (!dio) return;
     if (!mini) {
@@ -1172,8 +1185,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     tilt.zero ||= { side: tilt.side, fwd: tilt.fwd };
     const now = clock(), dt = Math.min(0.1, (now - (tiltAt || now)) / 1000); tiltAt = now;
     tilt.zero.fwd += (tilt.fwd - tilt.zero.fwd) * dt * 0.1;
-    const ramp = (v) => Math.sign(v) * clamp((Math.abs(v) - 2 * D) / (16 * D), 0, 1);
-    return { steer: ramp(tilt.side - tilt.zero.side), pace: ramp(tilt.zero.fwd - tilt.fwd) };
+    const ramp = (v, dead, full) => Math.sign(v) * clamp((Math.abs(v) - dead * D) / ((full - dead) * D), 0, 1);
+    // Speed needs a clear tip (6°+), so holding the phone a little differently never brakes you on a flat.
+    return { steer: ramp(tilt.side - tilt.zero.side, 2, 18), pace: ramp(tilt.zero.fwd - tilt.fwd, 6, 24) };
   };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   function stepSki(dt) {
@@ -1198,7 +1212,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     // Tilting the phone rides it: left or right edges into a turn at once (the route only nudges you
     // back), tipping it away lets it run, toward you slows down. Measured from how you held it at the start.
     const tl = tiltNow();
-    if (!auto && tl && Math.abs(tl.steer) > 0.02) { steer = clamp(tl.steer + 0.15 * steer, -1, 1); idleFor = 0; latIn = 0; tiltOff = 0; }
+    // At a crawl a full tilt would only spin you on the spot: it counts for less, the route for more.
+    const slow = clamp(r.speed / 5, 0.3, 1);
+    if (!auto && tl && Math.abs(tl.steer) > 0.02) { steer = clamp(tl.steer * slow + (1.15 - slow) * steer, -1, 1); idleFor = 0; latIn = 0; tiltOff = 0; }
     else if (!auto && tl) { tiltOff += dt; steer = clamp(steer, -0.35 - tiltOff * 0.3, 0.35 + tiltOff * 0.3); } // ease back to the line after a turn
     // Speed: held to an easy pace for the run's level unless you drag for more or less.
     const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level];
@@ -1209,6 +1225,14 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     // Stopped on purpose (holding the brake): stand still rather than pivot on the spot.
     const parked = pace < -0.2 && r.speed < 0.8;
     r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true });
+    // Into a tree: stopped short and put back beside it (the route then leads you on).
+    const tree = treeAt(r.x, r.z, 1.6);
+    if (tree) {
+      const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1;
+      r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z);
+      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); }
+      r.speed *= 0.15;
+    }
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
     const NL = ctx.nightLights;
@@ -1263,9 +1287,149 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       const turning = Math.abs(way.bearing) > 0.18; // only a real turn-off buzzes; straight on stays quiet
       if (!alerted || alerted.j !== J || alerted.stage < stage) { if (turning) navigator.vibrate?.(stage === 2 ? [60, 60, 60] : 40); tc.classList.remove("pop"); void tc.offsetWidth; tc.classList.add("pop"); alerted = { j: J, stage }; }
     } else tc.hidden = true;
+    offerLift(r, P, now);
     if (!ended && prog >= last - 1 && near.d < 60) { ended = true; arrive(P); }
   }
+  // A lift you can ride, right ahead: offer it once (not the one this plan ends at, the arrival card
+  // offers that). Tap to ride it; or keep skiing and it goes away.
+  let offered = new Set(), offer = null, offerAt = 0;
+  const rideable = (l) => bigLift(l) && ["chair_lift", "gondola", "mixed_lift", "cable_car"].includes(l.kind);
+  function offerLift(r, P, now) {
+    if (now - offerAt < 400) return;
+    offerAt = now;
+    const box = $("liftOffer");
+    if (offer && Math.hypot(offer.pts[0][0] - r.x, offer.pts[0][1] - r.z) > 260) { box.hidden = true; offer = null; }
+    if (offer || P.dist[P.dist.length - 1] - P.dist[prog] < 250) return; // near the end the arrival card offers its lifts
+    // Within 180 m and ahead of you (lift stations sit a little off the runs).
+    const ahead = (l) => { const dx = l.pts[0][0] - r.x, dz = l.pts[0][1] - r.z, d = Math.hypot(dx, dz); return d < 180 && (d < 50 || (dx * Math.sin(r.heading) + dz * Math.cos(r.heading)) / d > 0.2); };
+    const l = R.lifts.find((l) => rideable(l) && !offered.has(l) && l !== P.lift && l !== P.next && ahead(l));
+    if (!l) return;
+    offered.add(l); offer = l;
+    box.innerHTML = `<b>🚡 前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`;
+    box.querySelector(".go").onclick = () => { location.href = withResort(`look.html?lift=${encodeURIComponent(l.name)}`); };
+    box.querySelector(".no").onclick = () => { box.hidden = true; };
+    box.hidden = false;
+    navigator.vibrate?.(30);
+  }
+
+  // Missed a turn, or changed your mind: tap the map and choose again from where you are.
+  let origPlan = null;
+  const planFrom = (from, to) => {
+    for (const lv of LEVELS.slice(LEVELS.indexOf(myLevel))) { const rt = planRoute(graph, from, to, lv); if (rt) return rt; }
+    return null;
+  };
+  function rideInstead(Q, note) {
+    chosen = Q; prog = 0; ended = false; alerted = null;
+    dress(Q);
+    $("liftName").innerHTML = `${Q.icon || ""} ${Q.title}`;
+    $("rePlan").hidden = true;
+    flashCue(note);
+  }
+  function openReplan() {
+    if (st.phase !== "ski" || ended || !phys) return;
+    const r = phys, from = nodesNear(graph, r.x, r.z, 160), P = chosen, opts = [];
+    if (from.length && P.to?.length) {
+      const { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder } = P; // the plan's place, not its path
+      const rt = planFrom(from, P.to), Q = rt && !rt.legs.some((g) => g.type === "lift") && makePlan(rt.legs, { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder, seconds: rt.seconds });
+      if (Q) opts.push({ go: true, label: `继续去 ${P.short || P.title}`, sub: `从你现在的位置重新规划 · 约 ${fmtMin(rt.seconds)}`, act: () => rideInstead(Q, `已从这里重新规划到 ${P.short || P.title}`) });
+    }
+    const near = [];
+    if (from.length) for (const l of R.lifts) {
+      if (!rideable(l) || Math.hypot(l.pts[0][0] - r.x, l.pts[0][1] - r.z) > 3000) continue;
+      const to = [graph.liftNodes.get(l).bottom], rt = planFrom(from, to);
+      if (rt && !rt.legs.some((g) => g.type === "lift")) near.push({ l, rt, to });
+    }
+    near.sort((a, b) => a.rt.seconds - b.rt.seconds);
+    for (const { l, rt, to } of near.slice(0, 3)) {
+      const Q = makePlan(rt.legs, { to, kind: "lift", key: `lift:${l.name}`, title: `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: rt.seconds, end: l.pts[0], lift: l });
+      if (Q) opts.push({ label: `去坐 ${l.name}`, sub: `滑过去约 ${fmtMin(rt.seconds)}`, act: () => rideInstead(Q, `改去坐 ${l.name}`) });
+    }
+    if (origPlan) opts.push({ label: "回到起点，重滑这条路线", sub: origPlan.title, act: () => { $("rePlan").hidden = true; chosen = origPlan; startSki(); } });
+    const big = $("minimap").classList.contains("big");
+    opts.push({ label: big ? "地图缩小" : "地图放大", act: () => { $("minimap").classList.toggle("big"); $("rePlan").hidden = true; } });
+    const box = $("rePlan");
+    box.innerHTML = `<h2>重新选 <button aria-label="关闭">×</button></h2><p>你在 ${onRun ? onRun.run.name || "无名雪道" : "雪道外"}</p><h3>从这里</h3><div class="opts"></div>`;
+    box.querySelector("h2 button").onclick = () => (box.hidden = true);
+    for (const o of opts) {
+      const b = document.createElement("button");
+      b.className = "opt" + (o.go ? " go" : "");
+      b.innerHTML = `${o.label}${o.sub ? `<small>${o.sub}</small>` : ""}`;
+      b.onclick = o.act;
+      box.querySelector(".opts").append(b);
+    }
+    if (!opts.length) box.querySelector(".opts").innerHTML = "<p>附近找不到能去的地方，先回到雪道上。</p>";
+    box.hidden = false;
+  }
+
+  // The route written out, to read before a real day: each run, each junction (which way, which not),
+  // where it's easy to go wrong, and other ways to the same place. Copy or share it.
+  const LV_TXT = { easy: "🟢", intermediate: "🟦", advanced: "◆", expert: "◆◆" };
+  function routeGuide(P) {
+    const runName = (run) => `${LV_TXT[run.level]}${run.name || "无名雪道"}`;
+    const lines = [], html = [];
+    const head = `${P.icon || ""} ${P.title}：先滑 ${fmtLen(P.length)}，约 ${fmtMin(P.seconds || P.length / 7)}，最难 ${LV_TXT[P.hardest]}${LEVEL_ZH[P.hardest]}${P.next ? `，中途坐 🚡${P.next.name}` : ""}`;
+    lines.push(`从 ${lift.name} 山顶出发`, head, "", "怎么滑：");
+    html.push(`<p>从 ${lift.name} 山顶出发</p><p><b>${head}</b></p><h3>怎么滑</h3><ol>`);
+    P.segs.forEach((g, k) => {
+      const a = P.dist[g.at], b = k + 1 < P.segs.length ? P.dist[P.segs[k + 1].at] : P.dist[P.dist.length - 1];
+      const t = `${runName(g.run)}，约 ${fmtLen(b - a)}`;
+      lines.push(`${k + 1}. ${t}`); html.push(`<li>${t}</li>`);
+    });
+    if (P.next) { lines.push(`${P.segs.length + 1}. 到底坐 🚡${P.next.name}`); html.push(`<li>到底坐 🚡${P.next.name}</li>`); }
+    html.push("</ol>");
+    const js = junctions(P.path, P.segs, R);
+    if (js.length) { lines.push("", "岔口："); html.push("<h3>岔口（按顺序）</h3><ol>"); }
+    js.forEach((j) => {
+      const way = j.options.find((o) => o.route), others = j.options.filter((o) => o !== way);
+      if (!way) return;
+      // Where: along the run you're on, or, for a turn off at a run's end, "at the end of" the run before.
+      let on = P.segs.filter((g) => g.at <= j.i).pop();
+      if (on && P.dist[j.i] - P.dist[on.at] < 25) on = P.segs.filter((g) => g.at < on.at).pop() || on;
+      const tricky = others.some((o) => Math.abs(o.bearing - way.bearing) < 0.4) || others.some((o) => LEVELS.indexOf(o.run.level) > LEVELS.indexOf(myLevel));
+      const along = P.dist[j.i] - (on ? P.dist[on.at] : 0), atEnd = on && on.at < j.i && P.segs.some((g) => g.at === j.i || Math.abs(P.dist[g.at] - P.dist[j.i]) < 25);
+      const t = `${on ? (atEnd ? `${runName(on.run)} 滑到头（约 ${fmtLen(along)}）` : `在 ${runName(on.run)} 上约 ${fmtLen(along)} 处`) : "开头"}：${arrowText(way.bearing)} ${Math.abs(way.bearing) > 0.18 ? turnWord(way.bearing) + "进" : "直行"} ${runName(way.run)}`
+        + (others.length ? `；别走 ${others.map((o) => `${arrowText(o.bearing)} ${runName(o.run)}`).join("、")}` : "");
+      const warn = tricky ? "⚠️ 容易走错：岔路方向很接近，或者是更难的雪道，看清路牌再走" : "";
+      lines.push(`- ${t}${warn ? `\n  ${warn}` : ""}`);
+      html.push(`<li>${t}${warn ? `<br><span class="warn">${warn}</span>` : ""}</li>`);
+    });
+    if (js.length) html.push("</ol>");
+    // Other ways to the same place, at other levels.
+    const alt = [];
+    if (P.to?.length) for (const lv of LEVELS) {
+      const rt = planRoute(graph, fromTop, P.to, lv);
+      if (!rt) continue;
+      const names = [...new Set(rt.legs.filter((g) => g.type === "run" && g.run.name).map((g) => g.run.name))];
+      const key = names.join(">"), mine = [...new Set(P.segs.map((g) => g.run.name))].join(">");
+      if (key && key !== mine && !alt.some((a) => a.key === key)) alt.push({ key, lv, rt, names });
+    }
+    if (alt.length) {
+      lines.push("", "其他走法："); html.push("<h3>其他走法</h3><ol>");
+      for (const a of alt) {
+        const hard = a.rt.legs.filter((g) => g.type === "run").map((g) => LEVELS.indexOf(g.run.level)).reduce((m, v) => Math.max(m, v), 0);
+        const t = `${a.names.join(" › ")}（约 ${fmtMin(a.rt.seconds)}，最难 ${LV_TXT[LEVELS[hard]]}${LEVEL_ZH[LEVELS[hard]]}）`;
+        lines.push(`- ${t}`); html.push(`<li>${t}</li>`);
+      }
+      html.push("</ol>");
+    }
+    lines.push("", "（路线根据 OpenStreetMap 数据规划，到了雪场以官方地图和路牌为准）");
+    html.push(`<p style="margin-top:10px;color:#b9c4d3;font-size:12px">路线根据 OpenStreetMap 数据规划，到了雪场以官方地图和路牌为准。</p>`);
+    return { text: lines.join("\n"), html: html.join("") };
+  }
+  function openGuide(P) {
+    const g = routeGuide(P), box = $("guide");
+    box.innerHTML = `<h2>路线说明 <button aria-label="关闭">×</button></h2>${g.html}<div class="opts" style="margin-top:12px"><button class="opt go">复制路线说明</button>${navigator.share ? '<button class="opt share">分享</button>' : ""}</div>`;
+    box.querySelector("h2 button").onclick = () => (box.hidden = true);
+    box.querySelector(".opt.go").onclick = async (e) => { try { await navigator.clipboard.writeText(g.text); e.target.textContent = "已复制 ✓"; } catch { e.target.textContent = "复制不了，请长按选择文字"; } };
+    box.querySelector(".share")?.addEventListener("click", () => navigator.share({ title: P.title, text: g.text }).catch(() => {}));
+    box.hidden = false;
+  }
+  st.nearLift = () => { if (!phys) return null; let b = null; for (const l of R.lifts) if (rideable(l)) { const d = Math.hypot(l.pts[0][0] - phys.x, l.pts[0][1] - phys.z); if (!b || d < b.d) b = { name: l.name, d: Math.round(d) }; } return b; }; // testing
+  st.placeNear = (name, back = 120) => { const l = R.lifts.find((x) => x.name === name), [x, z] = l.pts[0], [x2, z2] = l.pts[1]; const h = Math.atan2(x - x2, z - z2) + Math.PI; phys.place(x - Math.sin(h) * back, z - Math.cos(h) * back, h, 6); }; // testing
+  st.guide = (key) => routeGuide([...dests, ...runs].find((p) => p.key === key) || chosen);
+
   function arrive(P) {
+    $("liftOffer").hidden = true;
     $("skiHud").hidden = true;
     $("turnCue").hidden = true;
     $("minimap").hidden = true;
@@ -1591,15 +1755,18 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
           <small>${fmtLen(P.first.length)} · 落差 ${P.first.drop} 米 · 最陡约 ${P.steep}°</small>
           <canvas width="300" height="40"></canvas>
           <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `🚡 ${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `🏠 ${P.leads.base}` : "雪道尽头"}</small>
+          <button class="doc">📄 路线说明 · 怎么滑、哪里容易错</button>
           <button class="go">从这条滑下去 ›</button>`
         : `<div class="r1"><span>${P.icon}</span><b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
           <div class="steps">${steps}</div>
           <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 🚡${P.next.name}` : ""}</small>
           ${P.lifts ? `<small class="to">到了能坐 🚡 ${P.lifts.join("、")}</small>` : ""}
           <canvas width="300" height="34"></canvas>
+          <button class="doc">📄 路线说明 · 怎么滑、哪里容易错</button>
           <button class="go">按这条路线滑 ›</button>`;
       drawProfile(card.querySelector("canvas"), P);
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
+      card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
       card.querySelector(".go").onclick = async (e) => {
         if (st.kind === "board" && !boarderLoaded) { e.target.textContent = "人物加载中…"; await prepBoard(); }
         camera.clearViewOffset();

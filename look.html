@@ -88,6 +88,24 @@
     #turnCue small { font-size: 12px; }
     #turnCue.pop { animation: pop .5s ease-out; }
     @keyframes pop { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
+    /* A lift you can take, as you come up to it. */
+    #liftOffer { position: fixed; left: 12px; right: 12px; bottom: calc(150px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 12px 14px; display: grid; gap: 8px; }
+    #liftOffer b { font-size: 17px; }
+    #liftOffer .two { display: flex; gap: 8px; }
+    #liftOffer button, .sheet button.opt { flex: 1; font: inherit; font-size: 15px; color: #f4f7fb; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); border-radius: 12px; padding: 10px; cursor: pointer; text-align: center; }
+    #liftOffer button.go, .sheet button.opt.go { background: #2f7fe8; border-color: #2f7fe8; font-weight: 600; }
+    /* Sheets: choosing again from where you are; the route's written guide. */
+    .sheet { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; max-height: 76vh; overflow-y: auto; padding: 14px 16px; border-radius: 18px; -webkit-overflow-scrolling: touch; touch-action: pan-y; z-index: 5; }
+    .sheet h2 { margin: 0 0 4px; font-size: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .sheet h2 button { background: none; border: 0; color: #f4f7fb; font-size: 24px; cursor: pointer; }
+    .sheet h3 { margin: 12px 0 6px; font-size: 13px; color: #b9c4d3; font-weight: 500; }
+    .sheet p, .sheet li { font-size: 14px; line-height: 1.55; margin: 0; }
+    .sheet ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+    .sheet .warn { color: #ffcf8a; }
+    .sheet .opts { display: grid; gap: 8px; }
+    .sheet button.opt { text-align: left; }
+    .sheet button.opt small { display: block; color: #b9c4d3; font-size: 12px; font-weight: 400; }
+    .rcard .doc { font: inherit; font-size: 13px; color: #cfe0ff; background: none; border: 0; padding: 2px 0; text-align: left; cursor: pointer; }
     #flash { position: fixed; inset: 0; background: #f4f6f9; opacity: 0; pointer-events: none; }
     #flash.go { animation: flash .7s ease-out; }
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -108,9 +126,12 @@
   <div id="minimap" hidden></div>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
+  <div id="liftOffer" class="glass" hidden></div>
+  <div id="rePlan" class="glass sheet" hidden></div>
+  <div id="guide" class="glass sheet" hidden></div>
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=47"></script>
+  <script type="module" src="look.js?v=49"></script>
 </body>
 </html>
