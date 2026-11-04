@@ -1,4 +1,5 @@
-"""Add each lift's seats and bubble (aerialway:occupancy, aerialway:bubble) to baked resort files.
+"""Add each lift's seats and bubble (aerialway:occupancy, aerialway:bubble), and which runs are floodlit
+for night skiing (lit=yes or piste:lit=yes), to baked resort files.
 
 usage: python3 tools/lift_tags.py data/copper.json [data/other.json ...]
 Matches lifts by their OpenStreetMap way id; fetches the tags for each file's box from Overpass.
@@ -12,7 +13,7 @@ for path in sys.argv[1:]:
     mx, mz = 111320 * math.cos(math.radians(lat0)), 110574
     x0, z0, x1, z1 = d["bounds"]
     bbox = (lat0 - z1 / mz, lon0 + x0 / mx, lat0 - z0 / mz, lon0 + x1 / mx)
-    q = '[out:json][timeout:90];way["aerialway"](%s,%s,%s,%s);out tags;' % bbox
+    q = '[out:json][timeout:90];(way["aerialway"](%s,%s,%s,%s);way["piste:type"="downhill"](%s,%s,%s,%s););out tags;' % (bbox + bbox)
     tags = None
     for attempt in range(10):
         r = subprocess.run(["curl", "-s", "-m", "120", "-A", "ski-prerun", SERVERS[attempt % 2], "--data-urlencode", "data=" + q], capture_output=True)
@@ -25,5 +26,9 @@ for path in sys.argv[1:]:
         except ValueError: l.pop("seats", None)
         if t.get("aerialway:bubble") == "yes": l["bubble"] = True
         if t.get("aerialway:detachable") == "yes": l["detachable"] = True
+    for run in d["runs"]:
+        t = tags.get(run["id"], {})
+        if t.get("lit") == "yes" or t.get("piste:lit") == "yes": run["lit"] = True
+        else: run.pop("lit", None)
     open(path, "w").write(json.dumps(d, separators=(",", ":")))
-    print(path, "; ".join(f"{l['name']} {l['kind']} {l.get('seats', '?')}{' bubble' if l.get('bubble') else ''}" for l in d["lifts"] if l["kind"] in ("chair_lift", "gondola", "mixed_lift", "cable_car")))
+    print(path, "; ".join(f"{l['name']} {l['kind']} {l.get('seats', '?')}{' bubble' if l.get('bubble') else ''}" for l in d["lifts"] if l["kind"] in ("chair_lift", "gondola", "mixed_lift", "cable_car")), "| lit:", ", ".join(r["name"] for r in d["runs"] if r.get("lit")) or "-")

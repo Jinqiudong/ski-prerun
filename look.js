@@ -669,6 +669,49 @@ function gradientSky(top, horizon, bottom) {
 let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
 let topTerm = null;
 let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
+// ---------- Night: floodlit runs ----------
+// Runs mapped as floodlit (lit=yes in OpenStreetMap: night skiing) get lamp posts along both sides every
+// 45 m, a warm pool of light on the snow under each, and the rider is lit near them. Elsewhere at night
+// only the lift stations are lit, and a faint light keeps the rider visible.
+function floodlights(T, runs) {
+  const spots = [];
+  for (const run of runs) {
+    if (!run.lit) continue;
+    const pts = run.pts;
+    let along = 0, next = 10, side = 1;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], L = Math.hypot(bx - ax, bz - az);
+      while (along + L >= next) {
+        const t = (next - along) / L, x = ax + (bx - ax) * t, z = az + (bz - az) * t, dx = (bx - ax) / L, dz = (bz - az) / L;
+        spots.push({ x: x - dz * side * 17, z: z + dx * side * 17, lx: x, lz: z });
+        side = -side; next += 45;
+      }
+      along += L;
+    }
+  }
+  const group = new THREE.Group();
+  group.userData.spots = spots;
+  if (!spots.length) return group;
+  const n = spots.length, m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const poles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.16, 10, 6), new THREE.MeshStandardMaterial({ color: 0x3a3f47, roughness: 0.6 }), n);
+  const heads = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 0.45, 0.8), new THREE.MeshBasicMaterial({ color: 0xfff1c4 }), n);
+  const dot = document.createElement("canvas"); dot.width = dot.height = 64;
+  const g = dot.getContext("2d"), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, "#fff"); grd.addColorStop(0.45, "#888"); grd.addColorStop(1, "#000");
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(46, 46).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffd9a0, alphaMap: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.38, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), n);
+  spots.forEach((s, i) => {
+    const h = T.heightAt(s.x, s.z);
+    poles.setMatrixAt(i, m.compose(p.set(s.x, h + 5, s.z), q.identity(), one));
+    heads.setMatrixAt(i, m.compose(p.set(s.x + (s.lx - s.x) * 0.06, h + 10, s.z + (s.lz - s.z) * 0.06), q.identity(), one));
+    const px = (s.x + s.lx) / 2, pz = (s.z + s.lz) / 2;
+    pools.setMatrixAt(i, m.compose(p.set(px, T.heightAt(px, pz) + 0.25, pz), q.setFromUnitVectors(up, T.normalAt(px, pz)), one));
+  });
+  poles.castShadow = true;
+  for (const o of [poles, heads, pools]) { o.frustumCulled = false; group.add(o); }
+  return group;
+}
+
 function build(look, ctx) {
   if (world) { scene.remove(world); world.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); } }); }
   world = new THREE.Group();
@@ -729,6 +772,16 @@ function build(look, ctx) {
   sun.shadow.normalBias = 0.6;
   world.add(sun, sun.target);
   if (snowing) setSnowyAir();
+  // Night (the sun 2° to 8° under the horizon and lower): floodlit runs, lit lift stations, a light on
+  // the rider that brightens near the lamps.
+  ctx.night = clamp((-(s0.el * 180) / Math.PI - 2) / 6, 0, 1);
+  if (ctx.night > 0) {
+    const fl = floodlights(T, ctx.R.runs);
+    world.add(fl);
+    const glow = new THREE.PointLight(0xffe2b0, 0, 45, 1.2);
+    world.add(glow);
+    ctx.nightLights = { spots: fl.userData.spots, glow };
+  }
 
   // Ground and far ranges.
   const groundMat = A ? snowA(tex) : new THREE.MeshLambertMaterial({ color: 0xe9eef6, flatShading: true });
@@ -795,6 +848,11 @@ function build(look, ctx) {
   // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
   world.add(terminal(line.towers[0].p.clone(), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
   world.add(topTerm = terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
+  if (ctx.night > 0) for (const t of [line.towers[0].p, line.towers[line.towers.length - 1].p]) { // the stations are lit at night
+    const l = new THREE.PointLight(0xffe7c2, 900 * ctx.night, 90, 1.5);
+    l.position.copy(t).add(new THREE.Vector3(0, 9, 0));
+    world.add(l);
+  }
 
   const parts = ctx.chair;
   const chairMetal = A ? metalMat : new THREE.MeshLambertMaterial({ color: 0x6b6f7d, flatShading: true });
@@ -989,6 +1047,11 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
     tilt.zero = null; // the way you hold the phone now is "straight on"
     $("desc").textContent = tilt.ok ? "沿路线带你滑 · 手机左右倾转弯 · 往前倾加速、往回倒减速" : "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
+    if (ctx.night > 0.5) { // at night: say where the lights are
+      const lit = [...new Set(R.runs.filter((x) => x.lit && x.name).map((x) => x.name))];
+      const onRoute = P.segs.some((g) => g.run.lit);
+      $("desc").textContent = "🌙 " + (lit.length ? (onRoute ? "夜场：这条路线上有亮灯的雪道" : `夜场只开 ${lit.slice(0, 4).join("、")}，这条路线没有灯`) : "现在是夜里，这个雪场没有夜场灯光");
+    }
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
@@ -1148,6 +1211,13 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true });
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
+    const NL = ctx.nightLights;
+    if (NL) { // brighter close to a floodlight
+      let lamp = 0;
+      for (const sp of NL.spots) { const d2 = (sp.lx - r.x) ** 2 + (sp.lz - r.z) ** 2; if (d2 < 1600) lamp = Math.max(lamp, Math.exp(-d2 / 450)); }
+      NL.glow.position.set(r.x, r.y + 6, r.z);
+      NL.glow.intensity = ctx.night * (10 + 70 * lamp);
+    }
     // Snow thrown up off the edge: a little in every turn, a cloud when you skid to slow down.
     const carve = Math.abs(r.lean) * r.speed;
     spray.emit(r, (r.skid || 0) * r.speed * 55 + (carve > 2 ? carve * 9 : 0), dt);

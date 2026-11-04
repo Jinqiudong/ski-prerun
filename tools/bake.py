@@ -113,6 +113,7 @@ for e in elements:
         run = {"id": e["id"], "name": tags.get("piste:name") or tags.get("name") or "",
                "level": LEVELS.get(tags.get("piste:difficulty"), "intermediate"),
                "grooming": tags.get("piste:grooming", ""), "area": area,
+               **({"lit": True} if tags.get("lit") == "yes" or tags.get("piste:lit") == "yes" else {}),
                "length": round(length), "drop": round(drop),
                "pts": [[round(x, 1), round(z, 1)] for x, z in pts]}
         if outline:
