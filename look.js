@@ -164,7 +164,7 @@ function chairParts() {
     metal.push(tube([[s * H, -1.8, -0.3], [s * H, -1.88, 0.2], [s * (H - 0.03), -1.96, 0.55]], 0.035)); // safety bar arms, lowered
   }
   for (let i = 0; i < SEAT_X.length; i += 2) { // a footrest for each pair of riders
-    const x = (SEAT_X[i] + SEAT_X[i + 1]) / 2;
+    const x = i + 1 < SEAT_X.length ? (SEAT_X[i] + SEAT_X[i + 1]) / 2 : SEAT_X[i]; // an odd seat out gets its own
     for (const d of [-0.22, 0.22]) metal.push(tube([[x + d, -1.96, 0.56], [x + d, -2.5, 0.6], [x + d, -2.88, 0.62]], 0.028));
     metal.push(new THREE.BoxGeometry(0.62, 0.04, 0.24).translate(x, -2.9, 0.68));
   }
@@ -669,6 +669,53 @@ function gradientSky(top, horizon, bottom) {
 let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
 let topTerm = null;
 let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
+// ---------- Other lifts, seen while skiing ----------
+// Every lift near the way down: towers every 85 m, its two ropes, a station at each end, and its name
+// floating over the bottom station so you can find it from a distance.
+function otherLift(T, l) {
+  const g = new THREE.Group(), pts = l.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
+  const along = [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], L = a.distanceTo(b), n = Math.max(1, Math.round(L / 85));
+    for (let k = i === 1 ? 0 : 1; k <= n; k++) along.push(a.clone().lerp(b, k / n));
+  }
+  const dir = pts[pts.length - 1].clone().sub(pts[0]).setY(0).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x);
+  const steel = new THREE.MeshStandardMaterial({ color: 0x8d96a3, metalness: 0.5, roughness: 0.5 });
+  const H = 11, towers = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.45, H, 8), steel, along.length);
+  const arms = new THREE.InstancedMesh(new THREE.BoxGeometry(6, 0.4, 0.4), steel, along.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), side), one = new THREE.Vector3(1, 1, 1);
+  along.forEach((p, i) => {
+    towers.setMatrixAt(i, m.compose(new THREE.Vector3(p.x, p.y + H / 2, p.z), new THREE.Quaternion(), one));
+    arms.setMatrixAt(i, m.compose(new THREE.Vector3(p.x, p.y + H, p.z), q, one));
+  });
+  towers.castShadow = true;
+  g.add(towers, arms);
+  for (const s of [-2.8, 2.8]) {
+    const rope = along.map((p) => new THREE.Vector3(p.x + side.x * s, p.y + H - 0.3, p.z + side.z * s));
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rope), new THREE.LineBasicMaterial({ color: 0x2a2e35 })));
+  }
+  const house = new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }), roof = new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 });
+  for (const p of [pts[0], pts[pts.length - 1]]) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(9, 5, 7), house); b.position.set(p.x, p.y + 2.5, p.z); b.castShadow = true;
+    const r = new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 9), roof); r.position.set(p.x, p.y + 5.4, p.z);
+    g.add(b, r);
+  }
+  // The name over the bottom station, always facing you.
+  const c = document.createElement("canvas"), cx = c.getContext("2d"), label = `🚡 ${l.name}`;
+  cx.font = "700 44px -apple-system, PingFang SC, sans-serif";
+  c.width = Math.ceil(cx.measureText(label).width) + 48; c.height = 72;
+  const ctx2 = c.getContext("2d");
+  ctx2.fillStyle = "rgba(242,182,50,.95)"; ctx2.beginPath(); ctx2.roundRect(0, 0, c.width, 72, 36); ctx2.fill();
+  ctx2.font = "700 44px -apple-system, PingFang SC, sans-serif"; ctx2.fillStyle = "#1d1606"; ctx2.textBaseline = "middle"; ctx2.fillText(label, 24, 38);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, fog: false }));
+  tag.scale.set((c.width / 72) * 7, 7, 1);
+  tag.position.set(pts[0].x, pts[0].y + 18, pts[0].z);
+  tag.renderOrder = 5;
+  g.add(tag);
+  return g;
+}
+
 // ---------- Night: floodlit runs ----------
 // Runs mapped as floodlit (lit=yes in OpenStreetMap: night skiing) get lamp posts along both sides every
 // 45 m, a warm pool of light on the snow under each, and the rider is lit near them. Elsewhere at night
@@ -1140,8 +1187,16 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     renderer.autoClear = false; renderer.clearDepth(); renderer.render(m.hud, m.hudCam); renderer.autoClear = true;
   }
   st.hud = () => { if (st.phase === "ski" && phys && !ended) drawMini(phys); };
+  const liftsShown = new Set([lift]);
   function dress(P) {
     const path = P.path;
+    // The other lifts near the way down, so a lift you can take is there to see.
+    for (const l of R.lifts) {
+      if (liftsShown.has(l) || l.kind === "magic_carpet" || l.pts.length < 2) continue;
+      if (!l.pts.some(([x, z]) => path.some(([rx, rz], i) => i % 4 === 0 && Math.hypot(rx - x, rz - z) < 900))) continue;
+      liftsShown.add(l);
+      world.add(otherLift(T, l));
+    }
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
     ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
