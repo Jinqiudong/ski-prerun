@@ -202,12 +202,13 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=3");
+    const { Collection } = await import("./collection.js?v=6");
     collection = new Collection(cv, $("ctags"));
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
-    await collection.build(await resortList(), stats);
+    await collection.build(await resortList(), stats, logOf());
+    $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
     collection.onPick = (r) => {
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       card.innerHTML = `<b>${r.name}</b><small>${r.zh} · ${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里` : "还没去过"}</small>

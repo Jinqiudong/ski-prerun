@@ -60,6 +60,10 @@
     .ctag { position: absolute; left: 0; top: 0; pointer-events: auto; font: inherit; display: flex; gap: 4px; align-items: baseline; background: rgba(255,250,240,.94); color: #3b2a1a; border: 1.5px solid #8a5a35; border-radius: 999px; padding: 2px 8px; white-space: nowrap; cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,.18); }
     .ctag b { font-size: 12px; } .ctag small { font-size: 10px; color: #7a5a3a; }
     .ctag.on { background: #7a4b25; color: #fff8ea; } .ctag.on small { color: #f3dcbb; }
+    .ctag.town { pointer-events: none; background: none; border: 0; box-shadow: none; padding: 0; color: #4b4037; font-size: 10px; font-style: italic; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+    .ctag.town.s3 { font-size: 13px; font-weight: 700; font-style: normal; color: #a0432f; }
+    #worldHead { padding-right: 64px; }
+    #worldHome { position: absolute; right: 12px; top: 12px; font: inherit; font-size: 12px; color: #3b2a1a; background: #fffaf0; border: 1.5px solid #8a5a35; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
     .ctag.city { pointer-events: none; background: none; border: 0; box-shadow: none; color: #a0432f; font-weight: 700; font-size: 12px; }
     #worldHead, #recHead { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; padding: 10px 14px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35; }
     #worldHead b, #recHead b { font-size: 17px; } #worldHead small, #recHead small { display: block; color: #7a5a3a; font-size: 12px; margin-top: 2px; }
@@ -135,12 +139,12 @@
     </section>
   </div>
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
-    <div id="worldHead"><b>🏔 去征服哪座山？</b><small>科罗拉多的 Ikon 雪场 · 灰色的还没去过，滑得越多颜色越多，全滑遍会开花</small></div>
+    <div id="worldHead"><b>🏔 去征服哪座山？</b><small>灰色的雪道还没滑过，滑过的变成彩色，全滑遍会开花 · 拖动移动，两指转动、倾斜、缩放</small><button id="worldHome">全图</button></div>
     <div id="worldCard" hidden></div></div>
   <div id="records" hidden><div id="recHead"><b>📖 我的滑雪记录</b><small>每个雪场你滑过多少（存在这台手机上）</small></div><div id="recList"></div></div>
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><span>🧑</span>人物</button><button data-tab="resort"><span>🏔</span>雪场</button><button data-tab="trip"><span>🧳</span>行程</button><button data-tab="log"><span>📖</span>记录</button></nav>
-  <script type="module" src="start.js?v=17"></script>
+  <script type="module" src="start.js?v=18"></script>
 </body>
 </html>
