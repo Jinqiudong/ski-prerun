@@ -479,8 +479,8 @@ function terrainGeometry(T) {
 }
 
 // A's snow: sculpted texture up close, rock on steep faces, softening with distance.
-function snowA(tex) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+function snowA(tex, vertexColors = false) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, vertexColors });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, { snowD: { value: tex.snowD }, snowN: { value: tex.snowN }, rockD: { value: tex.rockD } });
     sh.vertexShader = sh.vertexShader
@@ -502,7 +502,13 @@ function snowA(tex) {
         vec3 nt = texture2D(snowN, vWP.xz / 6.0).xyz * 2.0 - 1.0;
         vec3 nt2 = texture2D(snowN, vWP.xz / 80.0).xyz * 2.0 - 1.0;
         vec3 wp = vec3(nt.x, 0.0, -nt.y) * 0.6 * (1.0 - fade) + vec3(nt2.x, 0.0, -nt2.y) * 0.35;
-        normal = normalize(normal + (viewMatrix * vec4(wp, 0.0)).xyz);`);
+        normal = normalize(normal + (viewMatrix * vec4(wp, 0.0)).xyz);`)
+      // Sparkle: tiny ice crystals catching the light up close.
+      .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+        vec3 cell = floor(vWP * 7.0);
+        float h = fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+        float near = 1.0 - smoothstep(4.0, 40.0, length(vWP - cameraPosition));
+        totalEmissiveRadiance += vec3(1.0, 0.98, 0.92) * step(0.9965, h) * near * 1.4;`);
   };
   return mat;
 }
@@ -671,6 +677,35 @@ function gradientSky(top, horizon, bottom) {
 let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
 let topTerm = null;
 let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
+// ---------- The snow's colour, baked: ridge shadows (blue), the floor under the woods, rock ----------
+// Ridges throw long shadows across the slopes in the low winter sun; seen from the air those shadowed
+// slopes are blue. Marched once on every other vertex (and filled in) to keep loading quick on phones.
+function shadeGround(geo, T, mask, dir, day) {
+  const { gw, gh } = T, pos = geo.attributes.position, col = new Float32Array(gw * gh * 3);
+  const shade = new Float32Array(gw * gh), lit = new THREE.Color(1, 1, 1), blue = new THREE.Color(0.66, 0.74, 0.96), floor = new THREE.Color(0.8, 0.83, 0.9), c = new THREE.Color();
+  for (let r = 0; r < gh; r += 2) for (let j = 0; j < gw; j += 2) { const k = r * gw + j; shade[k] = day ? T.sunShadow(pos.getX(k), pos.getZ(k), pos.getY(k) + 1, dir) : 1; }
+  for (let r = 0; r < gh; r++) for (let j = 0; j < gw; j++) {
+    const k = r * gw + j, r0 = r & ~1, j0 = j & ~1, r1 = Math.min(gh - 1 - ((gh - 1) & 1), r0 + 2), j1 = Math.min(gw - 1 - ((gw - 1) & 1), j0 + 2);
+    const s = (shade[r0 * gw + j0] + shade[r0 * gw + j1] + shade[r1 * gw + j0] + shade[r1 * gw + j1]) / 4;
+    c.copy(lit).lerp(blue, s * 0.85);
+    if (mask(pos.getX(k), pos.getZ(k))) c.multiply(floor); // shade under the canopy
+    col.set([c.r, c.g, c.b], k * 3);
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+}
+
+// The forest beyond the way down: the whole mountain wooded where it is, low-detail trees every ~40 m, so
+// the slopes read as real from the chair and the top. The runs are left as clear lines through it.
+function farForest(T, mask, near, coarse) {
+  const spots = [], step = coarse ? 40 : 30;
+  for (let z = T.z0 + 50; z < T.z1 - 50; z += step) for (let x = T.x0 + 50; x < T.x1 - 50; x += step) {
+    const px = x + (rand() - 0.5) * step * 0.9, pz = z + (rand() - 0.5) * step * 0.9;
+    if (!mask(px, pz) || near(px, pz)) continue;
+    spots.push({ x: px, z: pz, y: T.heightAt(px, pz), d: 9999, v: rand() });
+  }
+  return spots;
+}
+
 // ---------- Other lifts, seen while skiing ----------
 // Every lift near the way down: towers every 85 m, its two ropes, a station at each end, and its name
 // floating over the bottom station so you can find it from a distance.
@@ -777,14 +812,27 @@ function build(look, ctx) {
   // greys it once it has loaded (ctx.applySky).
   const s0 = solar(new Date(), ctx.R.origin.lat, ctx.R.origin.lon), sunDir = sunVector(s0);
   const day = sunDir.y > 0.02, lightDir = day ? sunDir.clone() : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
-  let sky = null, skyEnv = null;
+  let sky = null, skyEnv = null, skyDome = null;
   if (A) {
     sky = new Sky();
     sky.scale.setScalar(20000);
-    sky.material.uniforms.rayleigh.value = 1.2;
-    sky.material.uniforms.mieCoefficient.value = 0.004;
+    sky.material.uniforms.rayleigh.value = 2.2; // a deep, clean mountain blue
+    sky.material.uniforms.mieCoefficient.value = 0.003;
     sky.material.uniforms.mieDirectionalG.value = 0.8;
+    // What you see: the miniature's sky (sky.js palette), deep blue overhead, light at the horizon, the
+    // sunset in its colours; the physical sky only lights the scene (its reflections).
+    sky.visible = false;
     world.add(sky);
+    skyDome = new THREE.Mesh(new THREE.SphereGeometry(25000, 32, 16), new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { sun: { value: new THREE.Vector3() }, top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color() } },
+      vertexShader: "varying vec3 v; void main(){ v = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+      fragmentShader: `varying vec3 v; uniform vec3 sun, top, mid, hor, glow;
+        void main(){ float h = clamp(v.y, -0.05, 1.0); vec3 c = mix(hor, mid, smoothstep(0.0, 0.16, h)); c = mix(c, top, smoothstep(0.16, 0.7, h));
+          float s = max(dot(normalize(v), sun), 0.0); c += glow * (pow(s, 8.0) * 0.25 + pow(s, 600.0) * 1.2); gl_FragColor = vec4(c, 1.0); }`,
+    }));
+    skyDome.renderOrder = -1; skyDome.frustumCulled = false;
+    world.add(skyDome);
     skyEnv = { pm: new THREE.PMREMGenerator(renderer), scene: new THREE.Scene(), sky: new Sky() };
     skyEnv.sky.scale.setScalar(1000); skyEnv.scene.add(skyEnv.sky);
     scene.fog = new THREE.FogExp2(0xc6d6e8, 0.00016);
@@ -793,24 +841,26 @@ function build(look, ctx) {
     scene.environment = null;
     scene.fog = new THREE.Fog(0xe9e0e4, 400, 7500);
   }
-  const hemi = new THREE.HemisphereLight(A ? 0xdbe8ff : 0xcfe0ff, A ? 0x8f9bb5 : 0xf0d8c8, A ? 0.55 : 1.15);
+  const hemi = new THREE.HemisphereLight(A ? 0x9fc2ff : 0xcfe0ff, A ? 0xb9b2a8 : 0xf0d8c8, A ? 0.55 : 1.15);
   world.add(hemi);
   sun = new THREE.DirectionalLight(A ? 0xfff1dd : 0xffe4c8, A ? 3.2 : 1.9);
   sun.userData.dir = lightDir;
   ctx.applySky = (kind = "clear") => {
     if (!A) return;
     const p = palette((s0.el * 180) / Math.PI, kind);
+    if (skyDome) { const u = skyDome.material.uniforms; u.sun.value.copy(sunDir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor); u.glow.value.copy(p.sun).multiplyScalar(kind === "clear" ? 1 : 0.3); }
     sky.material.uniforms.sunPosition.value.copy(sunDir);
-    sky.material.uniforms.turbidity.value = { clear: 3, cloudy: 6, overcast: 12, snow: 14 }[kind];
+    sky.material.uniforms.turbidity.value = { clear: 1.8, cloudy: 5, overcast: 12, snow: 14 }[kind];
     skyEnv.sky.material.uniforms.sunPosition.value.copy(sunDir);
     skyEnv.sky.material.uniforms.turbidity.value = sky.material.uniforms.turbidity.value;
     scene.environment?.dispose();
     scene.environment = skyEnv.pm.fromScene(skyEnv.scene).texture;
     scene.environmentIntensity = day ? 0.5 : 0.12;
-    if (!snowing) { scene.fog.color.copy(p.hor); scene.fog.density = { clear: 0.00016, cloudy: 0.00022, overcast: 0.0004, snow: 0.0009 }[kind]; }
-    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0));
-    sun.intensity = day ? p.si * 0.95 : 0.5;
-    hemi.intensity = p.amb + 0.15;
+    if (!snowing) { scene.fog.color.copy(p.hor).lerp(new THREE.Color(0xa9c6ea), kind === "clear" ? 0.45 : 0); scene.fog.density = { clear: 0.000075, cloudy: 0.00016, overcast: 0.00035, snow: 0.0009 }[kind]; }
+    // Lit snow warm, shaded snow blue: a strong warm sun, and the fill from a blue sky.
+    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0)).lerp(new THREE.Color(0xfff0d8), day ? 0.3 : 0);
+    sun.intensity = day ? p.si * 1.15 : 0.5;
+    hemi.intensity = p.amb + 0.12;
     renderer.toneMappingExposure = p.exp + 0.03;
   };
   ctx.applySky();
@@ -833,12 +883,13 @@ function build(look, ctx) {
   }
 
   // Ground and far ranges.
-  const groundMat = A ? snowA(tex) : new THREE.MeshLambertMaterial({ color: 0xe9eef6, flatShading: true });
+  const groundMat = A ? snowA(tex, true) : new THREE.MeshLambertMaterial({ color: 0xe9eef6, flatShading: true });
+  if (A) shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day);
   const ground = new THREE.Mesh(ctx.groundGeo, groundMat);
   ground.receiveShadow = true;
   world.add(ground);
   const ranges = farTerrain(far, T);
-  ranges.material = A ? snowA(tex) : new THREE.MeshLambertMaterial({ color: 0xdfe3ee, flatShading: true });
+  ranges.material = A ? snowA(tex, true) : new THREE.MeshLambertMaterial({ color: 0xdfe3ee, flatShading: true }); // its colours: forest belts, rock
   world.add(ranges);
 
   // Runs near the lift.
@@ -877,6 +928,10 @@ function build(look, ctx) {
       return g;
     };
     ctx.forest(spots);
+    // Beyond the trees planted along the lift: the rest of the mountain's forest, low detail.
+    const xs = line.ground.map((p) => p.x), zs = line.ground.map((p) => p.z), bx = [Math.min(...xs) - 850, Math.max(...xs) + 850, Math.min(...zs) - 850, Math.max(...zs) + 850];
+    ctx.farSpots = farForest(T, ctx.mask, (x, z) => x > bx[0] && x < bx[1] && z > bx[2] && z < bx[3], coarse);
+    ctx.forest(ctx.farSpots, -1);
   } else {
     world.add(plant(spots, coneTree(0x3f8574, 0xfaf6f2, 6), treeMat, height));
   }
@@ -1044,7 +1099,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // Trees you can hit: every tree planted so far, in a 10 m grid.
   const treeGrid = new Map(), TG = 10, tkey = (x, z) => `${Math.floor(x / TG)},${Math.floor(z / TG)}`;
   const addTrees = (list) => { for (const t of list) { const k = tkey(t.x, t.z); if (!treeGrid.has(k)) treeGrid.set(k, []); treeGrid.get(k).push(t); } };
-  addTrees(ctx.spots);
+  addTrees(ctx.spots); addTrees(ctx.farSpots || []);
   if (ctx.forest) { const plantForest = ctx.forest; ctx.forest = (list, near) => { addTrees(list); return plantForest(list, near); }; }
   const treeAt = (x, z, rad) => {
     let best = null, bd = rad * rad;
@@ -1083,6 +1138,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   function startSki() {
     const P = chosen, path = P.path;
+    camera.fov = 66; camera.updateProjectionMatrix(); // a wider view on the snow
     setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now (ski or board)
     if (guide) guide.visible = true;
     setTimeout(showTrickBtn, 0);
@@ -1534,10 +1590,11 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     spray.update(dt);
     // Chase camera, like the game's.
     const back = new THREE.Vector3(-Math.sin(r.heading), 0, -Math.cos(r.heading));
-    const want = new THREE.Vector3(r.x, r.y, r.z).addScaledVector(back, 6.5 + r.speed * 0.08);
-    want.y = Math.max(T.heightAt(want.x, want.z) + 1.2, r.y + 2.6);
+    // Higher and a little further back than before, looking well ahead: more of the slope and the valley.
+    const want = new THREE.Vector3(r.x, r.y, r.z).addScaledVector(back, 7.5 + r.speed * 0.1);
+    want.y = Math.max(T.heightAt(want.x, want.z) + 1.6, r.y + 3.4);
     camera.position.lerp(want, Math.min(1, dt * 4));
-    camera.lookAt(r.x + Math.sin(r.heading) * 5, r.y + 1.1, r.z + Math.cos(r.heading) * 5);
+    camera.lookAt(r.x + Math.sin(r.heading) * 9, r.y + 0.6, r.z + Math.cos(r.heading) * 9);
     const left = Math.max(0, P.dist[last] - P.dist[prog]);
     $("skiSpeed").textContent = Math.round(r.speed * 3.6);
     $("skiLeft").textContent = fmtLen(left);
