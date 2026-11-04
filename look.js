@@ -12,7 +12,7 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { PixelMap } from "./pixelmap.js?v=1";
+import { PixelMap } from "./pixelmap.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1125,8 +1125,9 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   st.hud = () => {
     if (st.phase !== "ski" || !phys || ended || clock() - pmapAt < 120) return;
     pmapAt = clock();
-    const big = $("minimap").classList.contains("big"), P = chosen;
-    pmap.draw({ x: phys.x, z: phys.z, heading: phys.heading, route: P.path.slice(Math.max(0, prog - 1)), dest: P.end, n: big ? 104 : 64, radius: big ? 650 : 230 });
+    const big = $("minimap").classList.contains("big"), P = chosen, J = nav?.js.find((j) => j.i > prog);
+    pmap.draw({ x: phys.x, z: phys.z, heading: phys.heading, route: P.path.slice(Math.max(0, prog - 1)), junction: J && P.path[J.i],
+      dest: P.end && [P.end[0], P.end[1], P.short || ""], n: big ? 160 : 96, radius: big ? 650 : 240, labels: big, blink: Math.floor(clock() / 450) % 2 === 0 });
   };
   $("minimap").onclick = (e) => {
     const box = $("minimap");
@@ -1167,10 +1168,10 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     if (!Q) Q = makePlan([{ type: "run", run, from: spot.i, to: run.pts.length - 1, length: run.length }], { kind: "run", key: `run:${run.name}`, title: run.name || "无名雪道", short: run.name, icon: "", end: run.pts[run.pts.length - 1], leads: leadsTo(run.pts[run.pts.length - 1]), first: run });
     if (!Q) return;
-    const h = phys.heading;
-    camera.position.set(sx - Math.sin(h) * 7, T.heightAt(sx, sz) + 3, sz - Math.cos(h) * 7);
     rideInstead(Q, `从 ${run.name || "这里"} 重新开始 · 去 ${Q.short || Q.title}`);
     shrinkMap();
+    spawn = { t0: clock() }; // the arrival: see stepSki
+    flash();
   }
   const liftsShown = new Set([lift]);
   function dress(P) {
@@ -1267,7 +1268,27 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     return { steer: ramp(tilt.side - tilt.zero.side, 2, 18), pace: ramp(tilt.zero.fwd - tilt.fwd, 6, 24) };
   };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
+  // Starting again somewhere else: a white flash, the camera dropping from high above, the rider
+  // popping up out of a burst of snow; then on you go.
+  let spawn = null;
+  function spawnStep(dt) {
+    const t = (clock() - spawn.t0) / 1000, r = phys, rider = ctx.rider;
+    r.speed = 0; r.dt = dt;
+    if (rider.userData.kind === "board" && rider.userData.mixer) poseBoarder(rider, r); else r.pose(rider);
+    const k = clamp((t - 0.45) / 0.45, 0, 1);
+    rider.scale.multiplyScalar(Math.max(0.001, k * (1 + 0.35 * Math.sin(k * Math.PI)))); // a little overshoot
+    if (!spawn.burst && t > 0.45) {
+      spawn.burst = true; navigator.vibrate?.(40);
+      for (let i = 0; i < 8; i++) spray.emit({ ...r, x: r.x, z: r.z, y: r.y, heading: (i / 8) * Math.PI * 2, steer: 1, skid: 1, speed: 7 }, 1500, 1 / 30);
+    }
+    spray.update(dt);
+    const u = ease(Math.min(1, t / 1.2)), h = r.heading;
+    camera.position.set(r.x - Math.sin(h) * (6.5 + 10 * (1 - u)), r.y + 2.6 + 60 * (1 - u), r.z - Math.cos(h) * (6.5 + 10 * (1 - u)));
+    camera.lookAt(r.x + Math.sin(h) * 5 * u, r.y + 1.1, r.z + Math.cos(h) * 5 * u);
+    if (t > 1.3) spawn = null;
+  }
   function stepSki(dt) {
+    if (spawn) { spawnStep(dt); return; }
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
     if (near.d < 70) prog = Math.max(prog, near.i);
