@@ -91,7 +91,8 @@ export class TrailMap {
   // pixel size). Overlays: route [x, z][], you {x, z, heading}, pin [x, z], bounce phase t.
   // up: a heading to turn the map to (the way you're going pointing up), as the corner map does; leave it
   // out for north up.
-  view(cv, { cx, cz, zoom, route = [], you = null, pin = null, t = 0, dpr = 1, up = null }) {
+  // skied: stretches you've skied (point lists), drawn in red-brown ink; track: your last ride, dashed.
+  view(cv, { cx, cz, zoom, route = [], you = null, pin = null, t = 0, dpr = 1, up = null, skied = null, track = null }) {
     this.build();
     const g = cv.getContext("2d"), k = zoom * dpr / this.s, T = this.T;
     g.fillStyle = "#e9edf2"; g.fillRect(0, 0, cv.width, cv.height);
@@ -114,6 +115,15 @@ export class TrailMap {
     const S = (x, z) => [(x - cx) * zoom * dpr + W / 2, (z - cz) * zoom * dpr + H / 2];
     // Overlays keep to the map's scale (a route as wide as a wide run), within what stays readable.
     const px = (m, lo, hi) => Math.max(lo, Math.min(hi, m * zoom)) * dpr;
+    if (skied?.length) {
+      g.lineCap = g.lineJoin = "round";
+      const w = px(12, 1.5, 9);
+      for (const seg of skied) { g.beginPath(); seg.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p)))); g.strokeStyle = "rgba(255,250,240,.9)"; g.lineWidth = w + 2.5 * dpr; g.stroke(); g.strokeStyle = "#b5482f"; g.lineWidth = w; g.stroke(); }
+    }
+    if (track?.length > 1) {
+      g.beginPath(); track.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p))));
+      g.setLineDash([px(14, 4, 10), px(10, 3, 8)]); g.strokeStyle = "#2d3440"; g.lineWidth = px(4, 1.2, 3); g.stroke(); g.setLineDash([]);
+    }
     if (route.length > 1) {
       g.lineCap = g.lineJoin = "round";
       g.beginPath(); route.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p))));

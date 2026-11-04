@@ -48,7 +48,8 @@
     #bigMap { position: fixed; inset: 0; z-index: 8; background: #e9edf2; }
     #bigMap canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
     #bigMap .bar { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35, 0 4px 12px rgba(0,0,0,.25); font-size: 14px; }
-    #bigMap .bar b { flex: 1; }
+    #bigMap .bar b { flex: 1; } #bigMap .bar b small { color: #7a5a3a; font-size: 12px; }
+    #bigMap { z-index: 9; }
     #bigMap button { font: inherit; font-size: 14px; color: #3b2a1a; background: #fff; border: 2px solid #8a5a35; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
     #bigMap .pickCard { position: absolute; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 12px 14px; border-radius: 16px; background: rgba(255,248,234,.97); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35, 0 6px 16px rgba(0,0,0,.3); display: grid; gap: 8px; }
     #bigMap .pickCard b { font-size: 17px; } #bigMap .pickCard small { color: #7a5a3a; }
@@ -169,7 +170,7 @@
   <canvas id="minimap" width="256" height="256" hidden></canvas>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
-  <div id="bigMap" hidden><canvas></canvas><div class="bar"><b>🗺 雪场地图 · 点一个地方，选从哪里出发</b><button id="mapMe">回到我</button><button id="mapMore">更多</button><button id="mapClose" aria-label="关闭">×</button></div><div class="pickCard" hidden></div></div>
+  <div id="bigMap" hidden><canvas></canvas><div class="bar"><b>🗺 雪场地图 · 点一个地方，选从哪里出发</b><button id="mapMe">回到我</button><button id="mapLog">📖</button><button id="mapMore">更多</button><button id="mapClose" aria-label="关闭">×</button></div><div class="pickCard" hidden></div></div>
   <button id="trickBtn" hidden>🤸<br>动作</button>
   <div id="trickWheel" hidden></div>
   <div id="liftOffer" class="glass" hidden></div>
@@ -178,6 +179,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=63"></script>
+  <script type="module" src="look.js?v=64"></script>
 </body>
 </html>
