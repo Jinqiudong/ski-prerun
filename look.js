@@ -7,7 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./rider.js?v=11";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=2";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=3";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, tricksOf, startTrick } from "./boarder.js?v=12";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
@@ -16,7 +16,8 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
-import { translatePage } from "./i18n.js?v=5";
+import { translatePage, openSettings } from "./i18n.js?v=7";
+import { navRow } from "./nav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -1104,18 +1105,18 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
   function openMenu() {
     const box = $("menu"), ski = st.phase === "ski" && phys && !ended;
     const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${icon} ${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
-    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2><div class="opts">
+    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2>${navRow()}<div class="opts">
       ${item("🗺", "雪场地图", "看全图，选从哪里出发", "map", ski)}
       ${item("📜", "预滑路书", "这一趟怎么走的，明天照着走", "book")}
       ${item("📖", "滑雪记录", "这个雪场你滑过的地方", "log", !!phys)}
       ${item(planetMap ? "🗺" : "🪐", planetMap ? "小地图改回平面" : "小地图换成小星球", "右上角的小地图样式", "style")}
       ${item("🏔", "回沙盘", R.name, "sandbox")}
-      ${item("🧑", "换人物 / 换雪场", "回到开始页", "start")}
+      ${item("⚙", "设置", "语言", "settings")}
     </div>`;
     box.querySelector("h2 button").onclick = () => (box.hidden = true);
     box.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
       box.hidden = true;
-      ({ map: openBigMap, log: openJournal, book: () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) }), style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), start: () => (location.href = "start.html?tab=resort") })[b.dataset.act]();
+      ({ map: openBigMap, log: openJournal, book: () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) }), style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), settings: openSettings })[b.dataset.act]();
     }));
     box.hidden = false;
   }

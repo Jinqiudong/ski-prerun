@@ -1,0 +1,88 @@
+/* The quiet watercolour look of the start page, carried onto the mountain page and the ride: paper cards
+   instead of dark glass, serif type, navy ink, patrol red to point. Loaded after each page's own styles,
+   so it only restyles; the layout stays theirs. */
+:root { --paper: #f6f1e7; --card: rgba(253, 251, 246, .94); --ink: #33302c; --navy: #22344d; --muted: #8a8278; --line: #d9cdb9; --red: #b6463b; --pine: #2f5446; }
+html, body { font-family: "Noto Serif SC", -apple-system, serif; color: var(--ink); }
+.glass { background: var(--card) !important; color: var(--ink) !important; border: 0 !important; border-radius: 6px !important; box-shadow: 0 6px 16px rgba(40, 30, 20, .18); -webkit-backdrop-filter: none; backdrop-filter: none; }
+b { color: var(--navy); }
+small, p { color: var(--muted); }
+button { font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
+
+/* The ride */
+#top b { font: 600 19px "Cormorant Garamond", "Noto Serif SC", serif; }
+#top p { color: var(--muted) !important; }
+#menuBtn { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; border-radius: 999px !important; }
+#bubble { color: var(--navy) !important; }
+#pads button { color: var(--navy) !important; }
+#skip { background: var(--navy) !important; color: #fdfbf6 !important; font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif !important; }
+#fast { background: #fdfbf6 !important; color: var(--navy) !important; font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif !important; box-shadow: 0 6px 14px rgba(40, 30, 20, .22); }
+#skiHud .nums { color: var(--muted) !important; } #skiHud .nums b { color: var(--navy) !important; font-family: Oswald, sans-serif; }
+#skiHud p, #skiHud small, #skiHud #skiWhere { color: var(--ink) !important; }
+#arrive p { color: var(--muted) !important; }
+#arrive .btn { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; border-radius: 999px !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif !important; font-size: 16px !important; }
+#arrive .go, #arrive .btn.go { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+#minimap { border: 4px solid #fdfbf6 !important; border-radius: 4px !important; box-shadow: 0 6px 16px rgba(40, 30, 20, .25) !important; }
+#turnCue { background: var(--card) !important; color: var(--ink) !important; border: 0 !important; border-left: 4px solid var(--red) !important; border-radius: 4px !important; box-shadow: 0 6px 16px rgba(40, 30, 20, .2) !important; }
+#turnCue .arr { color: var(--red) !important; } #turnCue b { color: var(--navy) !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; font-size: 19px !important; } #turnCue small { color: var(--muted) !important; }
+#liftOffer button, .sheet button.opt { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; }
+#liftOffer button.go, .sheet button.opt.go { background: var(--navy) !important; border-color: var(--navy) !important; color: #fdfbf6 !important; }
+.sheet h2 button { color: var(--navy) !important; }
+.sheet h3 { color: var(--muted) !important; } .sheet .warn { color: var(--red) !important; }
+.sheet button.opt small { color: var(--muted) !important; }
+.rtag { color: var(--navy) !important; background: var(--card) !important; border: 1px solid #cbbfa9 !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
+.rtag.on { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+.rtag.dest { background: var(--red) !important; color: #fdfbf6 !important; border-color: #fdfbf6 !important; }
+.rtag.via { background: var(--pine) !important; color: #fdfbf6 !important; border-color: #fdfbf6 !important; }
+.rtag.me { background: var(--red) !important; }
+#pickTabs button { color: var(--navy) !important; background: var(--card) !important; border: 1px solid #cbbfa9 !important; }
+#pickTabs button.on { background: var(--navy) !important; color: #fdfbf6 !important; }
+.rcard { background: var(--card) !important; color: var(--ink) !important; border: 1px solid transparent !important; border-radius: 6px !important; box-shadow: 0 6px 16px rgba(40, 30, 20, .18); }
+.rcard.on { border-color: var(--navy) !important; }
+.rcard .r1 b { font: 600 19px "Cormorant Garamond", "Noto Serif SC", serif; }
+.rcard .r1 .t { color: var(--red) !important; } .rcard .steps { color: var(--ink) !important; } .rcard .steps .lift { color: var(--pine) !important; }
+.rcard .warn { color: var(--red) !important; } .rcard small, .rcard small.to { color: var(--muted) !important; }
+.rcard .go { background: var(--navy) !important; color: #fdfbf6 !important; border-radius: 999px !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; font-size: 16px !important; }
+.rcard:not(.on) .go { background: rgba(34, 52, 77, .45) !important; }
+.rcard .doc { color: var(--navy) !important; }
+.pickLinks a { color: var(--navy) !important; text-shadow: 0 0 6px #fdfbf6, 0 0 2px #fdfbf6 !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; font-size: 15px; }
+#trickBtn { background: #fdfbf6 !important; color: var(--navy) !important; border: 0 !important; box-shadow: 0 6px 14px rgba(40, 30, 20, .22) !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif !important; }
+#trickBtn.on, #trickWheel .opt.hot { background: var(--navy) !important; color: #fdfbf6 !important; }
+#trickWheel .opt { background: #fdfbf6 !important; color: var(--navy) !important; border: 0 !important; box-shadow: 0 6px 14px rgba(40, 30, 20, .22); }
+#bigMap .bar { background: var(--card) !important; color: var(--ink) !important; border: 0 !important; border-radius: 6px !important; }
+#bigMap button { color: var(--navy) !important; border: 1px solid #cbbfa9 !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
+#bigMap .pickCard { background: var(--card) !important; border: 0 !important; border-radius: 6px !important; color: var(--ink) !important; }
+#bigMap .pickCard .go { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+/* The route guide: paper, no wooden rods. */
+#guide .rod { height: 6px !important; background: #e6dccb !important; margin: 0 !important; border-radius: 3px !important; }
+#guide .rod::before, #guide .rod::after { display: none !important; }
+#guide .paper { background: #fdfbf6 !important; }
+#guide .ink h2 { color: var(--navy) !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; border-bottom-color: var(--line) !important; }
+#guide .ink h3 { color: var(--muted) !important; } #guide .ink .warn { color: var(--red) !important; }
+#guide .ink button.opt { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; }
+#guide .ink button.opt.go { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+#credit { color: rgba(60, 50, 40, .55) !important; text-shadow: none !important; }
+
+/* The mountain page */
+#title b { font: 600 22px "Cormorant Garamond", "Noto Serif SC", serif; }
+#title span, #title span a { color: var(--muted) !important; }
+#bar button { color: var(--navy) !important; background: var(--card) !important; border: 1px solid #cbbfa9 !important; border-radius: 999px !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; font-size: 16px; }
+#bar button.on { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+#timePanel button { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; }
+#timePanel #live, #timePanel button.on { background: var(--navy) !important; color: #fdfbf6 !important; }
+#timePanel label { color: var(--muted) !important; }
+#miniTop button, .plans button { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; }
+.plans button.on { background: var(--navy) !important; color: #fdfbf6 !important; }
+.pin b { background: var(--card) !important; color: var(--navy) !important; border: 1px solid #cbbfa9 !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
+.pin.on b { background: var(--navy) !important; color: #fdfbf6 !important; }
+.ltag { background: var(--card) !important; border: 1px solid #cbbfa9 !important; } .ltag b { color: var(--navy) !important; } .ltag small { color: var(--muted) !important; }
+.ltag.on { background: var(--navy) !important; } .ltag.on b, .ltag.on small { color: #fdfbf6 !important; }
+.liftCard { background: var(--card) !important; color: var(--ink) !important; border: 1px solid transparent !important; border-radius: 6px !important; }
+.liftCard.on { border-color: var(--navy) !important; }
+.liftCard button { color: var(--navy) !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; border-radius: 999px !important; }
+.liftCard button.go { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
+#base h2 button { color: var(--navy) !important; }
+/* The way home: the start page's tabs, in the menu. */
+.navrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 10px; }
+.navrow a { display: grid; justify-items: center; gap: 2px; padding: 8px 2px; text-decoration: none; color: var(--navy); background: #fdfbf6; border: 1px solid #e2d8c6; border-radius: 6px; font: 14px "Cormorant Garamond", "Noto Serif SC", serif; }
+.navrow svg { width: 28px; height: 28px; }
+#navBtn { float: right; margin: -2px 0 0 8px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #cbbfa9; background: #fdfbf6; color: var(--navy); font-size: 16px; cursor: pointer; }

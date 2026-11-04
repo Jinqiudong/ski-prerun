@@ -26,6 +26,7 @@ const EN = {
   "选你的穿搭": "Pick your outfit", "先选一套穿搭，再选雪场": "An outfit first, then a resort", "穿搭模版": "Outfits", "我的穿搭": "My outfits",
   "🎨 改颜色": "🎨 Colours", "🎨 改颜色 · 存成我的": "🎨 Colours · save as mine", "穿这套去滑 ›": "Ride in this ›", "给这套穿搭取个名字": "Name this outfit", "比如：周末粉雪": "e.g. Weekend powder",
   "改颜色": "Colours", "穿搭加载中…": "Loading…", "还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。": "None yet. Pick an outfit, tap Colours to change a few things, give it a name, and it's saved here.",
+  "预滑路书": "Roadbook", "设置": "Settings", "语言": "Language", "⚙ 设置": "⚙ Settings", "你从哪飞（印在机票上）": "Where you fly from (printed on your pass)", "📍 用我的位置": "📍 Use my location", "最近的机场：{x}": "Nearest airport: {x}", "比如 SFO": "e.g. SFO", "定位不到，手动填吧": "Can't find you — type it in", "在「改一改」里填从哪飞": "set it in Edit",
   "外套": "Jacket", "雪裤": "Pants", "头盔": "Helmet", "雪镜": "Goggles", "单板": "Snowboard", "删除": "Delete", "🎨 换装 · 存成新人物": "🎨 Dress · save as new", "先取个名字": "Name it first",
   "改颜色，取个名字，保存到这台手机": "Change colours, name it, save it on this phone", "人物没加载出来，刷新试试": "The rider didn't load: try refreshing",
   "滑过 {a}/{b} 条雪道 · {km} 公里": "Skied {a}/{b} runs · {km} km", "滑过 {a}/{b} 条雪道 · {km} 公里 · {n} 趟": "Skied {a}/{b} runs · {km} km · {n} rides",
@@ -42,7 +43,7 @@ const EN = {
   "🗺 雪场地图 · 点一个地方，选从哪里出发": "🗺 Trail map · tap a spot to start from there", "🫧 放下防风罩": "🫧 Lower the bubble", "🫧 收起防风罩": "🫧 Raise the bubble",
   "← 回全景": "← Overview", "↻ 转一圈": "↻ Spin", "下雪": "Snow", "今天想怎么滑": "How do you want to ski today", "俯视": "Top", "全景": "Overview", "回到实时": "Now",
   "坐缆车上山 ›": "Ride up ›", "多云": "Cloudy", "山顶直接出发 ": "Straight from the top ", "巡航（蓝）": "Cruise (blue)", "挑战（黑）": "Challenge (black)", "换人物/雪场": "Change rider/resort",
-  "滑下去能接上": "Ski down to", "点绿色标签选 base · 点右上角切时间和天气 · ": "Tap a green tag for a base · top right for time and weather · ", "热身（绿）": "Warm up (green)", "生成山体…": "Building the mountain…",
+  "滑下去能接上": "Ski down to", "点绿色标签选 base · 点右上角切时间和天气 · ": "Tap a green tag for a base · top right for time and weather · ", "点绿色标签选 base · 点右上角切时间和天气": "Tap a green tag for a base · top right for time and weather", "热身（绿）": "Warm up (green)", "生成山体…": "Building the mountain…",
   "自动旋转": "Spin", "跳过 ⏭": "Skip ⏭", "近看": "Close", "详情": "Details", "坐这条上山 ›": "Ride this one up ›",
   "🗺 雪场地图": "🗺 Trail map", "📖 滑雪记录": "📖 Ski log", "🪐 小地图换成小星球": "🪐 Little-planet map", "🗺 小地图改回平面": "🗺 Flat map", "🏔 回沙盘": "🏔 Back to the model", "🧑 换人物 / 换雪场": "🧑 Rider / resort",
   "看全图，选从哪里出发": "See it all, start anywhere", "这一趟怎么走的，明天照着走": "This run's way, to follow tomorrow", "这个雪场你滑过的地方": "Where you've skied here", "右上角的小地图样式": "The corner map's style", "回到开始页": "Back to the start",
@@ -99,4 +100,18 @@ export function langSwitch() {
   b.innerHTML = `<button data-l="zh" class="${EN_ON ? "" : "on"}">中</button><button data-l="en" class="${EN_ON ? "on" : ""}">EN</button>`;
   b.onclick = (e) => { const l = e.target.dataset.l; if (l && l !== lang) setLang(l); };
   return b;
+}
+
+// Settings: for now the language. A sheet over whatever page you're on.
+export function openSettings() {
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;inset:0;z-index:60;background:rgba(40,34,28,.35);display:flex;align-items:flex-end";
+  el.innerHTML = `<div style="width:100%;background:#fdfbf6;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,25,10,.25);font-family:'Noto Serif SC',serif;color:#33302c">
+    <div style="font:500 10px Oswald,sans-serif;letter-spacing:.3em;color:#8a8278">SETTINGS</div>
+    <div style="font:600 28px 'Cormorant Garamond','Noto Serif SC',serif;color:#22344d;margin:2px 0 14px">${t("设置")}</div>
+    <div style="font:16px 'Cormorant Garamond','Noto Serif SC',serif;color:#6f675e;margin-bottom:8px">${t("语言")} · Language</div>
+    <div style="display:flex;gap:8px">${[["zh", "中文"], ["en", "English"]].map(([l, n]) => `<button data-l="${l}" style="flex:1;font:600 17px 'Cormorant Garamond','Noto Serif SC',serif;padding:10px;border-radius:6px;border:1px solid ${l === lang ? "#22344d" : "#cbbfa9"};background:${l === lang ? "#22344d" : "#f6f1e7"};color:${l === lang ? "#fdfbf6" : "#22344d"}">${n}</button>`).join("")}</div>
+    <button data-x style="margin-top:16px;width:100%;font:16px 'Cormorant Garamond','Noto Serif SC',serif;padding:9px;border-radius:999px;border:1px solid #cbbfa9;background:#fdfbf6;color:#22344d">${t("收起")}</button></div>`;
+  document.body.append(el);
+  el.onclick = (e) => { const l = e.target.dataset?.l; if (l && l !== lang) setLang(l); else if (e.target === el || e.target.dataset?.x !== undefined) el.remove(); };
 }

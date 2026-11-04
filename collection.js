@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "./i18n.js?v=5";
+import { EN_ON } from "./i18n.js?v=7";
 
 const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
 const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78, w: 140 }; // the painted map (tools/bake_map.py) and its width in scene units

@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=5";
-import { daysOf } from "./roadbook.js?v=2";
+import { t, EN_ON } from "./i18n.js?v=7";
+import { daysOf } from "./roadbook.js?v=3";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -25,6 +25,13 @@ const ABOUT = {
 };
 const CITY = { SFO: "San Francisco", LAX: "Los Angeles", SEA: "Seattle", JFK: "New York", EWR: "Newark", LGA: "New York", BOS: "Boston", ORD: "Chicago", IAH: "Houston", DFW: "Dallas", ATL: "Atlanta", MIA: "Miami", SAN: "San Diego", PDX: "Portland", SJC: "San Jose", OAK: "Oakland", PHX: "Phoenix", SLC: "Salt Lake City", MSP: "Minneapolis", DCA: "Washington", IAD: "Washington", AUS: "Austin", YVR: "Vancouver", YYZ: "Toronto", PEK: "Beijing", PVG: "Shanghai", SHA: "Shanghai", CAN: "Guangzhou", SZX: "Shenzhen", HKG: "Hong Kong", TPE: "Taipei", NRT: "Tokyo", HND: "Tokyo", ICN: "Seoul", LHR: "London", DEN: "Denver" };
 const BANDS = [C.ink, C.pine, C.wine];
+// Airports people fly to Denver from, to find the nearest one to where you are.
+const AIRPORTS = { SFO: [37.62, -122.38], OAK: [37.72, -122.22], SJC: [37.36, -121.93], LAX: [33.94, -118.41], SAN: [32.73, -117.19], SEA: [47.45, -122.31], PDX: [45.59, -122.6], PHX: [33.43, -112.01], SLC: [40.79, -111.98], DEN: [39.86, -104.67], DFW: [32.9, -97.04], IAH: [29.99, -95.34], AUS: [30.19, -97.67], ORD: [41.98, -87.9], MSP: [44.88, -93.22], ATL: [33.64, -84.43], MIA: [25.79, -80.29], BOS: [42.36, -71.01], JFK: [40.64, -73.78], EWR: [40.69, -74.17], IAD: [38.95, -77.46], DCA: [38.85, -77.04], YVR: [49.19, -123.18], YYZ: [43.68, -79.63], PEK: [40.08, 116.6], PVG: [31.14, 121.81], CAN: [23.39, 113.3], SZX: [22.64, 113.81], HKG: [22.31, 113.91], TPE: [25.08, 121.23], NRT: [35.77, 140.39], HND: [35.55, 139.78], ICN: [37.46, 126.44], LHR: [51.47, -0.45] };
+const nearestAirport = (lat, lon) => {
+  let best = null, bd = Infinity;
+  for (const [code, [a, b]] of Object.entries(AIRPORTS)) { const d = (a - lat) ** 2 + ((b - lon) * Math.cos((lat * Math.PI) / 180)) ** 2; if (d < bd) { bd = d; best = code; } }
+  return best;
+};
 
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]").map(norm); } catch { return []; } };
 const save = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* full */ } };
@@ -235,7 +242,7 @@ export class Trips {
         <div class="band" style="background:${band}"><span>✈ PRE-RUN AIR</span><span>${unknown ? "" : `${g.from} → `}DEN · ${names}</span></div>
         <div style="flex:1;padding:5px 10px 6px;display:flex;flex-direction:column;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:6px">
-            <div><div class="code">${unknown ? '<span class="setfrom" data-setfrom>???</span>' : g.from}</div><div class="city">${unknown ? `<span class="setfrom" data-setfrom>${t("点这里填你从哪飞")}</span>` : esc(CITY[g.from] || "")}</div></div>
+            <div><div class="code">${unknown ? "???" : g.from}</div><div class="city">${unknown ? t("在「改一改」里填从哪飞") : esc(CITY[g.from] || "")}</div></div>
             <div style="flex:1;display:flex;align-items:center;margin-bottom:12px;color:${band}"><i style="flex:1;border-top:1px dashed #b9b0a3"></i><span style="font-size:12px;margin:0 3px">✈</span><i style="flex:1;border-top:1px dashed #b9b0a3"></i></div>
             <div style="text-align:right"><div class="code" style="color:${C.red}">DEN</div><div class="city">Denver</div></div></div>
           <div class="grid">${[["PASSENGER", names], ["FLIGHT", `PR ${1118 + k * 7}`], ["DATE", short(tr.from)], ["SEAT", seat], ["PASS", pass]].map(([a, v]) => `<div><div class="lab">${a}</div><b>${v}</b></div>`).join("")}</div>
@@ -263,16 +270,8 @@ export class Trips {
         setTimeout(() => { order = [...order.slice(1), order[0]]; top.style.opacity = "1"; lay(); }, 260);
       };
     }
-    for (const s of el.querySelectorAll("[data-setfrom]")) s.onclick = (e) => { e.stopPropagation(); this.setFrom(tr); };
   }
-  setFrom(tr) {
-    const code = (prompt(t("你从哪个机场飞？（比如 SFO）"), "") || "").trim().toUpperCase();
-    if (!/^[A-Z]{3}$/.test(code)) return;
-    if (!tr.people.length) tr.people = [{ name: this.me, from: "" }];
-    (tr.people.find((p) => p.name === this.me) || tr.people[0]).from = code;
-    if (tr.id) save(this.list.map((x) => (x.id === tr.id ? tr : x)));
-    this.show(tr, !tr.id);
-  }
+
 
   // ---- The trip list.
   render() {
@@ -396,6 +395,8 @@ export class Trips {
     const now = today();
     const d = tr ? JSON.parse(JSON.stringify(tr)) : { id: null, name: "", from: plus(now, 14), to: plus(now, 16), passes: ["ikon"], maybe: [], people: [{ name: this.me, from: "" }], notes: "" };
     let picking = false, month = d.from;
+    if (!d.people.length) d.people = [{ name: this.me, from: "" }];
+    const meP = () => d.people.find((p) => p.name === this.me) || d.people[0];
     const draw = () => {
       const open = this.opened(d.passes).map((r) => r.id);
       d.maybe = d.maybe.filter((id) => open.includes(id));
@@ -407,9 +408,24 @@ export class Trips {
         <div class="tiles">${this.resorts.map((r) => { const ok = open.includes(r.id); return `<button class="tile ${!ok ? "no" : d.maybe.includes(r.id) ? "on" : d.maybe.length ? "off" : ""}" data-id="${r.id}" style="background-image:url(${paintUrl(r.id)})" ${ok ? "" : "disabled"}><span>${esc(this.name(r.id))}</span></button>`; }).join("")}</div>
         ${d.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
         <div class="chips" style="margin-top:10px"><button class="chip ${d.maybe.length ? "" : "on"}" data-any>${t("🌨 还没想好，都行")}</button></div>
+        <div class="sec">④ ${t("你从哪飞（印在机票上）")}</div>
+        <div style="display:flex;gap:8px"><input class="field f-from" maxlength="3" style="flex:1;text-transform:uppercase;font-family:Oswald,sans-serif;letter-spacing:.1em" value="${esc(meP().from)}" placeholder="${t("比如 SFO")}"><button class="ghostbtn locate" style="flex:none">${t("📍 用我的位置")}</button></div>
+        <div class="note fromnote">${meP().from && CITY[meP().from] ? CITY[meP().from] : ""}</div>
         <div class="sec">${t("叫什么（可以不填）")}</div><input class="field f-name" maxlength="30" value="${esc(d.name)}" placeholder="${EN_ON ? "e.g. First Tracks 2026" : "比如：2026 开板！"}">
         <div class="acts"><button class="ghostbtn main save">${t("保存，发给朋友 ✈")}</button></div>`;
-      const keepName = () => (d.name = this.box.querySelector(".f-name").value);
+      const keepName = () => { d.name = this.box.querySelector(".f-name").value; const f = this.box.querySelector(".f-from").value.trim().toUpperCase(); meP().from = /^[A-Z]{3}$/.test(f) ? f : ""; };
+      const locate = (ask) => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition((p) => {
+          const code = nearestAirport(p.coords.latitude, p.coords.longitude), f = this.box.querySelector(".f-from");
+          if (!f || (!ask && f.value)) return;
+          f.value = code; meP().from = code;
+          this.box.querySelector(".fromnote").textContent = t("最近的机场：{x}", { x: `${code} · ${CITY[code] || ""}` });
+        }, () => { if (ask) this.box.querySelector(".fromnote").textContent = t("定位不到，手动填吧"); }, { timeout: 10000, maximumAge: 3600e3 });
+      };
+      this.box.querySelector(".locate").onclick = () => locate(true);
+      // Already allowed? Then fill it in without asking.
+      if (!meP().from) navigator.permissions?.query({ name: "geolocation" }).then((q) => { if (q.state === "granted") locate(false); }).catch(() => {});
       this.calendar(d, this.box.querySelector(".cal"), month, (day) => {
         keepName();
         if (!picking || day < d.from) { d.from = day; d.to = day; picking = true; }

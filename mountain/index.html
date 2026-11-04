@@ -128,10 +128,12 @@
     try { if (!JSON.parse(localStorage.getItem("prerun") || "{}").rider) location.replace("../start.html"); } catch { /* storage off: carry on */ }
   </script>
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../ride.css?v=1">
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div id="title" class="glass"><b>Copper Mountain</b><span>点绿色标签选 base · 点右上角切时间和天气 · <a href="../start.html" style="color:#9fc3ff">换人物/雪场</a></span></div>
+  <div id="title" class="glass"><button id="navBtn" aria-label="菜单">☰</button><b>Copper Mountain</b><span>点绿色标签选 base · 点右上角切时间和天气</span></div>
   <div id="vignette"></div>
   <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
   <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
@@ -158,6 +160,6 @@
     <button class="glass on" id="lifts">缆车</button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=31"></script>
+  <script type="module" src="mountain.js?v=32"></script>
 </body>
 </html>
