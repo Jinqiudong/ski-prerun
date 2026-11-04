@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=10";
+import { Rider, Tracks, Spray } from "./rider.js?v=11";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, tricksOf, startTrick } from "./boarder.js?v=11";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
@@ -31,11 +31,6 @@ addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-
-const DESC = {
-  A: "A 半写实：分层下垂的云杉、带压雪条纹的雪道、带蓝色防风罩的六人吊椅（American Flyer 实物就是这种）、真实天空和远山雾气",
-  C: "C 风格化：块面感的地形和树、柔和的粉蓝色调、干净的色块和雾，像一张插画",
-};
 
 let seed = 7;
 const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -210,60 +205,6 @@ function bubbleMatrix(u, out = new THREE.Matrix4()) {
 }
 
 // ---------- Trees ----------
-// A: a spruce of drooping, ragged tiers, snow lying on the upper ones. Unit height, ~260 triangles.
-function spruceA() {
-  const pos = [], col = [];
-  const dark = new THREE.Color(0x173326), tip = new THREE.Color(0x2c553b), snow = new THREE.Color(0xeef3fa), c = new THREE.Color();
-  const N = 11, K = 11;
-  const push = (x, y, z, color) => { pos.push(x, y, z); col.push(color.r, color.g, color.b); };
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1), y = 0.12 + t * 0.8, r = 0.3 * Math.pow(1 - t, 0.9) + 0.035, droop = 0.07 + r * 0.25;
-    const rot = rand() * 6.28, ring = [];
-    for (let k = 0; k < K * 2; k++) {
-      const a = rot + (k / (K * 2)) * Math.PI * 2, rr = r * (k % 2 ? 0.6 : 1) * (0.85 + rand() * 0.3);
-      const snowy = Math.min(0.9, Math.max(0, (0.35 + t * 0.5) * (rand() * 1.3 - 0.15)));
-      ring.push([Math.cos(a) * rr, y - droop * (k % 2 ? 0.6 : 1) - rand() * 0.015, Math.sin(a) * rr, c.copy(tip).lerp(snow, snowy).clone()]);
-    }
-    const centre = c.copy(dark).lerp(snow, t * 0.25).clone();
-    for (let k = 0; k < ring.length; k++) {
-      const a = ring[k], b = ring[(k + 1) % ring.length];
-      push(0, y + 0.05, 0, centre); push(a[0], a[1], a[2], a[3]); push(b[0], b[1], b[2], b[3]);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  const trunk = new THREE.CylinderGeometry(0.018, 0.03, 0.25, 6).translate(0, 0.12, 0).toNonIndexed();
-  trunk.setAttribute("color", new THREE.Float32BufferAttribute(new Array(trunk.attributes.position.count).fill([0.27, 0.19, 0.13]).flat(), 3));
-  trunk.deleteAttribute("uv");
-  const out = mergeGeometries([geo, trunk.deleteAttribute("normal") && trunk]);
-  out.computeVertexNormals();
-  return out;
-}
-
-// Stacked cones, flat-shaded: C's tree everywhere, and A's tree far from the lift.
-function coneTree(green, snowCol, sides) {
-  const parts = [];
-  for (const [y, h, r] of [[0.08, 0.42, 0.3], [0.36, 0.36, 0.22], [0.6, 0.4, 0.14]]) {
-    const g = new THREE.ConeGeometry(r, h, sides, 1).translate(0, y + h / 2, 0).toNonIndexed();
-    g.computeVertexNormals();
-    const p = g.attributes.position, n = g.attributes.normal, col = [];
-    const c = new THREE.Color();
-    for (let i = 0; i < p.count; i++) {
-      const top = (p.getY(i) - y) / h;
-      c.set(green).lerp(new THREE.Color(snowCol), top > 0.55 && n.getY(i) > 0.3 ? 0.85 : 0);
-      col.push(c.r, c.g, c.b);
-    }
-    g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-    g.deleteAttribute("uv");
-    parts.push(g);
-  }
-  const trunk = new THREE.CylinderGeometry(0.02, 0.03, 0.12, 5).translate(0, 0.06, 0).toNonIndexed();
-  trunk.setAttribute("color", new THREE.Float32BufferAttribute(new Array(trunk.attributes.position.count).fill([0.35, 0.25, 0.2]).flat(), 3));
-  trunk.deleteAttribute("uv");
-  return mergeGeometries([...parts, trunk]);
-}
-
 // Where trees stand: the OSM woods near the lift, kept off the runs and out of the cleared lift line.
 function treeSpots(T, R, mask, line, M = 900, clear = 16, skip = null) {
   const xs = line.ground.map((p) => p.x), zs = line.ground.map((p) => p.z);
@@ -564,7 +505,7 @@ function runRibbon(T, pts, width, lift) {
 }
 
 // ---------- Lift hardware ----------
-function towerGeometries(line, look) {
+function towerGeometries(line) {
   const metal = [], dark = [];
   for (let i = 1; i < line.towers.length - 1; i++) {
     if (line.towers[i].station) continue;
@@ -572,14 +513,14 @@ function towerGeometries(line, look) {
     const top = ROPE_H - 0.9;
     const yaw = Math.atan2(line.dir.x, line.dir.z);
     const place = (g) => g.rotateY(yaw).translate(p.x, p.y, p.z);
-    metal.push(place(new THREE.CylinderGeometry(0.32, 0.55, top, look === "A" ? 10 : 6).translate(0, top / 2, 0)));
+    metal.push(place(new THREE.CylinderGeometry(0.32, 0.55, top, 10).translate(0, top / 2, 0)));
     metal.push(place(new THREE.BoxGeometry(HALF_GAUGE * 2 + 1.4, 0.45, 0.45).translate(0, top, 0)));
-    if (look === "A") metal.push(place(new THREE.CylinderGeometry(0.9, 1.1, 0.5, 10).translate(0, 0.25, 0))); // footing
+    metal.push(place(new THREE.CylinderGeometry(0.9, 1.1, 0.5, 10).translate(0, 0.25, 0))); // footing
     for (const s of [-1, 1]) {
       const x = s * HALF_GAUGE;
       metal.push(place(new THREE.BoxGeometry(0.2, 0.22, 3.4).translate(x, ROPE_H - 0.45, 0))); // sheave beam
       metal.push(place(new THREE.BoxGeometry(0.12, 0.5, 0.12).translate(x, ROPE_H - 0.68, 0)));
-      if (look === "A") for (let w = 0; w < 4; w++) dark.push(place(new THREE.CylinderGeometry(0.24, 0.24, 0.1, 14).rotateZ(Math.PI / 2).translate(x, ROPE_H - 0.24, -1.2 + w * 0.8)));
+      for (let w = 0; w < 4; w++) dark.push(place(new THREE.CylinderGeometry(0.24, 0.24, 0.1, 14).rotateZ(Math.PI / 2).translate(x, ROPE_H - 0.24, -1.2 + w * 0.8)));
     }
   }
   const strip = (g) => { g = g.toNonIndexed(); g.deleteAttribute("uv"); return g; };
@@ -607,7 +548,7 @@ function liftSign(lines, w = 6.4, h = 1.9) {
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
 }
 
-function terminal(p, dir, look, mats, { name, alt, top, upSide }) {
+function terminal(p, dir, mats, { name, alt, top, upSide }) {
   const g = new THREE.Group();
   const W = HALF_GAUGE + 2.2, steel = mats.metal;
   const foam = new THREE.MeshStandardMaterial({ color: 0x8d939b, roughness: 0.95 });
@@ -657,20 +598,6 @@ function terminal(p, dir, look, mats, { name, alt, top, upSide }) {
   g.rotation.y = Math.atan2(dir.x, dir.z);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
-}
-
-// ---------- Skies ----------
-function gradientSky(top, horizon, bottom) {
-  const geo = new THREE.SphereGeometry(20000, 32, 16);
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color(top) }, horizon: { value: new THREE.Color(horizon) }, bottom: { value: new THREE.Color(bottom) } },
-    vertexShader: "varying vec3 vP; void main() { vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position.z = gl_Position.w; }",
-    fragmentShader: "uniform vec3 top, horizon, bottom; varying vec3 vP; void main() { float h = vP.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.6)) : mix(horizon, bottom, pow(-h, 0.5)); gl_FragColor = vec4(c, 1.0); }",
-  });
-  const m = new THREE.Mesh(geo, mat);
-  m.renderOrder = -1;
-  return m;
 }
 
 // ---------- The scene for a look ----------
@@ -796,25 +723,22 @@ function floodlights(T, runs) {
   return group;
 }
 
-function build(look, ctx) {
+function build(ctx) {
   if (world) { scene.remove(world); world.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); } }); }
   world = new THREE.Group();
   scene.add(world);
   const { T, R, line, spots, tex, far, rider } = ctx;
-  const A = look === "A";
   seed = 7;
 
   // Light, sky and air.
   scene.background = null;
-  renderer.toneMapping = A ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-  renderer.toneMappingExposure = A ? 0.95 : 1;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.95;
   // The real sun for the resort right now (as on the miniature), sky and light from it; the weather
   // greys it once it has loaded (ctx.applySky).
   const s0 = solar(new Date(), ctx.R.origin.lat, ctx.R.origin.lon), sunDir = sunVector(s0);
   const day = sunDir.y > 0.02, lightDir = day ? sunDir.clone() : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
-  let sky = null, skyEnv = null, skyDome = null;
-  if (A) {
-    sky = new Sky();
+  const sky = new Sky();
     sky.scale.setScalar(20000);
     sky.material.uniforms.rayleigh.value = 2.2; // a deep, clean mountain blue
     sky.material.uniforms.mieCoefficient.value = 0.003;
@@ -823,7 +747,7 @@ function build(look, ctx) {
     // sunset in its colours; the physical sky only lights the scene (its reflections).
     sky.visible = false;
     world.add(sky);
-    skyDome = new THREE.Mesh(new THREE.SphereGeometry(25000, 32, 16), new THREE.ShaderMaterial({
+  const skyDome = new THREE.Mesh(new THREE.SphereGeometry(25000, 32, 16), new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: { sun: { value: new THREE.Vector3() }, top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color() } },
       vertexShader: "varying vec3 v; void main(){ v = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
@@ -833,22 +757,16 @@ function build(look, ctx) {
     }));
     skyDome.renderOrder = -1; skyDome.frustumCulled = false;
     world.add(skyDome);
-    skyEnv = { pm: new THREE.PMREMGenerator(renderer), scene: new THREE.Scene(), sky: new Sky() };
+  const skyEnv = { pm: new THREE.PMREMGenerator(renderer), scene: new THREE.Scene(), sky: new Sky() };
     skyEnv.sky.scale.setScalar(1000); skyEnv.scene.add(skyEnv.sky);
-    scene.fog = new THREE.FogExp2(0xc6d6e8, 0.00016);
-  } else {
-    world.add(gradientSky(0x86b6e6, 0xf3dccd, 0xe7e9f2));
-    scene.environment = null;
-    scene.fog = new THREE.Fog(0xe9e0e4, 400, 7500);
-  }
-  const hemi = new THREE.HemisphereLight(A ? 0x9fc2ff : 0xcfe0ff, A ? 0xb9b2a8 : 0xf0d8c8, A ? 0.55 : 1.15);
+  scene.fog = new THREE.FogExp2(0xc6d6e8, 0.00016);
+  const hemi = new THREE.HemisphereLight(0x9fc2ff, 0xb9b2a8, 0.55);
   world.add(hemi);
-  sun = new THREE.DirectionalLight(A ? 0xfff1dd : 0xffe4c8, A ? 3.2 : 1.9);
+  sun = new THREE.DirectionalLight(0xfff1dd, 3.2);
   sun.userData.dir = lightDir;
   ctx.applySky = (kind = "clear") => {
-    if (!A) return;
     const p = palette((s0.el * 180) / Math.PI, kind);
-    if (skyDome) { const u = skyDome.material.uniforms; u.sun.value.copy(sunDir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor); u.glow.value.copy(p.sun).multiplyScalar(kind === "clear" ? 1 : 0.3); }
+    { const u = skyDome.material.uniforms; u.sun.value.copy(sunDir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor); u.glow.value.copy(p.sun).multiplyScalar(kind === "clear" ? 1 : 0.3); }
     sky.material.uniforms.sunPosition.value.copy(sunDir);
     sky.material.uniforms.turbidity.value = { clear: 1.8, cloudy: 5, overcast: 12, snow: 14 }[kind];
     skyEnv.sky.material.uniforms.sunPosition.value.copy(sunDir);
@@ -883,19 +801,17 @@ function build(look, ctx) {
   }
 
   // Ground and far ranges.
-  const groundMat = A ? snowA(tex, true) : new THREE.MeshLambertMaterial({ color: 0xe9eef6, flatShading: true });
-  if (A) shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day);
+  const groundMat = snowA(tex, true);
+  shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day);
   const ground = new THREE.Mesh(ctx.groundGeo, groundMat);
   ground.receiveShadow = true;
   world.add(ground);
   const ranges = farTerrain(far, T);
-  ranges.material = A ? snowA(tex, true) : new THREE.MeshLambertMaterial({ color: 0xdfe3ee, flatShading: true }); // its colours: forest belts, rock
+  ranges.material = snowA(tex, true); // its colours: forest belts, rock
   world.add(ranges);
 
   // Runs near the lift.
-  const runMat = A
-    ? new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 })
-    : new THREE.MeshLambertMaterial({ color: 0xfbfcff, flatShading: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
+  const runMat = new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
   const near = (pts) => pts.some(([x, z]) => line.up.some((g, i) => i % 25 === 0 && Math.hypot(g.x - x, g.z - z) < 1400));
   const drawn = new Set();
   // Groomed runs; more can be added later along the way down (see addRunsNear).
@@ -910,10 +826,9 @@ function build(look, ctx) {
   };
   ctx.addRunsNear(near);
 
-  // Forest: detailed spruce near the lift in A, cones further out; cones everywhere in C.
-  const treeMat = A ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide }) : new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  // Forest: detailed spruce near the lift, simpler further out.
   const height = (s) => 13 + s.v * 13;
-  if (A) {
+  {
     const branchMat = foliageMat(tex.branch, tex.branchSnow, true), crownMat = foliageMat(tex.crown, tex.crownSnow, false);
     const bark = new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.95 });
     // Detailed trees near the line, simpler ones further out. Reused for the forest along a run.
@@ -932,26 +847,24 @@ function build(look, ctx) {
     const xs = line.ground.map((p) => p.x), zs = line.ground.map((p) => p.z), bx = [Math.min(...xs) - 850, Math.max(...xs) + 850, Math.min(...zs) - 850, Math.max(...zs) + 850];
     ctx.farSpots = farForest(T, ctx.mask, (x, z) => x > bx[0] && x < bx[1] && z > bx[2] && z < bx[3], coarse);
     ctx.forest(ctx.farSpots, -1);
-  } else {
-    world.add(plant(spots, coneTree(0x3f8574, 0xfaf6f2, 6), treeMat, height));
   }
 
   // Lift: towers, ropes, terminals, chairs.
-  const metalMat = A ? new THREE.MeshStandardMaterial({ color: 0x8b929c, metalness: 0.65, roughness: 0.42 }) : new THREE.MeshLambertMaterial({ color: 0xf2efe9, flatShading: true });
-  const darkMat = A ? new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.5, roughness: 0.5 }) : new THREE.MeshLambertMaterial({ color: 0x5a5d6a });
-  const tg = towerGeometries(line, look);
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x8b929c, metalness: 0.65, roughness: 0.42 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.5, roughness: 0.5 });
+  const tg = towerGeometries(line);
   const towers = new THREE.Mesh(tg.metal, metalMat);
   towers.castShadow = towers.receiveShadow = true;
   world.add(towers);
   if (tg.dark) { const d = new THREE.Mesh(tg.dark, darkMat); d.castShadow = true; world.add(d); }
-  const ropeMat = A ? new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.7, roughness: 0.35 }) : new THREE.MeshLambertMaterial({ color: 0x4d5060 });
-  for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, A ? 0.03 : 0.045, 5), ropeMat));
-  const houseMats = { house: A ? new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }) : new THREE.MeshLambertMaterial({ color: 0xd98c6a, flatShading: true }), roof: A ? new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 }) : new THREE.MeshLambertMaterial({ color: 0x4f5f78 }), metal: metalMat };
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.7, roughness: 0.35 });
+  for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, 0.03, 5), ropeMat));
+  const houseMats = { house: new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }), roof: new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 }), metal: metalMat };
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
   // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
-  world.add(terminal(line.towers[0].p.clone(), line.dir, look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
-  world.add(topTerm = terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), look, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
+  world.add(terminal(line.towers[0].p.clone(), line.dir, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
+  world.add(topTerm = terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
   if (ctx.night > 0) for (const t of [line.towers[0].p, line.towers[line.towers.length - 1].p]) { // the stations are lit at night
     const l = new THREE.PointLight(0xffe7c2, 900 * ctx.night, 90, 1.5);
     l.position.copy(t).add(new THREE.Vector3(0, 9, 0));
@@ -959,13 +872,13 @@ function build(look, ctx) {
   }
 
   const parts = ctx.chair;
-  const chairMetal = A ? metalMat : new THREE.MeshLambertMaterial({ color: 0x6b6f7d, flatShading: true });
-  const padMat = A ? new THREE.MeshStandardMaterial({ color: 0x1f2c47, roughness: 0.55 }) : new THREE.MeshLambertMaterial({ color: 0xe0665a, flatShading: true });
+  const chairMetal = metalMat;
+  const padMat = new THREE.MeshStandardMaterial({ color: 0x1f2c47, roughness: 0.55 });
   const n = Math.floor(line.total / CHAIR_GAP);
   chairsUp = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsUp = new THREE.InstancedMesh(parts.pad, padMat, n);
   chairsDown = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsDown = new THREE.InstancedMesh(parts.pad, padMat, n);
   // Copper's signature blue bubbles: tinted, glossy, see-through.
-  const bubbleMat = new THREE.MeshStandardMaterial({ color: CABIN ? 0xa9c4d8 : 0x2a6fe0, transparent: true, opacity: CABIN ? 0.22 : A ? 0.42 : 0.6, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
+  const bubbleMat = new THREE.MeshStandardMaterial({ color: CABIN ? 0xa9c4d8 : 0x2a6fe0, transparent: true, opacity: CABIN ? 0.22 : 0.42, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
   const rimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.5 });
   bubblesUp = new THREE.InstancedMesh(parts.bubble, bubbleMat, n); bubblesDown = new THREE.InstancedMesh(parts.bubble, bubbleMat, n);
   rimsUp = new THREE.InstancedMesh(parts.rim, rimMat, n); rimsDown = new THREE.InstancedMesh(parts.rim, rimMat, n);
@@ -984,7 +897,7 @@ function build(look, ctx) {
   rider.position.set(MY_SEAT, -2.95, 0.12);
   myChair.add(rider);
   world.add(myChair);
-  if (!TRIP) $("desc").textContent = DESC[look];
+  if (!TRIP) $("desc").textContent = "画面样稿：半写实的云杉、压雪的雪道、真实的天空和远山";
 }
 
 // ---------- At the top: get off, rise above the summit, pick a run, dive back down to ski it ----------
@@ -996,7 +909,7 @@ const ROUTE_GOLD = 0xf2b632;
 const fmtLen = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} 公里` : `${Math.round(m)} 米`);
 const fmtMin = (s) => `${Math.max(1, Math.round(s / 60))} 分钟`;
 // At the top: get off, rise above the summit, and plan where to go — a base, the next lift, or just a run.
-function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
+function topOfLift({ T, R, lift, line, ctx, getChair }) {
   const st = { phase: null, t0: 0, focus: new THREE.Vector3(), pick: null };
   const g1 = line.ground[line.ground.length - 1];
   const myLevel = (() => { try { const l = JSON.parse(localStorage.getItem("prerun") || "{}").level; return LEVELS.includes(l) ? l : "intermediate"; } catch { return "intermediate"; } })();
@@ -1116,30 +1029,10 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const pathDir = (pts, i) => { const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
   const nearestOn = (pts, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
-  // Put the rider in the gear for `k`: Rider A on a snowboard (once loaded), the built-in skier otherwise.
-  function wearFor(k) {
-    const want = k === "board" ? (boarderLoaded ? "riderA" : "board") : "ski";
-    if (ctx.rider.userData.look === want) return;
-    const next = want === "riderA" ? boarderModel() : riderModel(k);
-    next.userData.look = want;
-    next.position.copy(ctx.rider.position);
-    ctx.rider.parent?.add(next); ctx.rider.parent?.remove(ctx.rider);
-    ctx.rider = next;
-  }
-  let boarderLoaded = ctx.rider.userData.look === "riderA";
-  st.kind = kind;
-  const prepBoard = () => loadBoarder().then(() => { boarderLoaded = true; }).catch(() => {});
-  if (kind === "board") prepBoard();
-  st.setKind = (k) => {
-    st.kind = k;
-    try { localStorage.setItem("prerun", JSON.stringify({ ...JSON.parse(localStorage.getItem("prerun") || "{}"), kind: k })); } catch {}
-    if (k === "board") prepBoard();
-    const b = $("kindBtn"); if (b) b.textContent = k === "board" ? "🏂 单板（点这里换双板）" : "⛷ 双板（点这里换单板）";
-  };
   function startSki() {
     const P = chosen, path = P.path;
     camera.fov = 66; camera.updateProjectionMatrix(); // a wider view on the snow
-    setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now (ski or board)
+    setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now
     if (guide) guide.visible = true;
     setTimeout(showTrickBtn, 0);
     origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap();
@@ -1150,15 +1043,15 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     routeMarks = []; reveal = null;
     clearTags();
     dress(P);
-    wearFor(st.kind);
-    phys = new Rider(T, st.kind);
+    phys = new Rider(T);
     // Start a little way down, clear of the top station.
     let i0 = 0;
     while (i0 < path.length - 2 && P.dist[i0] < 25) i0++;
     phys.place(path[i0][0], path[i0][1], pathDir(path, i0), 2);
     const h0 = pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
-    tracks = new Tracks(scene, T, st.kind);
+    tracks?.dispose(scene);
+    tracks = new Tracks(scene, T);
     spray ||= new Spray(scene);
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
@@ -1432,7 +1325,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   function spawnStep(dt) {
     const t = (clock() - spawn.t0) / 1000, r = phys, rider = ctx.rider;
     r.speed = 0; r.dt = dt;
-    if (rider.userData.kind === "board" && rider.userData.mixer) poseBoarder(rider, r); else r.pose(rider);
+    poseBoarder(rider, r);
     const k = clamp((t - 0.45) / 0.45, 0, 1);
     rider.scale.multiplyScalar(Math.max(0.001, k * (1 + 0.35 * Math.sin(k * Math.PI)))); // a little overshoot
     if (!spawn.burst && t > 0.45) {
@@ -1574,7 +1467,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); }
       r.speed *= 0.15;
     }
-    if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
+    poseBoarder(ctx.rider, r);
     tracks.add(r);
     stepGuide(P, clock());
     const NL = ctx.nightLights;
@@ -1817,18 +1710,6 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     topTerm.updateMatrixWorld(true);
     return topTerm.localToWorld(new THREE.Vector3(-HALF_GAUGE, 0.25, -7.5));
   };
-  const ribbon = (pts, width, lift = 0.6) => {
-    const pos = [], idx = [];
-    pts.forEach(([x, z], i) => {
-      const [ax, az] = pts[Math.max(0, i - 1)], [bx, bz] = pts[Math.min(pts.length - 1, i + 1)];
-      let dx = bx - ax, dz = bz - az; const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
-      for (const sd of [-1, 1]) { const px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2; pos.push(px, T.heightAt(px, pz) + lift, pz); }
-      if (i) { const b = (i - 1) * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
-    });
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
-    return g;
-  };
-  const markMat = (color, opacity) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, fog: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -12, polygonOffsetUnits: -12 });
   const marks = new THREE.Group(); // faint: every run from this top; bold: the chosen plan, drawn in order
   let chosen = null, routeMarks = [], reveal = null;
   const tagBox = $("runTags"), cards = $("runCards");
@@ -1845,7 +1726,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("bubble").hidden = true;
     // No getting-off scene: arriving at the top cuts straight to choosing the way down.
     rider.position.copy(riderTo); rider.rotation.set(0, yaw0, 0);
-    if (rider.userData.mixer) standBoarder(rider, 1);
+    standBoarder(rider, 1);
     st.phase = "rise"; st.t0 = now; // a short lift up and back from the rider, then the cut to the miniature
     setupPick();
   };
@@ -1866,13 +1747,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       rider.position.lerpVectors(riderFrom, riderTo, u);
       rider.position.y += Math.sin(Math.min(1, t / 0.6) * Math.PI) * 0.15 * (1 - u);
       rider.rotation.set(0, yaw0, 0);
-      const ud = rider.userData;
-      if (ud.mixer) { if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider, (u - 0.25) / 0.75); }
-      else {
-      ud.yaw.rotation.set(0, 0, 0); ud.pivot.rotation.set(0, 0, 0); ud.stance.rotation.y = 0;
-      applyPose(rider, u < 0.25 ? { sit: true, knee: 0, fwd: 0.05, twist: 0, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: 0, spread: 0.08 }
-        : { knee: 0.8, fwd: 0.35, twist: 0, armsOut: 0.35, armsFwd: 0.55, elbow: 0.6, headYaw: 0, spread: 0.06 });
-      }
+      if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider, (u - 0.25) / 0.75);
       rider.position.y = Math.max(rider.position.y, T.heightAt(rider.position.x, rider.position.z));
       const c = rider.position.clone();
       camera.position.copy(camBehind(c, u * 2.4, 5.5, 2.2));
@@ -1991,7 +1866,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   let sprite = null;
   function makeSprite() {
     const rider = ctx.rider, W = 140, H = 180, L = 3; // render layer 3: only the rider and two lights
-    if (rider.userData.mixer) idleBoarder(rider); // standing on the board for the picture (the next frame poses it again)
+    idleBoarder(rider); // standing on the board for the picture (the next frame poses it again)
     const lights = [new THREE.HemisphereLight(0xffffff, 0x8a96a8, 2.2), new THREE.DirectionalLight(0xfff3e2, 2.6)];
     lights[1].position.copy(rider.localToWorld(new THREE.Vector3(1.5, 3, 3)));
     lights[1].target.position.copy(rider.position);
@@ -2165,7 +2040,6 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
       card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
       card.querySelector(".go").onclick = async (e) => {
-        if (st.kind === "board" && !boarderLoaded) { e.target.textContent = "人物加载中…"; await prepBoard(); }
         camera.clearViewOffset();
         startSki();
         $("pick").hidden = true; clearTags(); flash();
@@ -2303,24 +2177,17 @@ addEventListener("pointermove", (e) => {
 });
 addEventListener("pointerup", () => (drag = null));
 
-function sit(model, lookYaw) {
-  const u = model.userData;
-  // Rider A: hips on the cushion (it stands on the chair at the feet's height, 0.59 m under the seat).
-  if (u.mixer) { sitBoarder(model, lookYaw, new THREE.Vector3(0, 0.6, -0.08)); return; }
-  u.yaw.rotation.set(0, 0, 0); u.pivot.rotation.set(0, 0, 0); u.stance.rotation.y = 0;
-  applyPose(model, { sit: true, knee: 0, fwd: 0.05, twist: lookYaw * 0.25, armsOut: 0, armsFwd: 0.5, elbow: 0.8, headYaw: clamp(lookYaw * 0.75, -1, 1), spread: 0.08 });
-}
+// Rider A: hips on the cushion (it stands on the chair at the feet's height, 0.59 m under the seat).
+const sit = (model, lookYaw) => sitBoarder(model, lookYaw, new THREE.Vector3(0, 0.6, -0.08));
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
-// Ski or snowboard: ?kind= wins, else the saved setting (shared with the old game).
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
 const withResort = (url) => url + (url.includes("?") ? "&" : "?") + `resort=${RESORT}`;
 for (const a of document.querySelectorAll('a[href="mountain/"]')) a.href = withResort("mountain/");
-const KIND = params.get("kind") === "board" || params.get("kind") === "ski" ? params.get("kind") : settings.kind === "board" ? "board" : "ski";
-if (KIND === "board") loadBoarder().catch((e) => console.warn("Rider A did not load", e)); // start early, it is a few MB
+const riderLoad = loadBoarder(); // start early, it is a few MB
 async function main() {
   const [R, far] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json())]);
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
@@ -2331,10 +2198,7 @@ async function main() {
   const [snowD, snowN, rockD, branch, branchSnow, crown, crownSnow] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true),
     load("spruce_branch.png", true), load("spruce_snow.png"), load("spruce_crown.png", true), load("spruce_crown_snow.png")]);
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
-  await loadAvatar();
-  // Snowboarding: Rider A rides the lift too (when the model loads; else the built-in rider).
-  let riderA = false;
-  if (KIND === "board") try { await loadBoarder(); riderA = true; } catch (e) { console.warn("Rider A did not load", e); }
+  await riderLoad;
   const T = new Terrain(R), mask = treeMaskFn(R, T);
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
@@ -2343,12 +2207,9 @@ async function main() {
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
-  const kind = KIND;
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: riderA ? boarderModel() : riderModel(kind), lift, mask };
-  ctx.rider.userData.look = riderA ? "riderA" : kind;
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: boarderModel(), lift, mask };
   ctx.tex.cord.repeat.set(1, 1);
-  const current = "A"; // semi-realistic, decided 2026-11-01
-  build(current, ctx);
+  build(ctx);
   $("status").remove();
   // Run names carved into the snow, met on the way up.
   const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
@@ -2370,12 +2231,9 @@ async function main() {
   let skipping = null;
   $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
   $("again").addEventListener("click", () => location.reload());
-  $("skiDown").addEventListener("click", () => (location.href = `./?lift=${encodeURIComponent(lift.name)}&kind=${kind}`));
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
-  const top = topOfLift({ T, R, lift, line, ctx, kind, getChair: () => myChair });
+  const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair });
   window.__top = top;
-  $("kindBtn").onclick = () => top.setKind(top.kind === "board" ? "ski" : "board");
-  top.setKind(kind);
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();

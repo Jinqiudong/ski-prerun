@@ -7,16 +7,19 @@ Product contract: [venture-lab `product-incubator/products/48/PRODUCT.md`](https
 - Real data stays real: run names, difficulties, lifts and terrain come from OpenStreetMap and terrain tiles via `tools/bake.py`. Never invent runs, lifts or connections; mark gaps instead.
 - Never route a rider over runs harder than their chosen level without saying so.
 - Look: stylized realism — real proportions, soft snow, long blue shadows, boxed hand-drawn UI. Not chibi.
-- Ski and snowboard are both first-class: model, stance and physics differ.
+- Snowboard only (Rider A, regular or goofy). The old skier, the old game and the dressed base-body riders were removed on 2026-11-04.
 - It must run in a phone browser from a static site (GitHub Pages). No accounts, no server, no build step.
 - Always show the OpenStreetMap attribution and the "use the official trail map on the mountain" note.
 
 ## Code map
-- `main.js` — app: map, planner UI, journeys (lift rides and runs), HUD, minimap.
-- `world.js` — terrain, sun shadows, sky, forest, run layers, trail signs, lifts.
-- `rider.js` — rider models, slope physics, tracks, spray.
+- `start.html` / `start.js` — first screen: the rider (dress, stance), the resorts on a 3D map of Colorado (`collection.js`, from `data/region.*`), trips (`trips.js`), the ski log.
+- `mountain/` — a resort as a miniature: pick a base and a lift (`mountain.js`, `diorama.js`).
+- `look.html` / `look.js` — the ride: up the lift, then down the run you pick, with the guide, maps and tricks.
+- `boarder.js` — Rider A: model, colours, clips and poses. `rider.js` — board physics, tracks, spray.
+- `world.js` — terrain, far ranges, woods mask, run ribbons, lifts. `sky.js` — sun and weather palette.
 - `route.js` — route graph and planner (no three.js; tested in `tests/route.test.mjs`).
-- `tools/bake.py` — builds `data/<resort>.json`.
+- `mapview.js` (trail map), `skinav.js` (junctions), `snownames.js` (run names on the snow), `skilog.js` (what you've skied).
+- `tools/bake.py` builds `data/<resort>.json`; `tools/bake_far.py` the far ranges; `tools/bake_region.py` the Colorado map.
 
 ## Workflow
 - Follow venture-lab `WORKFLOW.md`: issue → branch → PR (`Closes #N`) → review/QA → merge. `main` deploys to Pages.

@@ -61,7 +61,7 @@ export function dressRider(scene, base, colors = {}) {
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 
-// root sits at the board's base with local +z the direction of travel, like rider.js's models:
+// root sits at the board's base with local +z the direction of travel, the way rider.js's physics moves it:
 //   root → yaw (board skidding across) → lean (board on its edge, rider inclined into the turn) → model
 export function boarderModel() {
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group();
@@ -229,8 +229,6 @@ export function startTrick(root, key) {
   u.trick = { ...t, t: 0 };
   return true;
 }
-export const inTrick = (root) => !!root?.userData?.trick;
-
 // Riding the lift and getting off: the rider faces the way the chair goes (root +z), not the board.
 // On the chair: seated, the leading foot still strapped in so the board hangs off it, the back foot free;
 // hands on the lap; lookYaw turns the head (and a little of the chest). The hips land on `seat`, a point

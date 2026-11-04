@@ -274,40 +274,6 @@ function placePins() {
     if (show) p.el.style.transform = `translate(${(v3.x * 0.5 + 0.5) * innerWidth}px, ${(-v3.y * 0.5 + 0.5) * innerHeight}px) translate(-50%, -100%)`;
   }
 }
-let liftTags = [], liftGlow = null;
-function chooseBase(T, R, base, basePins) {
-  const lifts = R.lifts.filter((l) => Math.hypot(l.pts[0][0] - base.x, l.pts[0][1] - base.z) < BASE_RADIUS)
-    .sort((a, b) => Math.hypot(a.pts[0][0] - base.x, a.pts[0][1] - base.z) - Math.hypot(b.pts[0][0] - base.x, b.pts[0][1] - base.z));
-  basePins.forEach((p) => p.el.classList.toggle("on", p.base === base));
-  liftTags.forEach((t) => { t.el.remove(); pins.splice(pins.indexOf(t), 1); });
-  liftTags = [];
-  if (liftGlow) scene.remove(liftGlow);
-  liftGlow = new THREE.Group();
-  const glow = new THREE.MeshBasicMaterial({ color: 0xe0402f, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
-  for (const l of lifts) {
-    liftGlow.add(new THREE.Mesh(ribbon(T, l.pts, 14, 1.2), glow));
-    const top = l.pts[l.pts.length - 1];
-    liftTags.push(pin(`🚡 ${l.name}`, "tag", new THREE.Vector3(top[0], T.heightAt(top[0], top[1]) * EXAG + 40, top[1])));
-  }
-  liftGlow.scale.y = EXAG;
-  scene.add(liftGlow);
-  // Fly to the base, looking up the mountain along its lifts.
-  const tops = lifts.map((l) => l.pts[l.pts.length - 1]);
-  const ux = tops.reduce((a, t) => a + t[0], 0) / Math.max(1, tops.length) - base.x, uz = tops.reduce((a, t) => a + t[1], 0) / Math.max(1, tops.length) - base.z;
-  const len = Math.hypot(ux, uz) || 1, y = T.heightAt(base.x, base.z), ye = y * EXAG;
-  controls.target.set(base.x + (ux / len) * 900, ye + 350, base.z + (uz / len) * 900);
-  camera.position.set(base.x - (ux / len) * 1700 + (uz / len) * 500, ye + 1200, base.z - (uz / len) * 1700 - (ux / len) * 500);
-  controls.autoRotate = false;
-  $("spin").classList.remove("on");
-  $("baseName").textContent = `🏠 ${base.name}`;
-  $("baseMeta").textContent = `山脚海拔 ${Math.round(T.data.hmin + y)} 米 · 从这里出发有 ${lifts.length} 条缆车`;
-  $("baseLifts").innerHTML = lifts.map((l) => {
-    const top = l.pts[l.pts.length - 1];
-    return `<li><span>🚡 ${l.name}</span><small>爬升 ${l.rise} 米 · 山顶 ${Math.round(T.data.hmin + T.heightAt(top[0], top[1]))} 米</small></li>`;
-  }).join("");
-  $("base").classList.add("show");
-}
-
 // Offsets in metres for Copper, seen from its villages to the north; c.k scales them to the resort's size
 // and c.rot turns them so every resort is seen from the side its bases are on, looking up the slopes.
 const at = (c, dx, dz) => [c.x + (dx * c.rot.c - dz * c.rot.s) * c.k, c.z + (dx * c.rot.s + dz * c.rot.c) * c.k];
@@ -324,6 +290,7 @@ function setView(name) {
   document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("on", b.dataset.view === name));
 }
 
+const RIDEABLE = ["chair_lift", "mixed_lift", "gondola", "cable_car"];
 async function main() {
   await status("下载地形…");
   const [R, far] = await Promise.all([fetch(`../data/${RESORT_ID}.json`).then((r) => r.json()), fetch(`../data/${RESORT_ID}-far.json`).then((r) => r.json())]);
@@ -449,9 +416,6 @@ async function main() {
   $("baseClose").addEventListener("click", () => {
     $("base").classList.remove("show");
     basePins.forEach((p) => p.el.classList.remove("on"));
-    liftTags.forEach((t) => { t.el.remove(); pins.splice(pins.indexOf(t), 1); });
-    liftTags = [];
-    if (liftGlow) scene.remove(liftGlow);
     setView("hero");
   });
 
@@ -500,7 +464,7 @@ async function main() {
   }
   const tagBox = $("liftTags"), cards = $("liftCards");
   function openBase(base) {
-    const ls = liftsAt(base);
+    const ls = liftsAt(base).filter((l) => RIDEABLE.includes(l.kind)); // carpets and drag lifts aren't ridden in the game
     // Seen from the base looking up its main lift: the turn starts and ends there, the name plate on that side.
     const main = [...ls].sort((a, b) => b.rise - a.rise)[0];
     const u0 = main ? dio.facing(main) : 0;
@@ -609,13 +573,7 @@ async function main() {
     }
     go2(l);
   }
-  function go2(l) {
-    const kind = localStorage.getItem("prerun") ? JSON.parse(localStorage.getItem("prerun")).kind : "ski";
-    // Chairlifts and gondolas ride in the new look; carpets and drag lifts still go to the old game.
-    location.href = ["chair_lift", "mixed_lift", "gondola", "cable_car"].includes(l.kind)
-      ? `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`
-      : `../?lift=${encodeURIComponent(l.name)}&kind=${kind || "ski"}&resort=${RESORT_ID}`;
-  }
+  function go2(l) { location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.
   document.querySelectorAll("[data-plan]").forEach((b) => b.addEventListener("click", () => {

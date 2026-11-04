@@ -1,13 +1,13 @@
 # 雪场预滑 · Ski Pre-Run
 
-A playable version of a real ski resort: plan your day, ride the lifts and ski the runs the night before you go, so you know the way tomorrow. Prototype for Venture Lab idea [#48](https://github.com/Jinqiudong/venture-lab/issues/48). First resort: Copper Mountain, Colorado (155 runs, 23 lifts).
+A playable version of real ski resorts: pick your rider, ride the lifts and ski the runs the night before you go, so you know the way tomorrow. Prototype for Venture Lab idea [#48](https://github.com/Jinqiudong/venture-lab/issues/48). Nine Colorado Ikon resorts.
 
-- **Plan a route**: from a base village, restaurant or lift top to anywhere, capped at your level (green to double black). The planner chains lifts and runs (`route.js`) and shows each step with times.
-- **Ride it**: sit on the chair with the runs passing below named, then ski each run with turn-by-turn cues ("前方 120 米 向左 · 进 Main Vein"), trail signs at run starts, and a heading-up minimap. 👀 auto mode skis the route for you; 🗺 pauses to look at the rest of the route from above.
-- **Ski or snowboard**, set on the start screen; the rider, stance and physics change.
-- Map mode: drag to orbit, pinch to zoom, tap a run, lift or place. ☰ searches everything.
+- **Pick a resort** on a 3D map of central Colorado: the runs you've skied light up in colour; ski all of one and it flowers.
+- **Ride it**: choose a base and a lift on the resort miniature, sit on the chair with the runs below named, then at the top choose where to go and snowboard down with gold arrows on the snow, junction cards, a heading-up map and a full trail map.
+- **Plan a trip**: dates, resorts, pass and who's coming, a lift ticket per day; share it as a link.
+- **Rider A** snowboards, regular or goofy, in colours you choose.
 
-Run locally: `python3 -m http.server 8765`, then open http://localhost:8765/. Tests: `node --test tests/route.test.mjs`.
+Run locally: `python3 -m http.server 8765`, then open http://localhost:8765/start.html. Tests: `node --test tests/route.test.mjs`.
 
 ## Data
 

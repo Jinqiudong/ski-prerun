@@ -1,5 +1,5 @@
-// Finding the way while skiing: where the route meets other runs, the signs that stand there, arrows on
-// the snow before a turn, and a small heading-up map of the runs around the rider.
+// Finding the way while skiing: where the route meets other runs, the signs that stand there, and arrows on
+// the snow before a turn.
 import * as THREE from "three";
 
 const COLOR = { easy: "#22b35a", intermediate: "#1f6fe5", advanced: "#15171c", expert: "#15171c" };
@@ -115,44 +115,4 @@ export function chevrons(T, path, i, bearingOut) {
     g.add(m);
   }
   return g;
-}
-
-// Heading-up map around the rider: runs in their colours, the route in gold over them, lifts dark,
-// the destination flagged. Drawn into a canvas each few frames.
-export class Minimap {
-  constructor(canvas, R) {
-    this.cv = canvas; this.g = canvas.getContext("2d"); this.R = R;
-    this.radius = 450; // metres from the rider to the edge
-  }
-  draw(x, z, heading, route, dest) {
-    const { cv, g } = this, W = cv.width, H = cv.height, k = (W / 2) / this.radius;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, W, H);
-    g.fillStyle = "rgba(236,241,247,0.94)"; g.beginPath(); g.arc(W / 2, H / 2, W / 2, 0, Math.PI * 2); g.fill();
-    g.save();
-    g.beginPath(); g.arc(W / 2, H / 2, W / 2 - 2, 0, Math.PI * 2); g.clip();
-    // World (x, z) to screen with the heading pointing up: rotate by heading, flip so +x is right.
-    const c = Math.cos(heading), s = Math.sin(heading);
-    const P = (px, pz) => { const dx = px - x, dz = pz - z; return [W / 2 - (dx * c - dz * s) * k, H / 2 - (dx * s + dz * c) * k]; };
-    const line = (pts, color, w) => { g.beginPath(); pts.forEach(([px, pz], i) => { const [u, v] = P(px, pz); i ? g.lineTo(u, v) : g.moveTo(u, v); }); g.strokeStyle = color; g.lineWidth = w; g.stroke(); };
-    g.lineCap = g.lineJoin = "round";
-    const R2 = (this.radius * 1.5) ** 2, near = (pts) => pts.some(([px, pz], i) => i % 3 === 0 && (px - x) ** 2 + (pz - z) ** 2 < R2);
-    for (const r of this.R.runs) if (!r.area && near(r.pts)) line(r.pts, COLOR[r.level], 4);
-    for (const l of this.R.lifts) if (near(l.pts)) { g.setLineDash([5, 4]); line(l.pts, "#3a3f4a", 2); g.setLineDash([]); }
-    if (route) { line(route, "rgba(242,182,50,0.95)", 7); }
-    if (dest) {
-      const [u, v] = P(dest[0], dest[1]), du = clampTo(u, v, W);
-      g.font = "16px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("🏁", du[0], du[1]);
-    }
-    g.restore();
-    // The rider: a triangle in the middle, pointing up.
-    g.fillStyle = "#e2463d"; g.strokeStyle = "#fff"; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(W / 2, H / 2 - 9); g.lineTo(W / 2 + 7, H / 2 + 7); g.lineTo(W / 2 - 7, H / 2 + 7); g.closePath(); g.fill(); g.stroke();
-    g.strokeStyle = "rgba(20,32,51,0.5)"; g.lineWidth = 2; g.beginPath(); g.arc(W / 2, H / 2, W / 2 - 1, 0, Math.PI * 2); g.stroke();
-  }
-}
-// Keep a marker inside the round map (it sits on the rim when the place is further away).
-function clampTo(u, v, W) {
-  const dx = u - W / 2, dy = v - W / 2, d = Math.hypot(dx, dy), r = W / 2 - 12;
-  return d <= r ? [u, v] : [W / 2 + (dx / d) * r, W / 2 + (dy / d) * r];
 }

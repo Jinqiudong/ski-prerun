@@ -16,7 +16,10 @@ const day0 = (d) => new Date(d + "T00:00:00");
 const fmt = (d) => { const x = day0(d); return `${x.getMonth() + 1} 月 ${x.getDate()} 日`; };
 const WEEK = "日一二三四五六";
 const daysBetween = (a, b) => Math.round((day0(b) - day0(a)) / 86400000);
-const today = () => new Date().toISOString().slice(0, 10);
+// Dates as local YYYY-MM-DD (toISOString is UTC, a day off east or west of it).
+const ymd = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+const today = () => ymd(new Date());
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // A lift ticket, as in the journal.
 function ticket({ band, title, sub, extra = "", rot = 0, used = false, cls = "" }) {
@@ -33,8 +36,14 @@ export class Trips {
   get list() { return load(); }
   // A trip that came in a link (?trip=...): show it, offer to keep it.
   incoming(code) {
-    try { const t = JSON.parse(unb64(code)); if (t && t.days) { this.shared = t; return true; } } catch { /* a broken link */ }
-    return false;
+    // Only what a trip can hold: known passes and resorts, real dates, plain text (it comes from anyone).
+    try {
+      const t = JSON.parse(unb64(code)), str = (v, n) => String(v ?? "").slice(0, n);
+      const days = (Array.isArray(t?.days) ? t.days : []).filter((d) => DATE.test(d?.date) && this.byId[d?.resort]).slice(0, 14).map((d) => ({ date: d.date, resort: d.resort, note: str(d.note, 80) }));
+      if (!days.length || !DATE.test(t.from) || !DATE.test(t.to)) return false;
+      this.shared = { name: str(t.name, 20) || "滑雪行程", from: t.from, to: t.to, pass: t.pass in PASSES ? t.pass : "none", people: (Array.isArray(t.people) ? t.people : []).slice(0, 20).map((p) => str(p, 20)), notes: str(t.notes, 80), days };
+      return true;
+    } catch { return false; } // a broken link
   }
   link(t) { return `${location.origin}${location.pathname.replace(/[^/]*$/, "")}start.html?trip=${b64(JSON.stringify({ ...t, id: undefined }))}`; }
 
@@ -94,7 +103,7 @@ export class Trips {
   // New or edit: name, dates, resorts, pass, people; the days are filled in from the resorts and can be
   // changed one by one.
   edit(t) {
-    const now = today(), plus = (d, n) => { const x = day0(d); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    const now = today(), plus = (d, n) => { const x = day0(d); x.setDate(x.getDate() + n); return ymd(x); };
     const draft = t ? JSON.parse(JSON.stringify(t)) : { id: null, name: "", from: plus(now, 14), to: plus(now, 16), pass: "ikon", people: [this.me], notes: "", days: [], resortsPicked: [] };
     draft.resortsPicked ||= [...new Set(draft.days.map((d) => d.resort))];
     const fillDays = () => {
@@ -114,7 +123,8 @@ export class Trips {
           <label>备注</label><input class="f-notes" maxlength="80" placeholder="比如：周六早上 7 点出发，记得订停车" value="${esc(draft.notes)}">
         </div><div class="acts"><button class="go save">保存</button></div>`;
       const v = (c) => this.box.querySelector(c).value;
-      const keep = () => { draft.name = v(".f-name"); draft.from = v(".f-from"); draft.to = v(".f-to") < draft.from ? draft.from : v(".f-to"); draft.people = v(".f-people").split(/[,，、\s]+/).filter(Boolean); draft.notes = v(".f-notes"); };
+      // Read the form back (a trip is two weeks at most).
+      const keep = () => { draft.name = v(".f-name"); draft.from = v(".f-from"); draft.to = v(".f-to") < draft.from ? draft.from : v(".f-to") > plus(draft.from, 13) ? plus(draft.from, 13) : v(".f-to"); draft.people = v(".f-people").split(/[,，、\s]+/).filter(Boolean); draft.notes = v(".f-notes"); };
       this.box.querySelector(".back").onclick = () => (t ? this.open(t) : this.render());
       for (const el of this.box.querySelectorAll(".f-from,.f-to")) el.onchange = () => { keep(); draw(); };
       for (const el of this.box.querySelectorAll(".chip[data-id]")) el.onclick = () => { keep(); const id = el.dataset.id; draft.resortsPicked = draft.resortsPicked.includes(id) ? draft.resortsPicked.filter((x) => x !== id) : [...draft.resortsPicked, id];

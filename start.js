@@ -4,7 +4,6 @@ import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
 
 const $ = (id) => document.getElementById(id);
-const DEFAULT_SLOTS = 4; // the four default riders; the ones not made yet show as coming
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
 const SWATCHES = {
   jacket: ["#464e3f", "#6f7a62", "#8e9681", "#4a5a6e", "#2f3a4c", "#7b8a96", "#a39d8f", "#c2b49a", "#a8674f", "#8e4a36", "#a88584", "#6e5f6e", "#3b3d40", "#dcd7cc"],
@@ -13,10 +12,11 @@ const SWATCHES = {
   lens: ["#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
 };
 
-// ---- Saved state: { kind, rider (an id or a default's key), riders: [{ id, base, name, colors }] }
+// ---- Saved state: { rider (an id or a default's key), riders: [{ id, base, name, colors }], stances, resort }
 const load = () => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } };
 const st = load();
-st.riders ||= [];
+st.riders = (st.riders || []).filter((r) => r.base in RIDERS); // riders on a base model since removed are dropped
+delete st.kind; // everyone snowboards now
 const save = () => localStorage.setItem("prerun", JSON.stringify(st));
 const chosen = () => st.riders.find((r) => r.id === st.rider) || { id: st.rider in RIDERS ? st.rider : "rider_a", base: st.rider in RIDERS ? st.rider : "rider_a", name: RIDERS[st.rider]?.name || RIDERS.rider_a.name, colors: {}, isDefault: true };
 
@@ -50,36 +50,11 @@ addEventListener("resize", resize); resize();
 canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, a: turntable.rotation.y }; });
 addEventListener("pointermove", (e) => { if (drag) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
 addEventListener("pointerup", () => { drag = null; });
-// A head-and-shoulders portrait of the rider as dressed, saved for the maps on the mountain (the "you are
-// here" marker). Rendered off screen with its own camera, once each time the rider or the colours change.
-let portraitDue = false;
-const portraitRT = new THREE.WebGLRenderTarget(160, 160, { samples: 4 }), portraitCam = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
-portraitRT.texture.colorSpace = THREE.SRGBColorSpace; // written as the screen would show it
-function savePortrait() {
-  if (!rider) return;
-  const head = rider.userData.B.head.getWorldPosition(new THREE.Vector3()), keep = turntable.rotation.y;
-  turntable.rotation.y = 0; rider.updateMatrixWorld(true);
-  const h = rider.userData.B.head.getWorldPosition(new THREE.Vector3());
-  portraitCam.position.set(h.x + 0.25, h.y + 0.12, h.z + 1.7); portraitCam.lookAt(h.x, h.y - 0.02, h.z);
-  const bg = scene.background, exp = renderer.toneMappingExposure; scene.background = new THREE.Color(0xdbe8f6); renderer.toneMappingExposure = 1.35;
-  renderer.setRenderTarget(portraitRT); renderer.render(scene, portraitCam); renderer.setRenderTarget(null);
-  renderer.toneMappingExposure = exp;
-  scene.background = bg; turntable.rotation.y = keep;
-  const px = new Uint8Array(160 * 160 * 4);
-  renderer.readRenderTargetPixels(portraitRT, 0, 0, 160, 160, px);
-  const c = document.createElement("canvas"); c.width = c.height = 160;
-  const g = c.getContext("2d"), img = g.createImageData(160, 160);
-  for (let y = 0; y < 160; y++) img.data.set(px.subarray((159 - y) * 640, (160 - y) * 640), y * 640); // flip
-  g.putImageData(img, 0, 0);
-  try { localStorage.setItem("prerunAvatar", c.toDataURL("image/png")); } catch { /* storage full: keep the old one */ }
-  void head;
-}
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!drag) turntable.rotation.y += spin * dt;
   if (rider) idleBoarder(rider);
-  if (portraitDue && rider) { portraitDue = false; savePortrait(); }
   renderer.render(scene, camera);
 });
 
@@ -99,7 +74,6 @@ async function show(r) {
   }
   dressRider(rider.userData.model, r.base, r.colors);
   $("who").textContent = r.name;
-  portraitDue = true;
 }
 
 // ---- Picking
@@ -107,14 +81,11 @@ const dots = (r) => `<span class="dots">${Object.keys(RIDERS[r.base].parts).map(
 function renderPick() {
   const cur = chosen();
   $("defaults").innerHTML = "";
-  const keys = Object.keys(RIDERS);
-  for (let i = 0; i < DEFAULT_SLOTS; i++) {
-    const key = keys[i], b = document.createElement("button");
-    b.className = "card" + (key && cur.isDefault && cur.base === key ? " on" : "");
-    if (key) {
-      b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>单板 · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
-      b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
-    } else { b.disabled = true; b.innerHTML = `<b>制作中</b><small>新人物</small>`; }
+  for (const key of Object.keys(RIDERS)) {
+    const b = document.createElement("button");
+    b.className = "card" + (cur.isDefault && cur.base === key ? " on" : "");
+    b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>单板 · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
+    b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
     $("defaults").append(b);
   }
   $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。</small></div>`;
@@ -197,12 +168,12 @@ async function setTab(t) {
 }
 let rider_ready = false;
 for (const b of $("tabs").children) b.onclick = () => setTab(b.dataset.tab);
-$("useBtn").onclick = () => { st.rider = chosen().id; st.kind = "board"; save(); setTab("resort"); };
+$("useBtn").onclick = () => { st.rider = chosen().id; save(); setTab("resort"); };
 const resortList = async () => (await (await fetch("data/resorts.json")).json()).filter((r) => r.ready);
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=6");
+    const { Collection } = await import("./collection.js?v=7");
     collection = new Collection(cv, $("ctags"));
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -225,7 +196,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=2");
+    const { Trips } = await import("./trips.js?v=3");
     trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);
@@ -253,7 +224,9 @@ async function openJournal(r) {
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village")), log = new SkiLog(r.id, R);
   const skied = log.stretches(), track = logOf()[r.id]?.lastTrack || [], s = log.stats();
-  const xs = skied.flat().map((p) => p[0]), zs = skied.flat().map((p) => p[1]);
+  // Frame what you skied; else your last track; else the whole resort.
+  const [bx0, bz0, bx1, bz1] = R.bounds, pts = skied.length ? skied.flat() : track.length ? track : [[bx0, bz0], [bx1, bz1]];
+  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
   const box = $("jMap"), cv = box.querySelector("canvas");
   box.hidden = false;
   const v = { cx: (Math.min(...xs) + Math.max(...xs)) / 2, cz: (Math.min(...zs) + Math.max(...zs)) / 2, zoom: 0.2 };
