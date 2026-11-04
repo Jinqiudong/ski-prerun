@@ -382,7 +382,7 @@ async function main() {
     u.sun.value.copy(dir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor);
     u.glow.value.copy(p.sun).multiplyScalar(look.kind === "clear" ? 1 : 0.3);
     scene.fog.color.copy(p.hor);
-    [scene.fog.near, scene.fog.far] = p.fog;
+    look.fog = p.fog;
     const lightDir = day ? dir : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
     sun.position.copy(lightDir).multiplyScalar(1000);
     sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0));
@@ -707,6 +707,9 @@ async function main() {
     }
     lifts.update(t);
     controls.update();
+    // Fog counts from the resort, not from the camera: this view looks from many km out, and in snow a
+    // fog a few km deep would hide the whole mountain. Past the resort it closes in as the weather says.
+    if (look.fog) { const d = camera.position.distanceTo(controls.target); scene.fog.near = d * 0.8 + look.fog[0]; scene.fog.far = d + look.fog[1]; }
     renderer.render(scene, camera);
     placePins();
   });
