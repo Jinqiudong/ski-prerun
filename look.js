@@ -1083,6 +1083,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   function startSki() {
     const P = chosen, path = P.path;
     setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now (ski or board)
+    if (guide) guide.visible = true;
     origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap();
     document.body.classList.remove("picking");
     camera.clearViewOffset();
@@ -1329,6 +1330,42 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     camera.lookAt(r.x + Math.sin(h) * 5 * u, r.y + 1.1, r.z + Math.cos(h) * 5 * u);
     if (t > 1.3) spawn = null;
   }
+  // The way to go, on the snow ahead of you: big gold arrowheads every 6.5 m along the route for the next 130 m,
+  // flowing forward and fading with distance, so the line through each turn is always in front of you.
+  let guide = null;
+  function chevronGeometry() { // a flat "^", 1.8 m wide, pointing +z
+    const T0 = [0, 0, 0.6], RO = [0.9, 0, -0.3], RI = [0.9, 0, -0.75], N = [0, 0, 0.12], LI = [-0.9, 0, -0.75], LO = [-0.9, 0, -0.3];
+    const pos = [T0, RO, RI, T0, RI, N, T0, N, LI, T0, LI, LO].flat();
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    return g;
+  }
+  const GUIDE_N = 20, GUIDE_GAP = 6.5;
+  function stepGuide(P, now) {
+    if (!guide) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xf2b632, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, });
+      guide = new THREE.InstancedMesh(chevronGeometry(), mat, GUIDE_N);
+      guide.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(GUIDE_N * 3), 3);
+      guide.frustumCulled = false; guide.renderOrder = 3;
+      world.add(guide);
+    }
+    const d0 = P.dist[prog], flow = ((now / 1000) * 7) % GUIDE_GAP, m = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    let i = prog;
+    const last = P.path.length - 1, gold = new THREE.Color(0xf2b632), snow = new THREE.Color(0xffffff);
+    for (let k = 0; k < GUIDE_N; k++) {
+      const want = d0 + 4 + k * GUIDE_GAP + flow;
+      while (i < last && P.dist[i + 1] < want) i++;
+      if (i >= last || want > P.dist[last]) { m.makeScale(0, 0, 0); guide.setMatrixAt(k, m); continue; }
+      const t = (want - P.dist[i]) / (P.dist[i + 1] - P.dist[i] || 1), [ax, az] = P.path[i], [bx, bz] = P.path[i + 1];
+      const x = ax + (bx - ax) * t, z = az + (bz - az) * t, h = Math.atan2(bx - ax, bz - az);
+      q.setFromUnitVectors(up, T.normalAt(x, z, v)).multiply(q2.setFromAxisAngle(up, h));
+      const fade = 1 - Math.max(0, (want - d0 - 70) / 70); // full for the first 70 m, gone by 140 m
+      m.compose(new THREE.Vector3(x, T.heightAt(x, z) + 0.12, z), q, new THREE.Vector3(2.8, 1, 3.2).multiplyScalar(0.75 + 0.25 * fade));
+      guide.setMatrixAt(k, m);
+      guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
+    }
+    guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
+    guide.material.opacity = 0.92;
+  }
   function stepSki(dt) {
     if (mapOpen) return; // skiing waits while you look at the map
     if (spawn) { spawnStep(dt); return; }
@@ -1376,6 +1413,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     if (ctx.rider.userData.kind === "board" && ctx.rider.userData.mixer) poseBoarder(ctx.rider, r); else r.pose(ctx.rider);
     tracks.add(r);
+    stepGuide(P, clock());
     const NL = ctx.nightLights;
     if (NL) { // brighter close to a floodlight
       let lamp = 0;
@@ -1576,6 +1614,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
 
   function arrive(P) {
     $("liftOffer").hidden = true; closeBigMap();
+    if (guide) guide.visible = false;
     $("skiHud").hidden = true;
     $("turnCue").hidden = true;
     $("minimap").hidden = true;
