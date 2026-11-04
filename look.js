@@ -49,7 +49,7 @@ const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, SPEED = 5;
 let CHAIR_GAP = 33, HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false;
 function setLiftKind(lift) {
   CABIN = lift.kind === "gondola" || lift.kind === "cable_car";
-  const k = LIFT_KIND[lift.name] || { seats: Math.min(8, Math.max(2, lift.seats || 4)), bubble: !!lift.bubble };
+  const k = (RESORT === "copper" && LIFT_KIND[lift.name]) || { seats: Math.min(8, Math.max(2, lift.seats || 4)), bubble: !!lift.bubble };
   const gap = 0.64;
   SEAT_X = CABIN ? [-0.45, 0.45] : Array.from({ length: k.seats }, (_, i) => (i - (k.seats - 1) / 2) * gap);
   MY_SEAT = SEAT_X[1];
