@@ -1,13 +1,29 @@
-// The resorts as a set of little relief models, like a shelf of terrain tiles: each one a square of the
-// resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, laid out
-// three by three, north at the back. Turn the whole set all the way round, tilt and zoom; tap a tile to
-// lift it and see it. Its colour comes back the more of it you've skied; ski all of it and a flag goes up.
+// The resorts as little relief models standing on a watercolour map of central Colorado: each one a square
+// of the resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, set
+// where it is (Aspen's four, too close together, sit as a two-by-two in their valley); each framed with the
+// town it's by; the drives between them along the roads, with how long they take (data/drives.json), and
+// Denver. Turn it all the way round, tilt and zoom; tap a tile to lift it and see it. Its colour comes back
+// the more of it you've skied; ski all of it and a flag goes up.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const S = 10, GAP = 14, PLINTH = 1.4, EX = 1.35; // tile size, spacing, plinth depth, vertical exaggeration
-// Three by three, roughly as they lie: Steamboat and the Front Range up top, Summit County, then Aspen's four.
-const LAYOUT = [["steamboat", "winterpark", "eldora"], ["snowmass", "copper", "abasin"], ["buttermilk", "highlands", "aspenmountain"]];
+import { EN_ON } from "./i18n.js?v=5";
+
+const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
+const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78, w: 140 }; // the painted map (tools/bake_map.py) and its width in scene units
+const KM = MAP.w / ((MAP.E - MAP.W) * 85.3); // scene units per km
+const at = (lat, lon) => new THREE.Vector3((lon - (MAP.W + MAP.E) / 2) * 85.3 * KM, 0, -(lat - (MAP.N + MAP.S) / 2) * 111 * KM);
+// The towns, and which resorts each frames. Aspen's four sit as a two-by-two around the valley's middle.
+const TOWNS = [
+  { zh: "Aspen · Snowmass Village", en: "Aspen · Snowmass Village", ids: ["snowmass", "buttermilk", "highlands", "aspenmountain"], grid: [["snowmass", "buttermilk"], ["highlands", "aspenmountain"]] },
+  { zh: "Steamboat Springs", en: "Steamboat Springs", ids: ["steamboat"] },
+  { zh: "Fraser · Winter Park", en: "Fraser · Winter Park", ids: ["winterpark"] },
+  { zh: "Nederland", en: "Nederland", ids: ["eldora"] },
+  { zh: "Frisco · Summit County", en: "Frisco · Summit County", ids: ["copper"] },
+  { zh: "Keystone · Summit County", en: "Keystone · Summit County", ids: ["abasin"] },
+];
+const DENVER = [39.7392, -104.9903];
+const ink = (c, o) => new THREE.LineDashedMaterial({ color: c, transparent: true, opacity: o, dashSize: 0.9, gapSize: 0.6 });
 
 export class Collection {
   constructor(canvas, labels) {
@@ -20,32 +36,54 @@ export class Collection {
     s.background = new THREE.Color(0xf3efe8);
     s.add(new THREE.HemisphereLight(0xffffff, 0xd9d0c2, 1.5));
     const sun = new THREE.DirectionalLight(0xfff4e6, 2.3);
-    sun.position.set(-30, 50, -24); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
-    Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 140 });
+    sun.position.set(-60, 100, -48); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 300 });
     sun.shadow.bias = -0.0008; sun.shadow.radius = 4;
     s.add(sun);
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
-    // A floor that only catches the tiles' shadows.
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ opacity: 0.16 }));
+    // The painted map the tiles stand on (it takes their shadows too).
+    const mh = MAP.w * ((MAP.N - MAP.S) * 111) / ((MAP.E - MAP.W) * 85.3);
+    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=1", (x) => (x.colorSpace = THREE.SRGBColorSpace));
+    tex.anisotropy = 8;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xdedbd6, roughness: 1 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -PLINTH; floor.receiveShadow = true; s.add(floor);
-    this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 600);
+    // The sheet's edge, a little thickness of paper.
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(MAP.w, 2, mh), new THREE.MeshStandardMaterial({ color: 0xece6db, roughness: 1 }));
+    edge.position.y = -PLINTH - 1.2; edge.receiveShadow = true; s.add(edge);
+    this.marks = []; // HTML labels pinned to the map: towns, drive times, Denver
+    this.camera = new THREE.PerspectiveCamera(30, 1, 4, 900);
     const c = (this.controls = new OrbitControls(this.camera, canvas));
-    Object.assign(c, { enableDamping: true, dampingFactor: 0.08, minDistance: 14, maxDistance: 320, minPolarAngle: 0.25, maxPolarAngle: 1.25, enablePan: true, screenSpacePanning: false });
-    c.addEventListener("start", () => { this.fly = null; this.moved = true; });
+    Object.assign(c, { enableDamping: true, dampingFactor: 0.08, minDistance: 14, maxDistance: 700, minPolarAngle: 0.25, maxPolarAngle: 1.25, enablePan: true, screenSpacePanning: false });
+    c.addEventListener("start", () => { this.fly = null; this.moved = true; this.dragging = true; });
+    c.addEventListener("end", () => (this.dragging = false));
     this.tiles = []; this.picked = null; this.onPick = null;
     canvas.addEventListener("pointerdown", (e) => (this.down = { x: e.clientX, y: e.clientY }));
     canvas.addEventListener("pointerup", (e) => { const d = this.down; this.down = null; if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) this.tap(e); });
   }
 
-  // list: [{ id, name }]; stats: { id: { share } }.
+  // list: [{ id, name, lat, lon }]; stats: { id: { share } }.
   async build(list, stats) {
-    const data = await (await fetch("data/tiles.json")).json(), loader = new THREE.TextureLoader();
-    const byId = Object.fromEntries(list.map((r) => [r.id, r]));
-    LAYOUT.forEach((row, j) => row.forEach((id, i) => {
-      const r = byId[id], d = data[id]; if (!r || !d) return;
-      const share = stats[id]?.share || 0;
-      const tile = this.tile(d, loader.load(`assets/tiles/${id}.jpg?v=2`, (tx) => (tx.colorSpace = THREE.SRGBColorSpace)), share);
-      tile.position.set((i - 1) * GAP, 0, (j - 1) * GAP);
+    const [data, drives] = await Promise.all([fetch("data/tiles.json").then((x) => x.json()), fetch("data/drives.json").then((x) => x.json()).catch(() => [])]);
+    const loader = new THREE.TextureLoader(), byId = Object.fromEntries(list.map((r) => [r.id, r]));
+    // Where each tile stands: its own place, or its square of a town's two-by-two.
+    const spot = {};
+    for (const r of list) spot[r.id] = at(r.lat, r.lon);
+    for (const town of TOWNS) if (town.grid) {
+      const mid = town.ids.reduce((m, id) => m.add(spot[id] || new THREE.Vector3()), new THREE.Vector3()).multiplyScalar(1 / town.ids.length);
+      town.grid.forEach((row, j) => row.forEach((id, i) => (spot[id] = mid.clone().add(new THREE.Vector3((i - 0.5) * (S + 1.6), 0, (j - 0.5) * (S + 1.6))))));
+    }
+    // Tiles too close to their neighbours are nudged apart a little (towns move as one).
+    const groupOf = (id) => TOWNS.find((tw) => tw.ids.includes(id));
+    for (let it = 0; it < 80; it++) for (const a of list) for (const b of list) {
+      if (a === b || groupOf(a.id) === groupOf(b.id) && groupOf(a.id)?.grid || !spot[a.id] || !spot[b.id]) continue;
+      const d = spot[a.id].clone().sub(spot[b.id]).setY(0), len = d.length(), min = S + 3;
+      if (len < min) { d.setLength((min - len) / 2 || 0.5); for (const [r, sg] of [[a, 1], [b, -1]]) { const tw = groupOf(r.id); for (const id of tw?.grid ? tw.ids : [r.id]) spot[id].addScaledVector(d, sg); } }
+    }
+    for (const r of list) {
+      const d = data[r.id]; if (!d) continue;
+      const share = stats[r.id]?.share || 0;
+      const tile = this.tile(d, loader.load(`assets/tiles/${r.id}.jpg?v=2`, (x) => (x.colorSpace = THREE.SRGBColorSpace)), share);
+      tile.position.copy(spot[r.id]);
       const el = document.createElement("button");
       el.className = "ctag";
       el.innerHTML = `<b>${share >= 0.999 ? "⚑ " : ""}${r.name.replace(/ Mountain$| Basin$/, "").toUpperCase()}</b>${share > 0 && share < 0.999 ? `<small>${Math.max(1, Math.round(share * 100))}%</small>` : ""}`;
@@ -53,9 +91,43 @@ export class Collection {
       el.onclick = () => this.pick(t);
       this.labels.append(el);
       this.tiles.push(t); this.scene.add(tile);
-    }));
-    this.home = { target: new THREE.Vector3(0, 0, 1), polar: 0.9, az: 0.38 };
+    }
+    // Each town's frame: a dashed line round its tiles, its name at the top corner.
+    const y0 = -PLINTH + 0.06;
+    for (const town of TOWNS) {
+      const ps = town.ids.map((id) => spot[id]).filter(Boolean); if (!ps.length) continue;
+      const pad = S / 2 + 1.8, x0 = Math.min(...ps.map((p) => p.x)) - pad, x1 = Math.max(...ps.map((p) => p.x)) + pad, z0 = Math.min(...ps.map((p) => p.z)) - pad, z1 = Math.max(...ps.map((p) => p.z)) + pad;
+      const g = new THREE.BufferGeometry().setFromPoints([[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]].map(([x, z]) => new THREE.Vector3(x, y0, z)));
+      const line = new THREE.Line(g, ink(0x22344d, 0.45)); line.computeLineDistances(); this.scene.add(line);
+      this.mark(EN_ON ? town.en : town.zh, new THREE.Vector3((x0 + x1) / 2, y0, (z0 + z1) / 2), town.grid ? "town group" : "town", [x0, x1, z0, z1]);
+      if (town.grid) for (const id of town.ids) { const t = this.tiles.find((x) => x.userData.id === id); if (t) t.inGroup = true; }
+    }
+    // The drives: dashed along the road, the time in small writing at the middle.
+    for (const dv of drives) {
+      const pts = dv.line.map(([la, lo]) => at(la, lo).setY(y0 + 0.02));
+      const g = new THREE.BufferGeometry().setFromPoints(pts), line = new THREE.Line(g, ink(0x6e2f36, 0.55));
+      line.computeLineDistances(); this.scene.add(line);
+      const h = Math.floor(dv.min / 60), m = dv.min % 60;
+      const txt = EN_ON ? `${h ? `${h} h ` : ""}${m ? `${m} min` : ""}`.trim() : `约 ${h ? `${h} 小时` : ""}${m ? `${m} 分` : ""}`;
+      this.mark(`🚗 ${txt}`, pts[Math.floor(pts.length / 2)], "drive");
+    }
+    const den = at(...DENVER).setY(y0);
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0xb6463b }));
+    pin.position.copy(den); this.scene.add(pin);
+    this.mark("DENVER ✈", den, "city");
+    const box = new THREE.Box3(); for (const t of this.tiles) box.expandByPoint(t.base); box.expandByPoint(den);
+    // Seen from the east, as if driving in from Denver: Denver at the bottom, Aspen at the top, so the
+    // long east–west spread runs up a phone screen.
+    this.home = { target: box.getCenter(new THREE.Vector3()), polar: 0.55, az: Math.PI / 2 };
+    this._fit = null; // measured again now the tiles are in place
     this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az, false);
+  }
+  // A label pinned to a point on the map.
+  // A town's label sits on its frame's edge nearest the top of the screen (rect: x0, x1, z0, z1).
+  mark(text, at3, kind, rect = null) {
+    const el = document.createElement("div");
+    el.className = `cmark ${kind}`; el.textContent = text;
+    this.labels.append(el); this.marks.push({ el, at: at3, kind, rect });
   }
 
   // One tile: the terrain on top (its texture greyed until you've skied it), a plinth under it.
@@ -108,16 +180,19 @@ export class Collection {
   // Far enough that every tile's corners fit the screen (measured by projecting them), leaving the top for
   // the heading and the bottom for the card.
   fitDist() {
+    if (this._fit && this._fit.a === this.camera.aspect) return this._fit.d;
     const cam = this.camera.clone(), v = new THREE.Vector3(), { target, polar, az } = this.home, pts = [];
     for (const t of this.tiles) for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pts.push(new THREE.Vector3(t.base.x + (dx * S) / 2, 0, t.base.z + (dz * S) / 2));
+    pts.push(at(...DENVER));
     let d = 60;
     for (let it = 0; it < 6; it++) {
       cam.position.set(target.x + Math.sin(polar) * Math.sin(az) * d, target.y + Math.cos(polar) * d, target.z + Math.sin(polar) * Math.cos(az) * d);
       cam.lookAt(target); cam.updateMatrixWorld();
-      let m = 0; for (const p of pts) { v.copy(p).project(cam); m = Math.max(m, Math.abs(v.x) / 0.97, Math.abs(v.y) / 0.66); }
+      let m = 0; for (const p of pts) { v.copy(p).project(cam); m = Math.max(m, Math.abs(v.x) / 0.96, Math.abs(v.y) / 0.6); }
       d *= m;
     }
-    return Math.min(this.controls.maxDistance, d);
+    this._fit = { a: this.camera.aspect, d: Math.min(this.controls.maxDistance, d) };
+    return this._fit.d;
   }
 
   tap(e) {
@@ -132,7 +207,7 @@ export class Collection {
     this.picked = t;
     for (const x of this.tiles) x.userData.tag.classList.toggle("on", x === t);
     const az = Math.atan2(this.camera.position.x - this.controls.target.x, this.camera.position.z - this.controls.target.z);
-    this.view(t.base.clone().setY(1.5), 40, 0.95, az);
+    this.view(t.base.clone().setY(5), 70, 0.95, az);
     this.onPick?.(t.userData);
   }
   overview() { this.picked = null; this.moved = false; for (const x of this.tiles) x.userData.tag.classList.remove("on"); this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az); }
@@ -152,16 +227,34 @@ export class Collection {
       if (u >= 1) this.fly = null;
     }
     this.controls.update();
-    for (const x of this.tiles) { const up = x === this.picked ? 1.2 + Math.sin(t * 2.4) * 0.12 : 0; x.group.position.y += (up - x.group.position.y) * 0.12; }
+    // The picked tile lifts off the map and grows, turning slowly, so its relief reads; the rest stay put.
+    for (const x of this.tiles) {
+      const on = x === this.picked, up = on ? 5 + Math.sin(t * 1.6) * 0.25 : 0, sc = on ? 1.7 : 1;
+      x.group.position.y += (up - x.group.position.y) * 0.1;
+      x.group.scale.setScalar(x.group.scale.x + (sc - x.group.scale.x) * 0.1);
+      if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
+      if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
+    }
     this.renderer.render(this.scene, this.camera);
     // Each name sits by its tile's foot, on the side facing you.
     const v = new THREE.Vector3(), w = this.canvas.clientWidth, h = this.canvas.clientHeight, cam = this.camera.position;
+    const dist = cam.distanceTo(this.controls.target), far = dist > this.fitDist() * 0.72;
     for (const x of this.tiles) {
       const c = x.group.position, dir = new THREE.Vector3(cam.x - c.x, 0, cam.z - c.z).normalize();
       v.set(c.x + dir.x * S * 0.66, c.y - PLINTH, c.z + dir.z * S * 0.66).project(this.camera);
       const el = x.userData.tag;
-      el.style.visibility = v.z > 1 ? "hidden" : "";
+      el.style.visibility = v.z > 1 || (x.inGroup && far && x !== this.picked) ? "hidden" : "";
       el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%, 0)`;
+    }
+    for (const m of this.marks) {
+      if (m.rect) { // the frame side farthest from the camera, shown at the top of the screen
+        const [x0, x1, z0, z1] = m.rect, c = m.at, d = new THREE.Vector3(c.x - cam.x, 0, c.z - cam.z);
+        if (Math.abs(d.x) > Math.abs(d.z)) v.set(d.x > 0 ? x1 : x0, c.y, c.z); else v.set(c.x, c.y, d.z > 0 ? z1 : z0);
+        v.project(this.camera);
+      } else v.copy(m.at).project(this.camera);
+      const hide = v.z > 1 || (far && m.kind !== "city" && m.kind !== "town group"); // towns and drive times once you're a little closer
+      m.el.style.visibility = hide ? "hidden" : "";
+      m.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(${m.rect ? "-50%, -120%" : "-50%, -50%"})`;
     }
   }
 }

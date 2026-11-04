@@ -177,8 +177,8 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=12");
-    collection = new Collection(cv, $("ctags"));
+    const { Collection } = await import("./collection.js?v=19");
+    collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
