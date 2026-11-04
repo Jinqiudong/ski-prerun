@@ -10,8 +10,9 @@ import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=9";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
-import { Diorama } from "./mountain/diorama.js?v=16";
-import { junctions, junctionSign, chevrons, Minimap, arrowText, turnWord } from "./skinav.js?v=1";
+import { Diorama } from "./mountain/diorama.js?v=17";
+import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
+import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -414,12 +415,13 @@ function snowfall() {
 
 // The resort's weather: snow in the last three days whitens the trees; snowing now makes it fall.
 // ?snow=0..1 and ?falling=1 override it for previews.
-async function weather(params, flakes, at) {
+async function weather(params, flakes, at, applySky) {
   let recent = null, now = false;
   try {
-    const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(4)}&longitude=${at.lon.toFixed(4)}&current=weather_code,snowfall&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=auto`)).json();
+    const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(4)}&longitude=${at.lon.toFixed(4)}&current=weather_code,snowfall,cloud_cover&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=auto`)).json();
     recent = w.daily.snowfall_sum.slice(0, 3).reduce((a, b) => a + (b || 0), 0);
     now = (w.current.snowfall || 0) > 0 || [71, 73, 75, 77, 85, 86].includes(w.current.weather_code);
+    applySky?.(weatherKind(w.current.weather_code, w.current.cloud_cover)); // the same greying as the miniature
   } catch { /* offline: keep the default */ }
   if (recent != null) treeSnow.value = Math.min(1, 0.5 + recent / 25);
   if (now) treeSnow.value = Math.max(treeSnow.value, 0.85);
@@ -679,29 +681,47 @@ function build(look, ctx) {
   scene.background = null;
   renderer.toneMapping = A ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
   renderer.toneMappingExposure = A ? 0.95 : 1;
-  const sunDir = A ? new THREE.Vector3(-0.55, 0.45, 0.7).normalize() : new THREE.Vector3(-0.6, 0.55, 0.58).normalize();
+  // The real sun for the resort right now (as on the miniature), sky and light from it; the weather
+  // greys it once it has loaded (ctx.applySky).
+  const s0 = solar(new Date(), ctx.R.origin.lat, ctx.R.origin.lon), sunDir = sunVector(s0);
+  const day = sunDir.y > 0.02, lightDir = day ? sunDir.clone() : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
+  let sky = null, skyEnv = null;
   if (A) {
-    const sky = new Sky();
+    sky = new Sky();
     sky.scale.setScalar(20000);
-    sky.material.uniforms.turbidity.value = 3;
     sky.material.uniforms.rayleigh.value = 1.2;
     sky.material.uniforms.mieCoefficient.value = 0.004;
     sky.material.uniforms.mieDirectionalG.value = 0.8;
-    sky.material.uniforms.sunPosition.value.copy(sunDir);
     world.add(sky);
-    const pm = new THREE.PMREMGenerator(renderer), env = new THREE.Scene();
-    const s2 = new Sky(); s2.scale.setScalar(1000); s2.material.uniforms.sunPosition.value.copy(sunDir); env.add(s2);
-    scene.environment = pm.fromScene(env).texture;
-    scene.environmentIntensity = 0.5;
+    skyEnv = { pm: new THREE.PMREMGenerator(renderer), scene: new THREE.Scene(), sky: new Sky() };
+    skyEnv.sky.scale.setScalar(1000); skyEnv.scene.add(skyEnv.sky);
     scene.fog = new THREE.FogExp2(0xc6d6e8, 0.00016);
   } else {
     world.add(gradientSky(0x86b6e6, 0xf3dccd, 0xe7e9f2));
     scene.environment = null;
     scene.fog = new THREE.Fog(0xe9e0e4, 400, 7500);
   }
-  world.add(new THREE.HemisphereLight(A ? 0xdbe8ff : 0xcfe0ff, A ? 0x8f9bb5 : 0xf0d8c8, A ? 0.55 : 1.15));
+  const hemi = new THREE.HemisphereLight(A ? 0xdbe8ff : 0xcfe0ff, A ? 0x8f9bb5 : 0xf0d8c8, A ? 0.55 : 1.15);
+  world.add(hemi);
   sun = new THREE.DirectionalLight(A ? 0xfff1dd : 0xffe4c8, A ? 3.2 : 1.9);
-  sun.userData.dir = sunDir;
+  sun.userData.dir = lightDir;
+  ctx.applySky = (kind = "clear") => {
+    if (!A) return;
+    const p = palette((s0.el * 180) / Math.PI, kind);
+    sky.material.uniforms.sunPosition.value.copy(sunDir);
+    sky.material.uniforms.turbidity.value = { clear: 3, cloudy: 6, overcast: 12, snow: 14 }[kind];
+    skyEnv.sky.material.uniforms.sunPosition.value.copy(sunDir);
+    skyEnv.sky.material.uniforms.turbidity.value = sky.material.uniforms.turbidity.value;
+    scene.environment?.dispose();
+    scene.environment = skyEnv.pm.fromScene(skyEnv.scene).texture;
+    scene.environmentIntensity = day ? 0.5 : 0.12;
+    if (!snowing) { scene.fog.color.copy(p.hor); scene.fog.density = { clear: 0.00016, cloudy: 0.00022, overcast: 0.0004, snow: 0.0009 }[kind]; }
+    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0));
+    sun.intensity = day ? p.si * 0.95 : 0.5;
+    hemi.intensity = p.amb + 0.15;
+    renderer.toneMappingExposure = p.exp + 0.03;
+  };
+  ctx.applySky();
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(coarse ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 900 });
@@ -972,9 +992,41 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
-  let nav = null, offFor = 0, lastLook = 0, onRun = null, mapAt = 0;
-  const minimap = new Minimap($("minimap"), R);
-  $("minimap").onclick = () => { $("minimap").classList.toggle("big"); minimap.radius = $("minimap").classList.contains("big") ? 900 : 450; };
+  let nav = null, offFor = 0, lastLook = 0, onRun = null;
+  // The map in the corner while skiing: the same miniature you chose the way on, the route lit, a red pin
+  // where you are, turning with you (the way ahead up). Rendered small into a texture every other frame
+  // and drawn as a disc over the view. Tap it for a bigger one.
+  let mini = null;
+  $("minimap").onclick = () => $("minimap").classList.toggle("big");
+  function drawMini(r) {
+    if (!dio) return;
+    if (!mini) {
+      const rt = new THREE.WebGLRenderTarget(512, 512, { samples: 4, type: THREE.HalfFloatType });
+      const hud = new THREE.Scene(), disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ map: rt.texture }));
+      hud.add(disc);
+      const pin = new THREE.Group(), red = new THREE.MeshBasicMaterial({ color: 0xe8453c });
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(16, 60, 16), red); cone.rotation.x = Math.PI; cone.position.y = 30;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(22, 16, 12), red); head.position.y = 72;
+      pin.add(cone, head);
+      dio.root.add(pin);
+      mini = { rt, hud, disc, pin, cam: new THREE.PerspectiveCamera(34, 1, 10, 40000), hudCam: new THREE.OrthographicCamera(0, 1, 1, 0, -1, 1), yaw: r.heading, frame: 0 };
+    }
+    const m = mini, y = dio.Y(r.x, r.z);
+    m.pin.position.set(r.x, y, r.z);
+    here.position.set(r.x, y + 4, r.z); here.scale.setScalar(1 + 0.25 * Math.sin(clock() / 300));
+    m.yaw += angleDiff(m.yaw, r.heading) * -0.06; // here angleDiff is a - b: ease toward the heading
+    if (m.frame++ % 2 === 0) {
+      const D = $("minimap").classList.contains("big") ? 1500 : 1000, el = 0.95, fx = Math.sin(m.yaw), fz = Math.cos(m.yaw);
+      m.cam.position.set(r.x - fx * D * Math.cos(el), y + D * Math.sin(el), r.z - fz * D * Math.cos(el));
+      m.cam.lookAt(r.x + fx * 120, y, r.z + fz * 120);
+      renderer.setRenderTarget(m.rt); renderer.render(dio.scene, m.cam); renderer.setRenderTarget(null);
+    }
+    const box = $("minimap").getBoundingClientRect(), rad = box.width / 2;
+    m.hudCam.right = innerWidth; m.hudCam.top = innerHeight; m.hudCam.updateProjectionMatrix();
+    m.disc.position.set(box.left + rad, innerHeight - box.top - rad, 0); m.disc.scale.setScalar(rad);
+    renderer.autoClear = false; renderer.clearDepth(); renderer.render(m.hud, m.hudCam); renderer.autoClear = true;
+  }
+  st.hud = () => { if (st.phase === "ski" && phys && !ended) drawMini(phys); };
   function dress(P) {
     const path = P.path;
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
@@ -1118,7 +1170,6 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     // Off the route for a while: replan from the run I'm on, if it leads anywhere.
     offFor = near.d > 45 ? offFor + dt : 0;
     if (offFor > 1.2 && onRun && replan(r)) { offFor = 0; return; }
-    if (now - mapAt > 120) { mapAt = now; minimap.draw(r.x, r.z, r.heading, path.slice(Math.max(0, prog - 2)), P.end); }
     const J = nav?.js.find((j) => j.i > prog), toJ = J ? P.dist[J.i] - P.dist[prog] : Infinity;
     let cue;
     if (now < cueHold) cue = cueText;
@@ -1205,7 +1256,11 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     scene.attach(rider);
     riderTo = standAt();
     $("bubble").hidden = true;
-    $("desc").textContent = "到站了，下缆车…";
+    // No getting-off scene: arriving at the top cuts straight to choosing the way down.
+    rider.position.copy(riderTo); rider.rotation.set(0, yaw0, 0);
+    if (rider.userData.mixer) standBoarder(rider, 1);
+    st.phase = "rise"; st.t0 = now - 1e5;
+    setupPick();
   };
   const camBehind = (r, ang, dist, hgt) => r.clone().add(new THREE.Vector3(Math.sin(yaw0 + ang) * -dist, hgt, Math.cos(yaw0 + ang) * -dist));
   // The overview camera eases towards `want` (position, look-at and a screen shift that keeps the
@@ -1666,7 +1721,7 @@ async function main() {
   scene.add(trailSigns(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer));
   const flakes = snowfall();
   scene.add(flakes);
-  weather(params, flakes, R.origin);
+  weather(params, flakes, R.origin, ctx.applySky);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - 9 : line.total * 0.66; // from the loading point to the unload ramp
@@ -1735,7 +1790,7 @@ async function main() {
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
-    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); renderer.render(scene, camera); return; }
+    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); renderer.render(scene, camera); top.hud?.(); return; }
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.

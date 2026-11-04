@@ -159,25 +159,30 @@ export class Diorama {
     base.position.set((x0 + x1) / 2, -40 - h / 2, (z0 + z1) / 2);
     base.castShadow = base.receiveShadow = true;
     group.add(base);
-    // Name plate on the side facing the camera's start.
-    const c = document.createElement("canvas");
-    c.width = 1024; c.height = 220;
-    const g = c.getContext("2d");
-    g.fillStyle = "#3d434d"; g.fillRect(0, 0, 1024, 220);
-    g.strokeStyle = "#9aa3ae"; g.lineWidth = 10; g.strokeRect(10, 10, 1004, 200);
-    g.fillStyle = "#eef1f4"; g.textAlign = "center"; g.textBaseline = "middle";
-    let px = 92; // shrink long names until they fit the plate
-    do g.font = `600 ${px}px Helvetica, Arial, sans-serif`; while (g.measureText(title).width > 940 && (px -= 4) > 36);
-    g.fillText(title, 512, 112);
+    // Name plate on the side facing the camera: as tall as the plinth's side and as wide as the name,
+    // big bold letters so it reads from across the table.
+    const fx = Math.cos(front), fz = Math.sin(front), onX = Math.abs(fx) * d > Math.abs(fz) * w;
+    const side = onX ? d : w, ph = h * 0.82;
+    const c = document.createElement("canvas"), CH = 256;
+    let g = c.getContext("2d"), px = 168;
+    const fit = () => { g.font = `700 ${px}px Helvetica, Arial, sans-serif`; return g.measureText(title).width + 150; };
+    let cw = fit();
+    while ((cw / CH) * ph > side * 0.9 && px > 60) { px -= 8; cw = fit(); } // too long for the side: smaller letters
+    c.width = Math.min(4096, Math.ceil(cw)); c.height = CH;
+    g = c.getContext("2d"); fit();
+    g.fillStyle = "#2f343c"; g.fillRect(0, 0, c.width, CH);
+    g.strokeStyle = "#aab2bd"; g.lineWidth = 12; g.strokeRect(12, 12, c.width - 24, CH - 24);
+    g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(title, c.width / 2, CH / 2 + 6);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const pw = Math.min(w * 0.55, 1300);
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(pw, pw * 0.215, 14), [0, 0, 0, 0, 1, 0].map((i) => (i ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.3 }) : new THREE.MeshStandardMaterial({ color: 0x3d434d }))));
+    tex.anisotropy = 8;
+    const pw = (c.width / CH) * ph;
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, 14), [0, 0, 0, 0, 1, 0].map((i) => (i ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshStandardMaterial({ color: 0x2f343c }))));
     // On the side facing the camera: the side the bearing points through.
-    const fx = Math.cos(front), fz = Math.sin(front), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-    if (Math.abs(fx) * d > Math.abs(fz) * w) { plate.position.set(fx > 0 ? x1 + 68 : x0 - 68, -40 - h / 2, cz); plate.rotation.y = fx > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    if (onX) { plate.position.set(fx > 0 ? x1 + 68 : x0 - 68, -40 - h / 2, cz); plate.rotation.y = fx > 0 ? Math.PI / 2 : -Math.PI / 2; }
     else { plate.position.set(cx, -40 - h / 2, fz > 0 ? z1 + 68 : z0 - 68); plate.rotation.y = fz > 0 ? 0 : Math.PI; }
-    if (Math.abs(fx) * d > Math.abs(fz) * w) plate.scale.x = Math.min(1, (d * 0.55) / pw);
     group.add(plate);
     // A table to throw soft shadows on.
     const table = new THREE.Mesh(new THREE.CircleGeometry(Math.max(w, d) * 3, 48), new THREE.MeshStandardMaterial({ color: 0xe4e8ee, roughness: 1 }));
