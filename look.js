@@ -12,6 +12,7 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
+import { PixelMap } from "./pixelmap.js?v=1";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1116,77 +1117,61 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
   let nav = null, offFor = 0, lastLook = 0, onRun = null;
-  // The map in the corner while skiing: the same miniature you chose the way on, the route lit, a red pin
-  // where you are, turning with you (the way ahead up). Rendered small into a texture every other frame
-  // and drawn as a disc over the view. Tap it for a bigger one.
-  let mini = null;
-  // Tap the small map: it grows. Tap a place on the big map: a route there from where you are.
+  // The map in the corner while skiing: pixel art from above, the way ahead up, a little pixel rider in
+  // the middle (pixelmap.js). Tap it to enlarge; on the big map tap a lift to ride it (up to its top), or a
+  // run to start again right there, routed on to where you were going.
+  const pmap = new PixelMap($("minimap"), T, R, ctx.mask);
+  let pmapAt = 0;
+  st.hud = () => {
+    if (st.phase !== "ski" || !phys || ended || clock() - pmapAt < 120) return;
+    pmapAt = clock();
+    const big = $("minimap").classList.contains("big"), P = chosen;
+    pmap.draw({ x: phys.x, z: phys.z, heading: phys.heading, route: P.path.slice(Math.max(0, prog - 1)), dest: P.end, n: big ? 104 : 64, radius: big ? 650 : 230 });
+  };
   $("minimap").onclick = (e) => {
     const box = $("minimap");
-    if (!box.classList.contains("big")) { box.classList.add("big"); $("mapBar").hidden = false; return; }
-    const r = box.getBoundingClientRect(), rad = r.width / 2;
-    goToMapPoint((e.clientX - r.left - rad) / rad, -(e.clientY - r.top - rad) / rad);
+    if (!box.classList.contains("big")) { box.classList.add("big"); $("mapBar").hidden = false; pmapAt = 0; return; }
+    const r = box.getBoundingClientRect(), w = pmap.toWorld((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+    if (w) goToMapPoint(w[0], w[1]);
   };
-  const shrinkMap = () => { $("minimap").classList.remove("big"); $("mapBar").hidden = true; };
+  const shrinkMap = () => { $("minimap").classList.remove("big"); $("mapBar").hidden = true; pmapAt = 0; };
   $("mapClose").onclick = shrinkMap;
   $("mapMore").onclick = () => { shrinkMap(); openReplan(); };
-  const raycaster = new THREE.Raycaster();
-  function goToMapPoint(nx, ny) {
-    if (!mini || !phys || nx * nx + ny * ny > 1) return;
-    raycaster.setFromCamera(new THREE.Vector2(nx, ny), mini.cam);
-    const hit = raycaster.intersectObject(dio.root.children[0], false)[0]; // the miniature's snow
-    if (!hit) return;
-    const x = hit.point.x, z = hit.point.z, from = nodesNear(graph, phys.x, phys.z, 160);
-    let to = nodesNear(graph, x, z, 120);
-    if (!to.length) to = nodesNear(graph, x, z, 350);
-    if (!from.length || !to.length) { flashCue("那里没有雪道，换个地方点"); return; }
-    const rt = planFrom(from, to) || planRoute(graph, from, to);
-    const l = R.lifts.find((l) => rideable(l) && Math.hypot(l.pts[0][0] - x, l.pts[0][1] - z) < 120);
-    const spot = runNear(x, z, 150), where = l ? l.name : spot?.run.name || "你点的地方";
-    const Q = rt && makePlan(rt.legs, l ? { to, kind: "lift", key: `lift:${l.name}`, title: `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: rt.seconds, end: l.pts[0], lift: l }
-      : { to, kind: "point", key: `pt:${Math.round(x)},${Math.round(z)}`, title: `去 ${where}`, short: where, icon: "📍", seconds: rt.seconds, end: [x, z], leads: leadsTo([x, z]) });
-    if (!Q) { flashCue("从这里滑不到那里，换个地方点"); return; }
-    // A yellow flag where you're going.
-    if (!mini.flag) {
-      const f = new THREE.Group(), y = new THREE.MeshBasicMaterial({ color: 0xf2b632 });
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 110), new THREE.MeshBasicMaterial({ color: 0x333a44 })); pole.position.y = 55;
-      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(60, 36), y); cloth.material.side = THREE.DoubleSide; cloth.position.set(30, 92, 0);
-      f.add(pole, cloth); dio.root.add(f); mini.flag = f;
+  const distToLine = (pts, x, z) => {
+    let d = Infinity;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], dx = bx - ax, dz = bz - az;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+      d = Math.min(d, Math.hypot(ax + dx * t - x, az + dz * t - z));
     }
-    mini.flag.position.set(x, dio.Y(x, z), z);
-    dio.light3((run) => (Q.segs.some((g) => g.run === run) ? 1 : 0), () => 0);
-    rideInstead(Q, `带你去 ${where}${Q.next ? `（中途坐 🚡${Q.next.name}）` : ""} · 约 ${fmtMin(rt.seconds)}`);
+    return d;
+  };
+  function goToMapPoint(x, z) {
+    if (!phys) return;
+    // A lift: ride it.
+    // A fingertip covers a lot of map: take the nearest lift (90 m) or run (120 m), the lift when it's
+    // clearly the closer.
+    const l = R.lifts.filter((l) => rideable(l)).map((l) => ({ l, d: distToLine(l.pts, x, z) })).sort((a, b) => a.d - b.d)[0];
+    const spot = runNear(x, z, 120), runD = spot ? Math.hypot(spot.run.pts[spot.i][0] - x, spot.run.pts[spot.i][1] - z) : Infinity;
+    if (l && (l.d < 35 || (l.d < 90 && l.d < runD * 0.8))) { flashCue(`去坐 ${l.l.name}…`); location.href = withResort(`look.html?lift=${encodeURIComponent(l.l.name)}`); return; }
+    // A run: start again there, routed on to where you were going (else down that run).
+    if (!spot) { flashCue("那里没有雪道，点一条雪道或者缆车"); return; }
+    const run = spot.run, [sx, sz] = run.pts[spot.i], i2 = Math.min(run.pts.length - 1, spot.i + 2);
+    phys.place(sx, sz, Math.atan2(run.pts[i2][0] - sx, run.pts[i2][1] - sz), 3);
+    const from = nodesNear(graph, sx, sz, 120), P = chosen;
+    let Q = null;
+    const rt = from.length && P.to?.length && planFrom(from, P.to);
+    if (rt) {
+      const { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder } = P;
+      Q = makePlan([{ type: "run", run, from: spot.i, to: Math.min(run.pts.length - 1, spot.i + 1), length: 0 }, ...rt.legs], { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder, seconds: rt.seconds });
+    }
+    if (!Q) Q = makePlan([{ type: "run", run, from: spot.i, to: run.pts.length - 1, length: run.length }], { kind: "run", key: `run:${run.name}`, title: run.name || "无名雪道", short: run.name, icon: "", end: run.pts[run.pts.length - 1], leads: leadsTo(run.pts[run.pts.length - 1]), first: run });
+    if (!Q) return;
+    const h = phys.heading;
+    camera.position.set(sx - Math.sin(h) * 7, T.heightAt(sx, sz) + 3, sz - Math.cos(h) * 7);
+    rideInstead(Q, `从 ${run.name || "这里"} 重新开始 · 去 ${Q.short || Q.title}`);
     shrinkMap();
   }
-  function drawMini(r) {
-    if (!dio) return;
-    if (!mini) {
-      const rt = new THREE.WebGLRenderTarget(512, 512, { samples: 4, type: THREE.HalfFloatType });
-      const hud = new THREE.Scene(), disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ map: rt.texture }));
-      hud.add(disc);
-      const pin = new THREE.Group(), red = new THREE.MeshBasicMaterial({ color: 0xe8453c });
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(16, 60, 16), red); cone.rotation.x = Math.PI; cone.position.y = 30;
-      const head = new THREE.Mesh(new THREE.SphereGeometry(22, 16, 12), red); head.position.y = 72;
-      pin.add(cone, head);
-      dio.root.add(pin);
-      mini = { rt, hud, disc, pin, cam: new THREE.PerspectiveCamera(34, 1, 10, 40000), hudCam: new THREE.OrthographicCamera(0, 1, 1, 0, -1, 1), yaw: r.heading, frame: 0 };
-    }
-    const m = mini, y = dio.Y(r.x, r.z);
-    m.pin.position.set(r.x, y, r.z);
-    here.position.set(r.x, y + 4, r.z); here.scale.setScalar(1 + 0.25 * Math.sin(clock() / 300));
-    m.yaw += angleDiff(m.yaw, r.heading) * -0.06; // here angleDiff is a - b: ease toward the heading
-    if (m.frame++ % 2 === 0) {
-      const D = $("minimap").classList.contains("big") ? 1500 : 1000, el = 0.95, fx = Math.sin(m.yaw), fz = Math.cos(m.yaw);
-      m.cam.position.set(r.x - fx * D * Math.cos(el), y + D * Math.sin(el), r.z - fz * D * Math.cos(el));
-      m.cam.lookAt(r.x + fx * 120, y, r.z + fz * 120);
-      renderer.setRenderTarget(m.rt); renderer.render(dio.scene, m.cam); renderer.setRenderTarget(null);
-    }
-    const box = $("minimap").getBoundingClientRect(), rad = box.width / 2;
-    m.hudCam.right = innerWidth; m.hudCam.top = innerHeight; m.hudCam.updateProjectionMatrix();
-    m.disc.position.set(box.left + rad, innerHeight - box.top - rad, 0); m.disc.scale.setScalar(rad);
-    renderer.autoClear = false; renderer.clearDepth(); renderer.render(m.hud, m.hudCam); renderer.autoClear = true;
-  }
-  st.hud = () => { if (st.phase === "ski" && phys && !ended) drawMini(phys); };
   const liftsShown = new Set([lift]);
   function dress(P) {
     const path = P.path;
@@ -1375,7 +1360,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       tc.innerHTML = `<span class="arr">${arrowText(way.bearing)}</span><span><b>${Math.abs(way.bearing) > 0.18 ? turnWord(way.bearing) + "进" : "直行"} ${nameR(way.run)}</b><small>${Math.round(toJ)} 米后岔口</small></span>`;
       const stage = toJ < 50 ? 2 : 1;
       // The big card repeats the line below, so that line lists only the other ways.
-      $("skiCue").innerHTML = J.options.length > 1 ? `<small>别走错：${J.options.filter((o) => o !== way).map((o) => `${arrowText(o.bearing)} ${nameR(o.run)}`).join("　")}</small>` : cue;
+      if (now >= cueHold) $("skiCue").innerHTML = J.options.length > 1 ? `<small>别走错：${J.options.filter((o) => o !== way).map((o) => `${arrowText(o.bearing)} ${nameR(o.run)}`).join("　")}</small>` : cue;
       const turning = Math.abs(way.bearing) > 0.18; // only a real turn-off buzzes; straight on stays quiet
       if (!alerted || alerted.j !== J || alerted.stage < stage) { if (turning) navigator.vibrate?.(stage === 2 ? [60, 60, 60] : 40); tc.classList.remove("pop"); void tc.offsetWidth; tc.classList.add("pop"); alerted = { j: J, stage }; }
     } else tc.hidden = true;
@@ -1522,6 +1507,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   }
   st.nearLift = () => { if (!phys) return null; let b = null; for (const l of R.lifts) if (rideable(l)) { const d = Math.hypot(l.pts[0][0] - phys.x, l.pts[0][1] - phys.z); if (!b || d < b.d) b = { name: l.name, d: Math.round(d) }; } return b; }; // testing
   st.placeNear = (name, back = 120) => { const l = R.lifts.find((x) => x.name === name), [x, z] = l.pts[0], [x2, z2] = l.pts[1]; const h = Math.atan2(x - x2, z - z2) + Math.PI; phys.place(x - Math.sin(h) * back, z - Math.cos(h) * back, h, 6); }; // testing
+  st.tapMap = (x, z) => goToMapPoint(x, z); st.liftMid = (n) => { const l = R.lifts.find((q) => q.name === n); return l.pts[Math.floor(l.pts.length / 2)]; }; st.runPt = (n) => { const r = R.runs.find((q) => q.name === n); return r.pts[Math.floor(r.pts.length / 2)]; }; // testing
   st.guide = (key) => routeGuide([...dests, ...runs].find((p) => p.key === key) || chosen);
 
   function arrive(P) {
