@@ -197,7 +197,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=3");
+    const { Trips } = await import("./trips.js?v=5");
     trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);

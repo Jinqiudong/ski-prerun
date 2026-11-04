@@ -101,6 +101,9 @@
     .clip { position: absolute; right: 64px; top: -14px; width: 22px; height: 54px; border: 3px solid #8d96a3; border-radius: 11px; transform: rotate(8deg); }
     .clip::after { content: ""; position: absolute; left: 3px; top: 8px; width: 10px; height: 34px; border: 3px solid #8d96a3; border-radius: 6px; }
     #trips .ride { position: absolute; right: 64px; bottom: 10px; font-family: "Long Cang"; font-size: 18px; color: #fff5e1; background: #7a4b25; border: 0; border-radius: 999px; padding: 2px 12px; cursor: pointer; }
+    #trips .maybe { display: flex; flex-wrap: wrap; gap: 8px; }
+    #trips .ride2 { font-family: "Long Cang"; font-size: 19px; color: #4a3626; background: #fffaf0; border: 1.8px solid #5a4636; border-radius: 999px; padding: 3px 14px; cursor: pointer; box-shadow: 2px 2px 0 rgba(74,54,38,.18); }
+    #trips .chip.wx.on { background: #4a5a6e; border-color: #4a5a6e; }
     #trips .back { font-family: "Long Cang"; font-size: 20px; color: #7a5a3a; background: none; border: 0; padding: 0; margin-bottom: 4px; cursor: pointer; }
     #trips .stamp { position: absolute; right: 20px; top: calc(48px + env(safe-area-inset-top)); width: 78px; height: 78px; border-radius: 50%; border: 3px double #b5482f; color: #b5482f; display: grid; place-items: center; text-align: center; font-family: "Special Elite"; font-size: 13px; transform: rotate(12deg); opacity: .85; }
     #trips .slips { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
@@ -147,6 +150,6 @@
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><span>🧑</span>人物</button><button data-tab="resort"><span>🏔</span>雪场</button><button data-tab="trip"><span>🧳</span>行程</button><button data-tab="log"><span>📖</span>记录</button></nav>
-  <script type="module" src="start.js?v=20"></script>
+  <script type="module" src="start.js?v=22"></script>
 </body>
 </html>
