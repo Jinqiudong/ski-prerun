@@ -967,7 +967,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     $("skiHud").hidden = false;
     $("minimap").hidden = false;
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
-    $("desc").textContent = "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
+    tilt.zero = null; // the way you hold the phone now is "straight on"
+    $("desc").textContent = tilt.ok ? "沿路线带你滑 · 手机左右倾转弯 · 往前倾加速、往回倒减速" : "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
@@ -1047,6 +1048,18 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   addEventListener("pointerup", touchEnd);
   addEventListener("pointercancel", touchEnd);
   st.setAuto = (on) => { auto = on; };
+  // The phone's tilt as riding input, relative to how it was held when the run started: a small dead
+  // zone, full at 18° either way. Forward and back recentres slowly (over ~10 s) to however you settle
+  // into holding it, so a new grip doesn't read as braking.
+  let tiltAt = 0, tiltOff = 9;
+  const tiltNow = () => {
+    if (!tilt.ok) return null;
+    tilt.zero ||= { side: tilt.side, fwd: tilt.fwd };
+    const now = clock(), dt = Math.min(0.1, (now - (tiltAt || now)) / 1000); tiltAt = now;
+    tilt.zero.fwd += (tilt.fwd - tilt.zero.fwd) * dt * 0.1;
+    const ramp = (v) => Math.sign(v) * clamp((Math.abs(v) - 2 * D) / (16 * D), 0, 1);
+    return { steer: ramp(tilt.side - tilt.zero.side), pace: ramp(tilt.zero.fwd - tilt.fwd) };
+  };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   function stepSki(dt) {
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
@@ -1066,10 +1079,16 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
     // The rider's right on screen is local -x: (−cos h, +sin h).
     const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
-    const steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
+    let steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
+    // Tilting the phone rides it: left or right edges into a turn at once (the route only nudges you
+    // back), tipping it away lets it run, toward you slows down. Measured from how you held it at the start.
+    const tl = tiltNow();
+    if (!auto && tl && Math.abs(tl.steer) > 0.02) { steer = clamp(tl.steer + 0.15 * steer, -1, 1); idleFor = 0; latIn = 0; tiltOff = 0; }
+    else if (!auto && tl) { tiltOff += dt; steer = clamp(steer, -0.35 - tiltOff * 0.3, 0.35 + tiltOff * 0.3); } // ease back to the line after a turn
     // Speed: held to an easy pace for the run's level unless you drag for more or less.
     const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level];
-    const pace = touching && Math.abs(paceIn) > 0.15 ? (paceIn > 0 && r.speed > cap * 1.6 ? -0.5 : paceIn) : r.speed > cap ? -1 : 0;
+    const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
+    const pace = asked ? (asked > 0 && r.speed > cap * 1.6 ? -0.5 : asked) : r.speed > cap ? -1 : 0;
     // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
     // nothing pulls you uphill.
     // Stopped on purpose (holding the brake): stand still rather than pivot on the spot.
@@ -1544,7 +1563,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     }
     simClock = null; out.push(ended ? "ARRIVED" : "not arrived"); return out;
   };
-  st.state = () => ({ x: Math.round(phys?.x), z: Math.round(phys?.z), prog, plan: chosen?.steps.map((s) => s.name).join(">"), junctions: nav?.js.map((j) => `${Math.round(chosen.dist[j.i])}m: ${j.options.map((o) => (o.route ? "*" : "") + o.run.name).join(", ")}`) });
+  st.state = () => ({ x: Math.round(phys?.x), z: Math.round(phys?.z), heading: +(phys?.heading ?? 0).toFixed(2), lean: +(phys?.lean ?? 0).toFixed(2), steer: +(phys?.steer ?? 0).toFixed(2), prog, plan: chosen?.steps.map((s) => s.name).join(">"), junctions: nav?.js.map((j) => `${Math.round(chosen.dist[j.i])}m: ${j.options.map((o) => (o.route ? "*" : "") + o.run.name).join(", ")}`) });
   st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, mode, chosen: chosen?.key, dests: dests.map((d) => `${d.key} ${Math.round(d.seconds)}s ${d.steps.map((s) => s.name).join(">")}`), cam: camera.position.toArray().map(Math.round), want: { ox: +want.ox.toFixed(2), oy: +want.oy.toFixed(2) } });
   st.select = (key) => { const P = [...dests, ...runs].find((p) => p.key === key); if (P) { if (!list().includes(P)) setMode(P.kind === "run" ? "runs" : "dest", P); else select(P, true); } };
   return st;
@@ -1553,13 +1572,36 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
 // ---------- Looking around (same as the game: phone turn or drag, limited like a seated rider) ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const look = { yaw: 0, pitch: 0, dragYaw: 0, dragPitch: 0, base: null, phone: null };
+// Phone motion, for looking around on the lift and for riding. Not the compass heading (alpha): on phones
+// it lags and jumps. Instead:
+// - turning: the gyroscope's rotation rate about the vertical, added up, at twice the angle (a turn of
+//   the wrist looks to the side), easing back to the middle very slowly against drift;
+// - tilting: where "up" is in the phone's frame, from beta/gamma (gravity, quick and steady).
+const tilt = { side: 0, fwd: 0, ok: false, zero: null };
+const D = Math.PI / 180;
+let gyroAt = 0, gyroYaw = 0;
+const upInPhone = (b, g) => ({ x: -Math.cos(b * D) * Math.sin(g * D), y: Math.sin(b * D), z: Math.cos(b * D) * Math.cos(g * D) });
 addEventListener("deviceorientation", (e) => {
-  if (e.alpha == null) return;
-  if (!look.base) look.base = { alpha: e.alpha, beta: e.beta };
-  const dy = ((e.alpha - look.base.alpha + 540) % 360) - 180;
-  look.phone = { yaw: (dy * Math.PI) / 180, pitch: ((e.beta - look.base.beta) * Math.PI) / 180 };
+  if (e.beta == null) return;
+  const up = upInPhone(e.beta, e.gamma);
+  tilt.side = Math.asin(clamp(-up.x, -1, 1)); // the phone's right edge down: positive
+  tilt.fwd = e.beta * D; // the top of the phone tipped away from you: smaller
+  tilt.up = up; tilt.ok = true;
+  if (!look.base) look.base = { beta: e.beta };
+  look.phone = { yaw: gyroYaw, pitch: ((e.beta - look.base.beta) * D) * 1.3 };
 });
-const askMotion = () => { if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => {}); };
+addEventListener("devicemotion", (e) => {
+  const r = e.rotationRate, now = performance.now(), dt = Math.min(0.1, (now - (gyroAt || now)) / 1000);
+  gyroAt = now;
+  if (!r || r.alpha == null || !tilt.up) return;
+  // Rotation about the world's vertical: the rate vector (x: beta, y: gamma, z: alpha) along "up".
+  const rate = (r.beta * tilt.up.x + r.gamma * tilt.up.y + r.alpha * tilt.up.z) * D;
+  gyroYaw = clamp(gyroYaw + rate * 2 * dt, -1.3, 1.3) * (1 - dt * 0.03);
+  if (look.phone) look.phone.yaw = gyroYaw;
+});
+const askMotion = () => {
+  for (const E of [globalThis.DeviceMotionEvent, globalThis.DeviceOrientationEvent]) if (typeof E?.requestPermission === "function") E.requestPermission().catch(() => {});
+};
 for (const ev of ["touchend", "click"]) addEventListener(ev, askMotion, { once: true, capture: true });
 let drag = null;
 renderer.domElement.addEventListener("pointerdown", (e) => (drag = { x: e.clientX, y: e.clientY, yaw: look.dragYaw, pitch: look.dragPitch }));
@@ -1690,7 +1732,7 @@ async function main() {
     bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
     bubbleMatrix(bubbleOpen, myBubble.matrix);
 
-    const k = Math.min(1, dt * 6);
+    const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
     if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); renderer.render(scene, camera); return; }
