@@ -7,7 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=10";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder } from "./boarder.js?v=10";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, tricksOf, startTrick } from "./boarder.js?v=11";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
@@ -1084,6 +1084,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const P = chosen, path = P.path;
     setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now (ski or board)
     if (guide) guide.visible = true;
+    setTimeout(showTrickBtn, 0);
     origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap();
     document.body.classList.remove("picking");
     camera.clearViewOffset();
@@ -1366,6 +1367,54 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
     guide.material.opacity = 0.92;
   }
+  // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
+  // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
+  const ICON = { ollie: "⬆️", indy: "🤙", melon: "🍈", tailGrab: "✋", nose: "👇", tailPress: "👆" };
+  const wheel = $("trickWheel"), tbtn = $("trickBtn");
+  let wheelOpen = null;
+  function showTrickBtn() { tbtn.hidden = !(st.phase === "ski" && tricksOf(ctx.rider).length); }
+  function openWheel(e) {
+    const list = tricksOf(ctx.rider);
+    if (!list.length || st.phase !== "ski") return;
+    const r = tbtn.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = 165;
+    wheel.innerHTML = "";
+    // A fan up and to the left of the button (it sits in the corner).
+    list.forEach((t, i) => {
+      const a = Math.PI * (0.45 + (i / Math.max(1, list.length - 1)) * 0.65), el = document.createElement("div");
+      el.className = "opt"; el.dataset.key = t.key;
+      el.style.left = `${cx + Math.cos(a) * R}px`; el.style.top = `${cy - Math.sin(a) * R}px`;
+      el.innerHTML = `<div><span>${ICON[t.key] || "★"}</span>${t.name}</div>`;
+      el.onclick = () => { doTrick(t.key); closeWheel(); };
+      wheel.append(el);
+    });
+    wheel.hidden = false; requestAnimationFrame(() => wheel.classList.add("open"));
+    tbtn.classList.add("on");
+    wheelOpen = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, hot: null };
+    navigator.vibrate?.(15);
+  }
+  function closeWheel() { wheel.classList.remove("open"); wheel.hidden = true; tbtn.classList.remove("on"); wheelOpen = null; }
+  function doTrick(key) {
+    if (!startTrick(ctx.rider, key)) return;
+    const t = tricksOf(ctx.rider).find((x) => x.key === key);
+    flashCue(`${ICON[key] || "★"} ${t.name}!`); navigator.vibrate?.(25);
+  }
+  tbtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (wheelOpen) { closeWheel(); return; } openWheel(e); tbtn.setPointerCapture?.(e.pointerId); });
+  tbtn.addEventListener("pointermove", (e) => {
+    if (!wheelOpen || e.pointerId !== wheelOpen.id) return;
+    if (Math.hypot(e.clientX - wheelOpen.x, e.clientY - wheelOpen.y) > 18) wheelOpen.moved = true;
+    let hot = null, bd = 60;
+    for (const el of wheel.children) { const b = el.getBoundingClientRect(), d = Math.hypot(e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2)); if (d < bd) { bd = d; hot = el; } }
+    for (const el of wheel.children) el.classList.toggle("hot", el === hot);
+    if (hot && hot !== wheelOpen.hot) navigator.vibrate?.(8);
+    wheelOpen.hot = hot;
+  });
+  tbtn.addEventListener("pointerup", (e) => {
+    if (!wheelOpen || e.pointerId !== wheelOpen.id) return;
+    if (wheelOpen.hot) { doTrick(wheelOpen.hot.dataset.key); closeWheel(); }
+    else if (wheelOpen.moved) closeWheel(); // slid off: nothing
+    // else: a tap; the wheel stays open for a tap on a trick
+  });
+  st.trick = doTrick; // testing
   function stepSki(dt) {
     if (mapOpen) return; // skiing waits while you look at the map
     if (spawn) { spawnStep(dt); return; }
@@ -1615,6 +1664,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   function arrive(P) {
     $("liftOffer").hidden = true; closeBigMap();
     if (guide) guide.visible = false;
+    tbtn.hidden = true; closeWheel();
     $("skiHud").hidden = true;
     $("turnCue").hidden = true;
     $("minimap").hidden = true;

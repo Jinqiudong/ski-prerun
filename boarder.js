@@ -104,7 +104,8 @@ export function boarderModel() {
   const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend"), stand: clip("Neutral_Standing"),
     toe: clip("Toeside_Carve"), heel: clip("Heelside_Carve"), sit: clip("Chairlift_Sit"), idle: clip("Stand_Idle"), push: clip("Skate_Push"), exit: clip("Lift_Exit"),
     toeTurn: clip("Toeside_Turn"), heelTurn: clip("Heelside_Turn"), toToe: clip("HeelToToe_HipPush"), toHeel: clip("ToeToHeel_Crouch"),
-    low: clip("Low_Stance"), lookL: clip("Chairlift_LookLeft"), lookR: clip("Chairlift_LookRight") };
+    low: clip("Low_Stance"), lookL: clip("Chairlift_LookLeft"), lookR: clip("Chairlift_LookRight"),
+    ollie: clip("Ollie_Air"), indy: clip("Indy_Grab"), melon: clip("Melon_Grab"), tailGrab: clip("Tail_Grab"), nose: clip("Nose_Press"), tailPress: clip("Tail_Press") };
   for (const k of Object.keys(A)) if (!A[k]) delete A[k];
   const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R"),
     board: bone("Board"), hips: bone("Hips"), head: bone("Head"), thighL: bone("Thigh.L"), thighR: bone("Thigh.R"), shinL: bone("Shin.L"), shinR: bone("Shin.R"),
@@ -178,13 +179,27 @@ export function poseBoarder(root, r) {
   const used = Object.values(w).reduce((a, v) => a + v, 0), rest = Math.max(0, 1 - used);
   if (A_(u, "low")) w.low = rest * Math.min(1, s.tuck * 1.2); else w.knee = rest * Math.min(1, s.tuck * 0.7);
   w.stance = Math.max(0, rest - (w.low || w.knee || 0));
+  // A trick takes over: in quickly, held, out at the end; in the air the board levels off.
+  let k = 0, lift = 0;
+  if (u.trick) {
+    const tr = u.trick; tr.t += dt;
+    const f = tr.t / tr.dur;
+    if (f >= 1) u.trick = null;
+    else {
+      k = Math.min(1, f / 0.22, (1 - f) / 0.22);
+      lift = tr.air * 4 * f * (1 - f); // a parabola
+      for (const key of Object.keys(w)) w[key] *= 1 - k;
+      w[tr.key] = k;
+    }
+  }
+  s.trickK = k;
   weights(u, w);
   if (push > 0.01) { u.pushT = (u.pushT + dt * 0.9) % 1; u.A.push.time = u.pushT * u.A.push.getClip().duration; } // a push every ~1.1 s
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
   mix(u);
   // Skid: the board swings so the toes face the way you are going and the heel edge trails uphill.
   u.yaw.rotation.y = -tx * 1.2 * s.skid;
-  const tilt = s.edge * (1 - s.skid) - tx * 0.3 * s.skid; // about the board's long axis; + leans toward -x
+  const tilt = (s.edge * (1 - s.skid) - tx * 0.3 * s.skid) * (1 - k); // about the board's long axis; + leans toward -x
   u.lean.rotation.z = tilt;
   u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);
@@ -192,9 +207,29 @@ export function poseBoarder(root, r) {
   // flat board; the inclination comes from tilting the whole rider).
   turn(u.B.spine, u.lean, Z, -tilt * 0.18);
   turn(u.B.chest, u.lean, Z, -tilt * 0.14);
+  if (lift) { root.position.addScaledVector(r.n, lift); }
   finish(root);
 }
 const A_ = (u, k) => !!u.A[k];
+
+// Tricks, on demand (the trick wheel in look.html): air ones are a hop with the model's pose at the top;
+// presses stay on the snow. key: the clip; air: jump height in metres; dur: seconds.
+export const TRICKS = [
+  { key: "ollie", name: "Ollie", air: 0.9, dur: 0.8 },
+  { key: "indy", name: "Indy", air: 1.3, dur: 1.05 },
+  { key: "melon", name: "Melon", air: 1.3, dur: 1.05 },
+  { key: "tailGrab", name: "Tail Grab", air: 1.4, dur: 1.1 },
+  { key: "nose", name: "Nose Press", air: 0, dur: 1.4 },
+  { key: "tailPress", name: "Tail Press", air: 0, dur: 1.4 },
+];
+export const tricksOf = (root) => (root?.userData?.A ? TRICKS.filter((t) => root.userData.A[t.key]) : []);
+export function startTrick(root, key) {
+  const t = TRICKS.find((x) => x.key === key), u = root.userData;
+  if (!t || !u.A?.[key] || u.trick) return false;
+  u.trick = { ...t, t: 0 };
+  return true;
+}
+export const inTrick = (root) => !!root?.userData?.trick;
 
 // Riding the lift and getting off: the rider faces the way the chair goes (root +z), not the board.
 // On the chair: seated, the leading foot still strapped in so the board hangs off it, the back foot free;
