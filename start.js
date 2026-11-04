@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=2";
-import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=4";
+import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=5";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -175,7 +175,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=7");
+    const { Collection } = await import("./collection.js?v=12");
     collection = new Collection(cv, $("ctags"));
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();

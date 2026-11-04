@@ -57,23 +57,11 @@
     #tabs .langSwitch button.on { color: #fdfbf6; background: #22344d; }
     #sheet { bottom: 62px !important; }
     #world, #records { position: fixed; inset: 0; bottom: 62px; z-index: 5; }
-    #world { background: #eee9df; } #world canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    #world { background: #f3efe8; } #world canvas { width: 100%; height: 100%; display: block; touch-action: none; }
     #ctags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-    .ctag { position: absolute; left: 0; top: 0; pointer-events: auto; font: inherit; display: flex; gap: 4px; align-items: baseline; background: rgba(255,250,240,.94); color: #3b2a1a; border: 1.5px solid #8a5a35; border-radius: 999px; padding: 2px 8px; white-space: nowrap; cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,.18); }
-    .ctag b { font-size: 12px; } .ctag small { font-size: 10px; color: #7a5a3a; }
-    .ctag.on { background: #7a4b25; color: #fff8ea; } .ctag.on small { color: #f3dcbb; }
-    .ctag.town { pointer-events: none; background: none; border: 0; box-shadow: none; padding: 0; color: #4b4037; font-size: 10px; font-style: italic; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
-    .ctag.town.s3 { font-size: 13px; font-weight: 700; font-style: normal; color: #a0432f; }
-    #worldHead { padding-right: 64px; }
-    #worldCredit { position: absolute; left: 8px; right: 8px; bottom: 2px; text-align: center; font-size: 9px; color: rgba(60,45,30,.6); pointer-events: none; }
-    #worldHome { position: absolute; right: 12px; top: 12px; font: inherit; font-size: 12px; color: #3b2a1a; background: #fffaf0; border: 1.5px solid #8a5a35; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
-    .ctag.city { pointer-events: none; background: none; border: 0; box-shadow: none; color: #a0432f; font-weight: 700; font-size: 12px; }
-    #worldHead, #recHead { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: 12px; right: 12px; padding: 10px 14px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35; }
-    #worldHead b, #recHead b { font-size: 17px; } #worldHead small, #recHead small { display: block; color: #7a5a3a; font-size: 12px; margin-top: 2px; }
-    #worldCard { position: absolute; left: 12px; right: 12px; bottom: 18px; max-width: 520px; margin: 0 auto; padding: 12px 14px; border-radius: 16px; background: rgba(255,248,234,.97); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35, 0 6px 16px rgba(0,0,0,.25); display: grid; gap: 6px; }
-    #worldCard b { font-size: 18px; } #worldCard small { color: #7a5a3a; }
-    #worldCard .bar { height: 8px; border-radius: 4px; background: #e2d7c3; overflow: hidden; } #worldCard .bar i { display: block; height: 100%; background: linear-gradient(90deg, #6fae7a, #f2b632); }
-    #worldCard button, #records button.go { font: inherit; font-size: 16px; font-weight: 700; color: #fff8ea; background: #7a4b25; border: 0; border-radius: 12px; padding: 11px; cursor: pointer; }
+    .ctag { position: absolute; left: 0; top: 0; pointer-events: auto; display: flex; gap: 6px; align-items: baseline; background: none; border: 0; padding: 2px 4px; white-space: nowrap; cursor: pointer; font: 500 11px Oswald, sans-serif; letter-spacing: .28em; color: #7b736a; }
+    .ctag b { font-weight: 500; } .ctag small { font: 600 12px "Cormorant Garamond", serif; letter-spacing: 0; color: #b6463b; }
+    .ctag.on { color: #22344d; } .ctag.on b { border-bottom: 1.5px solid #b6463b; }
     #records { background: #f6efe3; color: #3d3a36; overflow-y: auto; padding: env(safe-area-inset-top) 14px 0; font-family: "Noto Serif SC", serif; }
     #recSec { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; font: 18px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; } #recSec::after { content: ""; flex: 1; height: 1px; background: #d9cdb9; }
     #recList { padding: 0 0 24px; display: grid; gap: 10px; }
@@ -92,6 +80,15 @@
     .langSwitch { align-self: center; flex: none; margin: 0 10px 0 2px; display: flex; border: 1px solid #b9ad99; border-radius: 999px; overflow: hidden; background: rgba(253,251,246,.92); }
     .langSwitch button { font: 600 12px Oswald, sans-serif; color: #22344d; background: none; border: 0; padding: 4px 10px; cursor: pointer; }
     .langSwitch button.on { background: #22344d; color: #fdfbf6; }
+    #worldHead { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 18px; right: 80px; color: #33302c; pointer-events: none; }
+    #worldHead b { display: block; font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #worldHead small { display: block; font: 14px/1.4 "Cormorant Garamond", "Noto Serif SC", serif; color: #8a8278; margin-top: 4px; }
+    #worldHead::before { content: "MY MOUNTAINS"; display: block; font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: #8a8278; margin-bottom: 4px; }
+    #worldHome { position: absolute; right: 16px; top: calc(18px + env(safe-area-inset-top)); font: 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; background: #fdfbf6; border: 1px solid #cbbfa9; border-radius: 999px; padding: 3px 12px; cursor: pointer; z-index: 2; }
+    #worldCard { position: absolute; left: 14px; right: 14px; bottom: 18px; max-width: 520px; margin: 0 auto; padding: 14px 16px; background: #fdfbf6; color: #33302c; box-shadow: 0 8px 18px rgba(90,70,40,.18); display: grid; gap: 6px; font-family: "Noto Serif SC", serif; z-index: 3; }
+    #worldCard b { font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #worldCard small { color: #8a8278; font-size: 13px; }
+    #worldCard .bar { height: 5px; border-radius: 3px; background: #e6dccb; overflow: hidden; } #worldCard .bar i { display: block; height: 100%; background: #22344d; }
+    #worldCard button { font: 600 17px "Cormorant Garamond", "Noto Serif SC", serif; color: #fdfbf6; background: #22344d; border: 0; border-radius: 999px; padding: 9px; cursor: pointer; }
+    #worldCredit { position: absolute; left: 8px; right: 8px; bottom: 2px; text-align: center; font-size: 9px; color: rgba(60,50,40,.5); pointer-events: none; }
     [hidden] { display: none !important; }
     #status { position: fixed; top: 26vh; left: 50%; transform: translateX(-50%); color: #142033; font-size: 14px; }
   </style>
@@ -116,12 +113,12 @@
     </section>
   </div>
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
-    <div id="worldHead"><b>🏔 去征服哪座山？</b><small>灰色的雪道还没滑过，滑过的变成彩色，全滑遍会开花 · 拖动移动，两指转动、倾斜、缩放</small><button id="worldHome">全图</button></div>
-    <div id="worldCard" hidden></div><div id="worldCredit">地形 AWS Terrain Tiles · 道路、河流和雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准</div></div>
+    <div id="worldHead"><b>去征服哪座山？</b><small>每座山一块真实的地形 · 滑得越多颜色越足，全滑遍插上旗 · 拖动转一圈，两指缩放</small></div><button id="worldHome">全图</button>
+    <div id="worldCard" hidden></div><div id="worldCredit">地形 AWS Terrain Tiles · 雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准</div></div>
   <div id="records" hidden><div id="memory"></div><div id="recSec">每个雪场</div><div id="recList"></div></div>
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><span>🧑</span>人物</button><button data-tab="resort"><span>🏔</span>雪场</button><button data-tab="trip"><span>🧳</span>行程</button><button data-tab="log"><span>📖</span>记录</button></nav>
-  <script type="module" src="start.js?v=27"></script>
+  <script type="module" src="start.js?v=28"></script>
 </body>
 </html>
