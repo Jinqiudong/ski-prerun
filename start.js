@@ -181,27 +181,92 @@ $("saveBtn").onclick = () => {
   view("pick"); renderPick(); show(chosen());
 };
 
-// ---- Resorts
-$("useBtn").onclick = async () => {
-  st.rider = chosen().id; // the one on show, even if it was never tapped (the miniature checks for it)
-  st.kind = "board"; save();
-  view("resort");
-  const list = await (await fetch("data/resorts.json")).json();
-  $("resorts").innerHTML = "";
-  for (const r of list) {
-    const b = document.createElement("button");
-    b.className = "resort"; b.disabled = !r.ready;
-    b.innerHTML = `<span><b>${r.name}</b><small>${r.zh} · ${r.state}${r.ready ? "" : " · 即将加入"}</small></span><span>${r.ready ? "›" : ""}</span>`;
-    b.onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
-    $("resorts").append(b);
+// ---- Tabs: the rider, the resorts (a map of them to conquer), the journal.
+let collection = null, tab = "rider";
+const logOf = () => { try { return JSON.parse(localStorage.getItem("prerunLog") || "{}"); } catch { return {}; } };
+async function setTab(t) {
+  tab = t;
+  for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === t);
+  const rider = t === "rider";
+  for (const id of ["c", "head", "who", "sheet"]) $(id).hidden = !rider;
+  $("status").hidden = !rider || !!rider_ready;
+  $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("jMap").hidden = true;
+  if (t === "resort") await openWorld();
+  if (t === "log") await openRecords();
+}
+let rider_ready = false;
+for (const b of $("tabs").children) b.onclick = () => setTab(b.dataset.tab);
+$("useBtn").onclick = () => { st.rider = chosen().id; st.kind = "board"; save(); setTab("resort"); };
+const resortList = async () => (await (await fetch("data/resorts.json")).json()).filter((r) => r.ready);
+async function openWorld() {
+  const cv = $("world").querySelector("canvas");
+  if (!collection) {
+    const { Collection } = await import("./collection.js?v=3");
+    collection = new Collection(cv, $("ctags"));
+    const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
+    collection.resize();
+    addEventListener("resize", () => collection.resize());
+    await collection.build(await resortList(), stats);
+    collection.onPick = (r) => {
+      const s = logOf()[r.id]?.stats, card = $("worldCard");
+      card.innerHTML = `<b>${r.name}</b><small>${r.zh} · ${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里` : "还没去过"}</small>
+        <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${s?.touched ? "继续征服 ›" : "去这里 ›"}</button>`;
+      card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
+      card.hidden = false;
+    };
+    const loop = (now) => { if (tab === "resort") collection.frame(now / 1000); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
   }
-};
-$("backBtn").onclick = () => view("pick");
+  collection.resize();
+}
+async function openRecords() {
+  const list = await resortList(), log = logOf(), box = $("recList");
+  box.innerHTML = "";
+  const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
+  for (const r of sorted) {
+    const s = log[r.id]?.stats, el = document.createElement("div");
+    el.className = "rec";
+    el.innerHTML = `<div class="row1"><b>${(s?.share || 0) >= 0.999 ? "🌸 " : ""}${r.name}</b><small>${s?.touched ? `${Math.max(1, Math.round(s.share * 100))}%` : "还没去过"}</small></div>
+      <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div>
+      <small>${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里 · ${s.rides} 趟` : "去滑一趟，这里就会记下来"}</small>
+      ${s?.touched ? '<button>🗺 看地图</button>' : ""}`;
+    el.querySelector("button")?.addEventListener("click", () => openJournal(r));
+    box.append(el);
+  }
+}
+// The journal map for one resort: everything skied there in ink.
+async function openJournal(r) {
+  const [{ Terrain, treeMaskFn }, { TrailMap }, { SkiLog }] = await Promise.all([import("./world.js?v=5"), import("./mapview.js?v=7"), import("./skilog.js?v=2")]);
+  const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
+  const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village")), log = new SkiLog(r.id, R);
+  const skied = log.stretches(), track = logOf()[r.id]?.lastTrack || [], s = log.stats();
+  const xs = skied.flat().map((p) => p[0]), zs = skied.flat().map((p) => p[1]);
+  const box = $("jMap"), cv = box.querySelector("canvas");
+  box.hidden = false;
+  const v = { cx: (Math.min(...xs) + Math.max(...xs)) / 2, cz: (Math.min(...zs) + Math.max(...zs)) / 2, zoom: 0.2 };
+  v.zoom = Math.min(0.5, Math.max(0.06, Math.min(innerWidth / (Math.max(...xs) - Math.min(...xs) + 600), innerHeight / (Math.max(...zs) - Math.min(...zs) + 900))));
+  box.querySelector(".bar b").innerHTML = `📖 ${r.name}<br><small style="font-weight:500;color:#7a5a3a">滑过 ${s.touched}/${s.runs} 条 · ${s.km.toFixed(1)} 公里 · ${Math.round(s.share * 100)}%</small>`;
+  const draw = () => {
+    const dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr);
+    tm.view(cv, { cx: v.cx, cz: v.cz, zoom: v.zoom, skied, track, dpr });
+  };
+  draw();
+  let d = null;
+  cv.onpointerdown = (e) => (d = { x: e.clientX, y: e.clientY });
+  cv.onpointermove = (e) => { if (!d) return; v.cx -= (e.clientX - d.x) / v.zoom; v.cz -= (e.clientY - d.y) / v.zoom; d = { x: e.clientX, y: e.clientY }; draw(); };
+  cv.onpointerup = () => (d = null);
+  $("jZoom").onclick = () => { v.zoom = Math.min(1.2, v.zoom * 1.4); draw(); };
+  $("jZoomOut").onclick = () => { v.zoom = Math.max(0.05, v.zoom / 1.4); draw(); };
+  $("jClose").onclick = () => (box.hidden = true);
+}
 function view(v) {
-  $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit"; $("resortView").hidden = v !== "resort";
+  $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
   $("headTitle").textContent = { pick: "选你的 Rider", edit: "换装", resort: "去哪个雪场" }[v];
   $("headSub").textContent = { pick: "先选人物，再选雪场", edit: "改颜色，取个名字，保存到这台手机", resort: `${chosen().name} · 单板 · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
 
 renderPick();
-show(chosen()).catch((e) => { $("status").textContent = "人物没加载出来，刷新试试"; console.warn(e); });
+show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = "人物没加载出来，刷新试试"; console.warn(e); });
+// ?tab=resort or ?tab=log (from the game's menu); a rider already chosen starts on the map.
+const askTab = new URLSearchParams(location.search).get("tab");
+setTab(askTab === "log" ? "log" : askTab === "resort" ? "resort" : "rider");

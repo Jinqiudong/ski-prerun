@@ -4,62 +4,80 @@
     "name": "Copper Mountain",
     "zh": "铜山",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.4775,
+    "lon": -106.1605
   },
   {
     "id": "winterpark",
     "name": "Winter Park",
     "zh": "冬季公园",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.8713,
+    "lon": -105.7826
   },
   {
     "id": "steamboat",
     "name": "Steamboat",
     "zh": "斯廷博特",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 40.456,
+    "lon": -106.7701
   },
   {
     "id": "abasin",
     "name": "Arapahoe Basin",
     "zh": "阿拉帕霍盆地",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.6279,
+    "lon": -105.8743
   },
   {
     "id": "eldora",
     "name": "Eldora",
     "zh": "埃尔多拉",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.9413,
+    "lon": -105.5934
   },
   {
     "id": "snowmass",
     "name": "Snowmass",
     "zh": "阿斯本 · 雪堆山",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.1859,
+    "lon": -106.9494
   },
   {
     "id": "aspenmountain",
     "name": "Aspen Mountain",
     "zh": "阿斯本山",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.1652,
+    "lon": -106.8194
   },
   {
     "id": "highlands",
     "name": "Aspen Highlands",
     "zh": "阿斯本高地",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.1539,
+    "lon": -106.8643
   },
   {
     "id": "buttermilk",
     "name": "Buttermilk",
     "zh": "阿斯本 · 酪乳山",
     "state": "科罗拉多",
-    "ready": true
+    "ready": true,
+    "lat": 39.1928,
+    "lon": -106.87
   }
 ]
