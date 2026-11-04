@@ -1,5 +1,5 @@
 // The way home from the mountain page and the ride: the start page's four tabs, and the settings.
-import { t, openSettings } from "./i18n.js?v=8";
+import { t, openSettings } from "./i18n.js?v=9";
 
 const ICONS = {
   rider: `<svg viewBox="0 0 32 32"><g filter="url(#wct)"><path d="M10 30 L11 19 C11 15 21 15 21 19 L22 30Z" fill="#7f9e88"/><circle cx="16" cy="10.5" r="6.2" fill="#22344d"/><rect x="10.4" y="9" width="11.2" height="3.6" rx="1.8" fill="#c98f9f"/><path d="M6 30 h20" stroke="#8eaec4" stroke-width="2.6" stroke-linecap="round"/></g></svg>`,

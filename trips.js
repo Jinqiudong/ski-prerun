@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=8";
-import { daysOf } from "./roadbook.js?v=3";
+import { t, EN_ON } from "./i18n.js?v=9";
+import { daysOf } from "./roadbook.js?v=4";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -25,6 +25,10 @@ const ABOUT = {
 };
 const CITY = { SFO: "San Francisco", LAX: "Los Angeles", SEA: "Seattle", JFK: "New York", EWR: "Newark", LGA: "New York", BOS: "Boston", ORD: "Chicago", IAH: "Houston", DFW: "Dallas", ATL: "Atlanta", MIA: "Miami", SAN: "San Diego", PDX: "Portland", SJC: "San Jose", OAK: "Oakland", PHX: "Phoenix", SLC: "Salt Lake City", MSP: "Minneapolis", DCA: "Washington", IAD: "Washington", AUS: "Austin", YVR: "Vancouver", YYZ: "Toronto", PEK: "Beijing", PVG: "Shanghai", SHA: "Shanghai", CAN: "Guangzhou", SZX: "Shenzhen", HKG: "Hong Kong", TPE: "Taipei", NRT: "Tokyo", HND: "Tokyo", ICN: "Seoul", LHR: "London", DEN: "Denver" };
 const BANDS = [C.ink, C.pine, C.wine];
+// What to carry for a hike-to (from guides to Highland Bowl and the like).
+export const GEAR = { zh: ["能挂板的背包（25–30 升）或板带", "水，比你觉得的多带一些", "能量棒", "多一件保暖中间层", "备用手套", "雪镜和墨镜", "防晒", "手机充满电"], en: ["A pack that carries a board (25–30 L), or straps", "Water — more than you think", "Snacks", "A warm mid layer", "Spare gloves", "Goggles and sunglasses", "Sunscreen", "A charged phone"] };
+let HIKES = null;
+const hikesOf = async (id) => { if (!HIKES) HIKES = await fetch("data/hikes.json").then((x) => x.json()).catch(() => ({})); return HIKES[id] || []; };
 // Airports people fly to Denver from, to find the nearest one to where you are.
 const AIRPORTS = { SFO: [37.62, -122.38], OAK: [37.72, -122.22], SJC: [37.36, -121.93], LAX: [33.94, -118.41], SAN: [32.73, -117.19], SEA: [47.45, -122.31], PDX: [45.59, -122.6], PHX: [33.43, -112.01], SLC: [40.79, -111.98], DEN: [39.86, -104.67], DFW: [32.9, -97.04], IAH: [29.99, -95.34], AUS: [30.19, -97.67], ORD: [41.98, -87.9], MSP: [44.88, -93.22], ATL: [33.64, -84.43], MIA: [25.79, -80.29], BOS: [42.36, -71.01], JFK: [40.64, -73.78], EWR: [40.69, -74.17], IAD: [38.95, -77.46], DCA: [38.85, -77.04], YVR: [49.19, -123.18], YYZ: [43.68, -79.63], PEK: [40.08, 116.6], PVG: [31.14, 121.81], CAN: [23.39, 113.3], SZX: [22.64, 113.81], HKG: [22.31, 113.91], TPE: [25.08, 121.23], NRT: [35.77, 140.39], HND: [35.55, 139.78], ICN: [37.46, 126.44], LHR: [51.47, -0.45] };
 const nearestAirport = (lat, lon) => {
@@ -376,6 +380,9 @@ export class Trips {
         ${st ? `<div class="sec">${t("适合谁")}</div><div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span>${x[0]} ${t(x[1])} ${x[2]}</span>`).join("")}</div>
           <div class="note" style="font-size:15px;color:#4a453f">${EN_ON ? `${st.runs.easy + st.runs.intermediate} of ${total} named runs are green or blue.` : `${total} 条有名字的雪道里，绿道和蓝道有 ${st.runs.easy + st.runs.intermediate} 条。`}</div>
         <div class="sec">${t("数字")}</div><div class="nums">${[["山顶", m(st.top)], ["山脚", m(st.base)], ["落差", m(st.top - st.base)], ["雪道", total], ["缆车", st.lifts], ["从 Denver", EN_ON ? `~${a.drive} h drive` : `开车约 ${a.drive} 小时`]].map(([k, v]) => `<div><small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
+        ${st?.flats?.length ? `<div class="sec">${t("单板注意")}</div><div class="note" style="font-size:15px;color:#4a453f;margin-top:0">${EN_ON ? "Flats where a board slows (carry speed into them):" : "这些地方比较平，单板容易减速，要提前带速度："}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${st.flats.map(([n, , m]) => `<span style="font-size:13px;padding:2px 10px;background:#fbf1dc;border-left:3px solid #c9a24a">${esc(n)} · ${m} m</span>`).join("")}</div>` : ""}
+        <div class="hikes"></div>
         <div class="sec">${t("你的进度")}</div><div class="note" style="font-size:15px;color:#4a453f">${runs ? (EN_ON ? `Pre-ran ${runs} time${runs > 1 ? "s" : ""}` : `预滑过 ${runs} 趟`) : t("还没预滑过")}${log?.touched ? (EN_ON ? ` · seen ${Math.max(1, Math.round(log.share * 100))}% of the runs` : ` · 看过 ${Math.max(1, Math.round(log.share * 100))}% 的雪道`) : ""}</div>
         <div class="acts"><button class="ghostbtn main go">${t("去预滑 ›")}</button></div></div></div>`;
     document.body.append(el);
@@ -383,6 +390,15 @@ export class Trips {
     el.onclick = (e) => { if (e.target === el) close(); };
     el.querySelector(".x").onclick = close;
     el.querySelector(".go").onclick = () => this.go(id);
+    const hikes = await hikesOf(id);
+    if (hikes.length && el.isConnected) el.querySelector(".hikes").innerHTML = `<div class="sec">${t("徒步上去再滑")}</div>${hikes.map((h) => `<div style="margin:0 0 12px;padding:10px 12px;background:#f2f4f5">
+        <div style="font:600 19px ${SERIF};color:${C.ink}">🥾 ${esc(EN_ON ? h.name : h.zh)}</div>
+        <div style="font-size:13px;color:${C.mute};margin:2px 0 4px">${EN_ON ? `from the top of ${esc(h.from)} · about ${h.mins[0]}–${h.mins[1]} min${h.gain ? ` · +${h.gain} m` : ""}${h.summit ? ` · top ${h.summit[0].toLocaleString("en-US")} m` : ""}` : `从 ${esc(h.from)} 顶出发 · 约 ${h.mins[0]}–${h.mins[1]} 分钟${h.gain ? ` · 爬升约 ${h.gain} 米` : ""}${h.summit ? ` · 山顶 ${h.summit[0].toLocaleString("en-US")} 米` : ""}`}</div>
+        <div style="font-size:14px;color:#4a453f">${esc(EN_ON ? h.enWhy : h.zhWhy)}</div>
+        ${h.snowcat ? `<div style="font-size:13px;color:${C.pine};margin-top:4px">🚜 ${esc(EN_ON ? h.snowcatEn : h.snowcat)}</div>` : ""}
+        <ul style="margin:6px 0 0;padding-left:18px;font-size:13px;color:#4a453f">${(EN_ON ? h.tipsEn : h.tips).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}
+      <div style="font:15px ${SERIF};color:#6f675e;margin:4px 0 6px">${t("要带的东西")}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${GEAR[EN_ON ? "en" : "zh"].map((g) => `<span style="font-size:12px;padding:2px 9px;border:1px solid #cbbfa9;border-radius:999px;color:${C.ink}">${esc(g)}</span>`).join("")}</div>
+      <div class="note">${EN_ON ? "Times and openings change: check the resort's daily report." : "时间和开放情况会变：以雪场当天公告为准。"}</div>`;
     const fc = await forecast(r, tr.from, tr.to);
     if (fc && el.isConnected) {
       const dates = []; for (let d = tr.from; d <= tr.to && dates.length < 7; d = plus(d, 1)) dates.push(d);

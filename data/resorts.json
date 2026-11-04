@@ -16,7 +16,29 @@
         "advanced": 51,
         "expert": 24
       },
-      "lifts": 19
+      "lifts": 19,
+      "flats": [
+        [
+          "EZ Road",
+          "easy",
+          286
+        ],
+        [
+          "West Village Traverse",
+          "easy",
+          192
+        ],
+        [
+          "West Ridge Traverse",
+          "advanced",
+          156
+        ],
+        [
+          "Otto Bahn",
+          "intermediate",
+          132
+        ]
+      ]
     }
   },
   {
@@ -36,7 +58,39 @@
         "advanced": 65,
         "expert": 26
       },
-      "lifts": 22
+      "lifts": 22,
+      "flats": [
+        [
+          "Vasquez Cirque Access",
+          "expert",
+          599
+        ],
+        [
+          "Big Valley",
+          "easy",
+          528
+        ],
+        [
+          "Whistlestop",
+          "easy",
+          504
+        ],
+        [
+          "Thunderbird Traverse",
+          "advanced",
+          444
+        ],
+        [
+          "Corona Way",
+          "intermediate",
+          396
+        ],
+        [
+          "Turnpike",
+          "easy",
+          312
+        ]
+      ]
     }
   },
   {
@@ -56,7 +110,39 @@
         "advanced": 75,
         "expert": 9
       },
-      "lifts": 18
+      "lifts": 18,
+      "flats": [
+        [
+          "Right-o-Way",
+          "easy",
+          354
+        ],
+        [
+          "Hike Out",
+          "expert",
+          252
+        ],
+        [
+          "Yoo Hoo",
+          "easy",
+          192
+        ],
+        [
+          "To Pony",
+          "advanced",
+          192
+        ],
+        [
+          "Lower Valley View",
+          "advanced",
+          192
+        ],
+        [
+          "Last Chance",
+          "advanced",
+          192
+        ]
+      ]
     }
   },
   {
@@ -76,7 +162,19 @@
         "advanced": 52,
         "expert": 69
       },
-      "lifts": 7
+      "lifts": 7,
+      "flats": [
+        [
+          "Peaceful Valley",
+          "advanced",
+          144
+        ],
+        [
+          "Lightning Traverse",
+          "advanced",
+          144
+        ]
+      ]
     }
   },
   {
@@ -96,7 +194,24 @@
         "advanced": 11,
         "expert": 3
       },
-      "lifts": 8
+      "lifts": 8,
+      "flats": [
+        [
+          "Pipeline",
+          "intermediate",
+          444
+        ],
+        [
+          "Corona Road",
+          "intermediate",
+          344
+        ],
+        [
+          "Summer Road",
+          "easy",
+          156
+        ]
+      ]
     }
   },
   {
@@ -116,7 +231,39 @@
         "advanced": 25,
         "expert": 37
       },
-      "lifts": 18
+      "lifts": 18,
+      "flats": [
+        [
+          "Coffee Pot",
+          "intermediate",
+          384
+        ],
+        [
+          "Turkey Trot",
+          "intermediate",
+          336
+        ],
+        [
+          "East Wall",
+          "expert",
+          216
+        ],
+        [
+          "Powderhorn",
+          "expert",
+          192
+        ],
+        [
+          "Gowdy's",
+          "expert",
+          180
+        ],
+        [
+          "East Branch",
+          "intermediate",
+          156
+        ]
+      ]
     }
   },
   {
@@ -136,7 +283,19 @@
         "advanced": 28,
         "expert": 61
       },
-      "lifts": 6
+      "lifts": 6,
+      "flats": [
+        [
+          "North Star",
+          "advanced",
+          240
+        ],
+        [
+          "Buddy System",
+          "intermediate",
+          132
+        ]
+      ]
     }
   },
   {
@@ -156,7 +315,24 @@
         "advanced": 21,
         "expert": 53
       },
-      "lifts": 7
+      "lifts": 7,
+      "flats": [
+        [
+          "T-Lazy Catwalk",
+          "intermediate",
+          324
+        ],
+        [
+          "Prospector",
+          "intermediate",
+          156
+        ],
+        [
+          "P-Chutes Road",
+          "advanced",
+          132
+        ]
+      ]
     }
   },
   {
@@ -176,7 +352,8 @@
         "advanced": 17,
         "expert": 6
       },
-      "lifts": 7
+      "lifts": 7,
+      "flats": []
     }
   }
 ]

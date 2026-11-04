@@ -19,7 +19,8 @@ Product contract: [venture-lab `product-incubator/products/48/PRODUCT.md`](https
 - `world.js` — terrain, far ranges, woods mask, run ribbons, lifts. `sky.js` — sun and weather palette.
 - `route.js` — route graph and planner (no three.js; tested in `tests/route.test.mjs`).
 - `mapview.js` (trail map), `skinav.js` (junctions), `snownames.js` (run names on the snow), `skilog.js` (what you've skied).
-- `tools/bake.py` builds `data/<resort>.json`; `tools/bake_far.py` the far ranges; `tools/bake_region.py` the Colorado map.
+- `tools/bake.py` builds `data/<resort>.json`; `tools/bake_far.py` the far ranges; `tools/bake_region.py` the Colorado relief; `tools/bake_map.py` the painted map; `tools/bake_tiles.py` the resort tiles; `tools/bake_drives.py` the drives; `tools/bake_flats.py` flats and rises per run; `tools/resort_stats.py` the numbers in the resort guide; `tools/watercolor.py` the ticket paintings.
+- `data/hikes.json` — hike-to terrain per resort (researched; times are approximate, check the resort's report). Highland Bowl is walkable in the ride (`look.js`, hike phase).
 
 ## Workflow
 - Follow venture-lab `WORKFLOW.md`: issue → branch → PR (`Closes #N`) → review/QA → merge. `main` deploys to Pages.

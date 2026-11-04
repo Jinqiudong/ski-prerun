@@ -1,0 +1,49 @@
+{
+  "_note": "Hike-to terrain, gathered Nov 2026 from resort guides, Aspen Sojourner, OnTheSnow, Powderhounds, FATMAP route notes and trip reports. Times and gains vary by source and day: shown as 'about', and always 'check the resort's daily report'.",
+  "highlands": [{
+    "id": "highland-bowl", "name": "Highland Bowl", "zh": "Highland Bowl 徒步",
+    "from": "Loge Peak", "summit": [3777, 12392], "gain": 240, "mins": [25, 60], "snowcat": "条件允许时有免费雪猫，从 Loge Peak 顶送到第一个门，能省大约三分之一的路",
+    "snowcatEn": "When conditions allow, a free snowcat runs from the top of Loge Peak to the first gate, saving about a third of the walk",
+    "zhWhy": "科罗拉多最有名的徒步滑雪：沿山脊的靴印台阶走上去，山顶挂着经幡，下面是整个 Highland Bowl。",
+    "enWhy": "Colorado's best-known hike-to: up the ridge on the boot-packed steps to prayer flags on the summit, the whole bowl below.",
+    "down": ["G-1", "G-2", "G-3", "G-4", "G-6", "G-8", "Ozone"],
+    "tips": ["第一次最好跟走过的人一起", "台阶很窄，按自己的节奏走，别跟着别人冲", "山顶风大，留件厚外套在包里", "整个碗都是雪崩地形：救援三件套（信标、铲子、探杆）建议带，不强制"],
+    "tipsEn": ["Go the first time with someone who has done it", "The steps are narrow: keep your own pace", "It's windy on top: keep a warm layer in your pack", "The whole bowl is avalanche terrain: a beacon, shovel and probe are advised, not required"]
+  }],
+  "abasin": [{
+    "id": "east-wall", "name": "Upper East Wall", "zh": "East Wall 上半段徒步",
+    "from": "Lenawee Mountain", "mins": [20, 30], "gain": 150,
+    "zhWhy": "只能走上去的双黑道，大约二月才开，要做雪崩控制。", "enWhy": "Double-black terrain you can only walk to; it usually opens around February, after avalanche work.",
+    "tips": ["看当天开没开：门口有牌子", "下来是很陡的雪沟"], "tipsEn": ["Check it's open: the gate is signed", "It's steep gullies on the way down"]
+  }, {
+    "id": "steep-gullies", "name": "Steep Gullies", "zh": "Steep Gullies（滑完要走回来）",
+    "from": "Pallavicini", "mins": [20, 30], "back": true,
+    "zhWhy": "从 Pallavicini 旁边的门进去的陡沟，滑完要走 20–30 分钟回 Pallavicini 缆车。", "enWhy": "Steep chutes through a gate by Pallavicini; after them it's a 20–30 minute walk back to the lift.",
+    "tips": ["留好体力走回去", "常常要到季末才开"], "tipsEn": ["Save some legs for the walk back", "Often opens late in the season"]
+  }],
+  "winterpark": [{
+    "id": "vasquez-cirque", "name": "Vasquez Cirque", "zh": "Vasquez Cirque 徒步",
+    "from": "Panoramic Express", "mins": [20, 30], "km": 1.6, "snowcat": "可以坐雪猫 Cirque Sled，在 Panoramic Express 顶上一点上车",
+    "snowcatEn": "Or ride the Cirque Sled snowcat, which loads just above the Panoramic Express",
+    "zhWhy": "Parsenn Bowl 后面像野雪一样的大冰斗，先滑行加走大约 1.6 公里过去。", "enWhy": "A backcountry-like cirque behind Parsenn Bowl, a skate and walk of about a mile from the top of Panoramic.",
+    "tips": ["一般二月中下旬才开，看门口的牌子", "出来是很长的平路，单板要带速度，回 Eagle Wind / Pioneer"], "tipsEn": ["It usually opens mid to late February: check the gate", "The way out is a long runout: carry speed on a board"]
+  }],
+  "snowmass": [{
+    "id": "hanging-valley", "name": "Hanging Valley Wall", "zh": "Hanging Valley Wall 短徒步",
+    "from": "Alpine Springs", "mins": [5, 10],
+    "zhWhy": "Snowmass 最难的地形之一：陡壁、树林、悬崖。", "enWhy": "Some of Snowmass's hardest terrain: steeps, trees and cliffs.",
+    "tips": ["下午 2:30 左右关门，早点去", "常常晚开早关"], "tipsEn": ["The gate closes around 2:30 pm: go early", "It often opens late and closes early"]
+  }],
+  "steamboat": [{
+    "id": "morningside", "name": "Morningside hike-to chutes", "zh": "Morningside 顶上的短徒步",
+    "from": "Morningside", "mins": [5, 10],
+    "zhWhy": "缆车顶走五分钟，就是几条短而陡的雪沟和 Christmas Tree Bowl 的稀疏林子。", "enWhy": "A five-minute walk from the lift to short, steep chutes and the open glades of Christmas Tree Bowl.",
+    "tips": ["很短，但有几步是陡的，板夹在手里"], "tipsEn": ["Short, but a few steps are steep: carry the board"]
+  }],
+  "copper": [{
+    "id": "tucker", "name": "Tucker Mountain", "zh": "Tucker Mountain",
+    "from": "Three Bears", "mins": [0, 15],
+    "zhWhy": "以前要坐雪猫或沿 Copper Bowl 西脊走上去，2019 年起有 Three Bears 缆车。朝北，雪保存得久。", "enWhy": "Once a snowcat or a hike up Copper Bowl's west ridge; since 2019 the Three Bears lift reaches it. North-facing, it holds snow.",
+    "tips": ["只有专家道"], "tipsEn": ["Experts only"]
+  }]
+}

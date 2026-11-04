@@ -115,7 +115,7 @@ export function boarderModel() {
     toe: clip("Toeside_Carve"), heel: clip("Heelside_Carve"), sit: clip("Chairlift_Sit"), idle: clip("Stand_Idle"), push: clip("Skate_Push"), exit: clip("Lift_Exit"),
     toeTurn: clip("Toeside_Turn"), heelTurn: clip("Heelside_Turn"), toToe: clip("HeelToToe_HipPush"), toHeel: clip("ToeToHeel_Crouch"),
     low: clip("Low_Stance"), lookL: clip("Chairlift_LookLeft"), lookR: clip("Chairlift_LookRight"),
-    ollie: clip("Ollie_Air"), indy: clip("Indy_Grab"), melon: clip("Melon_Grab"), tailGrab: clip("Tail_Grab"), nose: clip("Nose_Press"), tailPress: clip("Tail_Press") };
+    carry: clip("Board_Carry"), ollie: clip("Ollie_Air"), indy: clip("Indy_Grab"), melon: clip("Melon_Grab"), tailGrab: clip("Tail_Grab"), nose: clip("Nose_Press"), tailPress: clip("Tail_Press") };
   for (const k of Object.keys(A)) if (!A[k]) delete A[k];
   const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R"),
     board: bone("Board"), hips: bone("Hips"), head: bone("Head"), thighL: bone("Thigh.L"), thighR: bone("Thigh.R"), shinL: bone("Shin.L"), shinR: bone("Shin.R"),
@@ -284,5 +284,16 @@ export function idleBoarder(root) {
   start(root);
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
   weights(u, A_(u, "idle") ? { idle: 1 } : { stance: 1 });
+  mix(u); finish(root);
+}
+
+// On foot, the board carried (a hike-to): the carry pose, bobbing a little with each step (phase in steps).
+export function hikeBoarder(root, phase) {
+  const u = root.userData;
+  start(root);
+  u.lean.position.set(0, 0, 0); u.lean.rotation.set(0.08, 0, 0); u.yaw.rotation.set(0, Math.sin(phase * Math.PI) * 0.04, 0); u.model.position.x = u.model.position.z = 0;
+  u.yaw.position.set(0, Math.abs(Math.sin(phase * Math.PI)) * 0.05, 0);
+  faceForward(u);
+  weights(u, A_(u, "carry") ? { carry: 1 } : A_(u, "idle") ? { idle: 1 } : { stance: 1 });
   mix(u); finish(root);
 }

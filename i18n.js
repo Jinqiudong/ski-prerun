@@ -26,7 +26,7 @@ const EN = {
   "选你的穿搭": "Pick your outfit", "先选一套穿搭，再选雪场": "An outfit first, then a resort", "穿搭模版": "Outfits", "我的穿搭": "My outfits",
   "🎨 改颜色": "🎨 Colours", "🎨 改颜色 · 存成我的": "🎨 Colours · save as mine", "穿这套去滑 ›": "Ride in this ›", "给这套穿搭取个名字": "Name this outfit", "比如：周末粉雪": "e.g. Weekend powder",
   "改颜色": "Colours", "穿搭加载中…": "Loading…", "还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。": "None yet. Pick an outfit, tap Colours to change a few things, give it a name, and it's saved here.",
-  "看雪定山": "wherever the snow is", "预滑路书": "Roadbook", "设置": "Settings", "语言": "Language", "⚙ 设置": "⚙ Settings", "你从哪飞（印在机票上）": "Where you fly from (printed on your pass)", "📍 用我的位置": "📍 Use my location", "最近的机场：{x}": "Nearest airport: {x}", "比如 SFO": "e.g. SFO", "定位不到，手动填吧": "Can't find you — type it in", "在「改一改」里填从哪飞": "set it in Edit",
+  "快到底放慢，别滑过站": "slow near the bottom, don't miss it", "单板注意": "For snowboards", "徒步上去再滑": "Hike, then ski", "要带的东西": "What to bring", "看雪定山": "wherever the snow is", "预滑路书": "Roadbook", "设置": "Settings", "语言": "Language", "⚙ 设置": "⚙ Settings", "你从哪飞（印在机票上）": "Where you fly from (printed on your pass)", "📍 用我的位置": "📍 Use my location", "最近的机场：{x}": "Nearest airport: {x}", "比如 SFO": "e.g. SFO", "定位不到，手动填吧": "Can't find you — type it in", "在「改一改」里填从哪飞": "set it in Edit",
   "外套": "Jacket", "雪裤": "Pants", "头盔": "Helmet", "雪镜": "Goggles", "单板": "Snowboard", "删除": "Delete", "🎨 换装 · 存成新人物": "🎨 Dress · save as new", "先取个名字": "Name it first",
   "改颜色，取个名字，保存到这台手机": "Change colours, name it, save it on this phone", "人物没加载出来，刷新试试": "The rider didn't load: try refreshing",
   "滑过 {a}/{b} 条雪道 · {km} 公里": "Skied {a}/{b} runs · {km} km", "滑过 {a}/{b} 条雪道 · {km} 公里 · {n} 趟": "Skied {a}/{b} runs · {km} km · {n} rides",
