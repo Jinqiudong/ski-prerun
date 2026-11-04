@@ -45,7 +45,7 @@ const turntable = new THREE.Group();
 scene.add(turntable);
 let rider = null, spin = 0.6, drag = null;
 function resize() {
-  const w = innerWidth, h = innerHeight * 0.58;
+  const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight * 0.56;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
   camera.position.set(0, 1.3, 5.4); camera.lookAt(0, 0.62, 0);
@@ -109,7 +109,9 @@ function renderPick() {
     $("mine").append(b);
   }
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
-  $("editBtn").textContent = t(cur.isDefault ? "🎨 改颜色 · 存成我的" : "🎨 改颜色");
+  $("editBtn").innerHTML = `<span>🎨</span>${t("改颜色")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
+  // The characters: the base bodies outfits go on. Rider A for now; the man's is still being made.
+  $("chars").innerHTML = `<button class="card on"><b>${t("女")}</b><small>Rider A</small></button><button class="card" disabled><b>${t("男")}</b><small>${t("制作中")}</small></button>`;
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -163,7 +165,7 @@ async function setTab(t) {
   tab = t;
   for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === t);
   const rider = t === "rider";
-  for (const id of ["c", "head", "who", "sheet"]) $(id).hidden = !rider;
+  for (const id of ["stage", "sheet"]) $(id).hidden = !rider;
   $("status").hidden = !rider || !!rider_ready;
   $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("jMap").hidden = true; $("trips").hidden = t !== "trip";
   if (t === "trip") await openTrips();
@@ -262,6 +264,7 @@ async function openJournal(r) {
 }
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
+  document.body.classList.toggle("editing", v === "edit");
   $("headTitle").textContent = t({ pick: "选你的穿搭", edit: "改颜色", resort: "去哪个雪场" }[v]);
   $("headSub").textContent = { pick: t("先选一套穿搭，再选雪场"), edit: t("改颜色，取个名字，保存到这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
