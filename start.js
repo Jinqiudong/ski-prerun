@@ -50,11 +50,36 @@ addEventListener("resize", resize); resize();
 canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, a: turntable.rotation.y }; });
 addEventListener("pointermove", (e) => { if (drag) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
 addEventListener("pointerup", () => { drag = null; });
+// A head-and-shoulders portrait of the rider as dressed, saved for the maps on the mountain (the "you are
+// here" marker). Rendered off screen with its own camera, once each time the rider or the colours change.
+let portraitDue = false;
+const portraitRT = new THREE.WebGLRenderTarget(160, 160, { samples: 4 }), portraitCam = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
+portraitRT.texture.colorSpace = THREE.SRGBColorSpace; // written as the screen would show it
+function savePortrait() {
+  if (!rider) return;
+  const head = rider.userData.B.head.getWorldPosition(new THREE.Vector3()), keep = turntable.rotation.y;
+  turntable.rotation.y = 0; rider.updateMatrixWorld(true);
+  const h = rider.userData.B.head.getWorldPosition(new THREE.Vector3());
+  portraitCam.position.set(h.x + 0.25, h.y + 0.12, h.z + 1.7); portraitCam.lookAt(h.x, h.y - 0.02, h.z);
+  const bg = scene.background, exp = renderer.toneMappingExposure; scene.background = new THREE.Color(0xdbe8f6); renderer.toneMappingExposure = 1.35;
+  renderer.setRenderTarget(portraitRT); renderer.render(scene, portraitCam); renderer.setRenderTarget(null);
+  renderer.toneMappingExposure = exp;
+  scene.background = bg; turntable.rotation.y = keep;
+  const px = new Uint8Array(160 * 160 * 4);
+  renderer.readRenderTargetPixels(portraitRT, 0, 0, 160, 160, px);
+  const c = document.createElement("canvas"); c.width = c.height = 160;
+  const g = c.getContext("2d"), img = g.createImageData(160, 160);
+  for (let y = 0; y < 160; y++) img.data.set(px.subarray((159 - y) * 640, (160 - y) * 640), y * 640); // flip
+  g.putImageData(img, 0, 0);
+  try { localStorage.setItem("prerunAvatar", c.toDataURL("image/png")); } catch { /* storage full: keep the old one */ }
+  void head;
+}
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!drag) turntable.rotation.y += spin * dt;
   if (rider) idleBoarder(rider);
+  if (portraitDue && rider) { portraitDue = false; savePortrait(); }
   renderer.render(scene, camera);
 });
 
@@ -74,6 +99,7 @@ async function show(r) {
   }
   dressRider(rider.userData.model, r.base, r.colors);
   $("who").textContent = r.name;
+  portraitDue = true;
 }
 
 // ---- Picking

@@ -42,9 +42,21 @@
     #skiHud #skiWhere { font-size: 12px; color: #b9c4d3; margin-top: 4px; }
     #skiHud small { font-size: 13px; color: #d5deea; }
     /* The 3D map is drawn into this circle by WebGL; the element gives it its place, frame and tap. */
-    /* The pixel-art map: a square, scaled up without smoothing. */
-    #minimap { position: fixed; right: 10px; top: calc(120px + env(safe-area-inset-top)); width: 128px; height: 128px; border-radius: 10px; border: 3px solid #2b2f36; outline: 2px solid rgba(255,255,255,.85); box-shadow: 0 3px 12px rgba(0,0,0,.35); box-sizing: border-box; cursor: pointer; image-rendering: pixelated; image-rendering: crisp-edges; background: #eef2f7; }
-    #minimap.big { width: 260px; height: 260px; }
+    /* The corner map: a small framed square of the trail map; tap it for the full map. */
+    #minimap { position: fixed; right: 10px; top: calc(120px + env(safe-area-inset-top)); width: 128px; height: 128px; border-radius: 14px; border: 3px solid #fff8ea; box-shadow: 0 0 0 2px #8a5a35, 0 4px 12px rgba(0,0,0,.35); box-sizing: border-box; cursor: pointer; background: #f4f1ea; }
+    /* The full map: pan, pinch, tap a place, confirm. */
+    #bigMap { position: fixed; inset: 0; z-index: 8; background: #e9edf2; }
+    #bigMap canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+    #bigMap .bar { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35, 0 4px 12px rgba(0,0,0,.25); font-size: 14px; }
+    #bigMap .bar b { flex: 1; }
+    #bigMap button { font: inherit; font-size: 14px; color: #3b2a1a; background: #fff; border: 2px solid #8a5a35; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+    #bigMap .pickCard { position: absolute; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 12px 14px; border-radius: 16px; background: rgba(255,248,234,.97); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35, 0 6px 16px rgba(0,0,0,.3); display: grid; gap: 8px; }
+    #bigMap .pickCard b { font-size: 17px; } #bigMap .pickCard small { color: #7a5a3a; }
+    #bigMap .pickCard .two { display: flex; gap: 8px; } #bigMap .pickCard .two button { flex: 1; padding: 10px; }
+    #bigMap .pickCard .go { background: #7a4b25; color: #fff8ea; border-color: #7a4b25; font-weight: 600; }
+    .rtag.me { background: none; border: 0; box-shadow: none; padding: 0; }
+    .rtag.me img, .rtag.me span { width: 46px; height: 46px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px #3a3f4a, 0 3px 8px rgba(0,0,0,.35); display: block; background: #dbe8f6; animation: hop 0.9s ease-in-out infinite; font-size: 28px; line-height: 46px; text-align: center; }
+    @keyframes hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-9px); } }
     body.picking #credit { display: none; }
     #runTags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
     .rtag { position: absolute; left: 0; top: 0; pointer-events: auto; font: inherit; font-size: 13px; font-weight: 600; color: #f4f7fb; background: rgba(14,22,34,.78); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 10px; white-space: nowrap; cursor: pointer; }
@@ -146,16 +158,16 @@
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a id="kindBtn" href="javascript:void 0"></a><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
   <div id="skiHud" class="glass" hidden><div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
   <div id="turnCue" hidden></div>
-  <canvas id="minimap" width="64" height="64" hidden></canvas>
+  <canvas id="minimap" width="256" height="256" hidden></canvas>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
-  <div id="mapBar" hidden><span>点缆车：去坐它 · 点雪道：从那里重新开始</span><button id="mapMore">更多选项</button><button id="mapClose" aria-label="收起地图">×</button></div>
+  <div id="bigMap" hidden><canvas></canvas><div class="bar"><b>🗺 雪场地图 · 点一个地方，选从哪里出发</b><button id="mapMe">回到我</button><button id="mapMore">更多</button><button id="mapClose" aria-label="关闭">×</button></div><div class="pickCard" hidden></div></div>
   <div id="liftOffer" class="glass" hidden></div>
   <div id="rePlan" class="glass sheet" hidden></div>
   <div id="guide" class="sheet scroll" hidden></div>
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=54"></script>
+  <script type="module" src="look.js?v=55"></script>
 </body>
 </html>
