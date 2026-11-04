@@ -95,7 +95,12 @@ export class TrailMap {
     g.fillStyle = "#e9edf2"; g.fillRect(0, 0, W, H);
     const sx = (cx - T.x0) * this.s - W / 2 / k, sz = (cz - T.z0) * this.s - H / 2 / k;
     g.imageSmoothingEnabled = true;
-    g.drawImage(this.base, sx, sz, W / k, H / k, 0, 0, W, H);
+    // Only the part of the picture that's in view, mapped to where it goes: a source rectangle reaching
+    // past the picture's edge is clipped differently by browsers (Safari stretches what's left), which
+    // shifted the map under the route.
+    const bw = this.base.width, bh = this.base.height;
+    const x0 = Math.max(0, sx), z0 = Math.max(0, sz), x1 = Math.min(bw, sx + W / k), z1 = Math.min(bh, sz + H / k);
+    if (x1 > x0 && z1 > z0) g.drawImage(this.base, x0, z0, x1 - x0, z1 - z0, (x0 - sx) * k, (z0 - sz) * k, (x1 - x0) * k, (z1 - z0) * k);
     const S = (x, z) => [(x - cx) * zoom * dpr + W / 2, (z - cz) * zoom * dpr + H / 2];
     // Overlays keep to the map's scale (a route as wide as a wide run), within what stays readable.
     const px = (m, lo, hi) => Math.max(lo, Math.min(hi, m * zoom)) * dpr;
