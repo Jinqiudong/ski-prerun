@@ -43,7 +43,7 @@ export class Collection {
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
     // The painted map the tiles stand on (it takes their shadows too).
     const mh = MAP.w * ((MAP.N - MAP.S) * 111) / ((MAP.E - MAP.W) * 85.3);
-    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=1", (x) => (x.colorSpace = THREE.SRGBColorSpace));
+    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=2", (x) => (x.colorSpace = THREE.SRGBColorSpace));
     tex.anisotropy = 8;
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xdedbd6, roughness: 1 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -PLINTH; floor.receiveShadow = true; s.add(floor);
@@ -58,6 +58,9 @@ export class Collection {
     c.addEventListener("end", () => (this.dragging = false));
     this.tiles = []; this.picked = null; this.onPick = null;
     canvas.addEventListener("pointerdown", (e) => (this.down = { x: e.clientX, y: e.clientY }));
+    // With a mouse, the tile under it rises a little.
+    canvas.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" && !this.down) this.hover = this.under(e); });
+    canvas.addEventListener("pointerleave", () => (this.hover = null));
     canvas.addEventListener("pointerup", (e) => { const d = this.down; this.down = null; if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) this.tap(e); });
   }
 
@@ -102,14 +105,25 @@ export class Collection {
       this.mark(EN_ON ? town.en : town.zh, new THREE.Vector3((x0 + x1) / 2, y0, (z0 + z1) / 2), town.grid ? "town group" : "town", [x0, x1, z0, z1]);
       if (town.grid) for (const id of town.ids) { const t = this.tiles.find((x) => x.userData.id === id); if (t) t.inGroup = true; }
     }
-    // The drives: dashed along the road, the time in small writing at the middle.
+    // The drives, drawn by hand: a row of dots along the road from one to the other, a ring at each end,
+    // and the time in small writing at the middle.
+    const dotTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 32; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.beginPath(); g.arc(16, 16, 12, 0, 7); g.fill(); return new THREE.CanvasTexture(c); })();
+    const dotMat = new THREE.PointsMaterial({ color: 0x8a3b34, size: 0.55, map: dotTex, transparent: true, alphaTest: 0.4, depthWrite: false });
+    let seed = 3; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5);
     for (const dv of drives) {
-      const pts = dv.line.map(([la, lo]) => at(la, lo).setY(y0 + 0.02));
-      const g = new THREE.BufferGeometry().setFromPoints(pts), line = new THREE.Line(g, ink(0x6e2f36, 0.55));
-      line.computeLineDistances(); this.scene.add(line);
+      const pts = dv.line.map(([la, lo]) => at(la, lo).setY(y0 + 0.05)), dots = [];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.round(a.distanceTo(b) / 1.05));
+        for (let k = 0; k < n; k++) { const p = a.clone().lerp(b, k / n); p.x += rnd() * 0.18; p.z += rnd() * 0.18; dots.push(p); } // a hand's wobble
+      }
+      this.scene.add(new THREE.Points(new THREE.BufferGeometry().setFromPoints(dots), dotMat));
+      for (const end of [pts[0], pts[pts.length - 1]]) {
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.7, 20), new THREE.MeshBasicMaterial({ color: 0x8a3b34, side: THREE.DoubleSide }));
+        ring.rotation.x = -Math.PI / 2; ring.position.copy(end).setY(y0 + 0.06); this.scene.add(ring);
+      }
       const h = Math.floor(dv.min / 60), m = dv.min % 60;
       const txt = EN_ON ? `${h ? `${h} h ` : ""}${m ? `${m} min` : ""}`.trim() : `约 ${h ? `${h} 小时` : ""}${m ? `${m} 分` : ""}`;
-      this.mark(`🚗 ${txt}`, pts[Math.floor(pts.length / 2)], "drive");
+      this.mark(txt, pts[Math.floor(pts.length / 2)], "drive");
     }
     const den = at(...DENVER).setY(y0);
     const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0xb6463b }));
@@ -168,6 +182,7 @@ export class Collection {
       flag.position.set(pos.getX(hi) + 0.4, pos.getY(hi) + 1.35, pos.getZ(hi));
       g.add(pole, flag);
     }
+    g.userData.top = Math.max(...Array.from({ length: pos.count }, (_, v) => pos.getY(v)));
     return g;
   }
 
@@ -195,14 +210,14 @@ export class Collection {
     return this._fit.d;
   }
 
-  tap(e) {
+  // The tile under a pointer, if any.
+  under(e) {
     const r = this.canvas.getBoundingClientRect(), ray = new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera);
     const hit = ray.intersectObjects(this.tiles.map((x) => x.group), true)[0];
-    if (!hit) return;
-    const t = this.tiles.find((x) => { let o = hit.object; while (o && o !== x.group) o = o.parent; return !!o; });
-    if (t) this.pick(t);
+    return hit ? this.tiles.find((x) => { let o = hit.object; while (o && o !== x.group) o = o.parent; return !!o; }) : null;
   }
+  tap(e) { const t = this.under(e); if (t) this.pick(t); }
   pick(t) {
     this.picked = t;
     for (const x of this.tiles) x.userData.tag.classList.toggle("on", x === t);
@@ -229,22 +244,27 @@ export class Collection {
     this.controls.update();
     // The picked tile lifts off the map and grows, turning slowly, so its relief reads; the rest stay put.
     for (const x of this.tiles) {
-      const on = x === this.picked, up = on ? 5 + Math.sin(t * 1.6) * 0.25 : 0, sc = on ? 1.7 : 1;
+      const on = x === this.picked, hov = x === this.hover && !on, up = on ? 5 + Math.sin(t * 1.6) * 0.25 : hov ? 1.5 : 0, sc = on ? 1.7 : hov ? 1.15 : 1;
       x.group.position.y += (up - x.group.position.y) * 0.1;
       x.group.scale.setScalar(x.group.scale.x + (sc - x.group.scale.x) * 0.1);
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
     this.renderer.render(this.scene, this.camera);
-    // Each name sits by its tile's foot, on the side facing you.
+    // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
+    // it. Where names would overlap, the nearer tile keeps its name.
     const v = new THREE.Vector3(), w = this.canvas.clientWidth, h = this.canvas.clientHeight, cam = this.camera.position;
-    const dist = cam.distanceTo(this.controls.target), far = dist > this.fitDist() * 0.72;
-    for (const x of this.tiles) {
-      const c = x.group.position, dir = new THREE.Vector3(cam.x - c.x, 0, cam.z - c.z).normalize();
-      v.set(c.x + dir.x * S * 0.66, c.y - PLINTH, c.z + dir.z * S * 0.66).project(this.camera);
-      const el = x.userData.tag;
-      el.style.visibility = v.z > 1 || (x.inGroup && far && x !== this.picked) ? "hidden" : "";
-      el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%, 0)`;
+    const dist = cam.distanceTo(this.controls.target), far = dist > this.fitDist() * 0.72, placed = [];
+    const order = [...this.tiles].sort((a, b) => (b === this.picked) - (a === this.picked) || a.group.position.distanceTo(cam) - b.group.position.distanceTo(cam));
+    for (const x of order) {
+      const c = x.group.position, el = x.userData.tag;
+      v.set(c.x, c.y + (x.group.userData.top + 2.2) * x.group.scale.x, c.z).project(this.camera);
+      const px = (v.x * 0.5 + 0.5) * w, py = (-v.y * 0.5 + 0.5) * h, bw = (el._w ||= el.offsetWidth || 80), bh = 22;
+      const clash = placed.some((r) => Math.abs(r.x - px) < (r.w + bw) / 2 + 4 && Math.abs(r.y - py) < bh);
+      const hide = v.z > 1 || clash || (x.inGroup && far && x !== this.picked);
+      el.style.visibility = hide ? "hidden" : "";
+      if (!hide) placed.push({ x: px, y: py, w: bw });
+      el.style.transform = `translate(${px}px, ${py}px) translate(-50%, -100%)`;
     }
     for (const m of this.marks) {
       if (m.rect) { // the frame side farthest from the camera, shown at the top of the screen

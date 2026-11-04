@@ -1,6 +1,6 @@
 """Paint the map under the resort tiles: central Colorado, Denver to Aspen and Steamboat, as a quiet
-watercolour. The relief from data/region.png (tools/bake_region.py) in soft washes (warm plains, sage
-foothills, blue-grey ranges, snow on the high ground), rivers in blue, the highways as fine ink lines,
+watercolour on old paper. The relief from data/region.png (tools/bake_region.py) in warm washes with a soft
+umber hill shade (kept apart in colour from the snowy tiles), rivers in blue, the highways as fine ink lines,
 Denver as a warm patch; then paper grain and pigment pooling at the edges of the washes.
 
 usage: python tools/bake_map.py      → assets/wc/colorado.jpg   (needs numpy and pillow)
@@ -26,7 +26,7 @@ def noise(k, seed):
     return np.asarray(Image.fromarray((g * 255).astype(np.uint8)).resize((TW, TH), Image.BICUBIC)).astype(np.float32) / 255
 # Washes by height, the edges between them wobbled by noise so they bleed.
 h = H + (noise(30, 1) - 0.5) * 220
-stops = [(1500, (0.95, 0.91, 0.83)), (1900, (0.90, 0.88, 0.80)), (2300, (0.78, 0.82, 0.76)), (2900, (0.66, 0.73, 0.76)), (3350, (0.80, 0.85, 0.89)), (3700, (0.97, 0.97, 0.96))]
+stops = [(1500, (0.96, 0.92, 0.84)), (1900, (0.94, 0.89, 0.80)), (2300, (0.89, 0.85, 0.76)), (2900, (0.84, 0.79, 0.69)), (3350, (0.86, 0.82, 0.74)), (3700, (0.92, 0.89, 0.83))]  # an old paper map: warm, so the snowy tiles stand out
 col = np.zeros((TH, TW, 3), np.float32)
 for i in range(len(stops)):
     lo, c0 = stops[i - 1] if i else (0, stops[0][1]); hi, c1 = stops[i]
@@ -36,7 +36,7 @@ for i in range(len(stops)):
 col = np.where((h > stops[-1][0])[..., None], np.array(stops[-1][1]), col)
 # Shade: cool and blue where the slopes turn from the sun, a little warmth where they face it.
 shade = (0.55 + 0.6 * sun)[..., None]
-col = col * shade + np.array([0.18, 0.24, 0.34]) * (1 - shade) * 0.35
+col = col * (0.72 + 0.28 * shade) + np.array([0.36, 0.28, 0.20]) * (1 - shade) * 0.18  # umber hill shade, kept soft
 # The lines: rivers, then the highways, then I-70 a touch stronger; Denver a warm patch.
 img = Image.fromarray((np.clip(col, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
 ink = Image.new("RGBA", (TW, TH), (0, 0, 0, 0)); g = ImageDraw.Draw(ink)
