@@ -1034,7 +1034,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   function startSki() {
     const P = chosen, path = P.path;
-    origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true;
+    origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true; $("mapBar").hidden = true; $("minimap").classList.remove("big");
     document.body.classList.remove("picking");
     camera.clearViewOffset();
     // Keep the route on the snow, faint, as the line to follow.
@@ -1073,7 +1073,44 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // where you are, turning with you (the way ahead up). Rendered small into a texture every other frame
   // and drawn as a disc over the view. Tap it for a bigger one.
   let mini = null;
-  $("minimap").onclick = () => openReplan();
+  // Tap the small map: it grows. Tap a place on the big map: a route there from where you are.
+  $("minimap").onclick = (e) => {
+    const box = $("minimap");
+    if (!box.classList.contains("big")) { box.classList.add("big"); $("mapBar").hidden = false; return; }
+    const r = box.getBoundingClientRect(), rad = r.width / 2;
+    goToMapPoint((e.clientX - r.left - rad) / rad, -(e.clientY - r.top - rad) / rad);
+  };
+  const shrinkMap = () => { $("minimap").classList.remove("big"); $("mapBar").hidden = true; };
+  $("mapClose").onclick = shrinkMap;
+  $("mapMore").onclick = () => { shrinkMap(); openReplan(); };
+  const raycaster = new THREE.Raycaster();
+  function goToMapPoint(nx, ny) {
+    if (!mini || !phys || nx * nx + ny * ny > 1) return;
+    raycaster.setFromCamera(new THREE.Vector2(nx, ny), mini.cam);
+    const hit = raycaster.intersectObject(dio.root.children[0], false)[0]; // the miniature's snow
+    if (!hit) return;
+    const x = hit.point.x, z = hit.point.z, from = nodesNear(graph, phys.x, phys.z, 160);
+    let to = nodesNear(graph, x, z, 120);
+    if (!to.length) to = nodesNear(graph, x, z, 350);
+    if (!from.length || !to.length) { flashCue("那里没有雪道，换个地方点"); return; }
+    const rt = planFrom(from, to) || planRoute(graph, from, to);
+    const l = R.lifts.find((l) => rideable(l) && Math.hypot(l.pts[0][0] - x, l.pts[0][1] - z) < 120);
+    const spot = runNear(x, z, 150), where = l ? l.name : spot?.run.name || "你点的地方";
+    const Q = rt && makePlan(rt.legs, l ? { to, kind: "lift", key: `lift:${l.name}`, title: `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: rt.seconds, end: l.pts[0], lift: l }
+      : { to, kind: "point", key: `pt:${Math.round(x)},${Math.round(z)}`, title: `去 ${where}`, short: where, icon: "📍", seconds: rt.seconds, end: [x, z], leads: leadsTo([x, z]) });
+    if (!Q) { flashCue("从这里滑不到那里，换个地方点"); return; }
+    // A yellow flag where you're going.
+    if (!mini.flag) {
+      const f = new THREE.Group(), y = new THREE.MeshBasicMaterial({ color: 0xf2b632 });
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 110), new THREE.MeshBasicMaterial({ color: 0x333a44 })); pole.position.y = 55;
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(60, 36), y); cloth.material.side = THREE.DoubleSide; cloth.position.set(30, 92, 0);
+      f.add(pole, cloth); dio.root.add(f); mini.flag = f;
+    }
+    mini.flag.position.set(x, dio.Y(x, z), z);
+    dio.light3((run) => (Q.segs.some((g) => g.run === run) ? 1 : 0), () => 0);
+    rideInstead(Q, `带你去 ${where}${Q.next ? `（中途坐 🚡${Q.next.name}）` : ""} · 约 ${fmtMin(rt.seconds)}`);
+    shrinkMap();
+  }
   function drawMini(r) {
     if (!dio) return;
     if (!mini) {
@@ -1345,8 +1382,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       if (Q) opts.push({ label: `去坐 ${l.name}`, sub: `滑过去约 ${fmtMin(rt.seconds)}`, act: () => rideInstead(Q, `改去坐 ${l.name}`) });
     }
     if (origPlan) opts.push({ label: "回到起点，重滑这条路线", sub: origPlan.title, act: () => { $("rePlan").hidden = true; chosen = origPlan; startSki(); } });
-    const big = $("minimap").classList.contains("big");
-    opts.push({ label: big ? "地图缩小" : "地图放大", act: () => { $("minimap").classList.toggle("big"); $("rePlan").hidden = true; } });
+    opts.push({ label: "在地图上点一个地方去", sub: "放大地图，点哪里就规划到哪里", act: () => { $("rePlan").hidden = true; $("minimap").classList.add("big"); $("mapBar").hidden = false; } });
     const box = $("rePlan");
     box.innerHTML = `<h2>重新选 <button aria-label="关闭">×</button></h2><p>你在 ${onRun ? onRun.run.name || "无名雪道" : "雪道外"}</p><h3>从这里</h3><div class="opts"></div>`;
     box.querySelector("h2 button").onclick = () => (box.hidden = true);
@@ -1418,18 +1454,23 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   }
   function openGuide(P) {
     const g = routeGuide(P), box = $("guide");
-    box.innerHTML = `<h2>路线说明 <button aria-label="关闭">×</button></h2>${g.html}<div class="opts" style="margin-top:12px"><button class="opt go">复制路线说明</button>${navigator.share ? '<button class="opt share">分享</button>' : ""}</div>`;
-    box.querySelector("h2 button").onclick = () => (box.hidden = true);
-    box.querySelector(".opt.go").onclick = async (e) => { try { await navigator.clipboard.writeText(g.text); e.target.textContent = "已复制 ✓"; } catch { e.target.textContent = "复制不了，请长按选择文字"; } };
-    box.querySelector(".share")?.addEventListener("click", () => navigator.share({ title: P.title, text: g.text }).catch(() => {}));
+    box.innerHTML = `<div class="rod"></div><div class="paper"><div class="ink"><h2>路书 · ${P.title}<button aria-label="收起">×</button></h2>${g.html}
+      <div class="opts"><button class="opt zoom">放大</button><button class="opt go">复制</button>${navigator.share ? '<button class="opt share">分享</button>' : ""}</div></div></div><div class="rod"></div>`;
+    box.classList.remove("open", "big");
     box.hidden = false;
+    requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add("open"))); // unroll
+    const roll = () => { box.classList.remove("open"); setTimeout(() => { if (!box.classList.contains("open")) box.hidden = true; }, 650); };
+    box.querySelector("h2 button").onclick = roll;
+    box.querySelector(".zoom").onclick = (e) => { box.classList.toggle("big"); e.target.textContent = box.classList.contains("big") ? "缩小" : "放大"; };
+    box.querySelector(".opt.go").onclick = async (e) => { try { await navigator.clipboard.writeText(g.text); e.target.textContent = "已复制 ✓"; } catch { e.target.textContent = "请长按选择文字"; } };
+    box.querySelector(".share")?.addEventListener("click", () => navigator.share({ title: P.title, text: g.text }).catch(() => {}));
   }
   st.nearLift = () => { if (!phys) return null; let b = null; for (const l of R.lifts) if (rideable(l)) { const d = Math.hypot(l.pts[0][0] - phys.x, l.pts[0][1] - phys.z); if (!b || d < b.d) b = { name: l.name, d: Math.round(d) }; } return b; }; // testing
   st.placeNear = (name, back = 120) => { const l = R.lifts.find((x) => x.name === name), [x, z] = l.pts[0], [x2, z2] = l.pts[1]; const h = Math.atan2(x - x2, z - z2) + Math.PI; phys.place(x - Math.sin(h) * back, z - Math.cos(h) * back, h, 6); }; // testing
   st.guide = (key) => routeGuide([...dests, ...runs].find((p) => p.key === key) || chosen);
 
   function arrive(P) {
-    $("liftOffer").hidden = true;
+    $("liftOffer").hidden = true; $("mapBar").hidden = true;
     $("skiHud").hidden = true;
     $("turnCue").hidden = true;
     $("minimap").hidden = true;
@@ -1755,14 +1796,14 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
           <small>${fmtLen(P.first.length)} · 落差 ${P.first.drop} 米 · 最陡约 ${P.steep}°</small>
           <canvas width="300" height="40"></canvas>
           <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `🚡 ${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `🏠 ${P.leads.base}` : "雪道尽头"}</small>
-          <button class="doc">📄 路线说明 · 怎么滑、哪里容易错</button>
+          <button class="doc">📜 路书 · 怎么滑、哪里容易错</button>
           <button class="go">从这条滑下去 ›</button>`
         : `<div class="r1"><span>${P.icon}</span><b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
           <div class="steps">${steps}</div>
           <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 🚡${P.next.name}` : ""}</small>
           ${P.lifts ? `<small class="to">到了能坐 🚡 ${P.lifts.join("、")}</small>` : ""}
           <canvas width="300" height="34"></canvas>
-          <button class="doc">📄 路线说明 · 怎么滑、哪里容易错</button>
+          <button class="doc">📜 路书 · 怎么滑、哪里容易错</button>
           <button class="go">按这条路线滑 ›</button>`;
       drawProfile(card.querySelector("canvas"), P);
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };

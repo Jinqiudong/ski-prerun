@@ -106,6 +106,28 @@
     .sheet button.opt { text-align: left; }
     .sheet button.opt small { display: block; color: #b9c4d3; font-size: 12px; font-weight: 400; }
     .rcard .doc { font: inherit; font-size: 13px; color: #cfe0ff; background: none; border: 0; padding: 2px 0; text-align: left; cursor: pointer; }
+    /* The route guide as a paper roadbook: two wooden rods, the paper unrolls between them; bigger or smaller. */
+    #guide.scroll { background: none; border: 0; padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible; max-height: none; filter: drop-shadow(0 8px 18px rgba(0,0,0,.45)); }
+    #guide .rod { position: relative; height: 18px; margin: 0 -6px; border-radius: 9px; background: linear-gradient(#5c3516, #b47b43 40%, #e0ae73 55%, #8a5428 75%, #4d2b11); z-index: 1; }
+    #guide .rod::before, #guide .rod::after { content: ""; position: absolute; top: -4px; width: 14px; height: 26px; border-radius: 7px; background: linear-gradient(#3b200b, #8d5a2c 50%, #3b200b); }
+    #guide .rod::before { left: -8px; } #guide .rod::after { right: -8px; }
+    #guide .paper { max-height: 0; overflow: hidden; transition: max-height .65s cubic-bezier(.2,.8,.2,1); margin: -4px 4px; background: radial-gradient(ellipse at 50% 0%, rgba(255,250,235,.7), transparent 60%), linear-gradient(90deg, #d9c29a, #f2e4c4 8%, #f6ead0 50%, #f2e4c4 92%, #d9c29a); color: #3b2a1a; font-family: "Songti SC", "STSong", "Noto Serif SC", Georgia, serif; }
+    #guide.open .paper { max-height: 64vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    #guide.open.big .paper { max-height: 84vh; }
+    #guide .ink { padding: 14px 18px 16px; font-size: 14px; transition: font-size .3s; }
+    #guide.big .ink { font-size: 16.5px; }
+    #guide .ink h2 { font-size: 1.3em; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; color: #2a1b0e; border-bottom: 1px solid rgba(90,60,30,.35); padding-bottom: 6px; }
+    #guide .ink h2 button { background: none; border: 0; color: #5b3b1c; font-size: 1.3em; cursor: pointer; }
+    #guide .ink h3 { color: #7a5230; font-size: .92em; margin: 14px 0 6px; letter-spacing: .1em; }
+    #guide .ink p, #guide .ink li { font-size: 1em; line-height: 1.6; }
+    #guide .ink .warn { color: #a63c16; }
+    #guide .ink .opts { display: flex; gap: 8px; margin-top: 14px; }
+    #guide .ink button.opt { color: #3b2a1a; background: rgba(120,80,40,.1); border: 1px solid rgba(120,80,40,.4); font-family: inherit; text-align: center; }
+    #guide .ink button.opt.go { background: #7a4b25; border-color: #7a4b25; color: #fbf1dc; }
+    /* The enlarged corner map: tap anywhere on it to go there. */
+    #mapBar { position: fixed; right: 10px; top: calc(376px + env(safe-area-inset-top)); width: 250px; display: flex; gap: 6px; align-items: center; font-size: 12px; color: #f4f7fb; background: rgba(14,22,34,.72); border-radius: 12px; padding: 6px 8px; box-sizing: border-box; }
+    #mapBar span { flex: 1; }
+    #mapBar button { font: inherit; font-size: 12px; color: #f4f7fb; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px; cursor: pointer; }
     #flash { position: fixed; inset: 0; background: #f4f6f9; opacity: 0; pointer-events: none; }
     #flash.go { animation: flash .7s ease-out; }
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -126,12 +148,13 @@
   <div id="minimap" hidden></div>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn go" id="skiDown">从这里滑下去（旧版画面）›</a><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
+  <div id="mapBar" hidden><span>点地图上任何地方，带你去那里</span><button id="mapMore">更多选项</button><button id="mapClose" aria-label="收起地图">×</button></div>
   <div id="liftOffer" class="glass" hidden></div>
   <div id="rePlan" class="glass sheet" hidden></div>
-  <div id="guide" class="glass sheet" hidden></div>
+  <div id="guide" class="sheet scroll" hidden></div>
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=49"></script>
+  <script type="module" src="look.js?v=50"></script>
 </body>
 </html>
