@@ -7,6 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./rider.js?v=11";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=1";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, tricksOf, startTrick } from "./boarder.js?v=11";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
@@ -1104,6 +1105,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
     const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${icon} ${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
     box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2><div class="opts">
       ${item("🗺", "雪场地图", "看全图，选从哪里出发", "map", ski)}
+      ${item("📜", "预滑路书", "这一趟怎么走的，明天照着走", "book")}
       ${item("📖", "滑雪记录", "这个雪场你滑过的地方", "log", !!phys)}
       ${item(planetMap ? "🗺" : "🪐", planetMap ? "小地图改回平面" : "小地图换成小星球", "右上角的小地图样式", "style")}
       ${item("🏔", "回沙盘", R.name, "sandbox")}
@@ -1112,7 +1114,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
     box.querySelector("h2 button").onclick = () => (box.hidden = true);
     box.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
       box.hidden = true;
-      ({ map: openBigMap, log: openJournal, style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), start: () => (location.href = "start.html?tab=resort") })[b.dataset.act]();
+      ({ map: openBigMap, log: openJournal, book: () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) }), style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), start: () => (location.href = "start.html?tab=resort") })[b.dataset.act]();
     }));
     box.hidden = false;
   }
@@ -1203,12 +1205,25 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
     return null;
   }
   const LEVEL_TXT_ICON = { easy: "🟢 ", intermediate: "🟦 ", advanced: "◆ ", expert: "◆◆ " };
+  // The roadbook: each way down as a step (the runs in order, the lift at the bottom, the path for its map).
+  const bookRoute = (P, changed = false) => addStep(RESORT, { k: "route", changed, title: P.title, segs: P.segs.map((g) => ({ n: g.run.name || "无名雪道", l: g.run.level })), next: P.next?.name || null, path: thinPath(P.path) });
+  // Skipping ahead with a tap on the map: the way from here to there along the chosen route counts as
+  // seen, so it goes in the log as skied.
+  function markAlong(x, z) {
+    const path = chosen?.path; if (!path || !phys || prog >= path.length - 1) return;
+    const to = nearestOn(path, x, z, prog, path.length - 1);
+    if (to.d > 150) return;
+    for (let i = prog; i <= to.i; i++) { const s = runNear(path[i][0], path[i][1], 26); if (s) skiLog.mark(s.run, s.i); }
+    skiLog.save();
+  }
   function goTo(c) {
-    if (c.lift) { location.href = withResort(`look.html?lift=${encodeURIComponent(c.lift.name)}`); return; }
+    if (c.lift) { markAlong(...c.at); addStep(RESORT, { k: "jump", to: `${c.lift.name} 底站` }); location.href = withResort(`look.html?lift=${encodeURIComponent(c.lift.name)}`); return; }
     goToMapPoint(...c.at, c.spot);
   }
   function goToMapPoint(x, z, spot = runNear(x, z, 120)) {
     if (!phys || !spot) return;
+    markAlong(x, z);
+    addStep(RESORT, { k: "jump", to: spot.run.name || "一条雪道" });
     const run = spot.run, [sx, sz] = run.pts[spot.i], i2 = Math.min(run.pts.length - 1, spot.i + 2);
     phys.place(sx, sz, Math.atan2(run.pts[i2][0] - sx, run.pts[i2][1] - sz), 3);
     const from = nodesNear(graph, sx, sz, 120), P = chosen;
@@ -1557,6 +1572,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
   };
   function rideInstead(Q, note) {
     chosen = Q; prog = 0; ended = false; alerted = null;
+    bookRoute(Q, true);
     dress(Q);
     $("liftName").innerHTML = `${Q.icon || ""} ${Q.title}`;
     $("rePlan").hidden = true;
@@ -1699,10 +1715,12 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
       row = P.leads.lifts.slice(0, 3).map((n) => link(n, null, `坐 ${n} 上山 ›`)).join("");
     }
     $("arriveTitle").textContent = title;
+    addStep(RESORT, { k: "arrive", title });
     $("arriveNote").textContent = note;
     skiLog.save(true);
-    $("arriveRow").innerHTML = row + `<button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
+    $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">📜 预滑路书</button><button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
     $("seeLog").onclick = openJournal;
+    $("seeBook").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
   }
 
   // Where the rider stands after getting off: down the ramp, beside the sign.
@@ -2040,6 +2058,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
       card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
       card.querySelector(".go").onclick = async (e) => {
+        addStep(RESORT, { k: "top", at: lift.name, options: [...dests, ...runs].map((x) => x.title), chose: P.title });
+        bookRoute(P);
         camera.clearViewOffset();
         startSki();
         $("pick").hidden = true; clearTags(); flash();
@@ -2204,6 +2224,7 @@ async function main() {
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
   const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
   setLiftKind(lift);
+  if (TRIP) addStep(RESORT, { k: "lift", name: lift.name });
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);

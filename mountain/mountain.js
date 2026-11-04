@@ -7,6 +7,7 @@ import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5"
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
 import { Diorama } from "./diorama.js?v=17";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
+import { addStep } from "../roadbook.js?v=1";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -573,7 +574,7 @@ async function main() {
     }
     go2(l);
   }
-  function go2(l) { location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
+  function go2(l) { if (mini?.base) addStep(RESORT_ID, { k: "base", name: mini.base.name }); location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.
   document.querySelectorAll("[data-plan]").forEach((b) => b.addEventListener("click", () => {

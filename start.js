@@ -2,6 +2,7 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -213,10 +214,18 @@ async function openRecords() {
     el.innerHTML = `<div class="row1"><b>${(s?.share || 0) >= 0.999 ? "🌸 " : ""}${r.name}</b><small>${s?.touched ? `${Math.max(1, Math.round(s.share * 100))}%` : "还没去过"}</small></div>
       <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div>
       <small>${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里 · ${s.rides} 趟` : "去滑一趟，这里就会记下来"}</small>
-      ${s?.touched ? '<button>🗺 看地图</button>' : ""}`;
-    el.querySelector("button")?.addEventListener("click", () => openJournal(r));
+      <div class="recBtns">${s?.touched ? '<button class="map">🗺 看地图</button>' : ""}${daysOf(r.id).length ? '<button class="bk">📜 预滑路书</button>' : ""}</div>`;
+    el.querySelector(".map")?.addEventListener("click", () => openJournal(r));
+    el.querySelector(".bk")?.addEventListener("click", () => openBook(r));
     box.append(el);
   }
+}
+// The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
+async function openBook(r) {
+  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("./world.js?v=5"), import("./mapview.js?v=7")]);
+  const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
+  const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
+  openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });
 }
 // The journal map for one resort: everything skied there in ink.
 async function openJournal(r) {
