@@ -81,6 +81,13 @@ async function show(r) {
 }
 
 // ---- Picking
+// Little watercolour pictures of each part, painted in its current colour, in place of the words.
+const PART_ICON = {
+  jacket: `<path d="M14 7 L20 10 L26 7 L33 12 L36 24 L31 25 L30 18 L30 34 L10 34 L10 18 L9 25 L4 24 L7 12Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M20 10 V34" stroke="#fdfbf6" stroke-width="1.2" opacity=".7"/><path d="M14 7 L20 14 L26 7" fill="none" stroke="#22344d" stroke-width="1"/>`,
+  pants: `<path d="M11 6 H29 L32 34 H23 L20 16 L17 34 H8Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M11 9.5 H29" stroke="#22344d" stroke-width="1" opacity=".6"/><rect x="24" y="18" width="5" height="6" rx="1" fill="none" stroke="#22344d" stroke-width=".9" opacity=".6"/>`,
+  helmet: `<path d="M6 26 C6 13 13 7 20 7 C28 7 34 13 34 26 Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M5 26 H35 V29 H5Z" fill="#22344d" opacity=".75"/><path d="M12 13 C15 10 19 9.5 22 10" stroke="#fdfbf6" stroke-width="1.6" stroke-linecap="round" opacity=".7" fill="none"/>`,
+  lens: `<path d="M5 20 H35" stroke="#22344d" stroke-width="3" stroke-linecap="round"/><path d="M8 14 H32 C35 14 35 27 32 27 H24 L20 23 L16 27 H8 C5 27 5 14 8 14Z" fill="var(--c)" stroke="#22344d" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 17 L15 17" stroke="#fdfbf6" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`,
+};
 const dots = (r) => `<span class="dots">${Object.keys(RIDERS[r.base].parts).map((p) => `<i style="background:${r.colors?.[p] || RIDERS[r.base].parts[p].color}"></i>`).join("")}</span>`;
 function renderPick() {
   const cur = chosen();
@@ -111,7 +118,7 @@ function renderPick() {
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
   $("editBtn").innerHTML = `<span>🎨</span>${t("改颜色")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
   // The characters: the base bodies outfits go on. Rider A for now; the man's is still being made.
-  $("chars").innerHTML = `<button class="card on"><b>${t("女")}</b><small>Rider A</small></button><button class="card" disabled><b>${t("男")}</b><small>${t("制作中")}</small></button>`;
+  $("chars").innerHTML = `<button class="card on"><b>Female</b></button><button class="card" disabled><b>Male</b><small>${t("制作中")}</small></button>`;
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -125,18 +132,19 @@ function openEdit() {
   for (const [part, p] of Object.entries(parts)) {
     const wrap = document.createElement("div");
     wrap.className = "part";
-    wrap.innerHTML = `<div class="lbl">${PART_ZH[part]}</div><div class="row"></div>`;
+    wrap.innerHTML = `<svg class="ico" viewBox="0 0 40 40" role="img" aria-label="${t(PART_ZH[part])}"><g filter="url(#wct)">${PART_ICON[part]}</g></svg><div class="row"></div>`;
     const row = wrap.querySelector(".row");
     const list = [...new Set([p.color, ...(SWATCHES[part] || [])])];
     const mark = () => { for (const s of row.children) s.classList.toggle("on", s.dataset.c === (draft.colors[part] || p.color)); };
     for (const c of list) {
       const s = document.createElement("button");
       s.className = "sw"; s.style.background = c; s.dataset.c = c;
-      s.onclick = () => { draft.colors[part] = c; mark(); show(draft); };
+      s.onclick = () => { draft.colors[part] = c; mark(); tint(); show(draft); };
       row.append(s);
     }
     mark();
-    $("parts").append(wrap);
+    const tint = () => wrap.querySelector(".ico").style.setProperty("--c", draft.colors[part] || p.color);
+    tint(); $("parts").append(wrap);
   }
   $("name").value = draft.name;
   view("edit");
