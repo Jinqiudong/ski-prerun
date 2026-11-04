@@ -19,10 +19,13 @@ export const RIDERS = {
       pants: { mats: ["V02_PANTS_ivory_shell", "V02_PANTS_ivory_shell.001"], color: "#c5bcaa" },
       helmet: { mats: ["Helmet matte charcoal"], color: "#272729" },
       lens: { mats: ["RAC_lens_blue_violet_mirror", "MVP_pink_purple_mirrored_lens"], color: "#95a2f9" },
+      // The mittens are painted in vertex colours: recolouring them drops those for a plain colour.
+      gloves: { mats: ["RAC_mitten_vcol"], color: "#d8cfb8", vcol: true },
+      boots: { mats: ["V02_BOOT_white_textile", "V02_BOOT_white_rubber"], color: "#c6c9c5" },
     },
   },
 };
-export const PART_ZH = { jacket: "外套", pants: "雪裤", helmet: "头盔", lens: "雪镜" };
+export const PART_ZH = { jacket: "外套", pants: "雪裤", helmet: "头盔", lens: "雪镜", gloves: "手套", boots: "雪鞋" };
 // Outfit templates for Rider A: pick one to wear, or start from one and save your own. For now these are
 // colourways of the one model; the owner is modelling four preset outfits (on a man's and a woman's base)
 // that will take their place.
@@ -62,6 +65,12 @@ export function dressRider(scene, base, colors = {}) {
   scene.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) byName.set(m.name, m); });
   for (const [part, p] of Object.entries(def.parts)) {
     const c = new THREE.Color(colors[part] || p.color);
+    if (p.vcol) { // as made (its own painted colours) until you pick one
+      for (const n of p.mats) { const m = byName.get(n); if (!m) continue;
+        const own = !colors[part]; if (m.vertexColors !== own) { m.vertexColors = own; m.needsUpdate = true; }
+        m.color.set(own ? "#ffffff" : c); }
+      continue;
+    }
     for (const n of p.mats) byName.get(n)?.color.copy(c);
     const dark = c.clone().multiplyScalar(0.72);
     for (const n of p.trim || []) byName.get(n)?.color.copy(dark);

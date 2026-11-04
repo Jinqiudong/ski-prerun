@@ -1,9 +1,9 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=12";
+import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=4";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=9";
+import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=10";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -11,6 +11,8 @@ const SWATCHES = {
   jacket: ["#464e3f", "#6f7a62", "#8e9681", "#4a5a6e", "#2f3a4c", "#7b8a96", "#a39d8f", "#c2b49a", "#a8674f", "#8e4a36", "#a88584", "#6e5f6e", "#3b3d40", "#dcd7cc"],
   pants: ["#c5c4b6", "#dcd7cc", "#a39d8f", "#8f8670", "#4f5645", "#4a5a6e", "#2f3a4c", "#9c6a55", "#3b3d40", "#222326"],
   helmet: ["#161819", "#3b3d40", "#d9d6ce", "#8f8b82", "#4a5a6e", "#55604b", "#b8a98c", "#9a5f4a"],
+  gloves: ["#3b3d40", "#222326", "#a8674f", "#4a5a6e", "#55604b", "#dcd7cc", "#b6463b"],
+  boots: ["#3b3d40", "#222326", "#8f8670", "#a39d8f", "#4a5a6e", "#9c6a55"],
   lens: ["#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
 };
 
@@ -86,6 +88,8 @@ const PART_ICON = {
   jacket: `<path d="M14 7 L20 10 L26 7 L33 12 L36 24 L31 25 L30 18 L30 34 L10 34 L10 18 L9 25 L4 24 L7 12Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M20 10 V34" stroke="#fdfbf6" stroke-width="1.2" opacity=".7"/><path d="M14 7 L20 14 L26 7" fill="none" stroke="#22344d" stroke-width="1"/>`,
   pants: `<path d="M11 6 H29 L32 34 H23 L20 16 L17 34 H8Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M11 9.5 H29" stroke="#22344d" stroke-width="1" opacity=".6"/><rect x="24" y="18" width="5" height="6" rx="1" fill="none" stroke="#22344d" stroke-width=".9" opacity=".6"/>`,
   helmet: `<path d="M6 26 C6 13 13 7 20 7 C28 7 34 13 34 26 Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M5 26 H35 V29 H5Z" fill="#22344d" opacity=".75"/><path d="M12 13 C15 10 19 9.5 22 10" stroke="#fdfbf6" stroke-width="1.6" stroke-linecap="round" opacity=".7" fill="none"/>`,
+  gloves: `<path d="M12 34 L11 20 C10 14 11 9 15 8 C17 7.5 18 9 18 12 L18 9 C18 6 23 6 23 9 L23 12 C24 10 28 10 28 13 L29 22 L31 18 C33 15 36 17 34 20 L29 28 L28 34Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M11 30 H29" stroke="#22344d" stroke-width="2.2" opacity=".6"/>`,
+  boots: `<path d="M11 6 H24 L25 22 C30 23 35 25 35 29 V33 H7 L8 20Z" fill="var(--c)" stroke="#22344d" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 30 H35" stroke="#22344d" stroke-width="2.6"/><path d="M12 12 L22 14 M12 17 L22 19" stroke="#22344d" stroke-width="1" opacity=".55"/>`,
   lens: `<path d="M5 20 H35" stroke="#22344d" stroke-width="3" stroke-linecap="round"/><path d="M8 14 H32 C35 14 35 27 32 27 H24 L20 23 L16 27 H8 C5 27 5 14 8 14Z" fill="var(--c)" stroke="#22344d" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 17 L15 17" stroke="#fdfbf6" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`,
 };
 const dots = (r) => `<span class="dots">${Object.keys(RIDERS[r.base].parts).map((p) => `<i style="background:${r.colors?.[p] || RIDERS[r.base].parts[p].color}"></i>`).join("")}</span>`;
@@ -118,7 +122,7 @@ function renderPick() {
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
   $("editBtn").innerHTML = `<span>🎨</span>${t("改颜色")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
   // The characters: the base bodies outfits go on. Rider A for now; the man's is still being made.
-  $("chars").innerHTML = `<button class="card on"><b>Female</b></button><button class="card" disabled><b>Male</b><small>${t("制作中")}</small></button>`;
+  $("chars").innerHTML = `<button class="card on"><b>${t("女")}</b></button><button class="card" disabled><b>${t("男")}</b><small>${t("制作中")}</small></button>`;
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
