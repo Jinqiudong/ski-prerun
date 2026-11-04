@@ -89,10 +89,20 @@ export class TrailMap {
 
   // Draw a view: centre (cx, cz) in metres, `zoom` screen pixels per metre, into canvas `cv` (its own
   // pixel size). Overlays: route [x, z][], you {x, z, heading}, pin [x, z], bounce phase t.
-  view(cv, { cx, cz, zoom, route = [], you = null, pin = null, t = 0, dpr = 1 }) {
+  // up: a heading to turn the map to (the way you're going pointing up), as the corner map does; leave it
+  // out for north up.
+  view(cv, { cx, cz, zoom, route = [], you = null, pin = null, t = 0, dpr = 1, up = null }) {
     this.build();
-    const g = cv.getContext("2d"), W = cv.width, H = cv.height, k = zoom * dpr / this.s, T = this.T;
-    g.fillStyle = "#e9edf2"; g.fillRect(0, 0, W, H);
+    const g = cv.getContext("2d"), k = zoom * dpr / this.s, T = this.T;
+    g.fillStyle = "#e9edf2"; g.fillRect(0, 0, cv.width, cv.height);
+    g.save();
+    // Turned: draw a square big enough to fill the canvas at any angle, rotated about the middle.
+    let W = cv.width, H = cv.height;
+    if (up != null) {
+      const D = Math.ceil(Math.hypot(W, H));
+      g.translate(W / 2, H / 2); g.rotate(-Math.PI / 2 - Math.atan2(Math.cos(up), Math.sin(up))); g.translate(-D / 2, -D / 2);
+      W = H = D;
+    }
     const sx = (cx - T.x0) * this.s - W / 2 / k, sz = (cz - T.z0) * this.s - H / 2 / k;
     g.imageSmoothingEnabled = true;
     // Only the part of the picture that's in view, mapped to where it goes: a source rectangle reaching
@@ -120,7 +130,12 @@ export class TrailMap {
       g.beginPath(); g.arc(u, v - 14 * dpr, 8 * dpr, Math.PI, 0); g.lineTo(u, v); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = "#fff"; g.beginPath(); g.arc(u, v - 14 * dpr, 3 * dpr, 0, Math.PI * 2); g.fill();
     }
-    if (you) this.drawYou(g, ...S(you.x, you.z), you.heading, t, dpr, px(150, 26, 54));
+    g.restore();
+    // You stand upright in any case: in the middle, heading up, on a turned map.
+    if (you) {
+      if (up != null) this.drawYou(g, cv.width / 2, cv.height / 2, Math.PI, t, dpr, px(150, 26, 54));
+      else this.drawYou(g, ...S(you.x, you.z), you.heading, t, dpr, px(150, 26, 54));
+    }
   }
 
   // You: your rider, a little full-body figure (rendered from the 3D model), hopping on the spot, with a

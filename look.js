@@ -12,7 +12,7 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=4";
+import { TrailMap } from "./mapview.js?v=5";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1122,12 +1122,14 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   // in gold, you as your rider's portrait. Tap it for the full map: pan, pinch, tap a place, and confirm to
   // start from there (a run) or ride it (a lift). Skiing waits while the map is open.
   const tmap = new TrailMap(T, R, ctx.mask, R.places.filter((p) => p.kind === "village"));
-  let tmapAt = 0, mapOpen = false;
+  let tmapAt = 0, mapOpen = false, mapUp = null;
   st.hud = () => {
     if (st.phase !== "ski" || !phys || ended || mapOpen || clock() - tmapAt < 60) return;
     tmapAt = clock();
     const cv = $("minimap"), dpr = cv.width / 128;
-    tmap.view(cv, { cx: phys.x, cz: phys.z, zoom: 0.32, route: chosen.path.slice(Math.max(0, prog - 1)), you: { x: phys.x, z: phys.z, heading: phys.heading }, t: clock() / 1000, dpr });
+    // Turned with you, the way ahead up (eased, so the map doesn't swing with every wiggle).
+    mapUp = mapUp == null ? phys.heading : mapUp + angleDiff(phys.heading, mapUp) * 0.15; // here angleDiff is a - b
+    tmap.view(cv, { cx: phys.x, cz: phys.z, zoom: 0.32, route: chosen.path.slice(Math.max(0, prog - 1)), you: { x: phys.x, z: phys.z, heading: phys.heading }, t: clock() / 1000, dpr, up: mapUp });
   };
   const bm = { cx: 0, cz: 0, zoom: 0.2, pin: null, choice: null, ptrs: new Map(), moved: 0, pinch: null };
   const bigCv = $("bigMap").querySelector("canvas");
