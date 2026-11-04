@@ -190,7 +190,8 @@ async function setTab(t) {
   const rider = t === "rider";
   for (const id of ["c", "head", "who", "sheet"]) $(id).hidden = !rider;
   $("status").hidden = !rider || !!rider_ready;
-  $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("jMap").hidden = true;
+  $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("jMap").hidden = true; $("trips").hidden = t !== "trip";
+  if (t === "trip") await openTrips();
   if (t === "resort") await openWorld();
   if (t === "log") await openRecords();
 }
@@ -218,6 +219,17 @@ async function openWorld() {
     requestAnimationFrame(loop);
   }
   collection.resize();
+}
+// Trips: plan where and when, with whom; share as a link.
+let trips = null;
+async function openTrips() {
+  if (!trips) {
+    const { Trips } = await import("./trips.js?v=2");
+    trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
+    const code = new URLSearchParams(location.search).get("trip");
+    if (code) trips.incoming(code);
+  }
+  trips.render();
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
@@ -269,4 +281,4 @@ renderPick();
 show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = "人物没加载出来，刷新试试"; console.warn(e); });
 // ?tab=resort or ?tab=log (from the game's menu); a rider already chosen starts on the map.
 const askTab = new URLSearchParams(location.search).get("tab");
-setTab(askTab === "log" ? "log" : askTab === "resort" ? "resort" : "rider");
+setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log", resort: "resort", trip: "trip" })[askTab] || "rider");
