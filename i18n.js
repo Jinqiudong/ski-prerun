@@ -21,7 +21,9 @@ const EN = {
   "还没去过": "Not yet", "去滑一趟，这里就会记下来": "Ski it once and it shows up here", "🗺 看地图": "🗺 Map", "📜 预滑路书": "📜 Roadbook",
   "继续征服 ›": "Keep going ›", "去这里 ›": "Go here ›",
   "还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。": "None yet. Pick a rider, tap Dress to change colours and give it a name, and it's saved here.",
-  "单板": "Snowboard", "删除": "Delete",
+  "外套": "Jacket", "雪裤": "Pants", "头盔": "Helmet", "雪镜": "Goggles", "单板": "Snowboard", "删除": "Delete", "🎨 换装 · 存成新人物": "🎨 Dress · save as new", "先取个名字": "Name it first",
+  "改颜色，取个名字，保存到这台手机": "Change colours, name it, save it on this phone", "人物没加载出来，刷新试试": "The rider didn't load: try refreshing",
+  "滑过 {a}/{b} 条雪道 · {km} 公里": "Skied {a}/{b} runs · {km} km", "滑过 {a}/{b} 条雪道 · {km} 公里 · {n} 趟": "Skied {a}/{b} runs · {km} km · {n} rides",
   // Roadbook
   "还没有。去预滑一趟，坐的缆车、在山顶的选择、滑的雪道都会一步一步记在这里。": "Nothing yet. Pre-run once: the lifts you take, the choices at each top, the runs you ski all go here, step by step.",
   "这里可以：": "From here you could:", "走了这条": "took this", "⛷ 滑下去": "⛷ Down", "↩ 改路线": "↩ Changed the route", "中间这段算看过了": "the stretch skipped counts as seen",

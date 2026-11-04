@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=11";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=2";
-import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=2";
+import { t, EN_ON, translatePage, langSwitch } from "./i18n.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -86,18 +86,18 @@ function renderPick() {
   for (const key of Object.keys(RIDERS)) {
     const b = document.createElement("button");
     b.className = "card" + (cur.isDefault && cur.base === key ? " on" : "");
-    b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>单板 · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
+    b.innerHTML = `<b>${RIDERS[key].name}</b>${dots({ base: key, colors: {} })}<small>${t("单板")} · ${stanceOf({ id: key }) === "goofy" ? "Goofy" : "Regular"}</small>`;
     b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
     $("defaults").append(b);
   }
-  $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。</small></div>`;
+  $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>${t("还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。")}</small></div>`;
   for (const r of st.riders) {
     const b = document.createElement("div");
     b.className = "card" + (r.id === cur.id ? " on" : "");
     b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${RIDERS[r.base].name} · ${stanceOf(r) === "goofy" ? "Goofy" : "Regular"}</small><button class="del" aria-label="删除">🗑</button>`;
     b.onclick = (e) => {
       if (e.target.closest(".del")) {
-        if (!confirm(`删除「${r.name}」？`)) return;
+        if (!confirm(`${t("删除")}「${r.name}」？`)) return;
         st.riders = st.riders.filter((x) => x !== r);
         if (st.rider === r.id) st.rider = r.base;
         save(); renderPick(); show(chosen()); return;
@@ -107,7 +107,7 @@ function renderPick() {
     $("mine").append(b);
   }
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
-  $("editBtn").textContent = cur.isDefault ? "🎨 换装 · 存成新人物" : "🎨 换装";
+  $("editBtn").textContent = t(cur.isDefault ? "🎨 换装 · 存成新人物" : "🎨 换装");
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -146,7 +146,7 @@ for (const b of $("stance").children) b.onclick = () => {
 $("cancelBtn").onclick = () => { view("pick"); show(chosen()); };
 $("saveBtn").onclick = () => {
   const name = $("name").value.trim();
-  if (!name) { $("name").focus(); $("name").placeholder = "先取个名字"; return; }
+  if (!name) { $("name").focus(); $("name").placeholder = t("先取个名字"); return; }
   draft.name = name;
   if (draft.id) Object.assign(st.riders.find((r) => r.id === draft.id), draft);
   else { draft.id = "r" + Date.now().toString(36); st.riders.push(draft); }
@@ -184,8 +184,8 @@ async function openWorld() {
     $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
     collection.onPick = (r) => {
       const s = logOf()[r.id]?.stats, card = $("worldCard");
-      card.innerHTML = `<b>${r.name}</b><small>${r.zh} · ${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里` : "还没去过"}</small>
-        <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${s?.touched ? "继续征服 ›" : "去这里 ›"}</button>`;
+      card.innerHTML = `<b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
+        <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
       card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
       card.hidden = false;
     };
@@ -198,7 +198,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=7");
+    const { Trips } = await import("./trips.js?v=8");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: chosen().name === "Rider A" ? "我" : chosen().name, sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -208,15 +208,17 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
+  const { renderMemory } = await import("./memory.js?v=2");
+  renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
   for (const r of sorted) {
     const s = log[r.id]?.stats, el = document.createElement("div");
     el.className = "rec";
-    el.innerHTML = `<div class="row1"><b>${(s?.share || 0) >= 0.999 ? "🌸 " : ""}${r.name}</b><small>${s?.touched ? `${Math.max(1, Math.round(s.share * 100))}%` : "还没去过"}</small></div>
+    el.innerHTML = `<div class="thumb" style="background-image:url(assets/wc/${r.id}.jpg?v=1)"></div><div class="row1"><b>${(s?.share || 0) >= 0.999 ? "🌸 " : ""}${r.name}</b><small>${s?.touched ? `${Math.max(1, Math.round(s.share * 100))}%` : t("还没去过")}</small></div>
       <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div>
-      <small>${s?.touched ? `滑过 ${s.touched}/${s.runs} 条雪道 · ${s.km.toFixed(1)} 公里 · ${s.rides} 趟` : "去滑一趟，这里就会记下来"}</small>
-      <div class="recBtns">${s?.touched ? '<button class="map">🗺 看地图</button>' : ""}${daysOf(r.id).length ? '<button class="bk">📜 预滑路书</button>' : ""}</div>`;
+      <small>${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里 · {n} 趟", { a: s.touched, b: s.runs, km: s.km.toFixed(1), n: s.rides }) : t("去滑一趟，这里就会记下来")}</small>
+      <div class="recBtns">${s?.touched ? `<button class="map">${t("🗺 看地图")}</button>` : ""}${daysOf(r.id).length ? `<button class="bk">${t("📜 预滑路书")}</button>` : ""}</div>`;
     el.querySelector(".map")?.addEventListener("click", () => openJournal(r));
     el.querySelector(".bk")?.addEventListener("click", () => openBook(r));
     box.append(el);
@@ -242,7 +244,7 @@ async function openJournal(r) {
   box.hidden = false;
   const v = { cx: (Math.min(...xs) + Math.max(...xs)) / 2, cz: (Math.min(...zs) + Math.max(...zs)) / 2, zoom: 0.2 };
   v.zoom = Math.min(0.5, Math.max(0.06, Math.min(innerWidth / (Math.max(...xs) - Math.min(...xs) + 600), innerHeight / (Math.max(...zs) - Math.min(...zs) + 900))));
-  box.querySelector(".bar b").innerHTML = `📖 ${r.name}<br><small style="font-weight:500;color:#7a5a3a">滑过 ${s.touched}/${s.runs} 条 · ${s.km.toFixed(1)} 公里 · ${Math.round(s.share * 100)}%</small>`;
+  box.querySelector(".bar b").innerHTML = `📖 ${r.name}<br><small style="font-weight:500;color:#7a5a3a">${t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) })} · ${Math.round(s.share * 100)}%</small>`;
   const draw = () => {
     const dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr);
     tm.view(cv, { cx: v.cx, cz: v.cz, zoom: v.zoom, skied, track, dpr });
@@ -258,12 +260,12 @@ async function openJournal(r) {
 }
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
-  $("headTitle").textContent = { pick: "选你的 Rider", edit: "换装", resort: "去哪个雪场" }[v];
-  $("headSub").textContent = { pick: "先选人物，再选雪场", edit: "改颜色，取个名字，保存到这台手机", resort: `${chosen().name} · 单板 · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
+  $("headTitle").textContent = t({ pick: "选你的 Rider", edit: "换装", resort: "去哪个雪场" }[v]);
+  $("headSub").textContent = { pick: t("先选人物，再选雪场"), edit: t("改颜色，取个名字，保存到这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
 
 renderPick();
-show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = "人物没加载出来，刷新试试"; console.warn(e); });
+show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = t("人物没加载出来，刷新试试"); console.warn(e); });
 // ?tab=resort or ?tab=log (from the game's menu); a rider already chosen starts on the map.
 const askTab = new URLSearchParams(location.search).get("tab");
 setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log", resort: "resort", trip: "trip" })[askTab] || "rider");
