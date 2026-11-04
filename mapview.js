@@ -164,4 +164,36 @@ export class TrailMap {
       g.font = `${h * 0.7}px sans-serif`; g.textAlign = "center"; g.textBaseline = "bottom"; g.fillText("🏂", u, v - hop);
     }
   }
+
+  // The little planet: `src` (a flat, heading-up map around you) wrapped onto a ball seen from above, you
+  // on top, the land curving away over the edge; shaded towards the rim, a thin bright atmosphere.
+  planet(dst, src) {
+    const n = dst.width, g = dst.getContext("2d"), sg = src.getContext("2d"), m = src.width;
+    if (!this.lut || this.lut.n !== n || this.lut.m !== m) {
+      const idx = new Int32Array(n * n).fill(-1), shade = new Float32Array(n * n);
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const u = ((i + 0.5) / n) * 2 - 1, v = ((j + 0.5) / n) * 2 - 1, r2 = u * u + v * v;
+        if (r2 >= 0.94 * 0.94) continue;
+        const R = 0.94, z = Math.sqrt(R * R - r2);
+        const ax = Math.atan2(u, z) / (Math.PI / 2), ay = Math.atan2(v, z) / (Math.PI / 2); // -1..1 across the ball
+        const sx = Math.round((ax * 0.5 + 0.5) * (m - 1)), sy = Math.round((ay * 0.5 + 0.5) * (m - 1));
+        idx[j * n + i] = (sy * m + sx) * 4;
+        shade[j * n + i] = 0.62 + 0.38 * (z / R) - 0.12 * v; // lit from above, a little from the front
+      }
+      this.lut = { n, m, idx, shade };
+    }
+    const from = sg.getImageData(0, 0, m, m).data, out = g.createImageData(n, n), o = out.data, { idx, shade } = this.lut;
+    for (let k = 0; k < n * n; k++) {
+      const q = idx[k], d = k * 4;
+      if (q < 0) continue;
+      const f = shade[k];
+      o[d] = from[q] * f; o[d + 1] = from[q + 1] * f; o[d + 2] = Math.min(255, from[q + 2] * f + 10 * (1 - f)); o[d + 3] = 255;
+    }
+    g.clearRect(0, 0, n, n);
+    g.putImageData(out, 0, 0);
+    const c = n / 2, rr = c * 0.94;
+    const halo = g.createRadialGradient(c, c, rr * 0.92, c, c, c);
+    halo.addColorStop(0, "rgba(170,215,255,0)"); halo.addColorStop(0.35, "rgba(170,215,255,.85)"); halo.addColorStop(1, "rgba(170,215,255,0)");
+    g.fillStyle = halo; g.beginPath(); g.arc(c, c, c, 0, Math.PI * 2); g.fill();
+  }
 }

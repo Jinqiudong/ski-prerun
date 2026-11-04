@@ -23,6 +23,8 @@
     #styles button { font: inherit; font-size: 15px; font-weight: 600; color: #f4f7fb; padding: 10px 16px; border-radius: 999px; cursor: pointer; }
     #styles button.on { background: #2f7fe8; border-color: #2f7fe8; }
     #bubble { position: fixed; right: 10px; top: calc(118px + env(safe-area-inset-top)); font: inherit; font-size: 13px; color: #f4f7fb; padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+    #menuBtn { float: right; font: inherit; font-size: 20px; line-height: 1; color: #f4f7fb; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 5px 10px; cursor: pointer; margin: -2px -2px 0 8px; }
+    #minimap.planet { border-radius: 50%; border: 0; box-shadow: 0 6px 16px rgba(0,0,0,.35); background: none; width: 150px; height: 150px; }
     #back { float: right; color: #9fc3ff; font-size: 13px; text-decoration: none; }
     #pads { position: fixed; left: 0; right: 0; bottom: calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: center; align-items: center; gap: 14px; pointer-events: none; }
     #pads button { pointer-events: auto; font: inherit; color: #f4f7fb; cursor: pointer; }
@@ -160,7 +162,7 @@
 <body>
   <canvas id="c"></canvas>
   <div id="vignette"></div>
-  <div id="top" class="glass"><b>🚡 <span id="liftName"></span></b> <a id="back" href="mountain/">← 沙盘</a><p id="desc"></p><p id="weather"></p></div>
+  <div id="top" class="glass"><b>🚡 <span id="liftName"></span></b> <button id="menuBtn" aria-label="菜单">☰</button><p id="desc"></p><p id="weather"></p></div>
   <button id="bubble" class="glass">🫧 放下防风罩</button>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
@@ -176,9 +178,10 @@
   <div id="liftOffer" class="glass" hidden></div>
   <div id="rePlan" class="glass sheet" hidden></div>
   <div id="guide" class="sheet scroll" hidden></div>
+  <div id="menu" class="glass sheet" style="z-index:10" hidden></div>
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0)</div>
-  <script type="module" src="look.js?v=64"></script>
+  <script type="module" src="look.js?v=65"></script>
 </body>
 </html>

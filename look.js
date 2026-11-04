@@ -12,8 +12,8 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=6";
-import { SkiLog } from "./skilog.js?v=1";
+import { TrailMap } from "./mapview.js?v=7";
+import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1135,8 +1135,39 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
     const cv = $("minimap"), dpr = cv.width / 128;
     // Turned with you, the way ahead up (eased, so the map doesn't swing with every wiggle).
     mapUp = mapUp == null ? phys.heading : mapUp + angleDiff(phys.heading, mapUp) * 0.15; // here angleDiff is a - b
-    tmap.view(cv, { cx: phys.x, cz: phys.z, zoom: 0.32, route: chosen.path.slice(Math.max(0, prog - 1)), you: { x: phys.x, z: phys.z, heading: phys.heading }, t: clock() / 1000, dpr, up: mapUp });
+    const route = chosen.path.slice(Math.max(0, prog - 1)), t = clock() / 1000;
+    if (planetMap) {
+      // A wider flat map around you, wrapped onto a little planet, you on top.
+      planetSrc ||= Object.assign(document.createElement("canvas"), { width: 256, height: 256 });
+      tmap.view(planetSrc, { cx: phys.x, cz: phys.z, zoom: 0.17, route, skied: plStretches, t, dpr: 2, up: mapUp });
+      tmap.planet(cv, planetSrc);
+      tmap.drawYou(cv.getContext("2d"), cv.width / 2, cv.height / 2 + 10 * dpr, Math.PI, t, dpr, 44 * dpr);
+    } else tmap.view(cv, { cx: phys.x, cz: phys.z, zoom: 0.32, route, you: { x: phys.x, z: phys.z, heading: phys.heading }, t, dpr, up: mapUp });
   };
+  // The corner map's look: flat, or a little planet (set in the menu, kept on this phone).
+  let planetMap = localStorage.getItem("prerunMapStyle") === "planet", planetSrc = null, plStretches = [];
+  const setMapStyle = (planet) => { planetMap = planet; $("minimap").classList.toggle("planet", planet); try { localStorage.setItem("prerunMapStyle", planet ? "planet" : "flat"); } catch {} };
+  setMapStyle(planetMap);
+  setInterval(() => { if (planetMap && st.phase === "ski") plStretches = skiLog.stretches(); }, 4000);
+  // The menu (☰): everywhere you can go from here.
+  function openMenu() {
+    const box = $("menu"), ski = st.phase === "ski" && phys && !ended;
+    const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${icon} ${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
+    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2><div class="opts">
+      ${item("🗺", "雪场地图", "看全图，选从哪里出发", "map", ski)}
+      ${item("📖", "滑雪记录", "这个雪场你滑过的地方", "log", !!phys)}
+      ${item(planetMap ? "🗺" : "🪐", planetMap ? "小地图改回平面" : "小地图换成小星球", "右上角的小地图样式", "style")}
+      ${item("🏔", "回沙盘", R.name, "sandbox")}
+      ${item("🧑", "换人物 / 换雪场", "回到开始页", "start")}
+    </div>`;
+    box.querySelector("h2 button").onclick = () => (box.hidden = true);
+    box.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
+      box.hidden = true;
+      ({ map: openBigMap, log: openJournal, style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), start: () => (location.href = "start.html?tab=resort") })[b.dataset.act]();
+    }));
+    box.hidden = false;
+  }
+  $("menuBtn").onclick = openMenu;
   const bm = { cx: 0, cz: 0, zoom: 0.2, pin: null, choice: null, ptrs: new Map(), moved: 0, pinch: null };
   const bigCv = $("bigMap").querySelector("canvas");
   function drawBig() {

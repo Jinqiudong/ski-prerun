@@ -31,7 +31,7 @@ export class SkiLog {
   save(endRide = false) {
     if (endRide) this.rides++;
     const all = load();
-    all[this.resort] = { runs: Object.fromEntries([...this.runs].map(([id, s]) => [id, [...s].sort((a, b) => a - b)])), rides: this.rides, lastTrack: this.track.length > 1 ? this.track : all[this.resort]?.lastTrack || [] };
+    all[this.resort] = { runs: Object.fromEntries([...this.runs].map(([id, s]) => [id, [...s].sort((a, b) => a - b)])), rides: this.rides, stats: this.stats(), lastTrack: this.track.length > 1 ? this.track : all[this.resort]?.lastTrack || [] };
     try { localStorage.setItem(KEY, JSON.stringify(all)); } catch { /* full */ }
     this.dirty = false; this.savedAt = performance.now();
   }
