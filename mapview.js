@@ -9,9 +9,12 @@ export class TrailMap {
   constructor(T, R, mask, bases = []) {
     this.T = T; this.R = R; this.mask = mask; this.bases = bases;
     this.avatar = null;
-    const src = (() => { try { return localStorage.getItem("prerunAvatar"); } catch { return null; } })();
-    if (src) { const im = new Image(); im.onload = () => (this.avatar = im); im.src = src; }
+    const src = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
+    if (src) this.setAvatar(src);
   }
+
+  // The figure that stands for you: an image URL (a transparent full-body picture of your rider).
+  setAvatar(src) { const im = new Image(); im.onload = () => (this.avatar = im); im.src = src; }
 
   // Paint the whole map once (lazily: it takes a moment).
   build() {
@@ -94,14 +97,17 @@ export class TrailMap {
     g.imageSmoothingEnabled = true;
     g.drawImage(this.base, sx, sz, W / k, H / k, 0, 0, W, H);
     const S = (x, z) => [(x - cx) * zoom * dpr + W / 2, (z - cz) * zoom * dpr + H / 2];
+    // Overlays keep to the map's scale (a route as wide as a wide run), within what stays readable.
+    const px = (m, lo, hi) => Math.max(lo, Math.min(hi, m * zoom)) * dpr;
     if (route.length > 1) {
       g.lineCap = g.lineJoin = "round";
       g.beginPath(); route.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p))));
-      g.strokeStyle = "rgba(60,40,10,.75)"; g.lineWidth = 7 * dpr; g.stroke();
-      g.strokeStyle = "#f2b632"; g.lineWidth = 4.5 * dpr; g.stroke();
-      const [ex, ez] = route[route.length - 1], [u, v] = S(ex, ez); // the end: a little flag
-      g.fillStyle = "#3a3f4a"; g.fillRect(u - 1 * dpr, v - 16 * dpr, 2 * dpr, 16 * dpr);
-      g.fillStyle = "#e8453c"; g.beginPath(); g.moveTo(u + dpr, v - 16 * dpr); g.lineTo(u + 12 * dpr, v - 12 * dpr); g.lineTo(u + dpr, v - 8 * dpr); g.fill();
+      const w = px(14, 2.5, 9);
+      g.strokeStyle = "rgba(60,40,10,.75)"; g.lineWidth = w + 2.5 * dpr; g.stroke();
+      g.strokeStyle = "#f2b632"; g.lineWidth = w; g.stroke();
+      const [ex, ez] = route[route.length - 1], [u, v] = S(ex, ez), f = px(60, 10, 18); // the end: a little flag
+      g.fillStyle = "#3a3f4a"; g.fillRect(u - 0.06 * f, v - f, 0.12 * f, f);
+      g.fillStyle = "#e8453c"; g.beginPath(); g.moveTo(u + 0.06 * f, v - f); g.lineTo(u + 0.75 * f, v - 0.75 * f); g.lineTo(u + 0.06 * f, v - 0.5 * f); g.fill();
     }
     if (pin) {
       const [u, v] = S(...pin);
@@ -109,22 +115,23 @@ export class TrailMap {
       g.beginPath(); g.arc(u, v - 14 * dpr, 8 * dpr, Math.PI, 0); g.lineTo(u, v); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = "#fff"; g.beginPath(); g.arc(u, v - 14 * dpr, 3 * dpr, 0, Math.PI * 2); g.fill();
     }
-    if (you) this.drawYou(g, ...S(you.x, you.z), you.heading, t, dpr);
+    if (you) this.drawYou(g, ...S(you.x, you.z), you.heading, t, dpr, px(150, 26, 54));
   }
 
-  // You: your rider's portrait in a round frame, hopping, with a little arrow the way you're heading.
-  drawYou(g, u, v, heading, t, dpr) {
-    const r = 15 * dpr, hop = Math.abs(Math.sin(t * 4)) * 5 * dpr;
-    g.fillStyle = "rgba(40,50,70,.25)"; g.beginPath(); g.ellipse(u, v + 2 * dpr, r * 0.8 * (1 - hop / (14 * dpr)), r * 0.3, 0, 0, Math.PI * 2); g.fill();
-    // Heading: x east, z south, so screen angle is atan2(cos h, sin h) with y down = south.
-    const a = Math.atan2(Math.cos(heading), Math.sin(heading)), ax = Math.cos(a), ay = Math.sin(a), y0 = v - r - hop;
-    g.fillStyle = "#f2b632"; g.strokeStyle = "#3a2a10"; g.lineWidth = 1.5 * dpr;
-    g.beginPath(); g.moveTo(u + ax * (r + 9 * dpr), y0 + ay * (r + 9 * dpr)); g.lineTo(u + (ax * r) - ay * 6 * dpr, y0 + ay * r + ax * 6 * dpr); g.lineTo(u + ax * r + ay * 6 * dpr, y0 + ay * r - ax * 6 * dpr); g.closePath(); g.fill(); g.stroke();
-    g.save(); g.beginPath(); g.arc(u, y0, r, 0, Math.PI * 2); g.fillStyle = "#dbe8f6"; g.fill(); g.clip();
-    if (this.avatar) g.drawImage(this.avatar, u - r, y0 - r, 2 * r, 2 * r);
-    else { g.font = `${r * 1.3}px sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("🏂", u, y0 + dpr); }
-    g.restore();
-    g.lineWidth = 3 * dpr; g.strokeStyle = "#ffffff"; g.beginPath(); g.arc(u, y0, r, 0, Math.PI * 2); g.stroke();
-    g.lineWidth = 1.5 * dpr; g.strokeStyle = "#3a3f4a"; g.beginPath(); g.arc(u, y0, r + 1.5 * dpr, 0, Math.PI * 2); g.stroke();
+  // You: your rider, a little full-body figure (rendered from the 3D model), hopping on the spot, with a
+  // small arrow on the ground the way you're heading. h: the figure's height in canvas pixels.
+  drawYou(g, u, v, heading, t, dpr, h = 40 * dpr) {
+    const hop = Math.abs(Math.sin(t * 4)) * h * 0.16;
+    // Heading: x east, z south (down the screen).
+    const ax = Math.sin(heading), ay = Math.cos(heading), r = h * 0.32;
+    g.fillStyle = "rgba(40,50,70,.28)"; g.beginPath(); g.ellipse(u, v, r * (1 - hop / h), r * 0.38, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#f2b632"; g.strokeStyle = "#3a2a10"; g.lineWidth = 1.2 * dpr;
+    g.beginPath(); g.moveTo(u + ax * r * 1.9, v + ay * r * 0.8); g.lineTo(u + ax * r * 1.1 - ay * r * 0.45, v + ay * r * 0.45 + ax * r * 0.25); g.lineTo(u + ax * r * 1.1 + ay * r * 0.45, v + ay * r * 0.45 - ax * r * 0.25); g.closePath(); g.fill(); g.stroke();
+    if (this.avatar) {
+      const w = h * (this.avatar.width / this.avatar.height);
+      g.drawImage(this.avatar, u - w / 2, v - h - hop + h * 0.04, w, h);
+    } else {
+      g.font = `${h * 0.7}px sans-serif`; g.textAlign = "center"; g.textBaseline = "bottom"; g.fillText("🏂", u, v - hop);
+    }
   }
 }

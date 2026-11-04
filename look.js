@@ -7,12 +7,12 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { riderModel, loadAvatar, applyPose, Rider, Tracks, Spray } from "./rider.js?v=10";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder } from "./boarder.js?v=9";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder } from "./boarder.js?v=9";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";
 import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=1";
+import { TrailMap } from "./mapview.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -1082,6 +1082,7 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
   };
   function startSki() {
     const P = chosen, path = P.path;
+    setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now (ski or board)
     origPlan = P; offered = new Set(); offer = null; $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap();
     document.body.classList.remove("picking");
     camera.clearViewOffset();
@@ -1776,6 +1777,47 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       t.el.style.transform = `translate(${x}px, ${y}px)`;
     }
   }
+  // A picture of your rider as dressed, full body on a transparent background, for the maps' "you are
+  // here": the model is lent to a small studio scene for one render.
+  let sprite = null;
+  function makeSprite() {
+    const rider = ctx.rider, W = 140, H = 180, L = 3; // render layer 3: only the rider and two lights
+    if (rider.userData.mixer) idleBoarder(rider); // standing on the board for the picture (the next frame poses it again)
+    const lights = [new THREE.HemisphereLight(0xffffff, 0x8a96a8, 2.2), new THREE.DirectionalLight(0xfff3e2, 2.6)];
+    lights[1].position.copy(rider.localToWorld(new THREE.Vector3(1.5, 3, 3)));
+    lights[1].target.position.copy(rider.position);
+    for (const l of lights) { l.layers.set(L); scene.add(l); }
+    scene.add(lights[1].target);
+    rider.traverse((o) => o.layers.enable(L));
+    rider.updateMatrixWorld(true);
+    const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 50);
+    cam.layers.set(L);
+    cam.position.copy(rider.localToWorld(new THREE.Vector3(1.4, 1.5, 4.0)));
+    cam.lookAt(rider.localToWorld(new THREE.Vector3(0, 0.82, 0)));
+    const rt = new THREE.WebGLRenderTarget(W * 2, H * 2); rt.texture.colorSpace = THREE.SRGBColorSpace; // twice the size, then halved
+    const clear = renderer.getClearColor(new THREE.Color()), alpha = renderer.getClearAlpha(), fog = scene.fog, bg = scene.background, env = scene.environment;
+    scene.fog = null; scene.background = null; scene.environment = null;
+    renderer.setClearColor(0x000000, 0);
+    renderer.setRenderTarget(rt); renderer.clear(); renderer.render(scene, cam); renderer.setRenderTarget(null);
+    renderer.setClearColor(clear, alpha); scene.fog = fog; scene.background = bg; scene.environment = env;
+    for (const l of lights) { scene.remove(l); l.dispose?.(); }
+    scene.remove(lights[1].target);
+    rider.traverse((o) => o.layers.disable(L));
+    const W2 = W * 2, H2 = H * 2, px = new Uint8Array(W2 * H2 * 4); renderer.readRenderTargetPixels(rt, 0, 0, W2, H2, px); rt.dispose();
+    if (!px.some((v, i) => i % 4 === 3 && v > 0)) return false; // nothing drawn: keep the last picture
+    const big = document.createElement("canvas"); big.width = W2; big.height = H2;
+    const bgc = big.getContext("2d"), img = bgc.createImageData(W2, H2);
+    for (let y = 0; y < H2; y++) img.data.set(px.subarray((H2 - 1 - y) * W2 * 4, (H2 - y) * W2 * 4), y * W2 * 4); // flip
+    bgc.putImageData(img, 0, 0);
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(big, 0, 0, W, H);
+    sprite = c.toDataURL("image/png");
+    try { localStorage.setItem("prerunSprite", sprite); } catch { /* full */ }
+    tmap?.setAvatar(sprite);
+    for (const el of document.querySelectorAll("#runTags .rtag.me")) el.innerHTML = `<img src="${sprite}" alt="你在这里">`; // if it's up already
+    return true;
+  }
+  setTimeout(makeSprite, 1500); // early on the chair (a picture taken right at the top doesn't come out)
   function setupPick() {
     // From the rider at the sign, rise and pull back above the summit, looking down the way.
     from = camera.position.clone();
@@ -1960,8 +2002,8 @@ function topOfLift({ T, R, lift, line, ctx, kind, getChair }) {
       const b = k + 1 < P.segs.length ? P.segs[k + 1].at : P.path.length - 1, i = Math.round(s.at + (b - s.at) * 0.4);
       addTag(`${LEVEL_MARK[s.run.level]}${s.run.name}`, "leg", P.path[i][0], P.path[i][1], 6);
     });
-    // You are here: your rider's portrait (saved on the start screen), hopping.
-    const ava = (() => { try { return localStorage.getItem("prerunAvatar"); } catch { return null; } })();
+    // You are here: your own rider, a little full-body figure, hopping.
+    const ava = sprite || (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     addTag(ava ? `<img src="${ava}" alt="你在这里">` : "<span>🏂</span>", "me", g1.x, g1.z, 34);
     for (const l of P.legs) if (l.type === "lift" && P.kind !== "run") addTag(`🚡 坐 ${l.lift.name}`, "via", l.lift.pts[0][0], l.lift.pts[0][1], 10);
     if (mode === "dest") for (const o of [P, ...dests.filter((d) => d !== P)]) addTag(o === P ? `🏁 ${o.short} <small>${fmtMin(o.seconds)}</small>` : `${o.icon} ${o.short}`, o === P ? "dest" : "pin", o.end[0], o.end[1], 10, () => select(o, true));
