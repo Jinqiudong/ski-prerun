@@ -11,7 +11,8 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 export const RIDERS = {
   rider_a: {
     // Claude's rebuild (2026-11-03): same rig, clips and axes as the first cut, one skinned mesh.
-    name: "Rider A", file: "assets/riders/rider_a_v2.glb", // v2: rebuilt rig and 16 clips (2026-11-03)
+    // v2, fourth pass: joint spec, per-frame IK solve, 39 clips. ?v= changes when the file does (phones cache it).
+    name: "Rider A", file: "assets/riders/rider_a_v2.glb?v=4",
     hide: /Jacket_chest_logo|Pants_back_ellipse/, // the owner wants no logos on the jacket or pants
     parts: {
       jacket: { mats: ["V02_JACKET_new_photo_gray_olive"], trim: ["V02_olive_stitch", "V02_zip_tape_olive_charcoal", "RAC_zip_tape_olive_dark", "RAC_seam_shadow"], color: "#525942" },
@@ -101,7 +102,9 @@ export function boarderModel() {
   // Left_Turn and Right_Turn shift the weight toward the nose or the tail; Knee_Bend sinks the hips.
   // Each held at its peak and blended by weight, except Skate_Push, which plays (one push per clip).
   const A = { stance: clip("Snowboard_Stance"), left: clip("Left_Turn"), right: clip("Right_Turn"), knee: clip("Knee_Bend"), stand: clip("Neutral_Standing"),
-    toe: clip("Toeside_Carve"), heel: clip("Heelside_Carve"), sit: clip("Chairlift_Sit"), idle: clip("Stand_Idle"), push: clip("Skate_Push"), exit: clip("Lift_Exit") };
+    toe: clip("Toeside_Carve"), heel: clip("Heelside_Carve"), sit: clip("Chairlift_Sit"), idle: clip("Stand_Idle"), push: clip("Skate_Push"), exit: clip("Lift_Exit"),
+    toeTurn: clip("Toeside_Turn"), heelTurn: clip("Heelside_Turn"), toToe: clip("HeelToToe_HipPush"), toHeel: clip("ToeToHeel_Crouch"),
+    low: clip("Low_Stance"), lookL: clip("Chairlift_LookLeft"), lookR: clip("Chairlift_LookRight") };
   for (const k of Object.keys(A)) if (!A[k]) delete A[k];
   const B = { spine: bone("Spine"), chest: bone("Chest"), neck: bone("Neck"), armL: bone("UpperArm.L"), armR: bone("UpperArm.R"),
     board: bone("Board"), hips: bone("Hips"), head: bone("Head"), thighL: bone("Thigh.L"), thighR: bone("Thigh.R"), shinL: bone("Shin.L"), shinR: bone("Shin.R"),
@@ -158,12 +161,23 @@ export function poseBoarder(root, r) {
   s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
   s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
   s.push = damp(s.push || 0, r.pushing || r.walking ? 1 : 0, 6, dt);
-  // How far onto each edge, 0..1 (full at about 30° of inclination): the model's carve clips.
+  // How far onto each edge, 0..1 (full at about 30° of inclination). A shallow turn is the model's Turn
+  // clip; deeper, it becomes the Carve clip. Rolling quickly from one edge to the other plays the edge
+  // change (toe to heel: sink; heel to toe: drive the hips over the toes). A tuck is Low_Stance.
   const toe = Math.min(1, Math.max(0, -s.edge * tx) / 0.5), heel = Math.min(1, Math.max(0, s.edge * tx) / 0.5 + s.skid * 0.7);
-  const push = A_(u, "push") ? s.push * (1 - Math.max(toe, heel)) : 0;
-  const knee = Math.min(1, s.tuck * 0.7 + (A_(u, "toe") ? 0 : 0.3 * (toe + heel))) * (1 - toe - heel) * (1 - push);
-  const w = { toe: A_(u, "toe") ? toe : 0, heel: A_(u, "heel") ? Math.min(1, heel) : 0, push, knee };
-  w.stance = Math.max(0, 1 - w.toe - w.heel - w.push - w.knee);
+  const roll = (s.edge - (s.lastEdge ?? s.edge)) / dt * tx; s.lastEdge = s.edge; // + rolling toward the heels
+  s.roll = damp(s.roll || 0, Math.max(-1, Math.min(1, roll / 1.2)), 6, dt);
+  const deep = (t) => Math.max(0, (t - 0.5) / 0.5), side = Math.max(toe, Math.min(1, heel));
+  const push = A_(u, "push") ? s.push * (1 - side) : 0;
+  const change = (1 - side) * (1 - push), toHeel = A_(u, "toHeel") ? Math.max(0, s.roll) * change : 0, toToe = A_(u, "toToe") ? Math.max(0, -s.roll) * change : 0;
+  const w = {
+    toeTurn: A_(u, "toeTurn") ? toe * (1 - deep(toe)) : 0, toe: A_(u, "toe") ? (A_(u, "toeTurn") ? deep(toe) : toe) : 0,
+    heelTurn: A_(u, "heelTurn") ? Math.min(1, heel) * (1 - deep(Math.min(1, heel))) : 0, heel: A_(u, "heel") ? (A_(u, "heelTurn") ? deep(Math.min(1, heel)) : Math.min(1, heel)) : 0,
+    push, toHeel, toToe,
+  };
+  const used = Object.values(w).reduce((a, v) => a + v, 0), rest = Math.max(0, 1 - used);
+  if (A_(u, "low")) w.low = rest * Math.min(1, s.tuck * 1.2); else w.knee = rest * Math.min(1, s.tuck * 0.7);
+  w.stance = Math.max(0, rest - (w.low || w.knee || 0));
   weights(u, w);
   if (push > 0.01) { u.pushT = (u.pushT + dt * 0.9) % 1; u.A.push.time = u.pushT * u.A.push.getClip().duration; } // a push every ~1.1 s
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
@@ -197,10 +211,13 @@ export function sitBoarder(root, lookYaw = 0, seat = new THREE.Vector3(0, 0.45, 
   if (u.goofy) { lookYaw = -lookYaw; seat = seat.clone(); seat.x = -seat.x; }
   faceForward(u);
   u.model.position.x = u.model.position.z = 0; u.yaw.position.y = 0;
-  weights(u, { sit: 1 }); // Chairlift_Sit: front foot strapped in, board hanging, hands on the knees
+  // Chairlift_Sit (front foot strapped in, board hanging, hands on the knees), turning to look with the
+  // model's own look-left and look-right poses as you turn the phone (lookYaw > 0: to the left).
+  const look = Math.max(-1, Math.min(1, lookYaw / 0.9));
+  if (A_(u, "lookL")) weights(u, { sit: 1 - Math.abs(look), lookL: Math.max(0, look), lookR: Math.max(0, -look) });
+  else weights(u, { sit: 1 });
   mix(u);
-  turn(B.spine, F, Y, lookYaw * 0.25);
-  turn(B.head, F, Y, Math.max(-1, Math.min(1, lookYaw * 0.75)));
+  if (!A_(u, "lookL")) { turn(B.spine, F, Y, lookYaw * 0.25); turn(B.head, F, Y, Math.max(-1, Math.min(1, lookYaw * 0.75))); }
   root.updateMatrixWorld(true);
   // Hips onto the seat.
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
