@@ -239,7 +239,9 @@ function forest(T, mask) {
 
 // Runs as on a resort map: a coloured core in a casing, with a soft glow to read from far away. The style is
 // one set of numbers (widths in m, opacities, colours) so the look can be tuned in one place.
-const RUN_STYLE = { glow: 70, glowOp: [0.22, 0.12], casing: 34, casingOp: 0.9, casingColor: 0xffffff, core: 20, coreOp: 1, colors: RUN_COLOR };
+// The owner's pick (2026-11-05): a thin coloured core in a thin white casing, no glow; lifts as red lines with dots at both ends.
+const RUN_STYLE = { glow: 0, glowOp: [0, 0], casing: 24, casingOp: 0.85, casingColor: 0xffffff, core: 12, coreOp: 1, colors: { easy: 0x4fae6a, intermediate: 0x3f78c8, advanced: 0x2a2e36, expert: 0x2a2e36 } };
+const LIFT_STYLE = { color: 0xb6463b, w: 14, dash: 0, gap: 0, ends: 32 };
 function runs(T, list, o = RUN_STYLE) {
   const group = new THREE.Group();
   const mat = (color, opacity, order) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: order, polygonOffsetUnits: order, fog: false });
@@ -351,9 +353,11 @@ async function main() {
   world.add(forest(T, mask));
   let runLayer = runs(T, R.runs);
   world.add(runLayer);
-  let liftLayer = null;
+  let liftLayer = liftMarks(T, R.lifts, LIFT_STYLE);
+  world.add(liftLayer);
   const lifts = new Lifts(T, R.lifts);
   world.add(lifts.group);
+  lifts.group.visible = false; // on the whole mountain, lifts are drawn as lines on the snow (liftMarks)
   const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d88a3, 0.35);
   const sun = new THREE.DirectionalLight(0xfff0dc, 3.6);
   scene.add(hemi, sun);
@@ -476,7 +480,7 @@ async function main() {
   const toggle = (id, fn) => $(id).addEventListener("click", () => { $(id).classList.toggle("on"); fn($(id).classList.contains("on")); });
   toggle("spin", (on) => (controls.autoRotate = on));
   toggle("runs", (on) => (runLayer.visible = on));
-  toggle("lifts", (on) => (lifts.group.visible = on));
+  toggle("lifts", (on) => (liftLayer.visible = on));
   renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); fold(); $("timePanel").classList.remove("show"); });
   // The two round buttons: tap one to open its pop-up (the other folds); choosing a view or tapping the map
   // folds them; they fold themselves after a while.
