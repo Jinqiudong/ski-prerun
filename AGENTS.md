@@ -12,6 +12,8 @@ Product contract: [venture-lab `product-incubator/products/48/PRODUCT.md`](https
 - Always show the OpenStreetMap attribution and the "use the official trail map on the mountain" note.
 
 ## Code map
+- `diorama.js` — the resort tiles as dioramas: layered cut-away sides, pines, an animal walking on each (`ANIMALS`). `?flat` brings back the plain tiles. The map under them: `tools/bake_map_snow.py` → `assets/wc/colorado.jpg`.
+- Tabs: a floating frosted pill (`#tabs` in start.html); on the map it folds into one round button when you turn, zoom or pick (`collection.onExplore`), and a tap opens it.
 - `intro.js` — the opening, once per visit: a snowy valley with a plane per city of the next trip's riders landing at Denver, on a frosted pane with snowboarders carving behind it (blur by CSS layers: Safari has no canvas `ctx.filter`); sound made with WebAudio on a tap. Skipped under `navigator.webdriver` (tests).
 - `start.html` / `start.js` — first screen: the rider (dress, stance), the resorts on a 3D map of Colorado (`collection.js`, from `data/region.*`), trips (`trips.js`), the ski log.
 - `mountain/` — a resort as a miniature: pick a base and a lift (`mountain.js`, `diorama.js`).

@@ -1,4 +1,5 @@
-// The resorts as little relief models standing on a watercolour map of central Colorado: each one a square
+// The resorts as little dioramas (diorama.js) standing on a snowy watercolour map of central Colorado
+// (tools/bake_map_snow.py): each one a square
 // of the resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, set
 // where it is (Aspen's four, too close together, sit as a two-by-two in their valley); each framed with the
 // town it's by; the drives between them along the roads, with how long they take (data/drives.json), and
@@ -10,8 +11,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { EN_ON } from "./i18n.js?v=9";
 import { ANIMALS, strataWalls, heightAt, pines, animal, walk } from "./diorama.js?v=1";
 
-// Diorama tiles (taller, cut-away sides in layers, pines, an animal each): on trial with ?diorama.
-const DIO = new URLSearchParams(location.search).has("diorama");
+// Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
+const DIO = !new URLSearchParams(location.search).has("flat");
 
 const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
 const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78, w: 140 }; // the painted map (tools/bake_map.py) and its width in scene units
@@ -37,7 +38,7 @@ export class Collection {
     r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     const s = (this.scene = new THREE.Scene());
-    s.background = new THREE.Color(0xf3efe8);
+    s.background = new THREE.Color(0xeef2f5);
     s.add(new THREE.HemisphereLight(0xffffff, 0xd9d0c2, 1.5));
     const sun = new THREE.DirectionalLight(0xfff4e6, 2.3);
     sun.position.set(-60, 100, -48); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
@@ -47,18 +48,19 @@ export class Collection {
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
     // The painted map the tiles stand on (it takes their shadows too).
     const mh = MAP.w * ((MAP.N - MAP.S) * 111) / ((MAP.E - MAP.W) * 85.3);
-    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=2", (x) => (x.colorSpace = THREE.SRGBColorSpace));
+    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=4", (x) => (x.colorSpace = THREE.SRGBColorSpace));
     tex.anisotropy = 8;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xdedbd6, roughness: 1 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1 }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -PLINTH; floor.receiveShadow = true; s.add(floor);
     // The sheet's edge, a little thickness of paper.
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(MAP.w, 2, mh), new THREE.MeshStandardMaterial({ color: 0xece6db, roughness: 1 }));
-    edge.position.y = -PLINTH - 1.2; edge.receiveShadow = true; s.add(edge);
+    // the snowy ground the map lies on, far past its (faded) edges
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w * 8, mh * 8), new THREE.MeshStandardMaterial({ color: 0xeceff2, roughness: 1 }));
+    ground.rotation.x = -Math.PI / 2; ground.position.y = -PLINTH - 0.03; ground.receiveShadow = true; s.add(ground);
     this.marks = []; // HTML labels pinned to the map: towns, drive times, Denver
     this.camera = new THREE.PerspectiveCamera(30, 1, 4, 900);
     const c = (this.controls = new OrbitControls(this.camera, canvas));
     Object.assign(c, { enableDamping: true, dampingFactor: 0.08, minDistance: 14, maxDistance: 700, minPolarAngle: 0.25, maxPolarAngle: 1.25, enablePan: true, screenSpacePanning: false });
-    c.addEventListener("start", () => { this.fly = null; this.moved = true; this.dragging = true; });
+    c.addEventListener("start", () => { this.fly = null; this.moved = true; this.dragging = true; this.onExplore?.(); });
     c.addEventListener("end", () => (this.dragging = false));
     this.tiles = []; this.picked = null; this.onPick = null;
     canvas.addEventListener("pointerdown", (e) => (this.down = { x: e.clientX, y: e.clientY }));
@@ -155,7 +157,7 @@ export class Collection {
     const k = (S / d.size) * (DIO ? 2.1 : EX), top = new THREE.PlaneGeometry(S, S, n - 1, n - 1);
     top.rotateX(-Math.PI / 2);
     const pos = top.attributes.position;
-    for (let v = 0; v < pos.count; v++) pos.setY(v, (q[v] / 2) * k + (DIO ? 1.6 : 0.15));
+    for (let v = 0; v < pos.count; v++) pos.setY(v, (q[v] / 2) * k + (DIO ? 1.0 : 0.15));
     top.computeVertexNormals();
     const vivid = share > 0 ? 0.6 + 0.4 * share : 0.5;
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 });

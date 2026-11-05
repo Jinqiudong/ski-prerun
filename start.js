@@ -171,7 +171,7 @@ $("saveBtn").onclick = () => {
 let collection = null, tab = "rider";
 const logOf = () => { try { return JSON.parse(localStorage.getItem("prerunLog") || "{}"); } catch { return {}; } };
 async function setTab(t) {
-  tab = t;
+  tab = t; $("tabs").classList.remove("shut");
   for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === t);
   const rider = t === "rider";
   for (const id of ["stage", "sheet"]) $(id).hidden = !rider;
@@ -182,27 +182,28 @@ async function setTab(t) {
   if (t === "log") await openRecords();
 }
 let rider_ready = false;
-for (const b of $("tabs").children) b.onclick = () => setTab(b.dataset.tab);
+for (const b of $("tabs").children) b.onclick = () => { if ($("tabs").classList.contains("shut")) { $("tabs").classList.remove("shut"); return; } setTab(b.dataset.tab); }; // folded: a tap opens it
 $("useBtn").onclick = () => { st.rider = chosen().id; save(); setTab("resort"); };
 const resortList = async () => (await (await fetch("data/resorts.json")).json()).filter((r) => r.ready);
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=22");
+    const { Collection } = await import("./collection.js?v=24");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
     await collection.build(await resortList(), stats, logOf());
     $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
-    collection.onPick = (r) => {
+    collection.onPick = (r) => { $("tabs").classList.add("shut");
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       card.innerHTML = `<b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
         <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
       card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
       card.hidden = false;
     };
-    const loop = (now) => { if (tab === "resort") collection.frame(now / 1000); requestAnimationFrame(loop); };
+    collection.onExplore = () => $("tabs").classList.add("shut"); // turning or zooming the map folds the tabs away
+    const loop = (now) => { if (tab === "resort") { collection.frame(now / 1000); $("compass").style.transform = `rotate(${(collection.controls.getAzimuthalAngle() * 180 / Math.PI).toFixed(1)}deg)`; } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
   collection.resize();

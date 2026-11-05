@@ -79,5 +79,10 @@ Lm = x @ [0.3, 0.59, 0.11]
 gran = np.asarray(Image.fromarray((rng.random((TH, TW)) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))).astype(np.float32) / 255
 x = x * (1 - (gran[..., None] - 0.5) * 0.08 * (0.5 + (1 - Lm[..., None])))
 x = x * (0.975 + 0.04 * noise(120, 5)[..., None])
+# fade the borders into the plain snowy ground the map lies on (collection.js), so it has no edge
+EDGE = np.array([0xec, 0xef, 0xf2]) / 255
+fx = np.minimum(xx, TW - 1 - xx) / (TW * 0.09); fy = np.minimum(yy, TH - 1 - yy) / (TH * 0.09)
+f = np.clip(np.minimum(fx, fy) + (noise(18, 7) - 0.5) * 0.5, 0, 1)[..., None] ** 1.5
+x = x * f + EDGE * (1 - f)
 Image.fromarray((np.clip(x, 0, 1) * 255).astype(np.uint8)).save(OUT, quality=84)
 print(OUT, TW, TH)
