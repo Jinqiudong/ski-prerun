@@ -16,7 +16,7 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar } from "./i18n.js?v=21";
+import { translatePage, openSettings, myAvatar, t } from "./i18n.js?v=22";
 import { navRow } from "./nav.js?v=9";
 
 const $ = (id) => document.getElementById(id);
@@ -376,7 +376,8 @@ async function weather(params, flakes, at, applySky) {
   flakes.visible = now;
   snowing = now;
   if (now && sun) setSnowyAir();
-  $("weather").textContent = `${now ? "❄️ 正在下雪 · " : ""}${recent != null ? `过去 3 天降雪 ${recent.toFixed(1)} 厘米 · ` : ""}树上积雪 ${Math.round(treeSnow.value * 100)}%`;
+  const cell = (icon, big, small) => `<div class="cell"><img src="assets/icons/${icon}.png?v=1" alt=""><b>${big}</b>${small}</div>`;
+  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "❄", "正在下雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
 }
 
 function plant(spots, geo, mat, scaleOf) {
@@ -1220,30 +1221,15 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
   const setMapStyle = (planet) => { planetMap = planet; $("minimap").classList.toggle("planet", planet); try { localStorage.setItem("prerunMapStyle", planet ? "planet" : "flat"); } catch {} };
   setMapStyle(planetMap);
   setInterval(() => { if (planetMap && st.phase === "ski") plStretches = skiLog.stretches(); }, 4000);
-  // The menu (☰): everywhere you can go from here.
   function openMenu() {
-    const box = $("menu"), ski = st.phase === "ski" && phys && !ended;
-    const ic = (n) => `<img src="assets/icons/${n}.png?v=1" alt="">`;
-    const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${ic(icon)}${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
-    // This ride's tools on top, the app's four tabs (as on the start page) under them; tap outside to close.
-    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2><div><div class="opts">
-      ${item("trailmap", "雪场地图", "", "map", ski)}
-      ${item("packing", "路书", "", "book")}
-      ${item("memory", "滑雪记录", "", "log", !!phys)}
-      ${item("compass_n", planetMap ? "平面小地图" : "小星球地图", "", "style")}
-      ${item("lodge", "回沙盘", "", "sandbox")}
-      ${item("sliders", "设置", "", "settings")}
-    </div>${navRow()}</div>`;
-    box.querySelector('.navrow a[href*="tab=resort"]')?.classList.add("on");
-    const dim = document.createElement("div"); dim.id = "menuDim"; document.body.append(dim);
-    document.body.classList.add("menuOpen");
-    const shut = () => { box.hidden = true; dim.remove(); document.body.classList.remove("menuOpen"); };
-    dim.onclick = shut; box.querySelector("h2 button").onclick = shut;
-    box.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
-      shut();
-      ({ map: openBigMap, log: openJournal, book: () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) }), style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), settings: openSettings })[b.dataset.act]();
-    }));
-    box.hidden = false;
+    const ski = st.phase === "ski" && phys && !ended;
+    fan("fanDown", $("menuBtn"), [
+      ["packing", "路书", () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) })],
+      ski && ["trailmap", "地图", openBigMap],
+      ski && ["compass_n", planetMap ? "平面小地图" : "小星球地图", () => setMapStyle(!planetMap)],
+      ["sliders", "设置", openSettings],
+      ["st_done", "结束今天", endToday],
+    ]);
   }
   $("menuBtn").onclick = openMenu;
   $("menuBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`;
@@ -2368,6 +2354,29 @@ const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun")
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
 const withResort = (url) => url + (url.includes("?") ? "&" : "?") + `resort=${RESORT}`;
 for (const a of document.querySelectorAll('a[href="mountain/"]')) a.href = withResort("mountain/");
+// The avatar's tools drop down under it as round buttons; the mountain (bottom left) pops the app's pages up.
+// Tap outside to fold them back.
+const fold = () => { for (const id of ["fanDown", "fanUp", "fanDim"]) $(id).hidden = true; $("menuBtn").classList.remove("on"); $("tabFab").classList.remove("on"); };
+const fan = (id, btn, items) => {
+  const box = $(id), open = !box.hidden; fold(); if (open) return;
+  box.innerHTML = items.filter(Boolean).map(([icon, label], i) => `<button data-i="${i}" style="animation-delay:${i * 35}ms"><img src="assets/icons/${icon}.png?v=1" alt=""><span>${t(label)}</span></button>`).join("");
+  const live = items.filter(Boolean);
+  box.querySelectorAll("button").forEach((b) => (b.onclick = () => { fold(); live[b.dataset.i][2](); }));
+  box.hidden = $("fanDim").hidden = false; btn.classList.add("on");
+};
+$("fanDim").onclick = fold;
+// A pre-run in progress is kept on this phone, so leaving the ride doesn't end it: the start page offers
+// "continue" until "结束今天".
+const SESSION = "prerunSession";
+const saveSession = (s) => { try { localStorage.setItem(SESSION, JSON.stringify({ ...s, t: Date.now() })); } catch {} };
+function endToday() { try { localStorage.removeItem(SESSION); } catch {} location.href = "start.html?tab=log"; }
+// The mountain, bottom left: the app's pages pop up over it; the mountain itself is this resort's sandbox.
+$("tabFab").onclick = () => {
+  if (!$("fanUp").hidden) { location.href = withResort("mountain/"); return; }
+  fan("fanUp", $("tabFab"), [["memory", "记录", () => (location.href = "start.html?tab=log")], ["trips", "行程", () => (location.href = "start.html?tab=trip")], ["rider", "人物", () => (location.href = "start.html?tab=rider")]]);
+};
+// The top pill: tap it for the snow (and, skiing, the controls); tap again to fold it.
+$("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxToggle").textContent = t(i.hidden ? "雪况 ⌄" : "收起 ⌃"); };
 const riderLoad = loadBoarder(); // start early, it is a few MB
 async function main() {
   const [R, far] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json())]);
@@ -2421,6 +2430,12 @@ async function main() {
     $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.classList.toggle("one", rate === 1); };
     $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
   }
+  if (TRIP) $("weather").insertAdjacentHTML("beforeend", `<div class="cell"><img src="assets/icons/lift.png?v=1" alt=""><b>${(() => { const s = (d1 - d0) / (SPEED * 3); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; })()}</b>${t("坐到山顶")}</div>`);
+  // Keep where we are, every couple of seconds and on the way out, for "continue" on the start page.
+  let savedAt = 0;
+  const keep = () => { if (!TRIP) return; const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0)));
+    saveSession(arrived ? { resort: RESORT, lift: lift.name, at: 1, phase: "ski", where: $("liftName").textContent.trim() } : { resort: RESORT, lift: lift.name, at: +u.toFixed(3), phase: "ride", where: lift.name }); };
+  addEventListener("pagehide", keep);
   const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
   const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair });
@@ -2457,7 +2472,7 @@ async function main() {
       if (TRIP) {
         d = d1;
         if (!arrived) {
-          arrived = true; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco")?.remove();
+          arrived = true; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco").src = "assets/icons/snowboard.png?v=1";
           // Put our chair at the unload point first: after "skip" it was still where it last was.
           along(line.up, d, p); along(line.up, d + 4, q);
           myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0); myChair.updateMatrixWorld(true);
@@ -2465,6 +2480,7 @@ async function main() {
         }
       } else d = d0;
     }
+    if (TRIP && now - savedAt > 2000) { savedAt = now; keep(); }
     if (TRIP && !arrived) {
       $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
       const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = (d1 - d0) / (SPEED * 3);

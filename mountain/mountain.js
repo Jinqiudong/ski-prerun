@@ -8,7 +8,7 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
 import { Diorama } from "./diorama.js?v=20";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
 import { addStep } from "../roadbook.js?v=12";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../i18n.js?v=21";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../i18n.js?v=22";
 import { openNav } from "../nav.js?v=9";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load

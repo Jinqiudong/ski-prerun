@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=21";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
 playIntro();
 
@@ -297,4 +297,15 @@ setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log"
 $("setBtn").onclick = openSettings;
 const face = () => ($("setBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`);
 face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
+// A pre-run left half way (kept by the ride page): offer to go back to it.
+(() => {
+  let ses = null; try { ses = JSON.parse(localStorage.getItem("prerunSession") || "null"); } catch {}
+  if (!ses || Date.now() - ses.t > 36 * 3600e3) return;
+  const el = $("resume"), name = ses.resort.replace(/(^|-)\w/g, (m) => m.toUpperCase()).replace(/-/g, " ");
+  el.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`;
+  el.querySelector("b").textContent = `${t("预滑中")} · ${name}`;
+  el.querySelector("small").textContent = `${ses.where} · ${t(ses.phase === "ride" ? "缆车上" : "滑行中")}`;
+  el.querySelector("u").style.width = `${Math.round((ses.phase === "ride" ? ses.at : 1) * 100)}%`;
+  el.hidden = false;
+})();
 translatePage();

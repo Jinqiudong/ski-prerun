@@ -197,12 +197,50 @@
     #menu .navrow a { flex: 1; border: 0 !important; background: none !important; border-radius: 32px !important; padding: 6px 0 5px !important; font: 12px "Noto Serif SC", serif !important; color: #4a453f !important; }
     #menu .navrow a.on { background: #6f879c !important; color: #fdfbf6 !important; }
     #menu > div { display: flex; flex-direction: column; } #menuDim { position: fixed; inset: 0; z-index: 9; background: rgba(30,40,55,.25); }
+  
+    /* Top and bottom mirror each other (the owner's mock, 2026-11-05): a long pill and a round button on each.
+       Top: where you are (tap: the snow) + the avatar (tools drop down). Bottom: the mountain (the app's pages
+       pop up) + the ride bar. */
+    #top { left: 14px !important; right: 86px !important; top: calc(14px + env(safe-area-inset-top)) !important; padding: 6px 14px 6px 6px !important; border-radius: 30px !important; background: rgba(253,251,246,.95) !important; color: #22344d !important; box-shadow: 0 6px 14px rgba(40,50,70,.18) !important; cursor: pointer; }
+    #top b#topBar { display: flex !important; align-items: center; gap: 8px; min-height: 48px; font: 600 18px "Cormorant Garamond", "Noto Serif SC", serif !important; }
+    #topBar #liftIco { width: 44px; height: 44px; padding: 7px; box-sizing: border-box; border-radius: 50%; background: #f3ede2; flex: none; }
+    #topBar #liftName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #wxToggle { flex: none; font: 13px "Noto Serif SC", serif; color: #7b746b; }
+    #topInfo { margin: 8px 0 4px; } #topInfo[hidden] { display: none; }
+    #weather { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+    #weather .cell { display: grid; justify-items: center; gap: 1px; padding: 8px 2px; border-radius: 16px; background: #f3ede2; font: 12px "Noto Serif SC", serif; color: #4a453f; text-align: center; }
+    #weather .cell img { width: 28px; height: 28px; } #weather .cell b { font: 600 16px "Cormorant Garamond", serif; color: #22344d; }
+    #top #desc { margin: 8px 4px 0 !important; font: 12px/1.6 "Noto Serif SC", serif !important; color: #7b746b !important; }
+    #top #desc:empty { display: none; }
+    .rfab { position: fixed; z-index: 12; width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.22); display: grid; place-items: center; cursor: pointer; transition: background .2s; }
+    .rfab img { width: 36px; height: 36px; } .rfab.on { background: #6f879c; }
+    #menuBtn.rfab { float: none; right: 14px; top: calc(14px + env(safe-area-inset-top)); width: 60px !important; height: 60px !important; border: 0 !important; background: rgba(253,251,246,.95) !important; overflow: visible; }
+    #menuBtn.rfab img { width: 46px; height: 46px; border-radius: 50%; } #menuBtn.rfab.on { background: #6f879c !important; }
+    #tabFab { left: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
+    #tabFab.on img { filter: brightness(1.7); }
+    #rideBar { left: 86px !important; right: 14px !important; }
+    #skiHud { left: 86px !important; right: 14px !important; }
+    #minimap { top: calc(90px + env(safe-area-inset-top)) !important; }
+    #fanDim { position: fixed; inset: 0; z-index: 11; background: rgba(30,40,55,.28); } #fanDim[hidden] { display: none; }
+    .fan { position: fixed; z-index: 12; display: grid; gap: 12px; } .fan[hidden] { display: none; }
+    #fanDown { right: 14px; top: calc(88px + env(safe-area-inset-top)); }
+    #fanUp { left: 14px; bottom: calc(88px + env(safe-area-inset-bottom)); }
+    .fan button { position: relative; width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%; background: rgba(253,251,246,.97); box-shadow: 0 6px 14px rgba(40,50,70,.22); display: grid; place-items: center; cursor: pointer; animation: fanIn .22s backwards; }
+    .fan button img { width: 36px; height: 36px; }
+    .fan button span { position: absolute; top: 50%; transform: translateY(-50%); padding: 3px 10px; border-radius: 12px; background: rgba(253,251,246,.97); box-shadow: 0 2px 6px rgba(40,50,70,.18); font: 600 13px "Noto Serif SC", serif; color: #22344d; white-space: nowrap; }
+    #fanDown button span { right: 70px; } #fanUp button span { left: 70px; }
+    @keyframes fanIn { from { opacity: 0; transform: translateY(var(--from, 0)) scale(.6); } }
+    #fanDown button { --from: -20px; } #fanUp button { --from: 20px; }
+  
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
   <div id="vignette"></div>
-  <div id="top" class="glass"><b><img id="liftIco" src="assets/icons/lift.png?v=1" alt="" style="width:28px;height:28px"><span id="liftName"></span></b> <button id="menuBtn" aria-label="菜单"><img alt=""></button><p id="desc"></p><p id="weather"></p></div>
+  <div id="top" class="glass"><b id="topBar"><img id="liftIco" src="assets/icons/lift.png?v=1" alt=""><span id="liftName"></span><small id="wxToggle">雪况 ⌄</small></b><div id="topInfo" hidden><div id="weather"></div><p id="desc"></p></div></div>
+  <button id="menuBtn" class="rfab" aria-label="菜单"><img alt=""></button>
+  <button id="tabFab" class="rfab" aria-label="页面"><img src="assets/icons/resorts.png?v=1" alt=""></button>
+  <div id="fanDim" hidden></div><div id="fanDown" class="fan" hidden></div><div id="fanUp" class="fan" hidden></div>
   <button id="bubble" aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span>放下防风罩</span></button>
   <!-- The chair ride as a player: back, pause, fast; the line from the bottom station to the flag at the top,
        drag it to jump ahead; 路线 opens the roadbook, 速度 cycles how fast the chair goes. -->
@@ -232,6 +270,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="look.js?v=98"></script>
+  <script type="module" src="look.js?v=99"></script>
 </body>
 </html>
