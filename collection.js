@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { EN_ON } from "./i18n.js?v=9";
-import { ANIMALS, strataWalls, heightAt, pines, animal, walk } from "./diorama.js?v=1";
+import { ANIMALS, strataWalls, heightAt, pines, animalSprite, walk } from "./diorama.js?v=2";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
@@ -180,7 +180,7 @@ export class Collection {
       g.add(strataWalls(pos, edge, -PLINTH));
       const h = heightAt(pos, n, S); let lo = 1e9, hi = -1e9; for (let v = 0; v < pos.count; v++) { lo = Math.min(lo, pos.getY(v)); hi = Math.max(hi, pos.getY(v)); }
       g.add(pines(h, S, lo, hi, 7 + (id || "").length * 13));
-      if (ANIMALS[id]) { const a = animal(ANIMALS[id]); g.add(a); (this.walkers ||= []).push({ a, h, seed: (id.charCodeAt(0) % 7) * 0.9 }); }
+      if (ANIMALS[id]) { const a = animalSprite(ANIMALS[id]); g.add(a); (this.walkers ||= []).push({ a, h, seed: (id.charCodeAt(0) % 7) * 0.9 }); }
     } else {
       const wg = new THREE.BufferGeometry(); wg.setAttribute("position", new THREE.Float32BufferAttribute(side, 3)); wg.setIndex(idx); wg.computeVertexNormals();
       const wall = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0xf1ede7, roughness: 0.85, side: THREE.DoubleSide }));
@@ -263,7 +263,7 @@ export class Collection {
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
-    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S);
+    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S, this.camera);
     this.renderer.render(this.scene, this.camera);
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.
