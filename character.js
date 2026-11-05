@@ -30,8 +30,6 @@ export async function makeCharacter(tpl) {
     o.material = [].concat(o.material).map((m) => m.clone()); if (o.material.length === 1) o.material = o.material[0];
     // The fabric's sheen comes in full and white, which lights every edge like a rim light; a third of it reads as cloth.
     for (const m of [].concat(o.material)) if (m.sheen) m.sheen *= 0.3;
-    // The man's board carries a maker's graphic: show it plain (the game puts real boards on later).
-    if (tpl === "M") for (const m of [].concat(o.material)) if (/MAT_board_(top|base)/.test(m.name)) { m.map = null; m.color.set(m.name.endsWith("top") ? "#2f3a4c" : "#22252a"); }
   });
   const bones = {}; root.traverse((o) => { if (o.isBone) bones[o.name] = o; });
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(g.animations.map((c) => [c.name, c]));
@@ -67,6 +65,10 @@ function makeGrid() {
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
   gridTex = mk("#ffffff", "#c8c8c8"); gridEmis = mk("#000000", "#ffffff");
 }
+// Each of the four has their own board (the real ones, from the character AI's per-rider models); ch.board picks it.
+export const BOARDS = ["A", "B", "C", "D"];
+const boardTex = {};
+const texOf = (k, side) => (boardTex[k + side] ||= (() => { const t = new THREE.TextureLoader().load(`assets/riders/boards/${k}_${side}.jpg?v=1`); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })());
 export function applyCharacter(root, tpl, ch) {
   root.scale.setScalar(ch.height / tpl.height);
   root.traverse((o) => {
@@ -82,6 +84,8 @@ export function applyCharacter(root, tpl, ch) {
   for (const k in PARTS) { const o = root.getObjectByName(PARTS[k]); if (o) o.visible = !!ch.parts[k]; }
   root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) {
     const c = ch.colors[m.name]; if (c) m.color.set(c);
+    const side = m.name === "MAT_board_top" ? "top" : m.name === "MAT_board_base" ? "base" : null;
+    if (side && ch.board && m.userData.board !== ch.board) { m.map = texOf(ch.board, side); m.color.set("#ffffff"); m.needsUpdate = true; m.userData.board = ch.board; }
     if (m.name === "MAT_helmet") { m.roughness = ch.glossyHelmet ? 0.55 : 0.78; m.metalness = ch.glossyHelmet ? 0.25 : 0; }
     if (m.name === "MAT_jacket") {
       if (!gridTex) makeGrid();
@@ -93,6 +97,8 @@ export function applyCharacter(root, tpl, ch) {
 }
 
 // A preset's character (a deep copy), and the game's six part colours read off it (the ride's rider wears those).
-export const presetChar = (k) => JSON.parse(JSON.stringify(CFG.presets[k]));
+// Each friend's signature move (the owner's picks): shown now and then on the pick page.
+export const SIGNATURE = { A: "Anim_Carve_Ref", B: "Anim_Carve_Spin_Toe", C: "Anim_Carve_S", D: "Anim_Method_Air" };
+export const presetChar = (k) => ({ board: k, fav: SIGNATURE[k], ...JSON.parse(JSON.stringify(CFG.presets[k])) });
 export const partColors = (ch) => Object.fromEntries(Object.entries(COLOR_MATS).map(([p, [m]]) => [p, ch.colors[m]]));
 export function setPartColor(ch, part, c) { for (const m of COLOR_MATS[part]) ch.colors[m] = c; }

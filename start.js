@@ -2,7 +2,7 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
-import { CFG, PART_LABEL, POSES, TRICKS, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=3";
+import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=4";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -180,13 +180,15 @@ function paneTab(name) {
   if (name === "衣服") pane.innerHTML = `${slider("jease", "外套宽松", S.jease.lo, S.jease.hi, 1, word(S.jease.lo, S.jease.hi, "合身", "适中", "宽松"))}
     ${slider("jlen", "外套长度", S.jlen.lo, S.jlen.hi, 0.5, word(S.jlen.lo, S.jlen.hi, "短", "适中", "长"))}
     ${slider("pease", "裤子宽松", S.pease.lo, S.pease.hi, 1, word(S.pease.lo, S.pease.hi, "合身", "适中", "宽松"))}
-    <div class="chips">${Object.entries(PART_LABEL).map(([k, l]) => `<button class="chip${ch.parts[k] ? " on" : ""}" data-part="${k}">${t(l)}</button>`).join("")}</div>`;
+    <div class="chips">${Object.entries(PART_LABEL).map(([k, l]) => `<button class="chip${ch.parts[k] ? " on" : ""}" data-part="${k}">${t(l)}</button>`).join("")}</div>
+    <h4>${t("雪板")}</h4><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><img src="assets/riders/boards/${k}_top.jpg?v=1" alt=""></button>`).join("")}</div>`;
   if (name === "动作") pane.innerHTML = `<div class="chips">${POSES.map(([k, l]) => `<button class="chip${rider?.current === k ? " on" : ""}" data-play="${k}">${t(l)}</button>`).join("")}</div>
     <div class="tricks">${TRICKS.map(([k, l]) => `<button class="trick${rider?.current === k ? " on" : ""}" data-play="${k}">${ch.fav === k ? "<i>★</i>" : ""}${t(l)}</button>`).join("")}</div>
     <p class="hint">${t("点一个看动作；再点一次正在播的 trick，设成你最爱的（选人页会时不时做一下）")}</p>`;
   for (const i of pane.querySelectorAll("input[type=range]")) i.oninput = () => { const k = i.dataset.k; ch[k] = +i.value; pane.querySelector(`[data-v="${k}"]`).textContent = fmts[k](ch[k]); show(draft); };
   for (const b of pane.querySelectorAll("[data-tpl]")) b.onclick = () => { if (ch.tpl === b.dataset.tpl) return; const k = Object.keys(OUTFITS).find((o) => CFG.presets[OUTFITS[o].ch].tpl === b.dataset.tpl), pre = presetChar(OUTFITS[k].ch);
     Object.assign(ch, { tpl: pre.tpl, height: pre.height }); ch.parts.hair = pre.parts.hair; paneTab(name); show(draft); };
+  for (const b of pane.querySelectorAll("[data-board]")) b.onclick = () => { ch.board = b.dataset.board; paneTab(name); show(draft); };
   for (const b of pane.querySelectorAll("[data-part]")) b.onclick = () => { ch.parts[b.dataset.part] = !ch.parts[b.dataset.part]; paneTab(name); show(draft); };
   for (const b of pane.querySelectorAll("[data-play]")) b.onclick = () => { const k = b.dataset.play;
     if (rider?.current === k && TRICKS.some(([n]) => n === k)) ch.fav = ch.fav === k ? null : k; else rider?.play(k); paneTab(name); };

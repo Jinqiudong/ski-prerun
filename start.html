@@ -44,6 +44,9 @@
     #epane .chip, #epane .trick { padding: 7px 14px; border-radius: 999px; border: 1.5px solid #d6cbb6; background: var(--paper); font: 13px "Noto Serif SC", serif; color: var(--ink); cursor: pointer; }
     #epane .chip.on, #epane .trick.on { background: var(--navy); color: #fdfbf6; border-color: var(--navy); }
     #epane .tricks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; } #epane .trick { position: relative; border-radius: 14px; padding: 12px 4px; }
+    #epane h4 { margin: 14px 0 6px; font: 14px "Noto Serif SC", serif; color: var(--navy); }
+    #epane .boards { display: flex; gap: 10px; } #epane .boards button { width: 44px; height: 150px; padding: 2px; border: 2px solid transparent; border-radius: 22px; background: none; cursor: pointer; }
+    #epane .boards button.on { border-color: var(--navy); } #epane .boards img { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; display: block; }
     #epane .trick i { position: absolute; right: 6px; top: 2px; font-style: normal; color: #b6463b; } #epane .hint { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
     .tools { display: flex; gap: 10px; justify-content: flex-end; margin: 2px 0 6px; }
     .tools button { width: 44px; height: 44px; padding: 6px; border-radius: 50%; border: 1px solid #e2d8c6; background: var(--card); cursor: pointer; }
@@ -190,6 +193,6 @@
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
   <a id="resume" hidden><img src="assets/icons/snowboard.png?v=1" alt=""><span><b></b> <small></small></span><i></i><em><svg viewBox="0 0 10 12" width="16" height="18"><path d="M1 0L10 6L1 12Z" fill="#fdfbf6"/></svg></em></a>
-  <script type="module" src="start.js?v=69"></script>
+  <script type="module" src="start.js?v=70"></script>
 </body>
 </html>
