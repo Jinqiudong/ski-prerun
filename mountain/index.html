@@ -130,10 +130,62 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../ride.css?v=2">
+  <style>
+    /* The mountain page in the app's paper style (the owner's mock, 2026-11-05). */
+    #title { position: fixed; top: 0; left: 0; right: 0; padding: calc(12px + env(safe-area-inset-top)) 14px 8px; display: flex; align-items: flex-start; gap: 10px; background: none !important; box-shadow: none !important; z-index: 6; }
+    #topFade { position: fixed; left: 0; right: 0; top: 0; height: calc(150px + env(safe-area-inset-top)); background: linear-gradient(#f6f1e7 55%, rgba(246,241,231,0)); pointer-events: none; z-index: 5; }
+    body.mini #topFade { display: none; }
+    .rb { width: 44px; height: 44px; flex: none; padding: 0; border-radius: 50%; border: 0; background: #fdfbf6; box-shadow: 0 4px 10px rgba(40,50,70,.15); display: grid; place-items: center; cursor: pointer; }
+    .rb img { width: 22px; height: 22px; } .rb.av img { width: 100%; height: 100%; border-radius: 50%; }
+    #title .tt { flex: 1; min-width: 0; } #title .tt i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a6a5a; }
+    #title .tt b { display: block; font: 600 28px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #title .tt small { display: block; font: 12px Oswald, sans-serif; letter-spacing: .12em; color: #6f675e; margin-top: 3px; }
+    #navBtn { float: none !important; margin: 0 !important; width: 44px !important; height: 44px !important; border: 3px solid #fdfbf6 !important; background: #e6ebee !important; overflow: hidden; }
+    #now { position: fixed; z-index: 6; top: calc(84px + env(safe-area-inset-top)); left: 14px; right: 14px; max-width: none; display: flex; align-items: center; gap: 8px; text-align: left; padding: 5px 14px; border: 0; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 4px 10px rgba(40,50,70,.12); font: 14px "Noto Serif SC", serif; color: #22344d; cursor: pointer; }
+    #now img { width: 30px; height: 30px; } #now .rf { width: 17px; height: 17px; } #now .sep { width: 1px; height: 18px; background: #d9cdb9; margin: 0 2px; }
+    #now #nowTime { font-size: 12px; color: #6f675e; } #now .more { margin-left: auto; font-size: 13px; } #now .more::after { content: " ⌄"; }
+    #nowText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #timePanel { top: calc(130px + env(safe-area-inset-top)) !important; left: 14px; right: 14px !important; width: auto !important; border-radius: 18px !important; z-index: 6; }
+    #side { position: fixed; z-index: 4; right: 12px; top: calc(150px + env(safe-area-inset-top)); display: grid; gap: 10px; justify-items: center; }
+    #compassBtn { width: 48px; height: 48px; } #compassBtn img { width: 34px; height: 34px; transition: transform .1s linear; }
+    #side .zoom { width: 44px; border-radius: 22px; background: #fdfbf6; box-shadow: 0 4px 10px rgba(40,50,70,.15); overflow: hidden; }
+    #side .zoom button { display: block; width: 44px; height: 40px; border: 0; background: none; font: 24px/40px sans-serif; color: #22344d; cursor: pointer; } #side .zoom button + button { border-top: 1px solid #e6dccb; }
+    body.mini #side, body.mini #topFade { display: none !important; }
+    #bar { left: 10px !important; right: 10px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; display: block !important; padding: 2px 14px 10px; border-radius: 22px; background: rgba(250,246,238,.96); box-shadow: 0 -4px 20px rgba(40,50,70,.12); font-family: "Noto Serif SC", serif; color: #22344d; z-index: 5; }
+    #bar button { background: none !important; border: 0 !important; box-shadow: none !important; font: 13px "Noto Serif SC", serif !important; color: #22344d !important; padding: 0; cursor: pointer; }
+    #barHandle { display: grid !important; place-items: center; width: 100%; height: 16px; } #barHandle i { width: 40px; height: 4px; border-radius: 2px; background: #d6cdbf; }
+    #bar .lab { font: 15px "Noto Serif SC", serif; } #bar .lab i { font: 10px Oswald, sans-serif; font-style: normal; letter-spacing: .25em; color: #8a8278; margin-left: 6px; }
+    #bar.min > .lab { display: none; }
+    #bar .views { display: flex; gap: 4px; align-items: center; margin: 4px 0 2px; }
+    #bar .views button { flex: 1; display: grid !important; justify-items: center; gap: 1px; padding: 5px 0 !important; border-radius: 18px !important; }
+    #bar .views button img { width: 30px; height: 30px; } #bar .views button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .views button[data-view].on img { filter: brightness(0) invert(1); }
+    #bar .vsep { width: 1px; height: 40px; background: #e6dccb; flex: none; }
+    #bar #spin { flex: 1.3; grid-template-columns: auto auto; align-items: center; column-gap: 6px; } #bar #spin span { grid-column: 1 / 3; }
+    .sw { width: 36px; height: 21px; border-radius: 11px; background: #d6cdbf; position: relative; flex: none; display: inline-block; transition: background .2s; }
+    .sw::after { content: ""; position: absolute; left: 2px; top: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .2s; }
+    button.on .sw { background: #4f6a86; } button.on .sw::after { left: 17px; }
+    #bar.min .more { display: none; }
+    #bar .layers { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e6dccb; padding-top: 8px; margin-top: 6px; }
+    #bar .layers .lab { flex: none; } #bar .ly { flex: 1; display: flex !important; align-items: center; gap: 6px; background: #fdfbf6 !important; border-radius: 999px !important; padding: 4px 8px 4px 6px !important; box-shadow: 0 2px 6px rgba(40,50,70,.08) !important; font-size: 14px !important; }
+    #bar .ly img { width: 30px; height: 30px; } #bar .ly .sw { margin-left: auto; }
+    #bar button#spin.on, #bar button#spin { background: none !important; color: #22344d !important; }
+    #bar button.ly.on, #bar button.ly { background: #fdfbf6 !important; color: #22344d !important; }
+    #bar button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; }
+    #timePanel input[type=range] { accent-color: #4f6a86; }
+    #counts { display: flex; justify-content: space-between; border-top: 1px solid #e6dccb; margin-top: 8px; padding-top: 7px; font-size: 13px; color: #4a453f; }
+    #counts .d { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+    #credit { bottom: calc(1px + env(safe-area-inset-bottom)) !important; left: 8px; font-size: 8px !important; z-index: 6; text-align: center; }
+    body:not(.mini) #credit { display: none; }
+    #vignette { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(8,18,40,.25) 100%); }
+  </style>
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div id="title" class="glass"><button id="navBtn" aria-label="菜单">☰</button><b>Copper Mountain</b><span>点绿色标签选 base · 点右上角切时间和天气</span></div>
+  <!-- The top: back, the resort and its heights, your avatar (the menu); under it the weather, tap for the hour and sky. -->
+  <div id="title"><button id="backBtn" class="rb" aria-label="返回"><img src="../assets/icons/back.png?v=1" alt=""></button>
+    <div class="tt"><i>COLORADO</i><b>Copper Mountain</b><small id="heights"></small></div>
+    <button id="navBtn" class="rb av" aria-label="菜单"><img alt=""></button></div>
+  <div id="topFade"></div>
   <div id="vignette"></div>
   <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
   <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
@@ -143,7 +195,8 @@
   <div id="dim"></div>
   <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
   <div id="pins"></div>
-  <div id="now" class="glass">…</div>
+  <button id="now"><img id="nowIcon" src="../assets/icons/cloudy.png?v=1" alt=""><span id="nowText">…</span><i class="sep"></i><img class="rf" src="../assets/icons/refresh.png?v=1" alt=""><span id="nowTime"></span><span class="more">详情</span></button>
+  <div id="side"><button id="compassBtn" class="rb" aria-label="朝北"><img src="../assets/icons/compass_n.png?v=1" alt=""></button><div class="zoom"><button id="zin" aria-label="放大">+</button><button id="zout" aria-label="缩小">−</button></div></div>
   <div id="timePanel" class="glass">
     <label for="hour">拖动看一天中不同时间（Copper 当地时间）</label>
     <input id="hour" type="range" min="0" max="23" step="1">
@@ -151,15 +204,25 @@
   </div>
   <div id="status" class="glass">生成山体…</div>
   <div id="base" class="glass"><h2><span id="baseName"></span><button id="baseClose" aria-label="关闭">×</button></h2><p id="baseMeta"></p><ul id="baseLifts"></ul></div>
-  <div id="bar">
-    <button class="glass" data-view="hero">全景</button>
-    <button class="glass" data-view="close">近看</button>
-    <button class="glass" data-view="top">俯视</button>
-    <button class="glass on" id="spin">自动旋转</button>
-    <button class="glass on" id="runs">雪道</button>
-    <button class="glass on" id="lifts">缆车</button>
+  <!-- The drawer: views and the spin on top; tap the handle (or it opens itself) for layers and the run counts. -->
+  <div id="bar" class="min">
+    <button id="barHandle" aria-label="展开"><i></i></button>
+    <div class="lab">视角<i>VIEW</i></div>
+    <div class="views">
+      <button data-view="hero" class="on"><img src="../assets/icons/resorts.png?v=1" alt=""><span>全景</span></button>
+      <button data-view="close"><img src="../assets/icons/view_close.png?v=1" alt=""><span>近看</span></button>
+      <button data-view="top"><img src="../assets/icons/view_top.png?v=1" alt=""><span>俯视</span></button>
+      <i class="vsep"></i>
+      <button id="spin" class="on sw-btn"><img src="../assets/icons/autorotate.png?v=1" alt=""><span>自动旋转</span><b class="sw"></b></button>
+    </div>
+    <div class="more">
+      <div class="layers"><div class="lab">图层<i>LAYERS</i></div>
+        <button id="runs" class="on ly"><img src="../assets/icons/layer_runs.png?v=1" alt=""><span>雪道</span><b class="sw"></b></button>
+        <button id="lifts" class="on ly"><img src="../assets/icons/layer_lifts.png?v=1" alt=""><span>缆车</span><b class="sw"></b></button></div>
+      <div id="counts"></div>
+    </div>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=39"></script>
+  <script type="module" src="mountain.js?v=42"></script>
 </body>
 </html>

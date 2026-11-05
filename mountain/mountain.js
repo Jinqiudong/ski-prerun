@@ -7,9 +7,9 @@ import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5"
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
 import { Diorama } from "./diorama.js?v=17";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
-import { addStep } from "../roadbook.js?v=10";
-import { translatePage } from "../i18n.js?v=18";
-import { openNav } from "../nav.js?v=8";
+import { addStep } from "../roadbook.js?v=11";
+import { translatePage, myAvatar, t as tr } from "../i18n.js?v=19";
+import { openNav } from "../nav.js?v=9";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -300,6 +300,13 @@ async function main() {
   Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // all Colorado so far: Denver time
   document.title = `${R.name} · 雪场预滑`;
   document.querySelector("#title b").textContent = R.name;
+  // The heights and the run counts, from the resort list (tools/resort_stats.py).
+  fetch("../data/resorts.json").then((r) => r.json()).then((list) => {
+    const st = list.find((x) => x.id === RESORT_ID)?.stats; if (!st) return;
+    $("heights").textContent = `BASE ${st.base.toLocaleString("en-US")} m · SUMMIT ${st.top.toLocaleString("en-US")} m`;
+    const n = st.runs, rows = [["初级", n.easy, "background:#22b35a;border-radius:50%"], ["中级", n.intermediate, "background:#1f6fe5"], ["高级", n.advanced, "background:#15171c;transform:rotate(45deg) scale(.8)"], ["专家", n.expert, "background:#15171c;transform:rotate(45deg) scale(.8);box-shadow:5px -5px 0 #15171c;margin-right:9px"]];
+    $("counts").innerHTML = rows.map(([k, v, css]) => `<span><i class="d" style="${css}"></i>${tr(k)} ${v}</span>`).join("");
+  }).catch(() => {});
   document.querySelector('label[for="hour"]').textContent = `拖动看一天中不同时间（${R.name} 当地时间）`;
   const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
   await status("生成山体和阴影…");
@@ -372,7 +379,10 @@ async function main() {
     const key = `${Math.round(elDeg / 3)}:${Math.round((s0.az * 180) / Math.PI / 6)}:${look.kind}`;
     if (key !== shadedFor) { shadedFor = key; shadeTerrain(geo, T, mask, lightDir, day ? p.shadow : 0.4); }
     const local = look.date.toLocaleTimeString("zh-CN", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" });
-    $("now").textContent = `${look.live ? "实时" : "预览"} · ${RESORT.name} 当地 ${local} · ${WEATHER_ZH[look.kind]}${look.temp !== null && look.live ? ` · ${Math.round(look.temp)}°C` : ""}`;
+    // the weather bar: the owner's icon for the sky, now or the hour you're previewing
+    $("nowIcon").src = `../assets/icons/${{ clear: day ? "sunny" : "partly", cloudy: "partly", overcast: "cloudy", snow: "snow_now" }[look.kind] || "cloudy"}.png?v=1`;
+    $("nowText").textContent = `${tr(look.live ? "现在" : "预览")} · ${tr(WEATHER_ZH[look.kind])}${look.temp !== null && look.live ? `  ${Math.round(look.temp)}°C` : ""}`;
+    $("nowTime").textContent = local;
   };
   await fetchWeather();
   applyLook();
@@ -427,7 +437,13 @@ async function main() {
   toggle("spin", (on) => (controls.autoRotate = on));
   toggle("runs", (on) => (runLayer.visible = on));
   toggle("lifts", (on) => (lifts.group.visible = on));
-  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); });
+  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); $("bar").classList.add("min"); $("timePanel").classList.remove("show"); });
+  // The drawer: the handle opens it to the layers and counts, and closes it again.
+  $("barHandle").addEventListener("click", () => $("bar").classList.toggle("min"));
+  // Zoom in and out along the view; the compass turns the view back to the hero's north.
+  const dolly = (k) => { const off = camera.position.clone().sub(controls.target); camera.position.copy(controls.target).add(off.multiplyScalar(k)); };
+  $("zin").addEventListener("click", () => dolly(0.75)); $("zout").addEventListener("click", () => dolly(1.33));
+  $("compassBtn").addEventListener("click", () => setView("hero"));
 
   // ---------- A base as a miniature world: 10 s around it, then pick a lift ----------
   const graph = buildGraph(R, (x, z) => T.heightAt(x, z));
@@ -668,6 +684,7 @@ async function main() {
     }
     lifts.update(t);
     controls.update();
+    { const ci = document.querySelector("#compassBtn img"); if (ci) ci.style.transform = `rotate(${(controls.getAzimuthalAngle() * 180 / Math.PI).toFixed(1)}deg)`; }
     // Fog counts from the resort, not from the camera: this view looks from many km out, and in snow a
     // fog a few km deep would hide the whole mountain. Past the resort it closes in as the weather says.
     if (look.fog) { const d = camera.position.distanceTo(controls.target); scene.fog.near = d * 0.8 + look.fog[0]; scene.fog.far = d + look.fog[1]; }
@@ -678,3 +695,5 @@ async function main() {
 main().catch((e) => { $("status").textContent = `加载失败：${e.message}`; console.error(e); });
 translatePage(); // English, if chosen on the start page
 document.getElementById("navBtn").onclick = () => openNav("../");
+document.querySelector("#navBtn img").src = `../assets/icons/${myAvatar()}.png?v=1`;
+document.getElementById("backBtn").onclick = () => { location.href = "../start.html?tab=resort"; };

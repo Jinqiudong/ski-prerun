@@ -18,3 +18,6 @@ All are 128×128 PNG with transparent backgrounds. Load as `assets/icons/<name>.
 
 Animals for the map: `assets/animals/<name>.png` (painted cut-outs) and `assets/animals/3d/<name>.glb`
 (rigged, walking; `tools/build_animals.py`).
+
+Mountain page (cut from the owner's Copper Mountain mock): `back` `bookmark` `snow_now` `refresh` `compass_n`
+`view_close` `view_top` `autorotate` `layer_runs` `layer_lifts`
