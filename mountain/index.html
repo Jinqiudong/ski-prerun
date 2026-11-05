@@ -168,8 +168,6 @@
     #bar .layers { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e6dccb; padding-top: 8px; margin-top: 6px; }
     #bar .layers .lab { flex: none; } #bar .ly { flex: 1; display: flex !important; align-items: center; gap: 6px; background: #fdfbf6 !important; border-radius: 999px !important; padding: 4px 8px 4px 6px !important; box-shadow: 0 2px 6px rgba(40,50,70,.08) !important; font-size: 14px !important; }
     #bar .ly img { width: 30px; height: 30px; } #bar .ly .sw { margin-left: auto; }
-    #bar button#spin.on, #bar button#spin { background: none !important; color: #22344d !important; }
-    #bar button.ly.on, #bar button.ly { background: #fdfbf6 !important; color: #22344d !important; }
     #bar button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; }
     #timePanel input[type=range] { accent-color: #4f6a86; }
     #counts { display: flex; justify-content: space-between; border-top: 1px solid #e6dccb; margin-top: 8px; padding-top: 7px; font-size: 13px; color: #4a453f; }
@@ -177,6 +175,29 @@
     #credit { bottom: calc(1px + env(safe-area-inset-bottom)) !important; left: 8px; font-size: 8px !important; z-index: 6; text-align: center; }
     body:not(.mini) #credit { display: none; }
     #vignette { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(8,18,40,.25) 100%); }
+    /* compass: the owner's painted one, turning with the view */
+    #compassBtn { width: 56px !important; height: 56px !important; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: 0 5px 12px rgba(40,50,70,.25); cursor: pointer; }
+    #compassBtn img { width: 56px !important; height: 56px !important; display: block; border-radius: 50%; }
+    /* the view button and its pop-up */
+    #bar { left: 14px !important; right: auto !important; bottom: calc(16px + env(safe-area-inset-bottom)) !important; padding: 0 !important; background: none !important; box-shadow: none !important; display: flex !important; flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
+    #bar #viewFab { width: 60px; height: 60px; border-radius: 50% !important; background: #fdfbf6 !important; box-shadow: 0 6px 16px rgba(40,50,70,.22) !important; display: grid !important; place-items: center; transition: transform .2s; }
+    #bar #viewFab img { width: 36px; height: 36px; } #bar.open #viewFab { transform: rotate(-8deg) scale(.94); }
+    #bar .pop { position: absolute; left: 0; bottom: 72px; width: max-content; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transform-origin: 30px 100%; transform: scale(.6) translateY(20px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .2s; }
+    #bar.open .pop { transform: none; opacity: 1; pointer-events: auto; }
+    #bar .pop button { display: flex !important; white-space: nowrap; align-items: center; gap: 8px; padding: 5px 14px 5px 6px !important; border-radius: 999px !important; background: rgba(253,251,246,.96) !important; box-shadow: 0 4px 10px rgba(40,50,70,.15) !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; }
+    #bar .pop button img { width: 30px; height: 30px; }
+    #bar .pop button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .pop button[data-view].on img { filter: brightness(0) invert(1); }
+    #bar .pop button.tg { opacity: 1; color: #8a8278 !important; } #bar .pop button.tg img { opacity: .5; } #bar .pop button.tg.on { color: #22344d !important; } #bar .pop button.tg.on img { opacity: 1; } #bar .pop button.tg.on { opacity: 1; box-shadow: 0 4px 10px rgba(40,50,70,.15), inset 0 0 0 2px #4f6a86 !important; }
+    #bar .pop .hsep { width: 40px; height: 1px; background: rgba(34,52,77,.25); margin: 0 0 0 14px; }
+    /* the weather panel: notched sliders */
+    #timePanel { padding: 12px 16px 10px !important; background: rgba(253,251,246,.97) !important; box-shadow: 0 8px 20px rgba(40,50,70,.18) !important; color: #22344d; font-family: "Noto Serif SC", serif; }
+    #timePanel .sl { display: grid; grid-template-columns: 34px 1fr; column-gap: 8px; align-items: center; margin: 4px 0 8px; }
+    #timePanel .sl label { margin: 0 !important; font-size: 13px; color: #6f675e !important; grid-row: 1 / 3; }
+    #timePanel input[type=range] { width: 100%; margin: 0; accent-color: #4f6a86; }
+    #timePanel .ticks { display: flex; justify-content: space-between; margin: 0 -6px; } #timePanel .ticks small { font-size: 11px; color: #8a8278; width: 34px; text-align: center; }
+    #timePanel .ticks.icons { margin: 0 -14px; } #timePanel .ticks.icons span { display: grid; justify-items: center; width: 50px; } #timePanel .ticks.icons img { width: 26px; height: 26px; }
+    #timePanel .ticks small.on, #timePanel .ticks span.on small { color: #22344d; font-weight: 600; }
+    #now .more { display: none; } #now::after { content: "⌄"; margin-left: auto; color: #6f675e; }
   </style>
 </head>
 <body>
@@ -196,33 +217,29 @@
   <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
   <div id="pins"></div>
   <button id="now"><img id="nowIcon" src="../assets/icons/cloudy.png?v=1" alt=""><span id="nowText">…</span><i class="sep"></i><img class="rf" src="../assets/icons/refresh.png?v=1" alt=""><span id="nowTime"></span><span class="more">详情</span></button>
-  <div id="side"><button id="compassBtn" class="rb" aria-label="朝北"><img src="../assets/icons/compass_n.png?v=1" alt=""></button><div class="zoom"><button id="zin" aria-label="放大">+</button><button id="zout" aria-label="缩小">−</button></div></div>
-  <div id="timePanel" class="glass">
-    <label for="hour">拖动看一天中不同时间（Copper 当地时间）</label>
-    <input id="hour" type="range" min="0" max="23" step="1">
-    <div class="row"><button data-weather="clear">晴</button><button data-weather="cloudy">多云</button><button data-weather="overcast">阴</button><button data-weather="snow">下雪</button><button id="live">回到实时</button></div>
+  <div id="side"><button id="compassBtn" aria-label="朝北"><img src="../assets/icons/compass_rose.png?v=1" alt=""></button></div>
+  <!-- The sky to preview: the hour and the weather, each a slider that clicks into a few stops. -->
+  <div id="timePanel">
+    <div class="sl"><label>时间</label><input id="hour" type="range" min="0" max="6" step="1" value="0"><div class="ticks"><small>实时</small><small>清晨</small><small>上午</small><small>中午</small><small>下午</small><small>傍晚</small><small>夜里</small></div></div>
+    <div class="sl"><label>天气</label><input id="wxs" type="range" min="0" max="3" step="1" value="0"><div class="ticks icons"><span><img src="../assets/icons/sunny.png?v=1" alt=""><small>晴</small></span><span><img src="../assets/icons/partly.png?v=1" alt=""><small>多云</small></span><span><img src="../assets/icons/cloudy.png?v=1" alt=""><small>阴</small></span><span><img src="../assets/icons/snow_now.png?v=1" alt=""><small>下雪</small></span></div></div>
   </div>
   <div id="status" class="glass">生成山体…</div>
   <div id="base" class="glass"><h2><span id="baseName"></span><button id="baseClose" aria-label="关闭">×</button></h2><p id="baseMeta"></p><ul id="baseLifts"></ul></div>
-  <!-- The drawer: views and the spin on top; tap the handle (or it opens itself) for layers and the run counts. -->
-  <div id="bar" class="min">
-    <button id="barHandle" aria-label="展开"><i></i></button>
-    <div class="lab">视角<i>VIEW</i></div>
-    <div class="views">
+  <!-- How you look at the map: one round button, bottom left; tap it and the views and layers pop up beside it,
+       pick one (or tap the map) and they fold back. -->
+  <div id="bar">
+    <div class="pop">
       <button data-view="hero" class="on"><img src="../assets/icons/resorts.png?v=1" alt=""><span>全景</span></button>
       <button data-view="close"><img src="../assets/icons/view_close.png?v=1" alt=""><span>近看</span></button>
       <button data-view="top"><img src="../assets/icons/view_top.png?v=1" alt=""><span>俯视</span></button>
-      <i class="vsep"></i>
-      <button id="spin" class="on sw-btn"><img src="../assets/icons/autorotate.png?v=1" alt=""><span>自动旋转</span><b class="sw"></b></button>
+      <i class="hsep"></i>
+      <button id="spin" class="tg"><img src="../assets/icons/autorotate.png?v=1" alt=""><span>自动旋转</span></button>
+      <button id="runs" class="on tg"><img src="../assets/icons/layer_runs.png?v=1" alt=""><span>雪道</span></button>
+      <button id="lifts" class="on tg"><img src="../assets/icons/layer_lifts.png?v=1" alt=""><span>缆车</span></button>
     </div>
-    <div class="more">
-      <div class="layers"><div class="lab">图层<i>LAYERS</i></div>
-        <button id="runs" class="on ly"><img src="../assets/icons/layer_runs.png?v=1" alt=""><span>雪道</span><b class="sw"></b></button>
-        <button id="lifts" class="on ly"><img src="../assets/icons/layer_lifts.png?v=1" alt=""><span>缆车</span><b class="sw"></b></button></div>
-      <div id="counts"></div>
-    </div>
+    <button id="viewFab" aria-label="视角"><img src="../assets/icons/resorts.png?v=1" alt=""></button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=42"></script>
+  <script type="module" src="mountain.js?v=46"></script>
 </body>
 </html>

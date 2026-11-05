@@ -20,4 +20,4 @@ Animals for the map: `assets/animals/<name>.png` (painted cut-outs) and `assets/
 (rigged, walking; `tools/build_animals.py`).
 
 Mountain page (cut from the owner's Copper Mountain mock): `back` `bookmark` `snow_now` `refresh` `compass_n`
-`view_close` `view_top` `autorotate` `layer_runs` `layer_lifts`
+`view_close` `view_top` `autorotate` `layer_runs` `layer_lifts` `compass_rose` (painted compass, needle leans 38° east)

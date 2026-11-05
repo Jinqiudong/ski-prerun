@@ -304,10 +304,11 @@ async function main() {
   fetch("../data/resorts.json").then((r) => r.json()).then((list) => {
     const st = list.find((x) => x.id === RESORT_ID)?.stats; if (!st) return;
     $("heights").textContent = `BASE ${st.base.toLocaleString("en-US")} m · SUMMIT ${st.top.toLocaleString("en-US")} m`;
+    if (!$("counts")) return;
     const n = st.runs, rows = [["初级", n.easy, "background:#22b35a;border-radius:50%"], ["中级", n.intermediate, "background:#1f6fe5"], ["高级", n.advanced, "background:#15171c;transform:rotate(45deg) scale(.8)"], ["专家", n.expert, "background:#15171c;transform:rotate(45deg) scale(.8);box-shadow:5px -5px 0 #15171c;margin-right:9px"]];
     $("counts").innerHTML = rows.map(([k, v, css]) => `<span><i class="d" style="${css}"></i>${tr(k)} ${v}</span>`).join("");
   }).catch(() => {});
-  document.querySelector('label[for="hour"]').textContent = `拖动看一天中不同时间（${R.name} 当地时间）`;
+
   const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
   await status("生成山体和阴影…");
   const T = new Terrain(R);
@@ -389,21 +390,22 @@ async function main() {
   setInterval(() => { if (look.live) { look.date = new Date(); applyLook(); } }, 60000);
   // Preview: drag the hour, pick the weather; 回到实时 goes back to now.
   const hourOf = (d) => +d.toLocaleString("en-US", { timeZone: RESORT.tz, hour: "numeric", hour12: false }) % 24;
-  $("hour").value = hourOf(look.date);
-  $("hour").addEventListener("input", () => {
-    look.live = false;
-    const d = new Date();
-    look.date = new Date(d.getTime() + (+$("hour").value - hourOf(d)) * 3600000);
-    applyLook();
+  // The sliders: time stops (now, dawn … night) and weather stops (clear … snow).
+  const HOURS = [null, 7, 10, 12, 15, 18, 21], KINDS = ["clear", "cloudy", "overcast", "snow"];
+  const mark = () => {
+    document.querySelectorAll("#timePanel .ticks:not(.icons) small").forEach((x, i) => x.classList.toggle("on", i === +$("hour").value));
+    document.querySelectorAll("#timePanel .ticks.icons span").forEach((x, i) => x.classList.toggle("on", KINDS[i] === look.kind));
+    $("wxs").value = Math.max(0, KINDS.indexOf(look.kind));
+  };
+  $("hour").addEventListener("input", async () => {
+    const k = +$("hour").value;
+    if (!k) { look.live = true; look.date = new Date(); await fetchWeather(); applyLook(); mark(); return; }
+    look.live = false; const d = new Date();
+    look.date = new Date(d.getTime() + (HOURS[k] - hourOf(d)) * 3600000);
+    applyLook(); mark();
   });
-  document.querySelectorAll("[data-weather]").forEach((b) => b.addEventListener("click", () => { look.live = false; look.kind = b.dataset.weather; applyLook(); }));
-  $("live").addEventListener("click", async () => {
-    look.live = true;
-    look.date = new Date();
-    await fetchWeather();
-    $("hour").value = hourOf(look.date);
-    applyLook();
-  });
+  $("wxs").addEventListener("input", () => { look.live = false; look.kind = KINDS[+$("wxs").value]; applyLook(); mark(); });
+  mark();
   $("now").addEventListener("click", () => $("timePanel").classList.toggle("show"));
 
   const all = R.runs.flatMap((r) => r.pts);
@@ -437,12 +439,14 @@ async function main() {
   toggle("spin", (on) => (controls.autoRotate = on));
   toggle("runs", (on) => (runLayer.visible = on));
   toggle("lifts", (on) => (lifts.group.visible = on));
-  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); $("bar").classList.add("min"); $("timePanel").classList.remove("show"); });
-  // The drawer: the handle opens it to the layers and counts, and closes it again.
-  $("barHandle").addEventListener("click", () => $("bar").classList.toggle("min"));
-  // Zoom in and out along the view; the compass turns the view back to the hero's north.
-  const dolly = (k) => { const off = camera.position.clone().sub(controls.target); camera.position.copy(controls.target).add(off.multiplyScalar(k)); };
-  $("zin").addEventListener("click", () => dolly(0.75)); $("zout").addEventListener("click", () => dolly(1.33));
+  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); $("bar").classList.remove("open"); $("timePanel").classList.remove("show"); });
+  // The view button: tap to open its pop-up; choosing a view or tapping the map folds it; it folds itself after a while.
+  let foldT = 0;
+  const fold = () => { $("bar").classList.remove("open"); clearTimeout(foldT); };
+  const keep = () => { clearTimeout(foldT); foldT = setTimeout(fold, 5000); };
+  $("viewFab").addEventListener("click", () => { $("bar").classList.toggle("open"); keep(); });
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { $("viewFab").querySelector("img").src = b.querySelector("img").src; setTimeout(fold, 250); }));
+  for (const id of ["spin", "runs", "lifts"]) $(id).addEventListener("click", keep);
   $("compassBtn").addEventListener("click", () => setView("hero"));
 
   // ---------- A base as a miniature world: 10 s around it, then pick a lift ----------
@@ -684,7 +688,8 @@ async function main() {
     }
     lifts.update(t);
     controls.update();
-    { const ci = document.querySelector("#compassBtn img"); if (ci) ci.style.transform = `rotate(${(controls.getAzimuthalAngle() * 180 / Math.PI).toFixed(1)}deg)`; }
+    // the painted compass turns with the view (its needle leans 38° east in the picture)
+    { const ci = document.querySelector("#compassBtn img"); if (ci) ci.style.transform = `rotate(${(controls.getAzimuthalAngle() * 180 / Math.PI - 38).toFixed(1)}deg)`; }
     // Fog counts from the resort, not from the camera: this view looks from many km out, and in snow a
     // fog a few km deep would hide the whole mountain. Past the resort it closes in as the weather says.
     if (look.fog) { const d = camera.position.distanceTo(controls.target); scene.fog.near = d * 0.8 + look.fog[0]; scene.fog.far = d + look.fog[1]; }
