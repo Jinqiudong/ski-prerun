@@ -236,10 +236,6 @@ export class Collection {
   tap(e) { const t = this.under(e); if (t) this.pick(t); }
   pick(t) {
     this.picked = t;
-    // the owner's painted flag, planted on the opened mountain's top
-    if (!this.pin) { const m = new THREE.SpriteMaterial({ map: new THREE.TextureLoader().load("assets/icons/challenge.png?v=1", (x) => (x.colorSpace = THREE.SRGBColorSpace)), depthTest: false, transparent: true });
-      this.pin = new THREE.Sprite(m); this.pin.center.set(0.28, 0.02); this.pin.scale.set(2.1, 2.1, 1); this.pin.renderOrder = 10; }
-    t.group.add(this.pin); this.pin.position.copy(t.group.userData.peak);
     for (const x of this.tiles) x.userData.tag.classList.toggle("on", x === t);
     const az = Math.atan2(this.camera.position.x - this.controls.target.x, this.camera.position.z - this.controls.target.z);
     this.view(t.base.clone().setY(5), 70, 0.95, az);
@@ -247,7 +243,7 @@ export class Collection {
   }
   // The town a resort is by, for the title over an opened tile.
   townOf(id) { return TOWNS.find((tw) => tw.ids.includes(id))?.en || ""; }
-  overview() { this.pin?.removeFromParent(); this.picked = null; this.moved = false; for (const x of this.tiles) x.userData.tag.classList.remove("on"); this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az); }
+  overview() { this.picked = null; this.moved = false; for (const x of this.tiles) x.userData.tag.classList.remove("on"); this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az); }
 
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
@@ -273,7 +269,6 @@ export class Collection {
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
     for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S, this.camera);
-    if (this.pin?.parent) { const pk = this.pin.parent.userData.peak; this.pin.position.set(pk.x, pk.y + 0.2 + Math.abs(Math.sin(t * 2.2)) * 0.35, pk.z); } // a little bob
     this.renderer.render(this.scene, this.camera);
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.

@@ -115,20 +115,20 @@
     #worldHead b { display: block; font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #worldHead small { display: block; font: 14px/1.4 "Cormorant Garamond", "Noto Serif SC", serif; color: #8a8278; margin-top: 4px; }
     #worldHead::before { content: "MY MOUNTAINS"; display: block; font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: #8a8278; margin-bottom: 4px; }
     #worldHome { position: absolute; right: 16px; top: calc(18px + env(safe-area-inset-top)); font: 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; background: #fdfbf6; border: 1px solid #cbbfa9; border-radius: 999px; padding: 3px 12px; cursor: pointer; z-index: 2; }
-    #worldCard { position: absolute; left: 14px; right: 92px; bottom: calc(14px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 14px 16px; background: #fdfbf6; color: #33302c; box-shadow: 0 8px 18px rgba(90,70,40,.18); display: grid; gap: 6px; font-family: "Noto Serif SC", serif; z-index: 3; }
-    #worldCard b { font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #worldCard small { color: #8a8278; font-size: 13px; }
-    #worldCard .bar { height: 5px; border-radius: 3px; background: #e6dccb; overflow: hidden; } #worldCard .bar i { display: block; height: 100%; background: #22344d; }
-    #worldCard button { font: 600 17px "Cormorant Garamond", "Noto Serif SC", serif; color: #fdfbf6; background: #22344d; border: 0; border-radius: 999px; padding: 9px; cursor: pointer; }
-    /* an opened mountain: the heading and the map's small words fade out; its name stands at the top */
-    #worldHead, .cmark, .ctag { transition: opacity .35s; }
-    #world.focus #worldHead, #world.focus .cmark, #world.focus .ctag, #world.focus #compass { opacity: 0 !important; pointer-events: none; }
-    #worldTitle { position: absolute; z-index: 4; left: 50%; top: calc(14px + env(safe-area-inset-top)); max-width: calc(100% - 150px); display: flex; align-items: center; gap: 8px; padding: 8px 16px 8px 10px;
-      background: rgba(253,251,246,.94); border-radius: 16px; box-shadow: 0 6px 16px rgba(40,50,70,.16); pointer-events: none; opacity: 0; transform: translate(-50%, -8px); transition: opacity .35s, transform .35s; }
-    #world.focus #worldTitle { opacity: 1; transform: translate(-50%, 0); }
-    #worldTitle img { width: 38px; height: 38px; flex: none; } #worldTitle div { min-width: 0; } #worldTitle i { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #worldTitle i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .32em; text-transform: uppercase; color: #8a8278; }
-    #worldTitle b { display: block; font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #worldTitle small { display: block; font: 13px "Noto Serif SC", serif; color: #6f675e; margin-top: 1px; }
+    #worldCard { position: absolute; left: 14px; right: 92px; bottom: calc(14px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 14px 16px 14px; border-radius: 22px; background: rgba(253,251,246,.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      box-shadow: 0 10px 26px rgba(40,50,70,.16), inset 0 0 0 1px rgba(255,255,255,.7); color: #33302c; display: grid; gap: 6px; font-family: "Noto Serif SC", serif; z-index: 3; }
+    #worldCard .st { position: absolute; right: 10px; top: -22px; width: 62px; height: 62px; transform: rotate(10deg); filter: drop-shadow(0 3px 4px rgba(90,70,40,.2)); }
+    #worldCard b { font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; padding-right: 56px; } #worldCard small { color: #8a8278; font-size: 13px; }
+    #worldCard .bar { height: 5px; border-radius: 3px; background: #e6dccb; overflow: hidden; } #worldCard .bar i { display: block; height: 100%; background: #6f879c; }
+    #worldCard button { font: 600 17px "Cormorant Garamond", "Noto Serif SC", serif; color: #fdfbf6; background: #22344d; border: 0; border-radius: 999px; padding: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(34,52,77,.25); }
+    /* an opened mountain (Option B): the heading on a frosted band, drive times on paper pills, town names
+       away, the other mountains' names paler; the card below in the app's soft paper */
+    #worldHead { transition: background .3s; }
+    #world.focus #worldHead { background: rgba(246,248,250,.84); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); left: 0; right: 0; top: 0; padding: calc(14px + env(safe-area-inset-top)) 92px 12px 18px; box-shadow: 0 6px 18px rgba(40,50,70,.08); }
+    #world.focus .cmark.town, #world.focus .cmark.group { opacity: 0 !important; }
+    #world.focus .cmark.drive { background: rgba(253,251,246,.94); padding: 1px 8px; border-radius: 999px; text-shadow: none; box-shadow: 0 2px 5px rgba(40,50,70,.12); }
+    #world.focus .ctag { box-shadow: 0 2px 6px rgba(40,50,70,.15); } #world.focus .ctag:not(.on) { opacity: .7; }
+    #world.focus #compass { opacity: 0; }
     #compass { position: absolute; left: 18px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 54px; height: 54px; pointer-events: none; opacity: .9; }
     #worldCredit { position: absolute; left: 8px; right: 90px; bottom: 2px; text-align: center; font-size: 9px; color: rgba(60,50,40,.5); pointer-events: none; }
     [hidden] { display: none !important; }
@@ -162,11 +162,11 @@
   </div>
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
     <div id="worldHead"><b>去征服哪座山？</b><small>每座山一块真实的地形 · 滑得越多颜色越足，全滑遍插上旗 · 拖动转一圈，两指缩放</small></div><button id="worldHome">全图</button>
-    <div id="worldCard" hidden></div><div id="worldTitle"></div><svg id="compass" viewBox="0 0 60 60" aria-hidden="true"><g fill="none" stroke="#6b5a4a" stroke-width="1"><circle cx="30" cy="32" r="16"/><circle cx="30" cy="32" r="12" stroke-dasharray="1.5 2"/></g><path d="M30 12 L33 32 L30 52 L27 32Z" fill="#8a7563"/><path d="M30 12 L33 32 L27 32Z" fill="#b6463b"/><path d="M10 32 L30 29 L50 32 L30 35Z" fill="#a8998a"/><text x="30" y="9" font-size="8" text-anchor="middle" fill="#6b5a4a" font-family="Cormorant Garamond">N</text></svg><div id="worldCredit">地形 AWS Terrain Tiles · 雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准</div></div>
+    <div id="worldCard" hidden></div><svg id="compass" viewBox="0 0 60 60" aria-hidden="true"><g fill="none" stroke="#6b5a4a" stroke-width="1"><circle cx="30" cy="32" r="16"/><circle cx="30" cy="32" r="12" stroke-dasharray="1.5 2"/></g><path d="M30 12 L33 32 L30 52 L27 32Z" fill="#8a7563"/><path d="M30 12 L33 32 L27 32Z" fill="#b6463b"/><path d="M10 32 L30 29 L50 32 L30 35Z" fill="#a8998a"/><text x="30" y="9" font-size="8" text-anchor="middle" fill="#6b5a4a" font-family="Cormorant Garamond">N</text></svg><div id="worldCredit">地形 AWS Terrain Tiles · 雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准</div></div>
   <div id="records" hidden><div id="memory"></div><div id="recSec">每个雪场</div><div id="recList"></div></div>
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="start.js?v=56"></script>
+  <script type="module" src="start.js?v=57"></script>
 </body>
 </html>
