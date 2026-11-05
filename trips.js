@@ -191,6 +191,7 @@ const CSS = `
 .pl .triprow .bp { position: relative; }
 .pl .triprow .count { position: absolute; left: 34%; top: 54px; font-family: ${SERIF}; font-size: 14px; color: ${C.red}; border: 1px solid ${C.red}; border-radius: 999px; padding: 0 8px; transform: rotate(-4deg); background: ${C.card}; }
 /* Form */
+.pl .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .pl .chip { font-family: ${SERIF}; font-size: 16px; font-weight: 600; color: ${C.ink}; background: ${C.card}; border: 1px solid #cbbfa9; border-radius: 6px; padding: 8px 14px; box-shadow: 0 3px 6px rgba(90,70,40,.1); }
 .pl .chip.on { background: ${C.ink}; border-color: ${C.ink}; color: #fffdf8; }
 .pl .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

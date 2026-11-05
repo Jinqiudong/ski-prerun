@@ -220,7 +220,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=20");
+    const { Trips } = await import("./trips.js?v=21");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
