@@ -12,6 +12,7 @@ Product contract: [venture-lab `product-incubator/products/48/PRODUCT.md`](https
 - Always show the OpenStreetMap attribution and the "use the official trail map on the mountain" note.
 
 ## Code map
+- `intro.js` — the opening, once per visit: a snowy valley with a plane per city of the next trip's riders landing at Denver, on a frosted pane with snowboarders carving behind it (blur by CSS layers: Safari has no canvas `ctx.filter`); sound made with WebAudio on a tap. Skipped under `navigator.webdriver` (tests).
 - `start.html` / `start.js` — first screen: the rider (dress, stance), the resorts on a 3D map of Colorado (`collection.js`, from `data/region.*`), trips (`trips.js`), the ski log.
 - `mountain/` — a resort as a miniature: pick a base and a lift (`mountain.js`, `diorama.js`).
 - `look.html` / `look.js` — the ride: up the lift, then down the run you pick, with the guide, maps and tricks.

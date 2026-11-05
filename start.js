@@ -3,7 +3,9 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=4";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=10";
+import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=11";
+import { playIntro } from "./intro.js?v=1";
+playIntro();
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -214,7 +216,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=14");
+    const { Trips } = await import("./trips.js?v=15");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
