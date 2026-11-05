@@ -3,8 +3,8 @@
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=4";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=11";
-import { playIntro } from "./intro.js?v=1";
+import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=12";
+import { playIntro } from "./intro.js?v=6";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
