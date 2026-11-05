@@ -111,15 +111,16 @@ const ROOT = () => (location.pathname.includes("/mountain/") ? "../" : "");
 // Settings: your avatar (swipe through, tap one), and the language.
 export function openSettings() {
   const el = document.createElement("div"), mine = myAvatar();
-  el.style.cssText = "position:fixed;inset:0;z-index:60;background:rgba(40,34,28,.35);display:flex;align-items:flex-end";
-  el.innerHTML = `<div style="width:100%;box-sizing:border-box;min-width:0;overflow:hidden;background:#fdfbf6;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,25,10,.25);font-family:'Noto Serif SC',serif;color:#33302c">
+  el.style.cssText = "position:fixed;inset:0;z-index:60;background:rgba(40,34,28,0);display:flex;align-items:flex-end;transition:background .3s";
+  el.innerHTML = `<div data-drawer style="width:100%;box-sizing:border-box;min-width:0;overflow:hidden;background:#fdfbf6;border-radius:18px 18px 0 0;padding:10px 18px calc(28px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.9,.3,1);touch-action:pan-x;box-shadow:0 -6px 20px rgba(40,25,10,.25);font-family:'Noto Serif SC',serif;color:#33302c">
+    <div style="width:44px;height:5px;border-radius:3px;background:#d6cdbf;margin:0 auto 12px"></div>
     <div style="font:500 10px Oswald,sans-serif;letter-spacing:.3em;color:#8a8278">SETTINGS</div>
     <div style="font:600 28px 'Cormorant Garamond','Noto Serif SC',serif;color:#22344d;margin:2px 0 14px">${t("设置")}</div>
     <div style="font:16px 'Cormorant Garamond','Noto Serif SC',serif;color:#6f675e;margin-bottom:6px">${t("我的头像")}</div>
     <div data-av-row style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 4px 12px;scrollbar-width:none">${AVATARS.map((a) => `<button data-av="${a}" style="flex:none;scroll-snap-align:center;width:84px;height:84px;padding:0;border-radius:50%;border:3px solid ${a === mine ? "#22344d" : "#fffdf8"};box-shadow:0 4px 10px rgba(90,70,40,.18);background:#e6ebee;overflow:hidden;transition:transform .2s;transform:scale(${a === mine ? 1.08 : 1})"><img src="${ROOT()}assets/icons/${a}.png?v=1" alt="" style="width:100%;height:100%;display:block;pointer-events:none"></button>`).join("")}</div>
     <div style="font:16px 'Cormorant Garamond','Noto Serif SC',serif;color:#6f675e;margin-bottom:8px">${t("语言")} · Language</div>
     <div style="display:flex;gap:8px">${[["zh", "中文"], ["en", "English"]].map(([l, n]) => `<button data-l="${l}" style="flex:1;font:600 17px 'Cormorant Garamond','Noto Serif SC',serif;padding:10px;border-radius:6px;border:1px solid ${l === lang ? "#22344d" : "#cbbfa9"};background:${l === lang ? "#22344d" : "#f6f1e7"};color:${l === lang ? "#fdfbf6" : "#22344d"}">${n}</button>`).join("")}</div>
-    <button data-x style="margin-top:16px;width:100%;font:16px 'Cormorant Garamond','Noto Serif SC',serif;padding:9px;border-radius:999px;border:1px solid #cbbfa9;background:#fdfbf6;color:#22344d">${t("收起")}</button></div>`;
+  </div>`;
   document.body.append(el);
   el.onclick = (e) => {
     const av = e.target.closest?.("[data-av]")?.dataset.av;
@@ -128,7 +129,18 @@ export function openSettings() {
       for (const b of el.querySelectorAll("[data-av]")) { const on = b.dataset.av === av; b.style.borderColor = on ? "#22344d" : "#fffdf8"; b.style.transform = `scale(${on ? 1.08 : 1})`; }
       dispatchEvent(new CustomEvent("prerun:avatar", { detail: av })); return;
     }
-    const l = e.target.dataset?.l; if (l && l !== lang) setLang(l); else if (e.target === el || e.target.dataset?.x !== undefined) el.remove();
+    const l = e.target.dataset?.l; if (l && l !== lang) setLang(l); else if (e.target === el) close();
   };
+  // A drawer: it slides up; pull it down (or tap above it) and it slides away.
+  const dr = el.querySelector("[data-drawer]");
+  const close = () => { dr.style.transition = "transform .25s ease-in"; dr.style.transform = "translateY(100%)"; el.style.background = "rgba(40,34,28,0)"; setTimeout(() => el.remove(), 260); removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); };
+  requestAnimationFrame(() => requestAnimationFrame(() => { dr.style.transform = "translateY(0)"; el.style.background = "rgba(40,34,28,.35)"; }));
+  let y0 = null, t0 = 0, dy = 0;
+  dr.addEventListener("pointerdown", (e) => { if (e.target.closest("[data-av-row]")) return; y0 = e.clientY; t0 = performance.now(); dy = 0; dr.style.transition = "none"; });
+  const move = (e) => { if (y0 === null) return; dy = Math.max(0, e.clientY - y0); dr.style.transform = `translateY(${dy}px)`; };
+  addEventListener("pointermove", move);
+  const up = () => { if (y0 === null) return; y0 = null; const fast = dy / Math.max(1, performance.now() - t0) > 0.5;
+    if (dy > 90 || (fast && dy > 30)) close(); else { dr.style.transition = "transform .25s"; dr.style.transform = "translateY(0)"; } };
+  addEventListener("pointerup", up); addEventListener("pointercancel", up);
   el.querySelector(`[data-av="${mine}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
 }

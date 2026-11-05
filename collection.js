@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "./i18n.js?v=16";
+import { EN_ON } from "./i18n.js?v=17";
 import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./diorama.js?v=3";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.

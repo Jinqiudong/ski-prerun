@@ -1,8 +1,8 @@
 // Snow memory: every pre-run day and every trip you've been on becomes a card (that mountain in
 // watercolour, the day's words, its stamp), stacked into a season you can flip back through: swipe up to
 // send the front card to the back. Tap one for the day: the painting, its stickers, the way you went.
-import { t, EN_ON } from "./i18n.js?v=16";
-import { daysOf } from "./roadbook.js?v=8";
+import { t, EN_ON } from "./i18n.js?v=17";
+import { daysOf } from "./roadbook.js?v=9";
 
 const C = { ink: "#22344d", red: "#b6463b", card: "#f8f1e4", mute: "#8a8278" };
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
