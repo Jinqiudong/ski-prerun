@@ -16,7 +16,7 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings } from "./i18n.js?v=19";
+import { translatePage, openSettings, myAvatar } from "./i18n.js?v=20";
 import { navRow } from "./nav.js?v=9";
 
 const $ = (id) => document.getElementById(id);
@@ -1223,23 +1223,30 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
   // The menu (☰): everywhere you can go from here.
   function openMenu() {
     const box = $("menu"), ski = st.phase === "ski" && phys && !ended;
-    const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${icon} ${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
-    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2>${navRow()}<div class="opts">
-      ${item("🗺", "雪场地图", "看全图，选从哪里出发", "map", ski)}
-      ${item("📜", "预滑路书", "这一趟怎么走的，明天照着走", "book")}
-      ${item("📖", "滑雪记录", "这个雪场你滑过的地方", "log", !!phys)}
-      ${item(planetMap ? "🗺" : "🪐", planetMap ? "小地图改回平面" : "小地图换成小星球", "右上角的小地图样式", "style")}
-      ${item("🏔", "回沙盘", R.name, "sandbox")}
-      ${item("⚙", "设置", "语言", "settings")}
-    </div>`;
-    box.querySelector("h2 button").onclick = () => (box.hidden = true);
+    const ic = (n) => `<img src="assets/icons/${n}.png?v=1" alt="">`;
+    const item = (icon, label, sub, act, on = true) => on ? `<button class="opt" data-act="${act}">${ic(icon)}${label}${sub ? `<small>${sub}</small>` : ""}</button>` : "";
+    // This ride's tools on top, the app's four tabs (as on the start page) under them; tap outside to close.
+    box.innerHTML = `<h2>菜单 <button aria-label="关闭">×</button></h2><div><div class="opts">
+      ${item("trailmap", "雪场地图", "", "map", ski)}
+      ${item("packing", "路书", "", "book")}
+      ${item("memory", "滑雪记录", "", "log", !!phys)}
+      ${item("compass_n", planetMap ? "平面小地图" : "小星球地图", "", "style")}
+      ${item("lodge", "回沙盘", "", "sandbox")}
+      ${item("sliders", "设置", "", "settings")}
+    </div>${navRow()}</div>`;
+    box.querySelector('.navrow a[href*="tab=resort"]')?.classList.add("on");
+    const dim = document.createElement("div"); dim.id = "menuDim"; document.body.append(dim);
+    document.body.classList.add("menuOpen");
+    const shut = () => { box.hidden = true; dim.remove(); document.body.classList.remove("menuOpen"); };
+    dim.onclick = shut; box.querySelector("h2 button").onclick = shut;
     box.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
-      box.hidden = true;
+      shut();
       ({ map: openBigMap, log: openJournal, book: () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) }), style: () => setMapStyle(!planetMap), sandbox: () => (location.href = withResort("mountain/")), settings: openSettings })[b.dataset.act]();
     }));
     box.hidden = false;
   }
   $("menuBtn").onclick = openMenu;
+  $("menuBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`;
   const bm = { cx: 0, cz: 0, zoom: 0.2, pin: null, choice: null, ptrs: new Map(), moved: 0, pinch: null };
   const bigCv = $("bigMap").querySelector("canvas");
   function drawBig() {
@@ -2397,7 +2404,7 @@ async function main() {
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - 9 : line.total * 0.66; // from the loading point to the unload ramp
-  let fast = false, arrived = false;
+  let fast = false, arrived = false, paused = false, rate = 1;
   const fastBtn = $("fast");
   fastBtn.hidden = !TRIP;
   for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
@@ -2406,6 +2413,18 @@ async function main() {
   let skipping = null;
   $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
   $("again").addEventListener("click", () => location.reload());
+  // The player bar: back a stretch, pause, hold ⏩ to rush; 速度 cycles 1× 2× 4×; drag the line to jump.
+  const RATES = [1, 2, 4];
+  if (TRIP) {
+    $("rideBar").hidden = false; document.body.classList.add("riding");
+    $("rbPause").onclick = () => { paused = !paused; $("rbPause").classList.toggle("paused", paused); };
+    $("rbBack").onclick = () => { d = Math.max(d0, d - (d1 - d0) * 0.12); };
+    for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) $("rbFwd").addEventListener(ev, (e) => { e.preventDefault(); fast = v; $("rbFwd").classList.toggle("on", v); });
+    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; $("rbSpeed").querySelector("b").textContent = `${rate}×`; };
+    $("rbRoute").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
+    $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
+  }
+  const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
   const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair });
   window.__top = top;
@@ -2414,7 +2433,7 @@ async function main() {
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
   const bubbleBtn = $("bubble");
-  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.textContent = open ? "🫧 放下防风罩" : "🫧 收起防风罩"; };
+  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; };
   bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names };
@@ -2423,12 +2442,12 @@ async function main() {
     last = now;
     if (flakes.visible) flakes.userData.step(dt, camera.position);
     if (skipping && !arrived) { const u = Math.min(1, (now - skipping.t0) / 2200); d = skipping.from + (d1 - skipping.from) * ease(u) + (u >= 1 ? 1 : 0); }
-    else if (!params.has("still") && !arrived) d += SPEED * (fast ? 20 : 3) * dt;
+    else if (!params.has("still") && !arrived && !paused) d += SPEED * (fast ? 20 : 3 * rate) * dt;
     if (d > d1) {
       if (TRIP) {
         d = d1;
         if (!arrived) {
-          arrived = true; $("fast").hidden = $("skip").hidden = true;
+          arrived = true; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco")?.remove();
           // Put our chair at the unload point first: after "skip" it was still where it last was.
           along(line.up, d, p); along(line.up, d + 4, q);
           myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0); myChair.updateMatrixWorld(true);
@@ -2436,7 +2455,13 @@ async function main() {
         }
       } else d = d0;
     }
-    if (TRIP && !arrived) $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3)))} · 转动手机看四周`;
+    if (TRIP && !arrived) {
+      $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
+      const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = (d1 - d0) / (SPEED * 3);
+      document.querySelector("#rideBar .fill").style.width = `${u * 100}%`; document.querySelector("#rideBar .knob").style.left = `${u * 100}%`;
+      if (document.activeElement !== $("rbSeek")) $("rbSeek").value = Math.round(u * 1000);
+      $("rbTime").textContent = `${clock(u * full)} / ${clock(full)}`;
+    }
     along(line.up, d, p); along(line.up, d + 4, q);
     const yaw = Math.atan2(q.x - p.x, q.z - p.z);
     myChair.position.copy(p);

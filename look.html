@@ -154,12 +154,60 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="ride.css?v=2">
+  <style>
+    /* The chair ride in the app's paper look: a player bar along the bottom (the owner's mock, 2026-11-05). */
+    #pads { display: none !important; }
+    #top { border-radius: 22px !important; padding: 10px 14px !important; }
+    #top b { display: inline-flex; align-items: center; gap: 6px; font: 600 20px "Cormorant Garamond", "Noto Serif SC", serif !important; }
+    #menuBtn { float: right; width: 44px !important; height: 44px !important; padding: 0 !important; border-radius: 50% !important; border: 3px solid #fdfbf6 !important; background: #e6ebee !important; overflow: hidden; box-shadow: 0 4px 10px rgba(40,50,70,.18); }
+    #menuBtn img { width: 100%; height: 100%; display: block; }
+    #bubble { display: flex !important; align-items: center; gap: 6px; background: rgba(253,251,246,.94) !important; color: #22344d !important; border: 0 !important; border-radius: 999px !important; padding: 4px 12px 4px 6px !important; box-shadow: 0 4px 10px rgba(40,50,70,.15); font: 13px "Noto Serif SC", serif !important; }
+    #bubble img { width: 28px; height: 28px; }
+    #rideBar { position: fixed; left: 10px; right: 10px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 5; display: grid; gap: 10px; font-family: "Noto Serif SC", serif; color: #22344d; }
+    #rideBar[hidden] { display: none; }
+    #rideBar .ctl { display: flex; align-items: center; justify-content: space-between; }
+    #rideBar .rnd { width: 66px; height: 66px; border-radius: 50%; border: 0; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.22); display: grid; place-content: center; justify-items: center; gap: 0; font: 600 12px "Noto Serif SC", serif; color: #22344d; cursor: pointer; padding: 0; }
+    #rideBar .rnd img { width: 32px; height: 32px; } #rideBar .rnd b { font: 600 20px "Cormorant Garamond", serif; line-height: 1.1; }
+    #rideBar .play { display: flex; align-items: center; gap: 14px; padding: 6px 14px; border-radius: 999px; background: rgba(34,52,77,.35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+    #rideBar .play button { width: 44px; height: 44px; border: 0; background: none; color: #fdfbf6; font-size: 22px; cursor: pointer; padding: 0; }
+    #rideBar .play button.on { color: #f6c453; }
+    #rideBar .play .pp { width: 52px; height: 52px; border-radius: 50%; background: #fdfbf6; color: #22344d; font: 700 18px sans-serif; letter-spacing: -2px; box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+    #rideBar .track { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.18); position: relative; }
+    #rideBar .track > img { width: 34px; height: 34px; flex: none; }
+    #rideBar .tr { flex: 1; position: relative; height: 26px; }
+    #rideBar .tr::before { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: #e6dccb; }
+    #rideBar .tr .fill { position: absolute; left: 0; top: 11px; height: 4px; border-radius: 2px; background: #22344d; width: 0; }
+    #rideBar .tr .knob { position: absolute; top: 4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #fdfbf6; box-shadow: 0 0 0 3px #22344d; left: 0; }
+    #rideBar .tr input { position: absolute; inset: 0; width: 100%; opacity: 0; margin: 0; cursor: pointer; }
+    #rideBar #rbTime { flex: none; font: 600 14px "Cormorant Garamond", serif; color: #6f675e; }
+    #rbPause .pl { display: none; } #rbPause.paused .pl { display: inline; } #rbPause.paused .ps { display: none; }
+    #rideBar .play button svg { display: block; margin: auto; }
+    body.riding #credit { display: none; } body.menuOpen #rideBar { visibility: hidden; }
+    /* the menu: the app's four tabs as a pill, this ride's tools above it */
+    #menu { left: 10px !important; right: 10px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; top: auto !important; background: none !important; box-shadow: none !important; padding: 0 !important; }
+    #menu h2 { display: none; }
+    #menu .opts { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    #menu .opt { display: grid !important; justify-items: center; gap: 2px; padding: 8px 4px !important; border: 0 !important; border-radius: 18px !important; background: rgba(253,251,246,.95) !important; box-shadow: 0 4px 10px rgba(40,50,70,.15); font: 13px "Noto Serif SC", serif !important; color: #22344d !important; text-align: center; }
+    #menu .opt img { width: 30px; height: 30px; } #menu .opt small { display: none !important; }
+    #menu .navrow { order: 2; display: flex !important; padding: 7px; border-radius: 40px; background: rgba(253,251,246,.92); box-shadow: 0 10px 26px rgba(40,50,70,.22); margin: 0 !important; gap: 0 !important; }
+    #menu .navrow a { flex: 1; border: 0 !important; background: none !important; border-radius: 32px !important; padding: 6px 0 5px !important; font: 12px "Noto Serif SC", serif !important; color: #4a453f !important; }
+    #menu .navrow a.on { background: #6f879c !important; color: #fdfbf6 !important; }
+    #menu > div { display: flex; flex-direction: column; } #menuDim { position: fixed; inset: 0; z-index: 9; background: rgba(30,40,55,.25); }
+  </style>
 </head>
 <body>
   <canvas id="c"></canvas>
   <div id="vignette"></div>
-  <div id="top" class="glass"><b>🚡 <span id="liftName"></span></b> <button id="menuBtn" aria-label="菜单">☰</button><p id="desc"></p><p id="weather"></p></div>
-  <button id="bubble" class="glass">🫧 放下防风罩</button>
+  <div id="top" class="glass"><b><img id="liftIco" src="assets/icons/lift.png?v=1" alt="" style="width:28px;height:28px"><span id="liftName"></span></b> <button id="menuBtn" aria-label="菜单"><img alt=""></button><p id="desc"></p><p id="weather"></p></div>
+  <button id="bubble" aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span>放下防风罩</span></button>
+  <!-- The chair ride as a player: back, pause, fast; the line from the bottom station to the flag at the top,
+       drag it to jump ahead; 路线 opens the roadbook, 速度 cycles how fast the chair goes. -->
+  <div id="rideBar" hidden>
+    <div class="ctl"><button id="rbRoute" class="rnd"><img src="assets/icons/resorts.png?v=1" alt=""><span>路线</span></button>
+      <div class="play"><button id="rbBack" aria-label="后退"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M11 6 L3 12 L11 18Z M21 6 L13 12 L21 18Z" fill="currentColor"/></svg></button><button id="rbPause" class="pp" aria-label="暂停"><svg viewBox="0 0 24 24" width="22" height="22"><path class="ps" d="M7 5h3.5v14H7z M13.5 5H17v14h-3.5z" fill="currentColor"/><path class="pl" d="M8 5 L19 12 L8 19Z" fill="currentColor"/></svg></button><button id="rbFwd" aria-label="快进"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 6 L11 12 L3 18Z M13 6 L21 12 L13 18Z" fill="currentColor"/></svg></button></div>
+      <button id="rbSpeed" class="rnd"><b>1×</b><span>速度</span></button></div>
+    <div class="track"><img src="assets/icons/lift.png?v=1" alt=""><div class="tr"><i class="fill"></i><i class="knob"></i><input id="rbSeek" type="range" min="0" max="1000" value="0"></div><small id="rbTime">0:00 / 0:00</small><img src="assets/icons/challenge.png?v=1" alt=""></div>
+  </div>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
@@ -178,6 +226,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="look.js?v=88"></script>
+  <script type="module" src="look.js?v=91"></script>
 </body>
 </html>
