@@ -2,6 +2,7 @@
 // ground in layers — snow, earth, rock — following the slope; small pines stand on the lower slopes; and on
 // each a cartoon animal of that mountain walks its round.
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 // The animal for each resort, from what lives there (and is fun to meet).
 export const ANIMALS = {
@@ -14,7 +15,20 @@ const PAINTED = {
   moose: [-1, 2.5], elk: [-1, 2.5], sheep: [-1, 1.8], fox: [-1, 1.25], pika: [1, 1.0], marmot: [1, 1.0],
   hare: [-1, 1.0], ptarmigan: [-1, 0.9], porcupine: [-1, 0.95], bear: [-1, 1.9],
 };
-const loader = new THREE.TextureLoader();
+const loader = new THREE.TextureLoader(), gltf = new GLTFLoader();
+// A 3D animal (assets/animals/3d, from tools/build_animals.py: rigged, with a walk cycle), standing `tall`.
+export function animal3d(kind) {
+  const root = new THREE.Group(), tall = PAINTED[kind][1];
+  root.userData = { model: 1, mixer: null, last: 0 };
+  gltf.load(`assets/animals/3d/${kind}.glb?v=1`, (g) => {
+    const o = g.scene, bb = new THREE.Box3().setFromObject(o);
+    o.scale.setScalar(tall / Math.max(0.01, bb.max.y - bb.min.y));
+    o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; m.material.roughness = 0.9; } });
+    root.add(o);
+    if (g.animations[0]) { const mx = new THREE.AnimationMixer(o); mx.clipAction(g.animations[0]).play(); root.userData.mixer = mx; }
+  });
+  return root;
+}
 // A painted animal as a little standee that always faces you, its feet on the ground.
 export function animalSprite(kind) {
   const [face, tall] = PAINTED[kind];
@@ -139,6 +153,12 @@ export function walk(a, h, t, seed, s, cam) {
   const r = s * 0.28, sp = 0.18, u = t * sp + seed;
   const x = Math.cos(u) * r + Math.sin(u * 2.3) * r * 0.25, z = Math.sin(u) * r * 0.8 + Math.cos(u * 1.7) * r * 0.2;
   const x2 = Math.cos(u + 0.01) * r + Math.sin((u + 0.01) * 2.3) * r * 0.25, z2 = Math.sin(u + 0.01) * r * 0.8 + Math.cos((u + 0.01) * 1.7) * r * 0.2;
+  if (a.userData.model) { // walk the loop, facing the way it goes, legs in step with its pace
+    const U = a.userData, dt = U.last ? Math.min(0.1, t - U.last) : 0; U.last = t;
+    a.position.set(x, h(x, z), z); a.rotation.y = Math.atan2(x2 - x, z2 - z);
+    U.mixer?.update(dt * 1.1);
+    return;
+  }
   if (a.userData.painted) { // a standee: a step's bob and sway, turned to the way it's going on screen
     const U = a.userData, ph = t * 5 + seed * 3;
     a.position.set(x, h(x, z) + (U.hop ? Math.abs(Math.sin(ph * 0.8)) * 0.3 : Math.abs(Math.sin(ph)) * 0.05), z);

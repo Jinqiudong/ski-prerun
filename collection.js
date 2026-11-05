@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { EN_ON } from "./i18n.js?v=9";
-import { ANIMALS, strataWalls, heightAt, pines, animalSprite, walk } from "./diorama.js?v=2";
+import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./diorama.js?v=3";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
@@ -180,7 +180,7 @@ export class Collection {
       g.add(strataWalls(pos, edge, -PLINTH));
       const h = heightAt(pos, n, S); let lo = 1e9, hi = -1e9; for (let v = 0; v < pos.count; v++) { lo = Math.min(lo, pos.getY(v)); hi = Math.max(hi, pos.getY(v)); }
       g.add(pines(h, S, lo, hi, 7 + (id || "").length * 13));
-      if (ANIMALS[id]) { const a = animalSprite(ANIMALS[id]); g.add(a); (this.walkers ||= []).push({ a, h, seed: (id.charCodeAt(0) % 7) * 0.9 }); }
+      if (ANIMALS[id]) { const a = animal3d(ANIMALS[id]); g.add(a); (this.walkers ||= []).push({ a, h, seed: (id.charCodeAt(0) % 7) * 0.9 }); }
     } else {
       const wg = new THREE.BufferGeometry(); wg.setAttribute("position", new THREE.Float32BufferAttribute(side, 3)); wg.setIndex(idx); wg.computeVertexNormals();
       const wall = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0xf1ede7, roughness: 0.85, side: THREE.DoubleSide }));
