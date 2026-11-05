@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=8";
-import { makeEntrance } from "./entrance.js?v=17";
+import { makeEntrance } from "./entrance.js?v=21";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -87,7 +87,7 @@ function enter() {
   if (!rider || editing) return;
   entrance.start(ROUTE_OF[shownChar?.fav] || "A", rider, turntable);
 }
-const look = new THREE.Vector3(0, 0.88, 0);
+const look = new THREE.Vector3(0, 0.88, 0), REST = { pos: new THREE.Vector3(0, 1.3, 5.6), at: new THREE.Vector3(0, 0.88, 0) };
 window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; } };
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
@@ -96,7 +96,8 @@ renderer.setAnimationLoop((now) => {
   // the sun and its shadow camera ride along with the rider
   const at = turntable.position; sun.position.set(at.x + 3, at.y + 6, at.z + 4); sun.target.position.copy(at);
   // the camera leans a little toward the rider while they come in, and settles back on them
-  look.lerp(new THREE.Vector3(at.x * 0.35, 0.88 + Math.max(0, at.y) * 0.5, at.z * 0.15), 1 - Math.exp(-dt * 3)); camera.lookAt(look);
+  // the camera: the entrance's shots while it runs, else resting on the rider
+  if (!entrance.shoot(camera, dt, REST)) { camera.position.lerp(REST.pos, 1 - Math.exp(-dt * 4)); look.lerp(REST.at, 1 - Math.exp(-dt * 4)); camera.lookAt(look); }
   renderer.render(scene, camera);
 });
 
