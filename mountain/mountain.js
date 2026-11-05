@@ -7,7 +7,7 @@ import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5"
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
 import { Diorama } from "./diorama.js?v=20";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
-import { addStep } from "../roadbook.js?v=11";
+import { addStep } from "../roadbook.js?v=12";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../i18n.js?v=19";
 import { openNav } from "../nav.js?v=9";
 
@@ -291,6 +291,9 @@ function setView(name) {
   controls.target.set(...v.target);
   camera.position.set(...v.pos);
   document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("on", b.dataset.view === name));
+  // Spinning only makes sense for the whole mountain: the other views stop it and hide its switch.
+  const sp = document.getElementById("spin");
+  if (sp) { sp.hidden = name !== "hero"; if (name !== "hero") { controls.autoRotate = false; sp.classList.remove("on"); } }
 }
 
 const RIDEABLE = ["chair_lift", "mixed_lift", "gondola", "cable_car"];
@@ -390,22 +393,35 @@ async function main() {
   setInterval(() => { if (look.live) { look.date = new Date(); applyLook(); } }, 60000);
   // Preview: drag the hour, pick the weather; 回到实时 goes back to now.
   const hourOf = (d) => +d.toLocaleString("en-US", { timeZone: RESORT.tz, hour: "numeric", hour12: false }) % 24;
-  // The sliders: time stops (now, dawn … night) and weather stops (clear … snow).
-  const HOURS = [null, 7, 10, 12, 15, 18, 21], KINDS = ["clear", "cloudy", "overcast", "snow"];
-  const mark = () => {
-    document.querySelectorAll("#timePanel .ticks:not(.icons) small").forEach((x, i) => x.classList.toggle("on", i === +$("hour").value));
-    document.querySelectorAll("#timePanel .ticks.icons span").forEach((x, i) => x.classList.toggle("on", KINDS[i] === look.kind));
-    $("wxs").value = Math.max(0, KINDS.indexOf(look.kind));
+  // The panel: slide to any hour (local), tap a weather; each changes on its own. 实时 brings back now and the
+  // real weather together. Sunrise and sunset sit on the slider where they fall today.
+  const fmtH = (h) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
+  const hourNow = () => { const d = new Date(), [h, m] = d.toLocaleTimeString("en-GB", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" }).split(":"); return +h + m / 60; };
+  const sync = () => {
+    const h = look.live ? hourNow() : +$("hour").value;
+    if (look.live) $("hour").value = h;
+    $("tpTime").textContent = fmtH(h);
+    $("tpLive").classList.toggle("on", look.live);
+    document.querySelectorAll("[data-wx]").forEach((b) => b.classList.toggle("on", b.dataset.wx === look.kind));
   };
-  $("hour").addEventListener("input", async () => {
-    const k = +$("hour").value;
-    if (!k) { look.live = true; look.date = new Date(); await fetchWeather(); applyLook(); mark(); return; }
-    look.live = false; const d = new Date();
-    look.date = new Date(d.getTime() + (HOURS[k] - hourOf(d)) * 3600000);
-    applyLook(); mark();
+  { // sunrise and sunset today: where the sun crosses the horizon
+    const day0 = new Date(); let rise = 7, set = 17, prev = null;
+    for (let q = 0; q < 96; q++) { const h = q / 4, d = new Date(day0.getTime() + (h - hourNow()) * 3600000), up = solar(d, RESORT.lat, RESORT.lon).el > 0;
+      if (prev !== null && up !== prev) up ? (rise = h) : (set = h); prev = up; }
+    const at = (id, h) => ($(id).style.left = `${(h / 23.75) * 100}%`);
+    at("tpRise", rise); at("tpNoon", 12); at("tpSet", set);
+  }
+  $("hour").addEventListener("input", () => {
+    look.live = false;
+    look.date = new Date(Date.now() + (+$("hour").value - hourNow()) * 3600000);
+    applyLook(); sync();
   });
-  $("wxs").addEventListener("input", () => { look.live = false; look.kind = KINDS[+$("wxs").value]; applyLook(); mark(); });
-  mark();
+  document.querySelectorAll("[data-wx]").forEach((b) => b.addEventListener("click", () => {
+    if (look.live) { look.live = false; $("hour").value = hourNow(); } // keep the time where it is
+    look.kind = b.dataset.wx; applyLook(); sync();
+  }));
+  $("tpLive").addEventListener("click", async () => { look.live = true; look.date = new Date(); await fetchWeather(); applyLook(); sync(); });
+  sync();
   $("now").addEventListener("click", () => $("timePanel").classList.toggle("show"));
 
   const all = R.runs.flatMap((r) => r.pts);
@@ -424,7 +440,7 @@ async function main() {
   $("status").remove();
 
   const basePins = R.places.filter((p) => p.kind === "village").map((base) => {
-    const item = pin(`<b>🏠 ${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) * EXAG + 60, base.z), () => openBase(base));
+    const item = pin(`<b><img class="pi" src="../assets/icons/lodge.png?v=1" alt="">${base.name}</b><i></i>`, "pin", new THREE.Vector3(base.x, T.heightAt(base.x, base.z) * EXAG + 60, base.z), () => openBase(base));
     item.base = base;
     return item;
   });
@@ -447,7 +463,7 @@ async function main() {
   const keep = () => { clearTimeout(foldT); foldT = setTimeout(fold, 5000); };
   for (const [fab, box, other] of [["viewFab", "bar", "layerBar"], ["layerFab", "layerBar", "bar"]])
     $(fab).addEventListener("click", () => { $(other).classList.remove("open"); $(box).classList.toggle("open"); keep(); });
-  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { $("viewFab").querySelector("img").src = b.querySelector("img").src; setTimeout(fold, 250); }));
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => setTimeout(fold, 250)));
   for (const id of ["spin", "runs", "lifts"]) $(id).addEventListener("click", keep);
   $("compassBtn").addEventListener("click", () => setView("hero"));
 
@@ -513,13 +529,13 @@ async function main() {
       const info = mini.info.get(l);
       const tag = document.createElement("button");
       tag.className = "ltag" + (info.beginner ? " small" : "");
-      tag.innerHTML = `<b>🚡 ${l.name}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · 到 ${info.alt} 米`}</small><i></i>`;
+      tag.innerHTML = `<b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · 到 ${info.alt} 米`}</small><i></i>`;
       tag.addEventListener("click", () => pickLift(l, { scroll: true }));
       tagBox.append(tag);
       info.tag = tag;
       const card = document.createElement("div");
       card.className = "liftCard";
-      card.innerHTML = `<div class="row1"><b>🚡 ${l.name}</b><span class="lvls">${info.can}</span></div>
+      card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><span class="lvls">${info.can}</span></div>
         <small>${info.what} · 到 ${info.alt} 米${info.next.length ? ` · 能接 ${info.next.length} 条缆车` : ""}</small>
         <div class="acts"><button class="more">详情</button><button class="go">坐这条上山 ›</button></div>`;
       card.addEventListener("click", (e) => { if (!e.target.closest("button")) pickLift(l, { scroll: true }); });
@@ -579,9 +595,9 @@ async function main() {
   function fillDetail() {
     const info = mini.info.get(mini.pick), l = info.l;
     const byLevel = LEVELS.map((k) => info.runs.filter((r) => r.level === k)).filter((g) => g.length);
-    $("detailBody").innerHTML = `<h2>🚡 ${l.name}</h2><p class="meta">${info.what} · 到 ${info.alt} 米</p>
+    $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</h2><p class="meta">${info.what} · 到 ${info.alt} 米</p>
       <h3>山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
-      ${info.next.length ? `<h3>上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<p class="nx"><span>🚡 <b>${n.o.name}</b></span><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""} · 约 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</small></p>`).join("")}` : ""}
+      ${info.next.length ? `<h3>上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<p class="nx"><span><img class="pi" src="../assets/icons/lift.png?v=1" alt=""><b>${n.o.name}</b></span><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""} · 约 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</small></p>`).join("")}` : ""}
       <p class="hint">山上最亮的是从山顶直接出发的雪道，半亮的是滑下去还能接上的。</p>`;
     $("detailGo").textContent = `坐 ${l.name} 上山 ›`;
   }
@@ -639,6 +655,7 @@ async function main() {
   });
   $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini", "picking", "detail"); });
   addEventListener("resize", () => dio.resize());
+  window.__mtn = { scene, renderer, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE }; // test hook
   window.__mini = { dio, get mini() { return mini; }, endIntro, openDetail, pickLift: (name) => pickLift(mini.lifts.find((l) => l.name === name), { scroll: true }) }; // test hook
   // Drag to turn the miniature after the intro.
   let drag = null, spin = 0;

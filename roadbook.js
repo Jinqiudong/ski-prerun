@@ -74,7 +74,7 @@ export function renderBook(box, resort, host) {
     let n = 0;
     const steps = day.steps.map((s) => {
       n++;
-      if (s.k === "base") return `<li data-n="${n}"><b>🏠 ${t("从 {x} 出发", { x: esc(s.name) })}</b></li>`;
+      if (s.k === "base") return `<li data-n="${n}"><b><img src="${location.pathname.includes("/mountain/") ? "../" : ""}assets/icons/lodge.png?v=1" alt="" style="width:20px;height:20px;vertical-align:-4px;margin-right:4px">${t("从 {x} 出发", { x: esc(s.name) })}</b></li>`;
       if (s.k === "lift") return `<li data-n="${n}"><b>🚡 ${t("坐 {x} 上山", { x: esc(s.name) })}</b></li>`;
       if (s.k === "top") {
         const opts = s.options.slice(0, 7), more = s.options.length - opts.length;

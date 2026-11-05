@@ -2,7 +2,7 @@
 // watercolour, the day's words, its stamp), stacked into a season you can flip back through: swipe up to
 // send the front card to the back. Tap one for the day: the painting, its stickers, the way you went.
 import { t, EN_ON } from "./i18n.js?v=19";
-import { daysOf } from "./roadbook.js?v=11";
+import { daysOf } from "./roadbook.js?v=12";
 
 const C = { ink: "#22344d", red: "#b6463b", card: "#f8f1e4", mute: "#8a8278" };
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

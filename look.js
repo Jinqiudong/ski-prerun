@@ -7,7 +7,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./rider.js?v=11";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=11";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=12";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick } from "./boarder.js?v=14";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "./route.js?v=5";

@@ -2,7 +2,7 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=11";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=19";
 import { playIntro } from "./intro.js?v=14";
 playIntro();
