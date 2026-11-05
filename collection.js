@@ -8,6 +8,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { EN_ON } from "./i18n.js?v=9";
+import { ANIMALS, strataWalls, heightAt, pines, animal, walk } from "./diorama.js?v=1";
+
+// Diorama tiles (taller, cut-away sides in layers, pines, an animal each): on trial with ?diorama.
+const DIO = new URLSearchParams(location.search).has("diorama");
 
 const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
 const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78, w: 140 }; // the painted map (tools/bake_map.py) and its width in scene units
@@ -85,7 +89,7 @@ export class Collection {
     for (const r of list) {
       const d = data[r.id]; if (!d) continue;
       const share = stats[r.id]?.share || 0;
-      const tile = this.tile(d, loader.load(`assets/tiles/${r.id}.jpg?v=2`, (x) => (x.colorSpace = THREE.SRGBColorSpace)), share);
+      const tile = this.tile(d, loader.load(`assets/tiles/${r.id}.jpg?v=2`, (x) => (x.colorSpace = THREE.SRGBColorSpace)), share, r.id);
       tile.position.copy(spot[r.id]);
       const el = document.createElement("button");
       el.className = "ctag";
@@ -145,13 +149,13 @@ export class Collection {
   }
 
   // One tile: the terrain on top (its texture greyed until you've skied it), a plinth under it.
-  tile(d, tex, share) {
+  tile(d, tex, share, id) {
     const g = new THREE.Group(), n = d.grid;
     const raw = Uint8Array.from(atob(d.heights), (ch) => ch.charCodeAt(0)), q = new Uint16Array(raw.buffer);
-    const k = (S / d.size) * EX, top = new THREE.PlaneGeometry(S, S, n - 1, n - 1);
+    const k = (S / d.size) * (DIO ? 2.1 : EX), top = new THREE.PlaneGeometry(S, S, n - 1, n - 1);
     top.rotateX(-Math.PI / 2);
     const pos = top.attributes.position;
-    for (let v = 0; v < pos.count; v++) pos.setY(v, (q[v] / 2) * k + 0.15);
+    for (let v = 0; v < pos.count; v++) pos.setY(v, (q[v] / 2) * k + (DIO ? 1.6 : 0.15));
     top.computeVertexNormals();
     const vivid = share > 0 ? 0.6 + 0.4 * share : 0.5;
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 });
@@ -170,9 +174,16 @@ export class Collection {
     for (let j = n - 2; j >= 0; j--) edge.push(j * n);
     for (const v of edge) side.push(pos.getX(v), pos.getY(v), pos.getZ(v), pos.getX(v), -PLINTH, pos.getZ(v));
     for (let e = 0; e + 1 < edge.length; e++) { const a = e * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-    const wg = new THREE.BufferGeometry(); wg.setAttribute("position", new THREE.Float32BufferAttribute(side, 3)); wg.setIndex(idx); wg.computeVertexNormals();
-    const wall = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0xf1ede7, roughness: 0.85, side: THREE.DoubleSide }));
-    wall.castShadow = wall.receiveShadow = true; g.add(wall);
+    if (DIO) {
+      g.add(strataWalls(pos, edge, -PLINTH));
+      const h = heightAt(pos, n, S); let lo = 1e9, hi = -1e9; for (let v = 0; v < pos.count; v++) { lo = Math.min(lo, pos.getY(v)); hi = Math.max(hi, pos.getY(v)); }
+      g.add(pines(h, S, lo, hi, 7 + (id || "").length * 13));
+      if (ANIMALS[id]) { const a = animal(ANIMALS[id]); g.add(a); (this.walkers ||= []).push({ a, h, seed: (id.charCodeAt(0) % 7) * 0.9 }); }
+    } else {
+      const wg = new THREE.BufferGeometry(); wg.setAttribute("position", new THREE.Float32BufferAttribute(side, 3)); wg.setIndex(idx); wg.computeVertexNormals();
+      const wall = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0xf1ede7, roughness: 0.85, side: THREE.DoubleSide }));
+      wall.castShadow = wall.receiveShadow = true; g.add(wall);
+    }
     // Conquered: a little red flag on the highest point.
     if (share >= 0.999) {
       let hi = 0; for (let v = 1; v < pos.count; v++) if (pos.getY(v) > pos.getY(hi)) hi = v;
@@ -250,6 +261,7 @@ export class Collection {
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
+    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S);
     this.renderer.render(this.scene, this.camera);
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.
