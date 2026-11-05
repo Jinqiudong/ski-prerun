@@ -2495,12 +2495,12 @@ async function main() {
     bubbleMatrix(bubbleOpen, myBubble.matrix);
     if (hintOn) { // the note sits under the canopy's middle, on screen
       if (arrived) { hintOn = false; $("bubbleHint").hidden = true; }
-      else { // the middle of the canopy as it looks on screen (its box's corners, projected; clipped to the screen)
+      else { // the canopy's right side as it looks on screen (its box's corners, projected; clipped to the screen)
         hb.setFromObject(myBubble.children[0]); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, behind = true;
         for (let k = 0; k < 8; k++) { hv.set(k & 1 ? hb.max.x : hb.min.x, k & 2 ? hb.max.y : hb.min.y, k & 4 ? hb.max.z : hb.min.z).project(camera);
           if (hv.z < 1) behind = false; x0 = Math.min(x0, hv.x); x1 = Math.max(x1, hv.x); y0 = Math.min(y0, hv.y); y1 = Math.max(y1, hv.y); }
-        const cx = (Math.max(-1, x0) + Math.min(1, x1)) / 2, cy = (Math.max(-1, y0) + Math.min(1, y1)) / 2, h = $("bubbleHint");
-        h.hidden = behind; h.style.left = `${(cx * 0.5 + 0.5) * innerWidth}px`; h.style.top = `${(-cy * 0.5 + 0.5) * innerHeight}px`; } }
+        const l = Math.max(-1, x0), r = Math.min(1, x1), cx = l + (r - l) * 0.84, cy = (Math.max(-1, y0) + Math.min(1, y1)) / 2 + 0.06, h = $("bubbleHint"); // on its right side, where it folds down
+        h.hidden = behind; h.style.left = `${Math.min(innerWidth - 34, (cx * 0.5 + 0.5) * innerWidth)}px`; h.style.top = `${(-cy * 0.5 + 0.5) * innerHeight}px`; } }
 
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
