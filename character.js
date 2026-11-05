@@ -28,6 +28,8 @@ export async function makeCharacter(tpl) {
     if (!o.isMesh) return;
     o.castShadow = true;
     o.material = [].concat(o.material).map((m) => m.clone()); if (o.material.length === 1) o.material = o.material[0];
+    // The fabric's sheen comes in full and white, which lights every edge like a rim light; a third of it reads as cloth.
+    for (const m of [].concat(o.material)) if (m.sheen) m.sheen *= 0.3;
     // The man's board carries a maker's graphic: show it plain (the game puts real boards on later).
     if (tpl === "M") for (const m of [].concat(o.material)) if (/MAT_board_(top|base)/.test(m.name)) { m.map = null; m.color.set(m.name.endsWith("top") ? "#2f3a4c" : "#22252a"); }
   });
