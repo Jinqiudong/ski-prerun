@@ -439,12 +439,14 @@ async function main() {
   toggle("spin", (on) => (controls.autoRotate = on));
   toggle("runs", (on) => (runLayer.visible = on));
   toggle("lifts", (on) => (lifts.group.visible = on));
-  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); $("bar").classList.remove("open"); $("timePanel").classList.remove("show"); });
-  // The view button: tap to open its pop-up; choosing a view or tapping the map folds it; it folds itself after a while.
+  renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); fold(); $("timePanel").classList.remove("show"); });
+  // The two round buttons: tap one to open its pop-up (the other folds); choosing a view or tapping the map
+  // folds them; they fold themselves after a while.
   let foldT = 0;
-  const fold = () => { $("bar").classList.remove("open"); clearTimeout(foldT); };
+  const fold = () => { $("bar").classList.remove("open"); $("layerBar").classList.remove("open"); clearTimeout(foldT); };
   const keep = () => { clearTimeout(foldT); foldT = setTimeout(fold, 5000); };
-  $("viewFab").addEventListener("click", () => { $("bar").classList.toggle("open"); keep(); });
+  for (const [fab, box, other] of [["viewFab", "bar", "layerBar"], ["layerFab", "layerBar", "bar"]])
+    $(fab).addEventListener("click", () => { $(other).classList.remove("open"); $(box).classList.toggle("open"); keep(); });
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { $("viewFab").querySelector("img").src = b.querySelector("img").src; setTimeout(fold, 250); }));
   for (const id of ["spin", "runs", "lifts"]) $(id).addEventListener("click", keep);
   $("compassBtn").addEventListener("click", () => setView("hero"));

@@ -178,17 +178,21 @@
     /* compass: the owner's painted one, turning with the view */
     #compassBtn { width: 56px !important; height: 56px !important; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: 0 5px 12px rgba(40,50,70,.25); cursor: pointer; }
     #compassBtn img { width: 56px !important; height: 56px !important; display: block; border-radius: 50%; }
-    /* the view button and its pop-up */
-    #bar { left: 14px !important; right: auto !important; bottom: calc(16px + env(safe-area-inset-bottom)) !important; padding: 0 !important; background: none !important; box-shadow: none !important; display: flex !important; flex-direction: column-reverse; align-items: flex-start; gap: 10px; }
-    #bar #viewFab { width: 60px; height: 60px; border-radius: 50% !important; background: #fdfbf6 !important; box-shadow: 0 6px 16px rgba(40,50,70,.22) !important; display: grid !important; place-items: center; transition: transform .2s; }
-    #bar #viewFab img { width: 36px; height: 36px; } #bar.open #viewFab { transform: rotate(-8deg) scale(.94); }
-    #bar .pop { position: absolute; left: 0; bottom: 72px; width: max-content; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transform-origin: 30px 100%; transform: scale(.6) translateY(20px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .2s; }
-    #bar.open .pop { transform: none; opacity: 1; pointer-events: auto; }
-    #bar .pop button { display: flex !important; white-space: nowrap; align-items: center; gap: 8px; padding: 5px 14px 5px 6px !important; border-radius: 999px !important; background: rgba(253,251,246,.96) !important; box-shadow: 0 4px 10px rgba(40,50,70,.15) !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; }
-    #bar .pop button img { width: 30px; height: 30px; }
-    #bar .pop button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .pop button[data-view].on img { filter: brightness(0) invert(1); }
-    #bar .pop button.tg { opacity: 1; color: #8a8278 !important; } #bar .pop button.tg img { opacity: .5; } #bar .pop button.tg.on { color: #22344d !important; } #bar .pop button.tg.on img { opacity: 1; } #bar .pop button.tg.on { opacity: 1; box-shadow: 0 4px 10px rgba(40,50,70,.15), inset 0 0 0 2px #4f6a86 !important; }
-    #bar .pop .hsep { width: 40px; height: 1px; background: rgba(34,52,77,.25); margin: 0 0 0 14px; }
+    /* the two round buttons and their pop-ups */
+.fab { position: fixed; z-index: 5; bottom: calc(16px + env(safe-area-inset-bottom)); }
+#bar.fab { left: 14px !important; right: auto !important; bottom: calc(16px + env(safe-area-inset-bottom)) !important; padding: 0 !important; background: none !important; box-shadow: none !important; display: block !important; }
+    #layerBar { right: 14px; }
+#bar .fabBtn, #layerBar .fabBtn { width: 60px; height: 60px; padding: 0 !important; border: 0 !important; border-radius: 50% !important; background: #fdfbf6 !important; box-shadow: 0 6px 16px rgba(40,50,70,.22) !important; display: grid !important; place-items: center; cursor: pointer; transition: transform .2s; }
+#bar .fabBtn img, #layerBar .fabBtn img { width: 36px; height: 36px; } #bar.open .fabBtn, #layerBar.open .fabBtn { transform: scale(.92); }
+#bar .pop, #layerBar .pop { position: absolute; left: 0; bottom: 72px; width: max-content; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transform-origin: 30px 100%; transform: scale(.6) translateY(20px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .2s; }
+    #layerBar .pop { left: auto; right: 0; align-items: flex-end; transform-origin: calc(100% - 30px) 100%; }
+#bar.open .pop, #layerBar.open .pop { transform: none; opacity: 1; pointer-events: auto; }
+#bar .pop button, #layerBar .pop button { display: flex !important; white-space: nowrap; align-items: center; gap: 8px; padding: 5px 14px 5px 6px !important; border: 0 !important; border-radius: 999px !important; background: rgba(253,251,246,.96) !important; box-shadow: 0 4px 10px rgba(40,50,70,.15) !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; cursor: pointer; }
+#bar .pop button img, #layerBar .pop button img { width: 30px; height: 30px; }
+#bar .pop button[data-view].on, #layerBar .pop button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .pop button[data-view].on img, #layerBar .pop button[data-view].on img { filter: brightness(0) invert(1); }
+#bar .pop button.tg, #layerBar .pop button.tg { color: #8a8278 !important; } #bar .pop button.tg img, #layerBar .pop button.tg img { opacity: .45; }
+#bar .pop button.tg.on, #layerBar .pop button.tg.on { color: #22344d !important; box-shadow: 0 4px 10px rgba(40,50,70,.15), inset 0 0 0 2px #4f6a86 !important; } #bar .pop button.tg.on img, #layerBar .pop button.tg.on img { opacity: 1; }
+    body.mini #layerBar { display: none !important; }
     /* the weather panel: notched sliders */
     #timePanel { padding: 12px 16px 10px !important; background: rgba(253,251,246,.97) !important; box-shadow: 0 8px 20px rgba(40,50,70,.18) !important; color: #22344d; font-family: "Noto Serif SC", serif; }
     #timePanel .sl { display: grid; grid-template-columns: 34px 1fr; column-gap: 8px; align-items: center; margin: 4px 0 8px; }
@@ -225,21 +229,25 @@
   </div>
   <div id="status" class="glass">生成山体…</div>
   <div id="base" class="glass"><h2><span id="baseName"></span><button id="baseClose" aria-label="关闭">×</button></h2><p id="baseMeta"></p><ul id="baseLifts"></ul></div>
-  <!-- How you look at the map: one round button, bottom left; tap it and the views and layers pop up beside it,
-       pick one (or tap the map) and they fold back. -->
-  <div id="bar">
+  <!-- Two round buttons: bottom left, how you look (views, spin); bottom right, what's on the mountain (runs,
+       lifts). Tap one and its choices pop up; pick one (or tap the map) and they fold back. -->
+  <div id="bar" class="fab">
     <div class="pop">
       <button data-view="hero" class="on"><img src="../assets/icons/resorts.png?v=1" alt=""><span>全景</span></button>
       <button data-view="close"><img src="../assets/icons/view_close.png?v=1" alt=""><span>近看</span></button>
       <button data-view="top"><img src="../assets/icons/view_top.png?v=1" alt=""><span>俯视</span></button>
-      <i class="hsep"></i>
       <button id="spin" class="tg"><img src="../assets/icons/autorotate.png?v=1" alt=""><span>自动旋转</span></button>
+    </div>
+    <button id="viewFab" class="fabBtn" aria-label="视角"><img src="../assets/icons/resorts.png?v=1" alt=""></button>
+  </div>
+  <div id="layerBar" class="fab">
+    <div class="pop">
       <button id="runs" class="on tg"><img src="../assets/icons/layer_runs.png?v=1" alt=""><span>雪道</span></button>
       <button id="lifts" class="on tg"><img src="../assets/icons/layer_lifts.png?v=1" alt=""><span>缆车</span></button>
     </div>
-    <button id="viewFab" aria-label="视角"><img src="../assets/icons/resorts.png?v=1" alt=""></button>
+    <button id="layerFab" class="fabBtn" aria-label="图层"><img src="../assets/icons/layer_runs.png?v=1" alt=""></button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=46"></script>
+  <script type="module" src="mountain.js?v=48"></script>
 </body>
 </html>
