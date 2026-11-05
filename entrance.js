@@ -5,7 +5,7 @@ import * as THREE from "three";
 
 // The slope: flat where the rider stops (z = 0), rising into the distance; its far edges fade into the painting.
 export const groundY = (z) => 0.035 * (Math.sqrt(z * z + 4) - z - 2);
-const FAR = -34;
+const FAR = -40;
 export let TURN = +(new URLSearchParams(location.search).get("turn") ?? 0); // the model's board axis against the path
 
 function fadeTex() {
@@ -18,18 +18,39 @@ function fadeTex() {
   return new THREE.CanvasTexture(c);
 }
 
-// The paths (x, z), far to near, sampled into a curve; each friend's clip plays along it.
-const P = (pts) => new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)));
+// What each friend does on the way down: clips in a row, each ridden along the line its own board implies
+// (character.js trace), the whole line turned to come at you out of the mountains and end at your feet.
 const ROUTES = {
-  // A: long euro carves, edge to edge, across the slope
-  A: { curve: P([[2, FAR], [-5, -24], [5, -15], [-4, -8], [2, -3], [0, 0]]), dur: 6.5, clip: "Anim_Carve_Ref" },
-  // B: straight out of the hills, then a carved spin: a full circle before stopping
-  B: { curve: P([[-1, FAR], [0, -18], [0.4, -8], [1.4, -4.4], [0.2, -3.2], [-1.2, -4.3], [-0.2, -5.6], [1.2, -4.6], [0.5, -2], [0, 0]]), dur: 6.8, clip: "Anim_Carve_Spin_Toe" },
-  // C: quick S turns down the fall line
-  C: { curve: P([[0, FAR], [3, -27], [-3, -21], [3, -15], [-3, -10], [2.5, -5.5], [-1.5, -2.2], [0, 0]]), dur: 6.2, clip: "Anim_Carve_S" },
-  // D: straight at the kicker, a Method in the air, a long landing
-  D: { curve: P([[-4, FAR], [-3, -20], [-2.2, -12.5], [-1.7, -9.2], [-1.2, -6.6], [-0.6, -3.4], [-0.2, -1], [0, 0]]), dur: 5.2, clip: "Anim_Chill_Cruise", kicker: { z0: -11.5, z1: -9.2, h: 0.75, land: -3, peak: 2.4, trick: "Anim_Method_Air" } },
+  A: { segs: [["Anim_Carve_Ref", 2, 7]] },                                   // long euro carves
+  B: { segs: [["Anim_Chill_Cruise", 1, 6.5], ["Anim_Carve_Spin_Toe", 1, 6]] },  // ride in, then the carved spin
+  C: { segs: [["Anim_Carve_S", 2, 7]] },                                     // S turns down the fall line
+  D: { segs: [["Anim_Chill_Cruise", 2, 7], ["Anim_Method_Air", 1, 7]], kicker: { at: 0.12, h: 0.7, peak: 1.6 } }, // a kicker, a Method
 };
+const LONG = 30; // the longest way in (m): longer lines are drawn in to this
+const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
+function lineOf(char, r) {
+  const pts = [], hd = [], segAt = []; let ox = 0, oz = 0, oh = 0;
+  for (const [clip, reps, v] of r.segs) {
+    const T = char.trace(clip, reps, v); if (!T) continue;
+    segAt.push({ clip, i0: pts.length, n: T.pts.length, once: reps === 1 && clip === "Anim_Method_Air" });
+    for (let i = 0; i < T.pts.length; i++) { const [x, z] = rotY(T.pts[i][0], T.pts[i][1], oh); pts.push([ox + x, oz + z]); hd.push(oh + T.hd[i]); }
+    [ox, oz] = pts[pts.length - 1]; oh = hd[hd.length - 1];
+  }
+  // end at the origin; the start out toward the mountains (-z), a little to one side
+  const [ex, ez] = pts[pts.length - 1], [sx, sz] = [pts[0][0] - ex, pts[0][1] - ez], L = Math.hypot(sx, sz), k = Math.min(1, LONG / L);
+  const ang = (x, z) => Math.atan2(-z, x), alpha = ang(-0.12, -1) - ang(sx, sz);
+  const P = pts.map(([x, z]) => rotY((x - ex) * k, (z - ez) * k, alpha));
+  let H = hd.map((h) => h + alpha);
+  // keep it in view: a line wandering out past the sides is drawn in sideways (and its headings follow)
+  const wide = Math.max(...P.map(([x, z]) => Math.abs(x) / (0.8 + 0.3 * Math.abs(z))));
+  if (wide > 1) {
+    const D = P.map(([x, z]) => [x / wide, z]);
+    H = H.map((h, i) => { const a = D[Math.max(0, i - 1)], b = D[Math.min(D.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], q = P[Math.max(0, i - 1)], w = P[Math.min(P.length - 1, i + 1)];
+      return Math.hypot(dx, dz) > 1e-4 ? h + (Math.atan2(-dz, dx) - Math.atan2(-(w[1] - q[1]), w[0] - q[0])) : h; });
+    return { pts: D, hd: H, segAt, fps: 30 };
+  }
+  return { pts: P, hd: H, segAt, fps: 30 };
+}
 
 export function makeEntrance(scene) {
   // the slope
@@ -44,55 +65,58 @@ export function makeEntrance(scene) {
   const tGeo = new THREE.BufferGeometry(); tGeo.setAttribute("position", new THREE.BufferAttribute(tPos, 3)); tGeo.setIndex(idx);
   const track = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({ color: 0xa9b8c8, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide }));
   track.frustumCulled = false; track.renderOrder = 0;
-  // D's kicker
-  // D's kicker: a snow wedge up to its lip, rounded off behind (it reads as a mound from below)
-  const k = ROUTES.D.kicker, L = k.z1 - k.z0, sh = new THREE.Shape();
-  sh.moveTo(-L / 2, -0.05); sh.quadraticCurveTo(L * 0.1, 0.05, L / 2 - 0.15, k.h); sh.lineTo(L / 2 + 0.1, k.h - 0.05); sh.quadraticCurveTo(L / 2 + 0.9, k.h * 0.6, L / 2 + 1.6, -0.05); sh.lineTo(-L / 2, -0.05);
+  // the kicker: a snow wedge up to its lip, rounded off behind; placed where D takes off
+  const KH = 0.7, KL = 2.6, sh = new THREE.Shape();
+  sh.moveTo(-KL / 2, -0.05); sh.quadraticCurveTo(KL * 0.1, 0.05, KL / 2 - 0.15, KH); sh.lineTo(KL / 2 + 0.1, KH - 0.05); sh.quadraticCurveTo(KL / 2 + 0.9, KH * 0.6, KL / 2 + 1.6, -0.05); sh.lineTo(-KL / 2, -0.05);
   const kg = new THREE.ExtrudeGeometry(sh, { depth: 1.8, bevelEnabled: true, bevelThickness: 0.25, bevelSize: 0.2, bevelSegments: 4, curveSegments: 12 });
-  kg.translate(0, 0, -0.9); kg.rotateY(-Math.PI / 2);
-  const kick = new THREE.Mesh(kg, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x2c3036, roughness: 1 }));
-  { const c = ROUTES.D.curve, pts = c.getSpacedPoints(400), mid = (k.z0 + k.z1) / 2, at = pts.reduce((b, q) => (Math.abs(q.z - mid) < Math.abs(b.z - mid) ? q : b)), i = pts.indexOf(at), d = pts[Math.min(399, i + 1)].clone().sub(at);
-    kick.position.set(at.x, groundY(at.z), at.z); kick.rotation.y = Math.atan2(d.x, d.z); }
-  kick.castShadow = kick.receiveShadow = true;
+  kg.translate(0, 0, -0.9);
+  const kick = new THREE.Mesh(kg, new THREE.MeshStandardMaterial({ color: 0xdfe5ec, emissive: 0x8d949c, roughness: 1, transparent: true, side: THREE.DoubleSide }));
+  kick.receiveShadow = true; // (its shadow falls outside the small shadow camera and smears)
   const group = new THREE.Group(); group.add(ground, track, kick); scene.add(group);
 
   let run = null, n = 0;
-  const lay = (x, y, z, dx, dz) => { // two points across the track, a little above the snow
-    if (n >= N) return; const l = Math.hypot(dx, dz) || 1, w = 0.07, o = n * 6;
-    tPos.set([x - (dz / l) * w, y + 0.02, z + (dx / l) * w, x + (dz / l) * w, y + 0.02, z - (dx / l) * w], o);
+  const lay = (x, y, z, h) => { // across the board's line, a little above the snow
+    if (n >= N) return; const w = 0.09, o = n * 6, cx = Math.sin(h) * w, cz = Math.cos(h) * w;
+    tPos.set([x - cx, y + 0.02, z - cz, x + cx, y + 0.02, z + cz], o);
     n++; tGeo.setDrawRange(0, Math.max(0, (n - 1) * 6)); tGeo.attributes.position.needsUpdate = true;
   };
+  const cache = new Map();
   const E = {
-    group, has: (k) => k in ROUTES,
-    // Start k's entrance with this character on this mover (a group placed and turned along the path).
+    group,
     start(k, char, mover) {
       const r = ROUTES[k]; if (!r) return false;
-      n = 0; tGeo.setDrawRange(0, 0); kick.visible = !!r.kicker;
-      run = { r, char, mover, t: 0, mode: null };
+      const key = char.root.uuid + k + char.root.scale.x; if (!cache.has(key)) cache.set(key, lineOf(char, r));
+      const line = cache.get(key);
+      n = 0; tGeo.setDrawRange(0, 0); kick.visible = false;
+      let air = null;
+      if (r.kicker) { // the takeoff: a little way into the Method; the kicker sits just before it, along the line
+        const sg = line.segAt.find((s) => s.clip === "Anim_Method_Air"), i0 = sg.i0 + Math.round(sg.n * r.kicker.at), i1 = sg.i0 + Math.round(sg.n * 0.78);
+        const [x, z] = line.pts[i0], h = line.hd[i0], back = KL / 2 - 0.15, kx = x - Math.cos(h) * back, kz = z + Math.sin(h) * back;
+        kick.position.set(kx, groundY(kz), kz); kick.rotation.y = h; kick.visible = true;
+        air = { i0, i1, ...r.kicker };
+      }
+      run = { line, char, mover, t: 0, seg: -1, air, done: 0 };
       return true;
     },
-    get running() { return !!run; },
+    get running() { return !!run && !run.done; },
     stop() { run = null; },
-    // Advance; returns true when the rider has pulled up (then they idle on their board).
+    // Advance; when the line ends the rider stops on their board and turns to you.
     step(dt) {
       if (!run) return false;
-      const { r, char, mover } = run; run.t += dt;
-      const u = Math.min(1, run.t / r.dur), e = 1 - Math.pow(1 - u, 1.6); // ease out: slowing to a stop
-      const p = r.curve.getPointAt(e), tan = r.curve.getTangentAt(Math.min(0.999, e));
-      let y = groundY(p.z), air = false;
-      const kk = r.kicker;
-      if (kk) {
-        if (p.z > kk.z0 && p.z < kk.z1) y += kk.h * (p.z - kk.z0) / (kk.z1 - kk.z0); // up the ramp
-        if (p.z >= kk.z1 && p.z < kk.land) { const s = (p.z - kk.z1) / (kk.land - kk.z1); y = THREE.MathUtils.lerp(groundY(kk.z1) + kk.h, groundY(p.z), s) + kk.peak * 4 * s * (1 - s); air = true; }
-        const want = air ? kk.trick : r.clip;
-        if (run.mode !== want) { char.play(want, { once: air, dur: air ? 1.1 : 0 }); run.mode = want; }
-      } else if (!run.mode) { char.play(r.clip); run.mode = r.clip; }
-      mover.position.set(p.x, y, p.z);
-      // The board runs along the path: the rider faces across it (their chest to the downhill side).
-      mover.rotation.y = Math.atan2(tan.x, tan.z) + TURN;
-      if (!air) lay(p.x, groundY(p.z) + (kk && p.z > kk.z0 && p.z < kk.z1 ? kk.h * (p.z - kk.z0) / (kk.z1 - kk.z0) : 0), p.z, tan.x, tan.z);
-      kick.material.opacity = kk ? Math.min(1, Math.max(0, (kk.land + 1 - p.z) / 2)) : 1; kick.material.transparent = kick.material.opacity < 1;
-      if (u >= 1) { run = null; char.play("Anim_Idle"); return true; }
+      const { line, char, mover, air } = run;
+      if (run.done) { run.done += dt; mover.rotation.y += (Math.round(mover.rotation.y / (2 * Math.PI)) * 2 * Math.PI - mover.rotation.y) * Math.min(1, dt * 3); if (run.done > 1.5) run = null; return false; }
+      run.t += dt;
+      const f = run.t * line.fps, i = Math.min(line.pts.length - 1, Math.floor(f)), j = Math.min(line.pts.length - 1, i + 1), u = f - Math.floor(f);
+      const s = line.segAt.findLastIndex((sg) => i >= sg.i0);
+      if (s !== run.seg) { run.seg = s; const sg = line.segAt[s]; char.play(sg.clip, sg.once ? { once: true } : {}); }
+      const x = line.pts[i][0] + (line.pts[j][0] - line.pts[i][0]) * u, z = line.pts[i][1] + (line.pts[j][1] - line.pts[i][1]) * u, h = line.hd[i] + (line.hd[j] - line.hd[i]) * u;
+      let y = groundY(z), flying = false;
+      if (air && i >= air.i0 - 6 && i < air.i0) y += air.h * (i - air.i0 + 6 + u) / 6; // up the kicker
+      if (air && i >= air.i0 && i < air.i1) { const q = (i - air.i0 + u) / (air.i1 - air.i0); y += air.h * (1 - q) + air.peak * 4 * q * (1 - q); flying = true; }
+      mover.position.set(x, y, z); mover.rotation.y = h;
+      if (!flying) lay(x, y, z, h);
+      if (air) kick.material.opacity = Math.min(1, Math.max(0, 1 - (i - air.i1) / 20));
+      if (i >= line.pts.length - 1) { run.done = 1e-6; char.play("Anim_Idle"); }
       return false;
     },
   };

@@ -2,8 +2,8 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
-import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=5";
-import { makeEntrance } from "./entrance.js?v=6";
+import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=6";
+import { makeEntrance } from "./entrance.js?v=11";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -100,7 +100,7 @@ async function show(r, pose) {
   const changed = rider !== c || shownChar?.board !== ch.board || shownChar?.fav !== ch.fav || shownChar !== ch && !editing;
   if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); }
   c.set(ch); shownChar = ch;
-  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
+  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); turntable.rotation.y = 0; if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
   else if (pose === "enter" || changed) enter();
   holder.scale.x = stanceOf(r) === "goofy" ? -1 : 1;
   holder.position.y = 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin

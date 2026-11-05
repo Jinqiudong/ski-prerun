@@ -32,6 +32,9 @@ export async function makeCharacter(tpl) {
     for (const m of [].concat(o.material)) if (m.sheen) m.sheen *= 0.3;
   });
   const bones = {}; root.traverse((o) => { if (o.isBone) bones[o.name] = o; });
+  // The board's turn at rest, relative to the root (for reading its yaw and edge out of a clip).
+  const rel = (q = new THREE.Quaternion()) => { root.updateMatrixWorld(true); new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(bones.Board.matrixWorld).decompose(new THREE.Vector3(), q, new THREE.Vector3()); return q; };
+  const boardRest = rel();
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(g.animations.map((c) => [c.name, c]));
   let action = null, held = true, t = 0; const off = [];
   const C = {
@@ -45,6 +48,29 @@ export async function makeCharacter(tpl) {
       a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once;
       a.timeScale = held ? 0 : dur ? clip.duration / dur : 1; if (held) a.time = 1;
       a.play(); if (action && action !== a) action.crossFadeTo(a, 0.25, false); action = a; C.current = name;
+    },
+    // The line a clip rides along (the character AI's method, rider_viewer.html): the clip plays in place,
+    // and its board says where it goes: on the toe edge the path turns toward the toes, on the heel edge
+    // toward the heels, tighter the higher the edge; a board turned across the line (spins, slides) stops
+    // steering. From (0, 0) heading 0 (+x), v m/s; returns { pts: [[x, z]], hd: [heading], fps }.
+    trace(name, reps = 1, v = 7) {
+      const clip = clips[name]; if (!clip) return null;
+      const FPS = 30, d = clip.duration, N = Math.round(d * FPS) * reps, pts = [], hd = [];
+      const m2 = new THREE.AnimationMixer(root), a = m2.clipAction(clip); a.play();
+      const q = new THREE.Quaternion(), inv = boardRest.clone().invert(), lng = new THREE.Vector3(), nrm = new THREE.Vector3(), toe = new THREE.Vector3();
+      let x = 0, z = 0, h = 0;
+      for (let i = 0; i <= N; i++) {
+        a.time = Math.min((i / FPS) % d, d - 1e-4); m2.update(0);
+        rel(q).multiply(inv);
+        lng.set(1, 0, 0).applyQuaternion(q); nrm.set(0, 1, 0).applyQuaternion(q);
+        const psi = Math.atan2(-lng.z, lng.x); toe.set(-Math.sin(psi), 0, Math.cos(psi));
+        const phi = Math.asin(Math.max(-1, Math.min(1, nrm.dot(toe)))), w = Math.pow(Math.abs(Math.cos(psi)), 6);
+        const kap = Math.abs(phi) > 0.05 ? (Math.sin(phi) / 6) * w : 0;
+        pts.push([x, z]); hd.push(h);
+        h -= kap * v / FPS; x += (Math.cos(h) * v) / FPS; z += (-Math.sin(h) * v) / FPS;
+      }
+      m2.stopAllAction(); m2.uncacheRoot(root); if (action) mixer.update(0);
+      return { pts, hd, fps: FPS };
     },
     // Alive while standing: a slow breath in the chest, the weight shifting, the head looking about.
     step(dt) {
