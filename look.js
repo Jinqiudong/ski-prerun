@@ -15,9 +15,9 @@ import { Diorama } from "./mountain/diorama.js?v=17";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
-import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=1";
+import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=2";
 import { translatePage, openSettings } from "./i18n.js?v=9";
-import { navRow } from "./nav.js?v=1";
+import { navRow } from "./nav.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;

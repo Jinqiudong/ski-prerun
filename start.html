@@ -29,7 +29,11 @@
     #stance button { flex: none; font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 0; padding: 7px 14px; cursor: pointer; }
     #stance button.on { background: var(--navy); color: #fdfbf6; }
     #editBtn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 64px; padding: 8px 4px; font: 13px/1.25 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 12px; box-shadow: 0 3px 8px rgba(40,30,20,.18); cursor: pointer; text-align: center; }
-    #editBtn span { display: block; font-size: 20px; }
+    #editBtn img { display: block; width: 30px; height: 30px; margin: 0 auto 2px; }
+    .tools { display: flex; gap: 10px; justify-content: flex-end; margin: 2px 0 6px; }
+    .tools button { width: 44px; height: 44px; padding: 6px; border-radius: 50%; border: 1px solid #e2d8c6; background: var(--card); cursor: pointer; }
+    .tools img, #saveBtn img { width: 100%; height: 100%; display: block; }
+    #saveBtn img { width: 22px; height: 22px; display: inline-block; vertical-align: -5px; margin-right: 6px; filter: brightness(0) invert(1); }
     #useBtn { position: absolute; right: 12px; bottom: 10px; width: 58px; height: 58px; padding: 9px; background: var(--navy); border: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(34,52,77,.3); cursor: pointer; }
     #useBtn svg { width: 100%; height: 100%; display: block; }
     #chars .card { height: 58px; flex-basis: 120px; flex-direction: row; align-items: center; gap: 10px; justify-content: flex-start; }
@@ -54,7 +58,7 @@
     .seg button { flex: 1; font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: var(--paper); border: 1px solid #e2d8c6; border-radius: 6px; padding: 9px 6px; cursor: pointer; }
     .seg button.on { background: var(--navy); border-color: var(--navy); color: #fdfbf6; font-weight: 600; }
     .part { margin: 4px 0 12px; display: flex; align-items: center; gap: 8px; } .part .row { flex: 1; min-width: 0; }
-    .part .ico { flex: none; width: 42px; height: 42px; --c: #888; }
+    .part .ico { flex: none; width: 44px; height: 44px; object-fit: contain; }
     .part .lbl { font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; margin: 0 2px 6px; display: flex; justify-content: space-between; }
     .sw { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 3px solid #fdfbf6; box-shadow: 0 0 0 1px #d9cdb9, 0 2px 4px rgba(90,70,40,.15); cursor: pointer; padding: 0; }
     .sw.on { box-shadow: 0 0 0 2px var(--navy), 0 2px 4px rgba(90,70,40,.15); }
@@ -66,8 +70,8 @@
     #tabs::before { content: ""; position: absolute; left: 0; right: 0; top: -15px; height: 16px; pointer-events: none;
       background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 16' preserveAspectRatio='none'><path d='M0 16 L0 11 L22 6 L40 9 L62 2 L80 8 L104 5 L120 10 L146 3 L170 9 L190 6 L214 11 L236 4 L258 9 L282 6 L300 10 L326 2 L350 8 L372 5 L400 9 L400 16Z' fill='%23fbfaf7'/><path d='M0 11 L22 6 L40 9 L62 2 L80 8 L104 5 L120 10 L146 3 L170 9 L190 6 L214 11 L236 4 L258 9 L282 6 L300 10 L326 2 L350 8 L372 5 L400 9' fill='none' stroke='%23c9d3dd' stroke-width='1.2'/></svg>") 0 0 / 100% 100% no-repeat; }
     #tabs button { flex: 1; font: 13px "Cormorant Garamond", "Noto Serif SC", serif; color: #9a9188; background: none; border: 0; padding: 2px; cursor: pointer; display: grid; justify-items: center; gap: 1px; }
-    #tabs button svg { width: 30px; height: 30px; filter: grayscale(.85) opacity(.55); transition: filter .2s, transform .2s; }
-    #tabs button.on { color: var(--navy); font-weight: 600; } #tabs button.on svg { filter: none; transform: translateY(-2px); }
+    #tabs button img { width: 32px; height: 32px; filter: grayscale(.85) opacity(.55); transition: filter .2s, transform .2s; }
+    #tabs button.on { color: var(--navy); font-weight: 600; } #tabs button.on img { filter: none; transform: translateY(-2px); }
     #tabs .langSwitch { align-self: center; flex: none; margin: 0 6px 0 2px; display: flex; border: 1px solid #cbbfa9; border-radius: 999px; overflow: hidden; background: var(--card); }
     #tabs .langSwitch button { flex: none; display: block; padding: 4px 9px; font: 600 12px Oswald, sans-serif; color: var(--navy); }
     #tabs .langSwitch button.on { color: #fdfbf6; background: var(--navy); }
@@ -130,9 +134,10 @@
       <h3>我的穿搭</h3><div class="row" id="mine"></div>
     </section>
     <section id="editView" hidden>
+      <div class="tools"><button id="shuffleBtn" aria-label="随机搭配"><img src="assets/icons/shuffle.png?v=1" alt=""></button><button id="resetBtn" aria-label="重置"><img src="assets/icons/reset.png?v=1" alt=""></button></div>
       <div id="parts"></div>
       <h3>给这套穿搭取个名字</h3><input id="name" maxlength="16" placeholder="比如：周末粉雪">
-      <div class="btns"><button id="cancelBtn">取消</button><button class="go" id="saveBtn">保存</button></div>
+      <div class="btns"><button id="cancelBtn">取消</button><button class="go" id="saveBtn"><img src="assets/icons/hanger.png?v=1" alt="">保存</button></div>
     </section>
   </div>
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
@@ -141,7 +146,7 @@
   <div id="records" hidden><div id="memory"></div><div id="recSec">每个雪场</div><div id="recList"></div></div>
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
-  <nav id="tabs"><button data-tab="rider"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><path d="M10 30 L11 19 C11 15 21 15 21 19 L22 30Z" fill="#7f9e88"/><circle cx="16" cy="10.5" r="6.2" fill="#22344d"/><rect x="10.4" y="9" width="11.2" height="3.6" rx="1.8" fill="#c98f9f"/><path d="M6 30 h20" stroke="#8eaec4" stroke-width="2.6" stroke-linecap="round"/></g></svg>人物</button><button data-tab="resort"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><path d="M2 28 L12 11 L17 18 L21 12 L30 28Z" fill="#8eaec4"/><path d="M12 11 L15 16 L13.5 15.5 L12 17 L10 15Z M21 12 L23.5 16.5 L21.5 15.5 L20 17 L19 15.5Z" fill="#fbfaf7"/><path d="M2 28 L12 11 L17 18 L21 12 L30 28" fill="none" stroke="#22344d" stroke-width="1.3" stroke-linejoin="round"/><path d="M4 28 h24" stroke="#4a6a5c" stroke-width="2" stroke-linecap="round"/></g></svg>雪场</button><button data-tab="trip"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><rect x="3" y="9" width="26" height="15" rx="2" fill="#efe6d6" stroke="#22344d" stroke-width="1.2"/><rect x="3" y="9" width="26" height="4.2" rx="1.5" fill="#22344d"/><path d="M22 13.5 V24" stroke="#b9a98f" stroke-width="1.1" stroke-dasharray="1.6 1.6"/><path d="M7 19 h7 M7 21.5 h5" stroke="#6e2f36" stroke-width="1.4" stroke-linecap="round"/><path d="M14 18 l3 -2 l1.5 .6 l-2.6 2.2" fill="#b6463b"/></g></svg>行程</button><button data-tab="log"><svg viewBox="0 0 32 32"><g filter="url(#wct)"><rect x="7" y="4" width="18" height="20" rx="2" fill="#d9e2ea" transform="rotate(-8 16 14)"/><rect x="6" y="7" width="20" height="22" rx="2" fill="#fbfaf7" stroke="#22344d" stroke-width="1.2"/><path d="M8.5 22 L13 15 L16 19 L19 14.5 L23.5 22Z" fill="#8eaec4"/><circle cx="21" cy="11.5" r="2" fill="#b6463b" opacity=".85"/></g></svg>记录</button></nav>
-  <script type="module" src="start.js?v=43"></script>
+  <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
+  <script type="module" src="start.js?v=44"></script>
 </body>
 </html>

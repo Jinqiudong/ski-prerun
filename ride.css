@@ -84,5 +84,5 @@ button { font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
 /* The way home: the start page's tabs, in the menu. */
 .navrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 10px; }
 .navrow a { display: grid; justify-items: center; gap: 2px; padding: 8px 2px; text-decoration: none; color: var(--navy); background: #fdfbf6; border: 1px solid #e2d8c6; border-radius: 6px; font: 14px "Cormorant Garamond", "Noto Serif SC", serif; }
-.navrow svg { width: 28px; height: 28px; }
+.navrow svg, .navrow img { width: 30px; height: 30px; }
 #navBtn { float: right; margin: -2px 0 0 8px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #cbbfa9; background: #fdfbf6; color: var(--navy); font-size: 16px; cursor: pointer; }
