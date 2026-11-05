@@ -2418,7 +2418,7 @@ async function main() {
   if (TRIP) {
     $("rideBar").hidden = false; document.body.classList.add("riding");
     $("rbPause").onclick = () => { paused = !paused; $("rbPause").classList.toggle("paused", paused); };
-    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.hidden = rate === 1; };
+    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.classList.toggle("one", rate === 1); };
     $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
   }
   const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
