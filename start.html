@@ -22,6 +22,10 @@
     #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
     #head { position: absolute; top: 12px; left: 14px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 0 10px rgba(253,251,246,.95), 0 0 3px rgba(253,251,246,.9); pointer-events: none; }
     #head button { pointer-events: auto; }
+    /* your avatar, top right: tap for settings (pick another avatar there) */
+    #setBtn { position: relative; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 3px solid #fffdf8; background: #e6ebee; box-shadow: 0 4px 10px rgba(40,30,20,.2); cursor: pointer; }
+    #setBtn img { width: 100%; height: 100%; border-radius: 50%; display: block; }
+    #setBtn i { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; background: #fdfbf6; font: 13px/20px sans-serif; font-style: normal; color: #22344d; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
     #head b { font: 600 24px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 2px; }
     #status { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 14px; }
     #who { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center; color: var(--navy); font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; text-shadow: 0 0 8px rgba(253,251,246,.95); pointer-events: none; }
@@ -126,7 +130,7 @@
   <!-- The rider on a card at the top: turn her round, flip the stance, change colours, go. -->
   <div id="stage">
     <canvas id="c"></canvas>
-    <div id="head"><div><b id="headTitle">选你的穿搭</b><small id="headSub">先选一套穿搭，再选雪场</small></div><button id="setBtn" aria-label="设置">⚙</button></div>
+    <div id="head"><div><b id="headTitle">选你的穿搭</b><small id="headSub">先选一套穿搭，再选雪场</small></div><button id="setBtn" aria-label="设置"><img alt=""><i>⚙</i></button></div>
     <div id="status">穿搭加载中…</div>
     <div id="who"></div>
     <div class="seg" id="stance"><button data-s="regular">Regular</button><button data-s="goofy">Goofy</button></div>
@@ -153,6 +157,6 @@
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="start.js?v=48"></script>
+  <script type="module" src="start.js?v=50"></script>
 </body>
 </html>

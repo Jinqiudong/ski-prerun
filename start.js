@@ -2,9 +2,9 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=6";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=14";
-import { playIntro } from "./intro.js?v=9";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=8";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=16";
+import { playIntro } from "./intro.js?v=11";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
@@ -196,7 +196,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=28");
+    const { Collection } = await import("./collection.js?v=30");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -220,7 +220,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=21");
+    const { Trips } = await import("./trips.js?v=23");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -230,7 +230,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=7");
+  const { renderMemory } = await import("./memory.js?v=9");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
@@ -294,4 +294,6 @@ const askTab = new URLSearchParams(location.search).get("tab");
 setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log", resort: "resort", trip: "trip" })[askTab] || "rider");
 // Settings (the language) from the gear on the rider page.
 $("setBtn").onclick = openSettings;
+const face = () => ($("setBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`);
+face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
 translatePage();

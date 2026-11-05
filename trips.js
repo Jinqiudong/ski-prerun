@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=14";
-import { daysOf } from "./roadbook.js?v=6";
+import { t, EN_ON, myAvatar } from "./i18n.js?v=16";
+import { daysOf } from "./roadbook.js?v=8";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -319,7 +319,9 @@ export class Trips {
   show(tr, shared = false) {
     const now = today(), n = between(now, tr.from), len = between(tr.from, tr.to) + 1, maybe = this.maybeOf(tr), groups = this.groups(tr);
     const lead = n > 1 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 1 ? (EN_ON ? "Tomorrow" : "明天出发") : n === 0 ? t("今天出发！") : tr.to >= now ? t("进行中") : fmt(tr.from);
-    const face = (p, k) => `<div class="face">${ICON(CREW[k % CREW.length], "")}</div>`;
+    // your own face is the avatar you chose; friends go round the others
+    const mine = myAvatar(), others = CREW.filter((a) => a !== mine);
+    let o = 0; const face = (p) => `<div class="face">${ICON(p.name === this.me && !shared ? mine : others[o++ % others.length], "")}</div>`;
     this.box.innerHTML = `<button class="back">${t("‹ 我的行程")}</button>
       <div class="kicker">${shared ? esc(t("朋友分享给你的行程")) : "TRIP"}</div><div style="position:relative;padding-right:84px"><div class="h1" translate="no">${esc(tr.name)}</div>${ICON(status(tr, now), "tstamp big")}</div>
       <div class="lead">${lead}<i>·</i>${fmt(tr.from)} – ${fmt(tr.to)}<i>·</i>${EN_ON ? `${len} days` : `${len} 天`}</div>
@@ -327,7 +329,7 @@ export class Trips {
       ${SEC("resorts", t("可能去的山"))}<div class="tickets">${maybe.map((id) => this.ticketHTML(id)).join("")}</div>
       ${tr.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
       ${SEC("season", t("日子"))}<div class="cal"></div>
-      ${SEC("av_rider", t("一起滑的人"))}<div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
+      ${SEC("av_rider", t("一起滑的人"))}<div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p) => `<div class="p">${face(p)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
       <div class="acts">${shared ? `<button class="ghostbtn main keep">${t("存到我的行程")}</button>` : `<button class="ghostbtn main share">${t("🔗 分享给朋友")}</button><button class="ghostbtn edit">${t("改一改")}</button><button class="ghostbtn del">${t("删掉")}</button>`}</div>`;
     this.deck(tr, this.box.querySelector(".deck"));
     this.calendar(tr, this.box.querySelector(".cal"), null);

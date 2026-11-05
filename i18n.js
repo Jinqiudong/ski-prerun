@@ -23,7 +23,7 @@ const EN = {
   "还没去过": "Not yet", "去滑一趟，这里就会记下来": "Ski it once and it shows up here", "🗺 看地图": "🗺 Map", "📜 预滑路书": "📜 Roadbook",
   "继续征服 ›": "Keep going ›", "去这里 ›": "Go here ›",
   "还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。": "None yet. Pick a rider, tap Dress to change colours and give it a name, and it's saved here.",
-  "大家都到啦": "Everyone's here", "到 Denver 啦": "Down at Denver", "穿过云，落在雪山里。": "Through the clouds, down into the mountains.", "轻点进入": "TAP TO ENTER", "去滑之前，先在这里滑一遍。": "Ride it here before you ride it there.", "2026–27 雪季": "2026–27 season", "声音": "Sound", "角色": "Character", "穿搭推荐": "Suggested", "穿搭": "Outfits", "女": "Female", "男": "Male", "手套": "Gloves", "雪鞋": "Boots", "制作中": "coming", "改颜色": "Colours", "存成我的": "save as mine", "选你的穿搭": "Pick your outfit", "先选一套穿搭，再选雪场": "An outfit first, then a resort", "穿搭模版": "Outfits", "我的穿搭": "My outfits",
+  "大家都到啦": "Everyone's here", "到 Denver 啦": "Down at Denver", "穿过云，落在雪山里。": "Through the clouds, down into the mountains.", "轻点进入": "TAP TO ENTER", "去滑之前，先在这里滑一遍。": "Ride it here before you ride it there.", "2026–27 雪季": "2026–27 season", "声音": "Sound", "我的头像": "My avatar", "角色": "Character", "穿搭推荐": "Suggested", "穿搭": "Outfits", "女": "Female", "男": "Male", "手套": "Gloves", "雪鞋": "Boots", "制作中": "coming", "改颜色": "Colours", "存成我的": "save as mine", "选你的穿搭": "Pick your outfit", "先选一套穿搭，再选雪场": "An outfit first, then a resort", "穿搭模版": "Outfits", "我的穿搭": "My outfits",
   "🎨 改颜色": "🎨 Colours", "🎨 改颜色 · 存成我的": "🎨 Colours · save as mine", "穿这套去滑 ›": "Ride in this ›", "给这套穿搭取个名字": "Name this outfit", "比如：周末粉雪": "e.g. Weekend powder",
   "改颜色": "Colours", "穿搭加载中…": "Loading…", "还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。": "None yet. Pick an outfit, tap Colours to change a few things, give it a name, and it's saved here.",
   "快到底放慢，别滑过站": "slow near the bottom, don't miss it", "单板注意": "For snowboards", "徒步上去再滑": "Hike, then ski", "要带的东西": "What to bring", "看雪定山": "wherever the snow is", "预滑路书": "Roadbook", "设置": "Settings", "语言": "Language", "⚙ 设置": "⚙ Settings", "你从哪飞（印在机票上）": "Where you fly from (printed on your pass)", "📍 用我的位置": "📍 Use my location", "最近的机场：{x}": "Nearest airport: {x}", "比如 SFO": "e.g. SFO", "定位不到，手动填吧": "Can't find you — type it in", "在「改一改」里填从哪飞": "set it in Edit",
@@ -103,15 +103,32 @@ export function langSwitch() {
 }
 
 // Settings: for now the language. A sheet over whatever page you're on.
+// Your face on trips (the crew): one of the owner's painted avatars (assets/icons), chosen in settings.
+export const AVATARS = ["av_rider", "av_girl", "av_fox", "av_hare", "av_marmot", "av_elk", "av_bear"];
+export const myAvatar = () => { try { const a = localStorage.getItem("prerunAvatar"); return AVATARS.includes(a) ? a : "av_rider"; } catch { return "av_rider"; } };
+const ROOT = () => (location.pathname.includes("/mountain/") ? "../" : "");
+
+// Settings: your avatar (swipe through, tap one), and the language.
 export function openSettings() {
-  const el = document.createElement("div");
+  const el = document.createElement("div"), mine = myAvatar();
   el.style.cssText = "position:fixed;inset:0;z-index:60;background:rgba(40,34,28,.35);display:flex;align-items:flex-end";
-  el.innerHTML = `<div style="width:100%;background:#fdfbf6;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,25,10,.25);font-family:'Noto Serif SC',serif;color:#33302c">
+  el.innerHTML = `<div style="width:100%;box-sizing:border-box;min-width:0;overflow:hidden;background:#fdfbf6;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,25,10,.25);font-family:'Noto Serif SC',serif;color:#33302c">
     <div style="font:500 10px Oswald,sans-serif;letter-spacing:.3em;color:#8a8278">SETTINGS</div>
     <div style="font:600 28px 'Cormorant Garamond','Noto Serif SC',serif;color:#22344d;margin:2px 0 14px">${t("设置")}</div>
+    <div style="font:16px 'Cormorant Garamond','Noto Serif SC',serif;color:#6f675e;margin-bottom:6px">${t("我的头像")}</div>
+    <div data-av-row style="display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 4px 12px;scrollbar-width:none">${AVATARS.map((a) => `<button data-av="${a}" style="flex:none;scroll-snap-align:center;width:84px;height:84px;padding:0;border-radius:50%;border:3px solid ${a === mine ? "#22344d" : "#fffdf8"};box-shadow:0 4px 10px rgba(90,70,40,.18);background:#e6ebee;overflow:hidden;transition:transform .2s;transform:scale(${a === mine ? 1.08 : 1})"><img src="${ROOT()}assets/icons/${a}.png?v=1" alt="" style="width:100%;height:100%;display:block;pointer-events:none"></button>`).join("")}</div>
     <div style="font:16px 'Cormorant Garamond','Noto Serif SC',serif;color:#6f675e;margin-bottom:8px">${t("语言")} · Language</div>
     <div style="display:flex;gap:8px">${[["zh", "中文"], ["en", "English"]].map(([l, n]) => `<button data-l="${l}" style="flex:1;font:600 17px 'Cormorant Garamond','Noto Serif SC',serif;padding:10px;border-radius:6px;border:1px solid ${l === lang ? "#22344d" : "#cbbfa9"};background:${l === lang ? "#22344d" : "#f6f1e7"};color:${l === lang ? "#fdfbf6" : "#22344d"}">${n}</button>`).join("")}</div>
     <button data-x style="margin-top:16px;width:100%;font:16px 'Cormorant Garamond','Noto Serif SC',serif;padding:9px;border-radius:999px;border:1px solid #cbbfa9;background:#fdfbf6;color:#22344d">${t("收起")}</button></div>`;
   document.body.append(el);
-  el.onclick = (e) => { const l = e.target.dataset?.l; if (l && l !== lang) setLang(l); else if (e.target === el || e.target.dataset?.x !== undefined) el.remove(); };
+  el.onclick = (e) => {
+    const av = e.target.closest?.("[data-av]")?.dataset.av;
+    if (av) { // pick it: ring it, keep it, tell the page
+      try { localStorage.setItem("prerunAvatar", av); } catch { /* private mode */ }
+      for (const b of el.querySelectorAll("[data-av]")) { const on = b.dataset.av === av; b.style.borderColor = on ? "#22344d" : "#fffdf8"; b.style.transform = `scale(${on ? 1.08 : 1})`; }
+      dispatchEvent(new CustomEvent("prerun:avatar", { detail: av })); return;
+    }
+    const l = e.target.dataset?.l; if (l && l !== lang) setLang(l); else if (e.target === el || e.target.dataset?.x !== undefined) el.remove();
+  };
+  el.querySelector(`[data-av="${mine}"]`)?.scrollIntoView({ inline: "center", block: "nearest" });
 }
