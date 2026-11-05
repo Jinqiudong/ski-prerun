@@ -1,9 +1,10 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=8";
-import { makeEntrance } from "./entrance.js?v=14";
+import { makeEntrance } from "./entrance.js?v=17";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -38,14 +39,18 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true 
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
-scene.add(new THREE.HemisphereLight(0xdfeaff, 0x8a96a8, 1.6));
-const sun = new THREE.DirectionalLight(0xfff3e2, 2.4);
-sun.position.set(2, 4, 3); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
-Object.assign(sun.shadow.camera, { left: -2, right: 2, top: 2, bottom: -2 });
-scene.add(sun);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 80);
+// Light: a soft studio environment for the fabrics and helmets, a cool sky from above, a warm low sun that
+// follows the rider (so their shadow is always there), and a pale rim from behind to cut them from the snow.
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.45;
+scene.add(new THREE.HemisphereLight(0xe4eeff, 0x9aa6b6, 1.1));
+const sun = new THREE.DirectionalLight(0xfff0dc, 2.6);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02; sun.shadow.radius = 4;
+Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 30 });
+scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight(0xdfe9ff, 1.3); rim.position.set(-3, 3, -6); scene.add(rim);
 const disc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 48), new THREE.MeshStandardMaterial({ color: 0xf6f8fb, roughness: 0.9 }));
 disc.rotation.x = -Math.PI / 2; disc.receiveShadow = true;
 disc.visible = false; // the slope below is the ground now
@@ -58,7 +63,7 @@ function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight * 0.56;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.45, 6.4); camera.lookAt(0, 0.82, 0);
+  camera.position.set(0, 1.3, 5.6); camera.lookAt(0, 0.88, 0);
 }
 addEventListener("resize", resize); resize();
 // Drag to turn the rider round; on the pick page a quick swipe goes to the next friend and a tap runs their
@@ -82,11 +87,16 @@ function enter() {
   if (!rider || editing) return;
   entrance.start(ROUTE_OF[shownChar?.fav] || "A", rider, turntable);
 }
+const look = new THREE.Vector3(0, 0.88, 0);
 window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; } };
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (rider) { rider.step(dt); entrance.step(dt); }
+  // the sun and its shadow camera ride along with the rider
+  const at = turntable.position; sun.position.set(at.x + 3, at.y + 6, at.z + 4); sun.target.position.copy(at);
+  // the camera leans a little toward the rider while they come in, and settles back on them
+  look.lerp(new THREE.Vector3(at.x * 0.35, 0.88 + Math.max(0, at.y) * 0.5, at.z * 0.15), 1 - Math.exp(-dt * 3)); camera.lookAt(look);
   renderer.render(scene, camera);
 });
 
