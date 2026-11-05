@@ -30,7 +30,7 @@ const CSS = `
 
 // From the next trip: who flies from where (one plane per city), its name and first day.
 async function flights(tr) {
-  const { AIRPORTS } = await import("./trips.js?v=19"), [dla, dlo] = AIRPORTS.DEN;
+  const { AIRPORTS } = await import("./trips.js?v=20"), [dla, dlo] = AIRPORTS.DEN;
   const codes = [...new Set((tr?.people || []).map((p) => (typeof p === "string" ? "" : p.from)).filter((c) => AIRPORTS[c] && c !== "DEN"))].slice(0, 5);
   // each plane comes in from its city's side of Denver (north up)
   const froms = codes.map((c) => { const [a, b] = AIRPORTS[c], x = (b - dlo) * Math.cos(dla * Math.PI / 180), y = a - dla, l = Math.hypot(x, y) || 1; return [x / l, y / l]; });

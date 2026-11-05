@@ -111,12 +111,6 @@ const CSS = `
 .pl .sec .si { width: 26px; height: 26px; margin: -4px -2px -4px 0; }
 .pl .tstamp { position: absolute; width: 64px; height: 64px; right: 4px; top: -16px; transform: rotate(10deg); pointer-events: none; filter: drop-shadow(0 3px 4px rgba(90,70,40,.2)); z-index: 2; }
 .pl .tstamp.big { width: 84px; height: 84px; right: 0; top: 0; }
-.pl .days7 { display: grid; gap: 8px; }
-.pl .days7 > div { display: grid; grid-template-columns: 54px 38px 1fr; align-items: center; gap: 8px; padding: 8px 10px; background: #fdfbf6; box-shadow: 0 2px 5px rgba(90,70,40,.08); }
-.pl .days7 small { font-family: Oswald, sans-serif; font-size: 10px; letter-spacing: .12em; color: ${C.mute}; line-height: 1.3; }
-.pl .days7 b { font: 600 16px ${SERIF}; color: ${C.ink}; display: block; } .pl .days7 span { font-size: 13px; color: #6f675e; }
-.pl .days7 .ic { width: 38px; height: 38px; }
-.pl .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .pl .chips span { font-size: 12px; padding: 2px 9px; border: 1px solid #cbbfa9; border-radius: 999px; color: ${C.ink}; }
 .pl .sec::after { content: ""; flex: 1; height: 1px; background: #d9cdb9; }
 .pl .back { font-family: ${SERIF}; font-size: 16px; color: ${C.mute}; background: none; border: 0; padding: 0; margin-bottom: 8px; cursor: pointer; }
 .pl button { cursor: pointer; }
@@ -197,7 +191,6 @@ const CSS = `
 .pl .triprow .bp { position: relative; }
 .pl .triprow .count { position: absolute; left: 34%; top: 54px; font-family: ${SERIF}; font-size: 14px; color: ${C.red}; border: 1px solid ${C.red}; border-radius: 999px; padding: 0 8px; transform: rotate(-4deg); background: ${C.card}; }
 /* Form */
-.pl .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .pl .chip { font-family: ${SERIF}; font-size: 16px; font-weight: 600; color: ${C.ink}; background: ${C.card}; border: 1px solid #cbbfa9; border-radius: 6px; padding: 8px 14px; box-shadow: 0 3px 6px rgba(90,70,40,.1); }
 .pl .chip.on { background: ${C.ink}; border-color: ${C.ink}; color: #fffdf8; }
 .pl .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -321,21 +314,6 @@ export class Trips {
     this.box.scrollTop = 0;
   }
 
-  // The trip day by day: fly in and drive up, the riding days (where, as far as we know), the way home,
-  // and what to pack before you go.
-  daysHTML(tr, maybe) {
-    const len = between(tr.from, tr.to) + 1, where = maybe.length ? maybe.map((id) => this.name(id)).join(" / ") : t("看雪定山"), rows = [];
-    for (let i = 0; i < len; i++) {
-      const d = plus(tr.from, i), first = i === 0 && len > 1, last = i === len - 1 && len > 1;
-      const [icon, what, note] = first ? ["trailmap", EN_ON ? "Fly in, drive up" : "飞到 Denver，开车上山", EN_ON ? "check in, rent gear, early night" : "入住、取装备、早点睡"]
-        : last ? ["lodge", EN_ON ? "Last laps, head home" : "最后几趟，回程", EN_ON ? "pack the car by noon" : "中午前收拾好行李"]
-        : ["snowboard", EN_ON ? `Ride day ${i}` : `滑雪日 ${i}`, where];
-      rows.push(`<div><small>${fmt(d)}<br>${WK[day0(d).getDay()]}</small>${ICON(icon)}<div><b>${what}</b><span translate="no">${esc(note)}</span></div></div>`);
-    }
-    rows.push(`<div><small>${EN_ON ? "BEFORE" : "出发前"}</small>${ICON("packing")}<div><b>${EN_ON ? "Packing list" : "装备清单"}</b><div class="chips">${GEAR[EN_ON ? "en" : "zh"].map((g) => `<span>${esc(g)}</span>`).join("")}</div></div></div>`);
-    return rows.join("");
-  }
-
   // ---- One trip.
   show(tr, shared = false) {
     const now = today(), n = between(now, tr.from), len = between(tr.from, tr.to) + 1, maybe = this.maybeOf(tr), groups = this.groups(tr);
@@ -348,7 +326,6 @@ export class Trips {
       ${SEC("resorts", t("可能去的山"))}<div class="tickets">${maybe.map((id) => this.ticketHTML(id)).join("")}</div>
       ${tr.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
       ${SEC("season", t("日子"))}<div class="cal"></div>
-      ${SEC("trailmap", t("每一天"))}<div class="days7">${this.daysHTML(tr, maybe)}</div>
       ${SEC("av_rider", t("一起滑的人"))}<div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
       <div class="acts">${shared ? `<button class="ghostbtn main keep">${t("存到我的行程")}</button>` : `<button class="ghostbtn main share">${t("🔗 分享给朋友")}</button><button class="ghostbtn edit">${t("改一改")}</button><button class="ghostbtn del">${t("删掉")}</button>`}</div>`;
     this.deck(tr, this.box.querySelector(".deck"));
