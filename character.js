@@ -38,10 +38,12 @@ export async function makeCharacter(tpl) {
     root, tpl, bones,
     set(ch) { applyCharacter(root, CFG.templates[tpl], ch); },
     // A pose holds its frame at 1 s; a trick plays on a loop. Crossfade between them.
-    play(name) {
+    // { once, dur }: play it through once (stretched to dur seconds) and hold the last frame.
+    play(name, { once = false, dur = 0 } = {}) {
       const clip = clips[name]; if (!clip) return;
       const a = mixer.clipAction(clip); held = POSES.some(([n]) => n === name);
-      a.reset(); a.setLoop(THREE.LoopRepeat, Infinity); a.timeScale = held ? 0 : 1; if (held) a.time = 1;
+      a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once;
+      a.timeScale = held ? 0 : dur ? clip.duration / dur : 1; if (held) a.time = 1;
       a.play(); if (action && action !== a) action.crossFadeTo(a, 0.25, false); action = a; C.current = name;
     },
     // Alive while standing: a slow breath in the chest, the weight shifting, the head looking about.

@@ -2,7 +2,8 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
-import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=4";
+import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=5";
+import { makeEntrance } from "./entrance.js?v=6";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -47,10 +48,12 @@ Object.assign(sun.shadow.camera, { left: -2, right: 2, top: 2, bottom: -2 });
 scene.add(sun);
 const disc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 48), new THREE.MeshStandardMaterial({ color: 0xf6f8fb, roughness: 0.9 }));
 disc.rotation.x = -Math.PI / 2; disc.receiveShadow = true;
+disc.visible = false; // the slope below is the ground now
 scene.add(disc);
+const entrance = makeEntrance(scene);
 const turntable = new THREE.Group();
 scene.add(turntable);
-let rider = null, spin = 0.6, drag = null;
+let rider = null, spin = 0, drag = null;
 function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight * 0.56;
   renderer.setSize(w, h, false);
@@ -58,19 +61,32 @@ function resize() {
   camera.position.set(0, 1.45, 6.4); camera.lookAt(0, 0.82, 0);
 }
 addEventListener("resize", resize); resize();
-canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, a: turntable.rotation.y }; });
-addEventListener("pointermove", (e) => { if (drag) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
-addEventListener("pointerup", () => { drag = null; });
-let last = performance.now(), favAt = 6;
+// Drag to turn the rider round; on the pick page a quick swipe goes to the next friend and a tap runs their
+// entrance again.
+canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, a: turntable.rotation.y, t: performance.now() }; });
+addEventListener("pointermove", (e) => { if (drag && !entrance.running) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
+addEventListener("pointerup", (e) => {
+  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y, quick = performance.now() - drag.t < 400; drag = null;
+  if (editing || $("pickView").hidden) return;
+  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { nextRider(dx < 0 ? 1 : -1); return; }
+  if (quick && Math.hypot(dx, dy) < 8) enter();
+});
+// Swipe: the next (or previous) of the suggestions and your own.
+function nextRider(d) {
+  const ids = [...Object.keys(OUTFITS), ...st.riders.map((r) => r.id)], i = ids.indexOf(chosen().id);
+  st.rider = ids[(i + d + ids.length) % ids.length]; save(); renderPick(); show(chosen());
+}
+const ROUTE_OF = Object.fromEntries(Object.entries(SIGNATURE).map(([k, c]) => [c, k]));
+// The shown rider's entrance: their favourite move's route (a carve's, a spin's, an S, a kicker), else the carve.
+function enter() {
+  if (!rider || editing) return;
+  entrance.start(ROUTE_OF[shownChar?.fav] || "A", rider, turntable);
+}
+window.__stage = { scene, camera, turntable, entrance };
+let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (!drag) turntable.rotation.y += spin * dt;
-  if (rider) {
-    rider.step(dt);
-    // On the pick page the rider holds the board, and now and then shows their favourite trick.
-    const fav = shownChar?.fav;
-    if (!editing && fav && (favAt -= dt) < 0) { if (rider.current === fav) { rider.play("Board_Hold"); favAt = 7; } else { rider.play(fav); favAt = 3.5; } }
-  }
+  if (rider) { rider.step(dt); entrance.step(dt); }
   renderer.render(scene, camera);
 });
 
@@ -81,9 +97,11 @@ const holder = new THREE.Group(); turntable.add(holder);
 async function show(r, pose) {
   const ch = r.ch || charOf(r);
   const c = await (chars[ch.tpl] ||= makeCharacter(ch.tpl));
-  if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); rider.play(pose || "Board_Hold"); }
-  else if (pose) rider.play(pose);
+  const changed = rider !== c || shownChar?.board !== ch.board || shownChar?.fav !== ch.fav || shownChar !== ch && !editing;
+  if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); }
   c.set(ch); shownChar = ch;
+  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
+  else if (pose === "enter" || changed) enter();
   holder.scale.x = stanceOf(r) === "goofy" ? -1 : 1;
   holder.position.y = 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
   $("status").hidden = true;
@@ -157,7 +175,7 @@ function openEdit() {
     $("parts").append(wrap);
   }
   $("name").value = draft.name;
-  editing = true; paneTab("身材");
+  editing = true; paneTab("身材"); show(draft, "Board_Hold");
   view("edit");
 }
 // The edit page's four tabs: body, clothes, colours (the swatches above), and moves.
@@ -199,7 +217,7 @@ for (const b of $("stance").children) b.onclick = () => {
   st.stances = { ...(st.stances || {}), [cur.id]: b.dataset.s }; save();
   renderPick(); show(chosen());
 };
-$("cancelBtn").onclick = () => { editing = false; view("pick"); show(chosen(), "Board_Hold"); };
+$("cancelBtn").onclick = () => { editing = false; view("pick"); show(chosen(), "enter"); };
 $("saveBtn").onclick = () => {
   const name = $("name").value.trim();
   if (!name) { $("name").focus(); $("name").placeholder = t("先取个名字"); return; }
@@ -207,7 +225,7 @@ $("saveBtn").onclick = () => {
   if (draft.id) Object.assign(st.riders.find((r) => r.id === draft.id), draft);
   else { draft.id = "r" + Date.now().toString(36); st.riders.push(draft); }
   st.rider = draft.id; save(); editing = false;
-  view("pick"); rider?.play("Board_Hold"); renderPick(); show(chosen());
+  view("pick"); renderPick(); show(chosen(), "enter");
 };
 
 // ---- Tabs: the rider, the resorts (a map of them to conquer), the journal.
