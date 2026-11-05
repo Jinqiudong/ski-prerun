@@ -1,0 +1,301 @@
+{
+ "templates": {
+  "F": {
+   "height": 164,
+   "hmin": 155,
+   "hmax": 172,
+   "base": {
+    "weight": 45,
+    "muscle": 50,
+    "jease": 74,
+    "jlen": -3.5,
+    "pease": 70
+   }
+  },
+  "M": {
+   "height": 181,
+   "hmin": 172,
+   "hmax": 188,
+   "base": {
+    "weight": 45,
+    "muscle": 50,
+    "jease": 74,
+    "jlen": -3.5,
+    "pease": 70
+   }
+  }
+ },
+ "sliders": [
+  {
+   "key": "weight",
+   "label": "体重",
+   "morph": "weight",
+   "lo": 28,
+   "hi": 62
+  },
+  {
+   "key": "muscle",
+   "label": "肌肉",
+   "morph": "muscle",
+   "lo": 30,
+   "hi": 69
+  },
+  {
+   "key": "jease",
+   "label": "外套宽松",
+   "morph": "jacket_ease",
+   "lo": 61,
+   "hi": 88
+  },
+  {
+   "key": "jlen",
+   "label": "外套长度",
+   "morph": "jacket_length",
+   "lo": -6,
+   "hi": -1
+  },
+  {
+   "key": "pease",
+   "label": "裤子宽松",
+   "morph": "pants_ease",
+   "lo": 47,
+   "hi": 92
+  }
+ ],
+ "presets": {
+  "A": {
+   "tpl": "F",
+   "height": 158,
+   "weight": 28,
+   "muscle": 30,
+   "jease": 74,
+   "jlen": -6,
+   "pease": 67,
+   "parts": {
+    "hair": true,
+    "hood": true,
+    "vest": false,
+    "visor": false,
+    "stickers": false,
+    "grid": false
+   },
+   "glossyHelmet": false,
+   "colors": {
+    "MAT_jacket": "#525a42",
+    "MAT_pants": "#c9bfac",
+    "MAT_helmet": "#2b2b2e",
+    "MAT_goggle_frame": "#26262a",
+    "MAT_lens": "#4d5ce0",
+    "MAT_goggle_strap": "#d9d2bf",
+    "MAT_mitten": "#e3dccb",
+    "MAT_mitten_grip": "#2b2b2e",
+    "MAT_boot_panel": "#1d1d20",
+    "MAT_boot_textile": "#3b3b40",
+    "MAT_boot_sole": "#2a2a2c",
+    "MAT_hair": "#3f2a1f",
+    "MAT_vest": "#17171a",
+    "MAT_vest_lining": "#e2531f"
+   }
+  },
+  "B": {
+   "tpl": "M",
+   "height": 180,
+   "weight": 62,
+   "muscle": 58,
+   "jease": 88,
+   "jlen": -1,
+   "pease": 92,
+   "parts": {
+    "hair": false,
+    "hood": true,
+    "vest": false,
+    "visor": false,
+    "stickers": false,
+    "grid": true
+   },
+   "glossyHelmet": false,
+   "colors": {
+    "MAT_jacket": "#18181b",
+    "MAT_pants": "#1a1a1d",
+    "MAT_helmet": "#151517",
+    "MAT_goggle_frame": "#c9b58f",
+    "MAT_lens": "#4d5ce0",
+    "MAT_goggle_strap": "#c9b58f",
+    "MAT_mitten": "#1b1b1d",
+    "MAT_mitten_grip": "#1b1b1d",
+    "MAT_boot_panel": "#8fb8e6",
+    "MAT_boot_textile": "#e8ecf0",
+    "MAT_boot_sole": "#d5dae0",
+    "MAT_hair": "#3f2a1f",
+    "MAT_vest": "#17171a",
+    "MAT_vest_lining": "#e2531f"
+   }
+  },
+  "C": {
+   "tpl": "F",
+   "height": 168,
+   "weight": 54,
+   "muscle": 68,
+   "jease": 65,
+   "jlen": -3,
+   "pease": 47,
+   "parts": {
+    "hair": true,
+    "hood": true,
+    "vest": false,
+    "visor": true,
+    "stickers": false,
+    "grid": false
+   },
+   "glossyHelmet": false,
+   "colors": {
+    "MAT_jacket": "#e0157f",
+    "MAT_pants": "#d61a7b",
+    "MAT_helmet": "#1b1b1e",
+    "MAT_goggle_frame": "#cbbd9c",
+    "MAT_lens": "#1d1d22",
+    "MAT_goggle_strap": "#cbbd9c",
+    "MAT_mitten": "#d8cdb3",
+    "MAT_mitten_grip": "#1b1b1d",
+    "MAT_boot_panel": "#3e4046",
+    "MAT_boot_textile": "#e9e9e9",
+    "MAT_boot_sole": "#efefef",
+    "MAT_hair": "#3f2a1f",
+    "MAT_vest": "#17171a",
+    "MAT_vest_lining": "#e2531f"
+   }
+  },
+  "D": {
+   "tpl": "M",
+   "height": 182,
+   "weight": 50,
+   "muscle": 69,
+   "jease": 61,
+   "jlen": -2,
+   "pease": 90,
+   "parts": {
+    "hair": false,
+    "hood": true,
+    "vest": true,
+    "visor": false,
+    "stickers": true,
+    "grid": false
+   },
+   "glossyHelmet": true,
+   "colors": {
+    "MAT_jacket": "#e6e9ec",
+    "MAT_pants": "#151517",
+    "MAT_helmet": "#d6c8a0",
+    "MAT_goggle_frame": "#1b1b1d",
+    "MAT_lens": "#ff7a1a",
+    "MAT_goggle_strap": "#2a1d1d",
+    "MAT_mitten": "#1b1b1d",
+    "MAT_mitten_grip": "#1b1b1d",
+    "MAT_boot_panel": "#5fa2e3",
+    "MAT_boot_textile": "#f0f2f4",
+    "MAT_boot_sole": "#5fa2e3",
+    "MAT_hair": "#3f2a1f",
+    "MAT_vest": "#17171a",
+    "MAT_vest_lining": "#e2531f"
+   }
+  }
+ },
+ "clips": [
+  [
+   "技巧",
+   [
+    [
+     "Anim_Ollie",
+     "Ollie 起跳落地"
+    ],
+    [
+     "Anim_Indy_Air",
+     "Indy 抓板跳"
+    ],
+    [
+     "Anim_Method_Air",
+     "Method 抓板跳"
+    ],
+    [
+     "Anim_Nose_Press",
+     "压板头"
+    ],
+    [
+     "Anim_Tail_Press",
+     "压板尾"
+    ],
+    [
+     "Anim_Carve_Ref",
+     "欧式刻滑"
+    ],
+    [
+     "Anim_Carve_Spin_Toe",
+     "刻平陀螺·前刃"
+    ],
+    [
+     "Anim_Pop_Ref",
+     "坡上跳跃"
+    ],
+    [
+     "Anim_Toe_Slide_Ref",
+     "平花·前刃倒滑"
+    ]
+   ]
+  ],
+  [
+   "滑行",
+   [
+    [
+     "Anim_Chill_Cruise",
+     "chill 滑行"
+    ],
+    [
+     "Anim_Carve_S",
+     "立刃 S 弯"
+    ],
+    [
+     "Anim_Skid_S",
+     "搓雪 S 弯"
+    ]
+   ]
+  ],
+  [
+   "场景",
+   [
+    [
+     "Anim_Idle",
+     "山顶待机"
+    ],
+    [
+     "Anim_Skate_Push",
+     "单脚蹬地"
+    ],
+    [
+     "Anim_Chairlift_Look",
+     "坐缆车·左右看"
+    ],
+    [
+     "Anim_Lift_Exit",
+     "下缆车滑走"
+    ]
+   ]
+  ],
+  [
+   "展示",
+   [
+    [
+     "Board_Hold",
+     "抱板"
+    ],
+    [
+     "Sit_Snow",
+     "坐雪地"
+    ],
+    [
+     "Stand_Idle",
+     "自然站立"
+    ]
+   ]
+  ]
+ ]
+}

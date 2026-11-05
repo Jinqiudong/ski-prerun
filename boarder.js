@@ -29,11 +29,11 @@ export const PART_ZH = { jacket: "外套", pants: "雪裤", helmet: "头盔", le
 // Outfit templates for Rider A: pick one to wear, or start from one and save your own. For now these are
 // colourways of the one model; the owner is modelling four preset outfits (on a man's and a woman's base)
 // that will take their place.
-export const OUTFITS = {
-  o_pine: { zh: "松林", en: "Pine", colors: {} }, // as made: olive jacket, ivory pants
-  o_night: { zh: "夜航", en: "Night Flight", colors: { jacket: "#2f3a4c", pants: "#c5c4b6", helmet: "#d9d6ce", lens: "#b8873e" } },
-  o_wine: { zh: "热红酒", en: "Mulled Wine", colors: { jacket: "#8e4a36", pants: "#dcd7cc", helmet: "#3b3d40", lens: "#ad5599" } },
-  o_glacier: { zh: "冰川", en: "Glacier", colors: { jacket: "#7b8a96", pants: "#3b3d40", helmet: "#d9d6ce", lens: "#7f9fb8" } },
+export const OUTFITS = { // ch: the character template preset each is (character.js); colours are its parts', for the ride
+  o_pine: { zh: "松林", en: "Pine", ch: "A", colors: { jacket: "#525a42", pants: "#c9bfac", helmet: "#2b2b2e", lens: "#4d5ce0", gloves: "#e3dccb", boots: "#1d1d20" } },
+  o_night: { zh: "夜航", en: "Night Flight", ch: "B", colors: { jacket: "#18181b", pants: "#1a1a1d", helmet: "#151517", lens: "#4d5ce0", gloves: "#1b1b1d", boots: "#8fb8e6" } },
+  o_wine: { zh: "热红酒", en: "Mulled Wine", ch: "C", colors: { jacket: "#e0157f", pants: "#d61a7b", helmet: "#1b1b1e", lens: "#1d1d22", gloves: "#d8cdb3", boots: "#3e4046" } },
+  o_glacier: { zh: "冰川", en: "Glacier", ch: "D", colors: { jacket: "#e6e9ec", pants: "#151517", helmet: "#d6c8a0", lens: "#ff7a1a", gloves: "#1b1b1d", boots: "#5fa2e3" } },
 };
 
 // The rider saved on this phone (see start.html): { base, name, colors }. Falls back to Rider A as made.

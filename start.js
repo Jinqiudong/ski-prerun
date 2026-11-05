@@ -1,7 +1,8 @@
 // The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
-import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
+import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
+import { CFG, PART_LABEL, POSES, TRICKS, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=2";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -25,7 +26,9 @@ const st = load();
 st.riders = (st.riders || []).filter((r) => r.base in RIDERS); // riders on a base model since removed are dropped
 delete st.kind; // everyone snowboards now
 const save = () => localStorage.setItem("prerun", JSON.stringify(st));
-const template = (k) => ({ id: k, base: "rider_a", name: EN_ON ? OUTFITS[k].en : OUTFITS[k].zh, colors: { ...OUTFITS[k].colors }, isDefault: true });
+const template = (k) => ({ id: k, base: "rider_a", name: EN_ON ? OUTFITS[k].en : OUTFITS[k].zh, colors: { ...OUTFITS[k].colors }, ch: presetChar(OUTFITS[k].ch), isDefault: true });
+// Every rider is a character (template, body, fit, parts, colours); outfits saved before that get one from A, in their colours.
+const charOf = (r) => { if (r.ch) return r.ch; const ch = presetChar("A"); for (const [p, c] of Object.entries(r.colors || {})) setPartColor(ch, p, c); return ch; };
 const chosen = () => st.riders.find((r) => r.id === st.rider) || template(OUTFITS[st.rider] ? st.rider : "o_pine");
 
 // ---- The 3D preview: the rider on a little snow disc, turning slowly; drag to turn it yourself.
@@ -52,35 +55,38 @@ function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight * 0.56;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.3, 5.4); camera.lookAt(0, 0.62, 0);
+  camera.position.set(0, 1.45, 6.4); camera.lookAt(0, 0.82, 0);
 }
 addEventListener("resize", resize); resize();
 canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, a: turntable.rotation.y }; });
 addEventListener("pointermove", (e) => { if (drag) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
 addEventListener("pointerup", () => { drag = null; });
-let last = performance.now();
+let last = performance.now(), favAt = 6;
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!drag) turntable.rotation.y += spin * dt;
-  if (rider) idleBoarder(rider);
+  if (rider) {
+    rider.step(dt);
+    // On the pick page the rider holds the board, and now and then shows their favourite trick.
+    const fav = shownChar?.fav;
+    if (!editing && fav && (favAt -= dt) < 0) { if (rider.current === fav) { rider.play("Board_Hold"); favAt = 7; } else { rider.play(fav); favAt = 3.5; } }
+  }
   renderer.render(scene, camera);
 });
 
-// Regular (left foot forward) or goofy, per rider; the model is rebuilt to face the other way.
+// Regular (left foot forward) or goofy, per rider: the character is mirrored.
 const stanceOf = (r) => ((st.stances || {})[r.id] === "goofy" ? "goofy" : "regular");
-let shownStance = null;
-async function show(r) {
-  await loadBoarder(RIDERS[r.base].file);
-  if (rider && shownStance !== stanceOf(r)) { turntable.remove(rider); rider = null; }
-  if (!rider) {
-    if (r.id) { st.rider = r.id; save(); } // boarderModel reads the stance of the saved rider
-    shownStance = stanceOf(r);
-    rider = boarderModel();
-    rider.rotation.y = Math.PI / 2; // the board across the view, the rider facing the camera
-    turntable.add(rider);
-    $("status").hidden = true;
-  }
-  dressRider(rider.userData.model, r.base, r.colors);
+const chars = {}; let shownChar = null, editing = false;
+const holder = new THREE.Group(); turntable.add(holder);
+async function show(r, pose) {
+  const ch = r.ch || charOf(r);
+  const c = await (chars[ch.tpl] ||= makeCharacter(ch.tpl));
+  if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); rider.play(pose || "Board_Hold"); }
+  else if (pose) rider.play(pose);
+  c.set(ch); shownChar = ch;
+  holder.scale.x = stanceOf(r) === "goofy" ? -1 : 1;
+  holder.position.y = 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
+  $("status").hidden = true;
   $("who").textContent = r.name;
 }
 
@@ -115,9 +121,11 @@ function renderPick() {
     $("mine").append(b);
   }
   for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
-  $("editBtn").innerHTML = `<img src="${ICON("palette")}" alt="">${t("改颜色")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
+  $("editBtn").innerHTML = `<img src="${ICON("palette")}" alt="">${t("捏人")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
   // The characters: the base bodies outfits go on. Rider A for now; the man's is still being made.
-  $("chars").innerHTML = `<button class="card on"><b>${t("女")}</b></button><button class="card" disabled><b>${t("男")}</b><small>${t("制作中")}</small></button>`;
+  const tplNow = charOf(cur).tpl;
+  $("chars").innerHTML = ["F", "M"].map((k) => `<button class="card${k === tplNow ? " on" : ""}" data-t="${k}"><b>${t(k === "F" ? "女" : "男")}</b></button>`).join("");
+  for (const b of $("chars").children) b.onclick = () => { const k = Object.keys(OUTFITS).find((o) => OUTFITS[o].ch && CFG.presets[OUTFITS[o].ch].tpl === b.dataset.t); st.rider = k; save(); renderPick(); show(chosen()); };
 }
 const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -125,11 +133,12 @@ const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", 
 let draft = null, marks = [];
 function openEdit() {
   const cur = chosen();
-  draft = { id: cur.isDefault ? null : cur.id, base: cur.base, name: cur.isDefault ? "" : cur.name, colors: { ...cur.colors } };
+  draft = { id: cur.isDefault ? null : cur.id, base: cur.base, name: cur.isDefault ? "" : cur.name, colors: { ...cur.colors }, ch: JSON.parse(JSON.stringify(charOf(cur))) };
+  const fromCh = JSON.parse(JSON.stringify(draft.ch));
   const parts = RIDERS[draft.base].parts, from = { ...cur.colors }; marks = [];
   // shuffle: a colour from each part's list; reset: back to what you started from
-  $("shuffleBtn").onclick = () => { for (const [part, p] of Object.entries(parts)) { const l = [p.color, ...(SWATCHES[part] || [])]; draft.colors[part] = l[Math.floor(Math.random() * l.length)]; } marks.forEach((m) => m()); show(draft); };
-  $("resetBtn").onclick = () => { draft.colors = { ...from }; marks.forEach((m) => m()); show(draft); };
+  $("shuffleBtn").onclick = () => { for (const [part, p] of Object.entries(parts)) { const l = [p.color, ...(SWATCHES[part] || [])]; draft.colors[part] = l[Math.floor(Math.random() * l.length)]; setPartColor(draft.ch, part, draft.colors[part]); } marks.forEach((m) => m()); show(draft); };
+  $("resetBtn").onclick = () => { draft.colors = { ...from }; draft.ch = JSON.parse(JSON.stringify(fromCh)); paneTab(curTab); marks.forEach((m) => m()); show(draft); };
   $("parts").innerHTML = "";
   for (const [part, p] of Object.entries(parts)) {
     const wrap = document.createElement("div");
@@ -141,14 +150,46 @@ function openEdit() {
     for (const c of list) {
       const s = document.createElement("button");
       s.className = "sw"; s.style.background = c; s.dataset.c = c;
-      s.onclick = () => { draft.colors[part] = c; mark(); show(draft); };
+      s.onclick = () => { draft.colors[part] = c; setPartColor(draft.ch, part, c); mark(); show(draft); };
       row.append(s);
     }
     mark(); marks.push(mark);
     $("parts").append(wrap);
   }
   $("name").value = draft.name;
+  editing = true; paneTab("身材");
   view("edit");
+}
+// The edit page's four tabs: body, clothes, colours (the swatches above), and moves.
+let curTab = "身材";
+const TABS_E = ["身材", "衣服", "颜色", "动作"];
+const fmts = {};
+const slider = (key, label, lo, hi, step, fmt) => (fmts[key] = fmt, `<label class="sl"><span>${t(label)}<b data-v="${key}">${fmt(draft.ch[key])}</b></span><input type="range" data-k="${key}" min="${lo}" max="${hi}" step="${step}" value="${draft.ch[key]}"></label>`);
+const word = (lo, hi, a, b, c) => (v) => t(v < lo + (hi - lo) / 3 ? a : v > hi - (hi - lo) / 3 ? c : b);
+function paneTab(name) {
+  curTab = name;
+  $("etabs").innerHTML = TABS_E.map((k) => `<button class="${k === name ? "on" : ""}">${t(k)}</button>`).join("");
+  for (const b of $("etabs").children) b.onclick = () => paneTab(TABS_E[[...$("etabs").children].indexOf(b)]);
+  const colours = name === "颜色"; $("parts").hidden = $("etools").hidden = !colours; $("epane").hidden = colours;
+  const ch = draft.ch, T = CFG.templates[ch.tpl], S = Object.fromEntries(CFG.sliders.map((x) => [x.key, x]));
+  const pane = $("epane");
+  if (name === "身材") pane.innerHTML = `<div class="chips">${["F", "M"].map((k) => `<button class="chip${ch.tpl === k ? " on" : ""}" data-tpl="${k}">${t(k === "F" ? "女" : "男")}</button>`).join("")}</div>
+    ${slider("height", "身高", T.hmin, T.hmax, 1, (v) => `${v} cm`)}
+    ${slider("weight", "体重", S.weight.lo, S.weight.hi, 1, word(S.weight.lo, S.weight.hi, "偏瘦", "适中", "偏壮"))}
+    ${slider("muscle", "肌肉", S.muscle.lo, S.muscle.hi, 1, word(S.muscle.lo, S.muscle.hi, "柔和", "普通", "结实"))}`;
+  if (name === "衣服") pane.innerHTML = `${slider("jease", "外套宽松", S.jease.lo, S.jease.hi, 1, word(S.jease.lo, S.jease.hi, "合身", "适中", "宽松"))}
+    ${slider("jlen", "外套长度", S.jlen.lo, S.jlen.hi, 0.5, word(S.jlen.lo, S.jlen.hi, "短", "适中", "长"))}
+    ${slider("pease", "裤子宽松", S.pease.lo, S.pease.hi, 1, word(S.pease.lo, S.pease.hi, "合身", "适中", "宽松"))}
+    <div class="chips">${Object.entries(PART_LABEL).map(([k, l]) => `<button class="chip${ch.parts[k] ? " on" : ""}" data-part="${k}">${t(l)}</button>`).join("")}</div>`;
+  if (name === "动作") pane.innerHTML = `<div class="chips">${POSES.map(([k, l]) => `<button class="chip${rider?.current === k ? " on" : ""}" data-play="${k}">${t(l)}</button>`).join("")}</div>
+    <div class="tricks">${TRICKS.map(([k, l]) => `<button class="trick${rider?.current === k ? " on" : ""}" data-play="${k}">${ch.fav === k ? "<i>★</i>" : ""}${t(l)}</button>`).join("")}</div>
+    <p class="hint">${t("点一个看动作；再点一次正在播的 trick，设成你最爱的（选人页会时不时做一下）")}</p>`;
+  for (const i of pane.querySelectorAll("input[type=range]")) i.oninput = () => { const k = i.dataset.k; ch[k] = +i.value; pane.querySelector(`[data-v="${k}"]`).textContent = fmts[k](ch[k]); show(draft); };
+  for (const b of pane.querySelectorAll("[data-tpl]")) b.onclick = () => { if (ch.tpl === b.dataset.tpl) return; const k = Object.keys(OUTFITS).find((o) => CFG.presets[OUTFITS[o].ch].tpl === b.dataset.tpl), pre = presetChar(OUTFITS[k].ch);
+    Object.assign(ch, { tpl: pre.tpl, height: pre.height }); ch.parts.hair = pre.parts.hair; paneTab(name); show(draft); };
+  for (const b of pane.querySelectorAll("[data-part]")) b.onclick = () => { ch.parts[b.dataset.part] = !ch.parts[b.dataset.part]; paneTab(name); show(draft); };
+  for (const b of pane.querySelectorAll("[data-play]")) b.onclick = () => { const k = b.dataset.play;
+    if (rider?.current === k && TRICKS.some(([n]) => n === k)) ch.fav = ch.fav === k ? null : k; else rider?.play(k); paneTab(name); };
 }
 $("editBtn").onclick = openEdit;
 for (const b of $("stance").children) b.onclick = () => {
@@ -156,15 +197,15 @@ for (const b of $("stance").children) b.onclick = () => {
   st.stances = { ...(st.stances || {}), [cur.id]: b.dataset.s }; save();
   renderPick(); show(chosen());
 };
-$("cancelBtn").onclick = () => { view("pick"); show(chosen()); };
+$("cancelBtn").onclick = () => { editing = false; view("pick"); show(chosen(), "Board_Hold"); };
 $("saveBtn").onclick = () => {
   const name = $("name").value.trim();
   if (!name) { $("name").focus(); $("name").placeholder = t("先取个名字"); return; }
   draft.name = name;
   if (draft.id) Object.assign(st.riders.find((r) => r.id === draft.id), draft);
   else { draft.id = "r" + Date.now().toString(36); st.riders.push(draft); }
-  st.rider = draft.id; save();
-  view("pick"); renderPick(); show(chosen());
+  st.rider = draft.id; save(); editing = false;
+  view("pick"); rider?.play("Board_Hold"); renderPick(); show(chosen());
 };
 
 // ---- Tabs: the rider, the resorts (a map of them to conquer), the journal.
@@ -284,8 +325,8 @@ async function openJournal(r) {
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
   document.body.classList.toggle("editing", v === "edit");
-  $("headTitle").textContent = t({ pick: "选你的穿搭", edit: "改颜色", resort: "去哪个雪场" }[v]);
-  $("headSub").textContent = { pick: t("先选一套穿搭，再选雪场"), edit: t("改颜色，取个名字，保存到这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
+  $("headTitle").textContent = t({ pick: "选你的穿搭", edit: "捏人", resort: "去哪个雪场" }[v]);
+  $("headSub").textContent = { pick: t("先选一套穿搭，再选雪场"), edit: t("身材、衣服、颜色、动作，取个名字存在这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
 }
 
 renderPick();
