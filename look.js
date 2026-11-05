@@ -2430,7 +2430,7 @@ async function main() {
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
   const bubbleBtn = $("bubble");
-  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; $("bubbleHint").querySelector("span").textContent = open ? "轻点车罩 · 放下挡风" : "轻点车罩 · 收起"; };
+  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; $("bubbleHint").classList.toggle("down", !open); };
   bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
   // Tap the canopy itself to pull it down or push it up (a short tap, not a drag to look around). The first
   // time, a small note by the canopy says so.
@@ -2440,9 +2440,10 @@ async function main() {
   renderer.domElement.addEventListener("pointerup", (e) => {
     if (!tap0 || !HAS_BUBBLE || CABIN || arrived || Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) > 10 || performance.now() - tap0.t > 400) return;
     ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); rc.setFromCamera(ndc, camera);
-    if (rc.intersectObject(myBubble, true).length) { setBubble(bubbleWant < 0.5); try { localStorage.setItem("prerunBubbleTip", "1"); } catch { /* fine */ } $("bubbleHint").hidden = true; }
+    if (rc.intersectObject(myBubble, true).length) setBubble(bubbleWant < 0.5);
   });
-  let hintOn = TRIP && HAS_BUBBLE && !CABIN && !(() => { try { return localStorage.getItem("prerunBubbleTip"); } catch { return 1; } })();
+  $("bubbleHint").addEventListener("click", () => setBubble(bubbleWant < 0.5));
+  let hintOn = TRIP && HAS_BUBBLE && !CABIN;
   const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names };
@@ -2494,8 +2495,12 @@ async function main() {
     bubbleMatrix(bubbleOpen, myBubble.matrix);
     if (hintOn) { // the note sits under the canopy's middle, on screen
       if (arrived) { hintOn = false; $("bubbleHint").hidden = true; }
-      else { hb.setFromObject(myBubble.children[0]); hb.getCenter(hv).project(camera); const h = $("bubbleHint");
-        h.hidden = hv.z > 1; h.style.left = `${Math.min(innerWidth - 110, Math.max(110, (hv.x * 0.5 + 0.5) * innerWidth))}px`; h.style.top = `${(-hv.y * 0.5 + 0.5) * innerHeight}px`; } }
+      else { // the middle of the canopy as it looks on screen (its box's corners, projected; clipped to the screen)
+        hb.setFromObject(myBubble.children[0]); let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, behind = true;
+        for (let k = 0; k < 8; k++) { hv.set(k & 1 ? hb.max.x : hb.min.x, k & 2 ? hb.max.y : hb.min.y, k & 4 ? hb.max.z : hb.min.z).project(camera);
+          if (hv.z < 1) behind = false; x0 = Math.min(x0, hv.x); x1 = Math.max(x1, hv.x); y0 = Math.min(y0, hv.y); y1 = Math.max(y1, hv.y); }
+        const cx = (Math.max(-1, x0) + Math.min(1, x1)) / 2, cy = (Math.max(-1, y0) + Math.min(1, y1)) / 2, h = $("bubbleHint");
+        h.hidden = behind; h.style.left = `${(cx * 0.5 + 0.5) * innerWidth}px`; h.style.top = `${(-cy * 0.5 + 0.5) * innerHeight}px`; } }
 
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;

@@ -178,8 +178,10 @@
     #rbTime { position: absolute; top: -30px; left: 0; transform: translateX(-50%); font: 600 13px "Cormorant Garamond", serif; color: #22344d; background: rgba(253,251,246,.95); border-radius: 999px; padding: 1px 8px; box-shadow: 0 2px 6px rgba(40,50,70,.15); white-space: nowrap; pointer-events: none; }
     #rideBar .tr input { position: absolute; left: -10px; right: -10px; top: -6px; bottom: -6px; width: calc(100% + 20px); opacity: 0; margin: 0; cursor: pointer; }
     #bubble { display: none !important; }
-    #bubbleHint { position: fixed; z-index: 4; display: flex; align-items: center; gap: 6px; transform: translate(-50%, 12px); font: 600 13px "Noto Serif SC", serif; color: #22344d; background: rgba(253,251,246,.94); border-radius: 999px; padding: 3px 12px 3px 4px; box-shadow: 0 3px 8px rgba(40,50,70,.2); pointer-events: none; }
-    #bubbleHint[hidden] { display: none; } #bubbleHint img { width: 24px; height: 24px; }
+    /* the canopy's own button: just the wind, sitting on the canopy; tap it (or the canopy) to pull it down */
+    #bubbleHint { position: fixed; z-index: 4; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; transform: translate(-50%, -50%); background: rgba(253,251,246,.9); box-shadow: 0 3px 10px rgba(40,50,70,.25); display: grid; place-items: center; cursor: pointer; transition: opacity .3s; }
+    #bubbleHint[hidden] { display: none; } #bubbleHint img { width: 30px; height: 30px; }
+    #bubbleHint.down { opacity: .55; }
     body.riding #top #desc { display: none; }
     #rbPause .pl { display: none; } #rbPause.paused .pl { display: inline; } #rbPause.paused .ps { display: none; }
     #rideBar .play button svg { display: block; margin: auto; }
@@ -210,7 +212,7 @@
       <div class="tr"><i class="fill"></i><i class="knob"></i><span id="rbTime">0:00 / 0:00</span><input id="rbSeek" type="range" min="0" max="1000" value="0"></div>
       <button id="rbPause" aria-label="暂停"><img src="assets/icons/challenge.png?v=1" alt=""><svg viewBox="0 0 24 24" width="16" height="16"><path class="ps" d="M7 5h3.5v14H7z M13.5 5H17v14h-3.5z" fill="#fdfbf6"/><path class="pl" d="M8 5 L19 12 L8 19Z" fill="#fdfbf6"/></svg></button></div>
   </div>
-  <div id="bubbleHint" hidden><img src="assets/icons/windy.png?v=1" alt=""><span>轻点车罩 · 放下挡风</span></div>
+  <button id="bubbleHint" hidden aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span hidden></span></button>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
@@ -229,6 +231,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="look.js?v=94"></script>
+  <script type="module" src="look.js?v=96"></script>
 </body>
 </html>
