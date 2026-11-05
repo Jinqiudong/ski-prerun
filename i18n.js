@@ -85,8 +85,8 @@ export function t(zh, vars) {
 export function translatePage(root = document.body) {
   if (!EN_ON) return;
   const fix = (n) => {
-    if (n.nodeType === 3) { const k = n.nodeValue.trim(); if (k && EN[k]) n.nodeValue = n.nodeValue.replace(k, EN[k]); return; }
-    if (n.nodeType !== 1) return;
+    if (n.nodeType === 3) { const k = n.nodeValue.trim(); if (k && EN[k] && !n.parentElement?.closest('[translate="no"]')) n.nodeValue = n.nodeValue.replace(k, EN[k]); return; }
+    if (n.nodeType !== 1 || n.getAttribute("translate") === "no") return; // names people typed stay as they are
     if (n.placeholder && EN[n.placeholder]) n.placeholder = EN[n.placeholder];
     for (const c of n.childNodes) fix(c);
   };

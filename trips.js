@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=9";
-import { daysOf } from "./roadbook.js?v=4";
+import { t, EN_ON } from "./i18n.js?v=13";
+import { daysOf } from "./roadbook.js?v=5";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -86,6 +86,15 @@ const WX = {
   cloud: { icon: "☁", word: () => t("阴"), over: '<i class="fog"></i>', filter: "saturate(.45) brightness(1.05)" },
 };
 
+// The owner's painted icons (assets/icons/README.md): the day's weather, the stamps, the crew's faces.
+const ICON = (n, cls = "ic") => `<img class="${cls}" src="assets/icons/${n}.png?v=1" alt="">`;
+const wxIcon = (w) => {
+  if (!w) return null; const c = w.code;
+  if (w.cm >= 0.5 || [71, 73, 75, 77, 85, 86].includes(c)) return w.cm >= 10 || c === 75 || c === 86 ? "heavysnow" : c <= 2 ? "snowsun" : w.cm < 2 || c === 71 || c === 85 ? "lightsnow" : "snow";
+  return c === 0 ? "sunny" : c <= 2 ? "partly" : c === 45 || c === 48 ? "fog" : "cloudy";
+};
+const CREW = ["av_rider", "av_fox", "av_hare", "av_marmot", "av_elk", "av_bear", "av_girl"]; // me first, then friends round the animals
+
 const SERIF = `"Cormorant Garamond", "Noto Serif SC", serif`;
 const CSS = `
 .pl { color: #33302c; font-family: "Noto Serif SC", serif; }
@@ -128,7 +137,8 @@ const CSS = `
 .pl .lt .days { display: flex; gap: 3px; margin-top: 3px; }
 .pl .lt .days div { flex: 1; text-align: center; line-height: 1.1; min-width: 0; }
 .pl .lt .days small { display: block; font-family: Oswald, sans-serif; font-size: 8px; letter-spacing: .1em; color: #9a9188; }
-.pl .lt .days span { font-family: "Cormorant Garamond", serif; font-size: 11px; font-weight: 600; color: #5b554e; white-space: nowrap; }
+.pl .lt .days span { font-family: "Cormorant Garamond", serif; font-size: 11px; font-weight: 600; color: #5b554e; white-space: nowrap; display: grid; justify-items: center; line-height: 1; }
+.pl .lt .days span .ic { width: 22px; height: 22px; }
 .pl .lt .days .best span { color: ${C.red}; }
 .pl .lt .powder { position: absolute; top: -9px; font-family: ${SERIF}; font-size: 11px; font-weight: 600; color: #fffdf8; background: ${C.red}; padding: 0 6px; border-radius: 8px; transform: rotate(-6deg); z-index: 3; white-space: nowrap; }
 .pl .lt .txt { flex: 1; min-width: 0; padding: 10px 8px 8px 12px; display: flex; flex-direction: column; justify-content: space-between; }
@@ -137,7 +147,9 @@ const CSS = `
 .pl .lt .txt .w { font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 12.5px; line-height: 1.25; color: ${C.mute}; }
 .pl .lt .stub { position: relative; width: 64px; flex: none; border-left: 1.5px dashed #dccfb9; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 0 0 10px; }
 .pl .lt .stub::before { content: ""; position: absolute; top: 10px; width: 10px; height: 10px; border-radius: 50%; background: ${C.paper}; box-shadow: inset 1px 1px 2px rgba(0,0,0,.25); }
-.pl .stamp { position: absolute; right: 26px; top: -14px; width: 62px; height: 62px; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(90,70,40,.22)); }
+.pl .stamp { position: absolute; right: 26px; top: -14px; width: 64px; height: 64px; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(90,70,40,.22)); transform: rotate(-8deg); }
+.pl .stamp img { width: 100%; height: 100%; display: block; } .pl .stamp.ghost { filter: none; opacity: .8; }
+.pl .stamp b { position: absolute; right: -4px; bottom: 0; font: 600 13px "Cormorant Garamond", serif; color: ${C.red}; background: #fbf7ef; border-radius: 999px; padding: 0 5px; }
 .pl .snowfall { position: absolute; left: 0; right: 0; top: -20px; bottom: 0; background-image: radial-gradient(circle, #fff 1.2px, transparent 1.8px), radial-gradient(circle, rgba(255,255,255,.85) .9px, transparent 1.4px); background-size: 14px 16px, 9px 11px; background-position: 0 0, 5px 7px; animation: plfall 3s linear infinite; }
 @keyframes plfall { to { transform: translateY(20px); } }
 .pl .fog { position: absolute; left: -40%; right: -40%; top: 25%; height: 45%; background: linear-gradient(90deg, transparent, rgba(250,250,248,.75) 30%, rgba(250,250,248,.35) 55%, transparent 80%); filter: blur(4px); animation: pldrift 9s ease-in-out infinite alternate; }
@@ -160,7 +172,8 @@ const CSS = `
 /* Crew */
 .pl .crew { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .pl .crew .p { text-align: center; width: 54px; font-size: 12px; }
-.pl .crew .face { width: 50px; height: 50px; border-radius: 50%; background: #e6ebee center/cover no-repeat; border: 3px solid #fffdf8; box-shadow: 0 3px 6px rgba(90,70,40,.18); display: grid; place-items: center; font-size: 24px; margin: 0 auto 3px; }
+.pl .crew .face img { width: 100%; height: 100%; border-radius: 50%; display: block; }
+.pl .crew .face { width: 56px; height: 56px; overflow: hidden; border-radius: 50%; background: #e6ebee center/cover no-repeat; border: 3px solid #fffdf8; box-shadow: 0 3px 6px rgba(90,70,40,.18); display: grid; place-items: center; font-size: 24px; margin: 0 auto 3px; }
 .pl .crew small { display: block; font-family: "Cormorant Garamond", serif; font-size: 11px; color: ${C.mute}; }
 .pl .crew .add { width: 50px; height: 50px; border-radius: 50%; border: 1.5px dashed #c7bba7; background: none; color: ${C.mute}; font-size: 20px; margin-bottom: 3px; }
 /* List */
@@ -190,7 +203,7 @@ const CSS = `
 .plsheet .quote { font-family: ${SERIF}; font-size: 18px; line-height: 1.45; color: #4a453f; }
 .plsheet .wx { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px; }
 .plsheet .wx div { background: #f2f4f5; border-radius: 6px; padding: 6px; text-align: center; font-family: ${SERIF}; font-size: 14px; }
-.plsheet .wx b { display: block; font-size: 22px; } .plsheet .wx small { display: block; color: ${C.mute}; font-size: 12px; }
+.plsheet .wx b { display: block; font-size: 22px; } .plsheet .wx b .ic { width: 40px; height: 40px; } .plsheet .wx small { display: block; color: ${C.mute}; font-size: 12px; }
 .plsheet .bar { display: flex; height: 12px; border-radius: 3px; overflow: hidden; }
 .plsheet .legend { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; color: #5b554e; }
 .plsheet .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; }
@@ -200,8 +213,8 @@ const CSS = `
 `;
 let styled = false;
 const style = () => { if (styled) return; styled = true; const s = document.createElement("style"); s.textContent = CSS; document.head.append(s); };
-const stamp = (runs) => `<svg class="stamp" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fbf7ef"/><circle cx="50" cy="50" r="40" fill="none" stroke="${C.red}" stroke-width="2.4"/><circle cx="50" cy="50" r="33" fill="none" stroke="${C.red}" stroke-width="1" stroke-dasharray="2 3"/><path d="M30 60 L42 44 L50 52 L58 40 L72 60Z" fill="${C.red}" opacity=".85"/><text x="50" y="76" text-anchor="middle" font-family="Cormorant Garamond" font-size="12" font-weight="600" fill="${C.red}">pre-run ×${runs}</text><text x="50" y="32" text-anchor="middle" font-family="Oswald" font-size="7" letter-spacing="1.5" fill="${C.red}">PRE-RUN</text></svg>`;
-const ghost = () => `<svg class="stamp" viewBox="0 0 100 100" style="filter:none"><circle cx="50" cy="50" r="40" fill="none" stroke="#c7bba7" stroke-width="2" stroke-dasharray="5 4"/>${EN_ON ? "" : '<text x="50" y="49" text-anchor="middle" font-family="Noto Serif SC" font-size="12" fill="#b5a890">还没预滑</text>'}<text x="50" y="${EN_ON ? 56 : 65}" text-anchor="middle" font-family="Cormorant Garamond" font-size="${EN_ON ? 15 : 11}" fill="#b5a890">not yet</text></svg>`;
+const stamp = (runs) => `<div class="stamp">${ICON("st_prerun", "")}<b>×${runs}</b></div>`;
+const ghost = () => `<div class="stamp ghost">${ICON("st_notyet", "")}</div>`;
 const clipSvg = `<svg class="clip" viewBox="0 0 40 110"><defs><linearGradient id="plsteel" x1="0" x2="1"><stop offset="0" stop-color="#8d949c"/><stop offset=".45" stop-color="#e9edf1"/><stop offset="1" stop-color="#7c838b"/></linearGradient></defs><path d="M12 96 V18 a8 8 0 0 1 16 0 V86 a12 12 0 0 1 -24 0 V28" fill="none" stroke="url(#plsteel)" stroke-width="3.6" stroke-linecap="round"/></svg>`;
 const paintUrl = (id) => `assets/wc/${id}.jpg?v=1`;
 
@@ -282,7 +295,7 @@ export class Trips {
     if (this.shared) return this.show(this.shared, true);
     const list = this.list.sort((a, b) => a.from.localeCompare(b.from)), now = today();
     const coming = list.filter((x) => x.to >= now), past = list.filter((x) => x.to < now);
-    const row = (tr) => { const n = between(now, tr.from); return `<div class="triprow" data-id="${tr.id}"><div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0">${esc(tr.name)} · ${tr.maybe.length ? tr.maybe.map((id) => this.name(id)).join(" · ") : t("看雪定山")}</div></div>`; };
+    const row = (tr) => { const n = between(now, tr.from); return `<div class="triprow" data-id="${tr.id}"><div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0"><span translate="no">${esc(tr.name)}</span> · ${tr.maybe.length ? tr.maybe.map((id) => this.name(id)).join(" · ") : t("看雪定山")}</div></div>`; };
     this.box.innerHTML = `<div class="kicker">MY TRIPS</div><div class="h1">${t("我的行程")}</div>
       <button class="new">${t("＋ 新建行程")}<small>${t("先选雪卡，再看能去哪些山")}</small></button>
       ${coming.length ? `<div class="sec">${t("即将出发")}</div>${coming.map(row).join("")}` : ""}
@@ -297,15 +310,15 @@ export class Trips {
   show(tr, shared = false) {
     const now = today(), n = between(now, tr.from), len = between(tr.from, tr.to) + 1, maybe = this.maybeOf(tr), groups = this.groups(tr);
     const lead = n > 1 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 1 ? (EN_ON ? "Tomorrow" : "明天出发") : n === 0 ? t("今天出发！") : tr.to >= now ? t("进行中") : fmt(tr.from);
-    const face = (p, k) => (k === 0 && this.sprite && !shared ? `<div class="face" style="background-image:url(${this.sprite});background-size:120%;background-position:50% 15%"></div>` : '<div class="face">🏂</div>');
+    const face = (p, k) => `<div class="face">${ICON(CREW[k % CREW.length], "")}</div>`;
     this.box.innerHTML = `<button class="back">${t("‹ 我的行程")}</button>
-      <div class="kicker">${shared ? esc(t("朋友分享给你的行程")) : "TRIP"}</div><div class="h1">${esc(tr.name)}</div>
+      <div class="kicker">${shared ? esc(t("朋友分享给你的行程")) : "TRIP"}</div><div class="h1" translate="no">${esc(tr.name)}</div>
       <div class="lead">${lead}<i>·</i>${fmt(tr.from)} – ${fmt(tr.to)}<i>·</i>${EN_ON ? `${len} days` : `${len} 天`}</div>
       <div class="deck"></div><div class="dealhint">${groups.length > 1 ? `↕ ${t("上下滑，抽下一张")} · ${groups.length} ${t("张机票")}` : ""}</div>
       <div class="sec">${t("可能去的山")}</div><div class="tickets">${maybe.map((id) => this.ticketHTML(id)).join("")}</div>
       ${tr.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
       <div class="sec">${t("日子")}</div><div class="cal"></div>
-      <div class="sec">${t("一起滑的人")}</div><div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}${esc(p.name === this.me && EN_ON ? t("我") : p.name)}<small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
+      <div class="sec">${t("一起滑的人")}</div><div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
       <div class="acts">${shared ? `<button class="ghostbtn main keep">${t("存到我的行程")}</button>` : `<button class="ghostbtn main share">${t("🔗 分享给朋友")}</button><button class="ghostbtn edit">${t("改一改")}</button><button class="ghostbtn del">${t("删掉")}</button>`}</div>`;
     this.deck(tr, this.box.querySelector(".deck"));
     this.calendar(tr, this.box.querySelector(".cal"), null);
@@ -347,7 +360,7 @@ export class Trips {
     dates.forEach((d, i) => { const w = fc[d]; if (w && w.cm >= 3 && (best < 0 || w.cm > fc[dates[best]].cm)) best = i; }); // a powder day: 3 cm or more
     pic.innerHTML = dates.map((d, i) => { const w = fc[d], k = kindOf(w);
       return `<div class="pan"><b style="left:${-i * 100}%;width:${n * 100}%;background-image:url(${paintUrl(r.id)});filter:${k ? WX[k].filter : "grayscale(1) brightness(1.04)"}"></b>${k ? WX[k].over : ""}</div>`; }).join("");
-    pic.insertAdjacentHTML("afterend", `<div class="days">${dates.map((d, i) => { const w = fc[d], k = kindOf(w); return `<div class="${i === best ? "best" : ""}"><small>${WK[day0(d).getDay()]}</small><span>${k ? `${WX[k].icon} ${WX[k].word(w)}` : "—"}</span></div>`; }).join("")}</div>`);
+    pic.insertAdjacentHTML("afterend", `<div class="days">${dates.map((d, i) => { const w = fc[d], k = kindOf(w); return `<div class="${i === best ? "best" : ""}"><small>${WK[day0(d).getDay()]}</small><span>${k ? `${ICON(wxIcon(w))}${w.cm >= 1 ? `${Math.round(w.cm)}cm` : ""}` : "—"}</span></div>`; }).join("")}</div>`);
     if (best >= 0) pic.insertAdjacentHTML("beforebegin", `<div class="powder" style="left:${(best / n) * 100}%">${t("粉雪日")}</div>`);
   }
   // A week strip (or a month), the trip's days washed in blue. With pick, taps choose the days.
@@ -402,7 +415,7 @@ export class Trips {
     const fc = await forecast(r, tr.from, tr.to);
     if (fc && el.isConnected) {
       const dates = []; for (let d = tr.from; d <= tr.to && dates.length < 7; d = plus(d, 1)) dates.push(d);
-      el.querySelector(".wxbox").innerHTML = `<div class="wx">${dates.map((d) => { const w = fc[d], k = kindOf(w); return `<div><small>${fmt(d)} · ${WK[day0(d).getDay()]}</small><b>${k ? WX[k].icon : "—"}</b>${w ? `<span style="color:${k === "snow" ? "#2f5e8a" : C.mute};font-weight:600">${k === "snow" && w.cm >= 1 ? `+${Math.round(w.cm)} cm` : WX[k].word(w)}</span><small>${Math.round(w.lo)}° / ${Math.round(w.hi)}°C</small>` : "<small>—</small>"}</div>`; }).join("")}</div><div class="note">Open-Meteo</div>`;
+      el.querySelector(".wxbox").innerHTML = `<div class="wx">${dates.map((d) => { const w = fc[d], k = kindOf(w); return `<div><small>${fmt(d)} · ${WK[day0(d).getDay()]}</small><b>${k ? ICON(wxIcon(w)) : "—"}</b>${w ? `<span style="color:${k === "snow" ? "#2f5e8a" : C.mute};font-weight:600">${k === "snow" && w.cm >= 1 ? `+${Math.round(w.cm)} cm` : WX[k].word(w)}</span><small>${Math.round(w.lo)}° / ${Math.round(w.hi)}°C</small>` : "<small>—</small>"}</div>`; }).join("")}</div><div class="note">Open-Meteo</div>`;
     }
   }
 

@@ -2,9 +2,9 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=4";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=12";
-import { playIntro } from "./intro.js?v=6";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=5";
+import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=13";
+import { playIntro } from "./intro.js?v=8";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
@@ -188,7 +188,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=26");
+    const { Collection } = await import("./collection.js?v=27");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -212,7 +212,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=15");
+    const { Trips } = await import("./trips.js?v=17");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -222,7 +222,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=5");
+  const { renderMemory } = await import("./memory.js?v=6");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
