@@ -82,13 +82,17 @@
     #name { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 6px; border: 1px solid #cbbfa9; background: var(--paper); color: var(--ink); }
     /* Tabs along the bottom: rider, resorts (the conquest map), journal. */
     /* The tabs: a frosted pill floating over the page; on the map it folds into one round button while you explore. */
-    /* A pre-run left half way: back to it, from any tab (until "结束今天" on the ride). */
-    #resume { position: fixed; left: 22px; right: 22px; bottom: calc(94px + env(safe-area-inset-bottom)); z-index: 20; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 10px; border-radius: 24px; background: rgba(253,251,246,.95); box-shadow: 0 8px 20px rgba(40,50,70,.18); text-decoration: none; color: #22344d; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    /* A pre-run left half way: a slim pill over the tabs, back to it from any tab (until "结束今天" on the
+       ride); it folds with the tabs into a round play button beside theirs. */
+    #resume { position: fixed; left: 50%; transform: translateX(-50%); max-width: calc(100% - 60px); bottom: calc(92px + env(safe-area-inset-bottom)); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 4px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 16px rgba(40,50,70,.18); text-decoration: none; color: #22344d; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); overflow: hidden; transition: all .35s cubic-bezier(.3,1.3,.5,1); }
     #resume[hidden] { display: none; }
-    #resume > img { width: 44px; height: 44px; padding: 4px; box-sizing: border-box; border-radius: 50%; background: #f3ede2; flex: none; }
-    #resume span { flex: 1; min-width: 0; line-height: 1.3; } #resume b { display: block; font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #resume small { font: 12px "Noto Serif SC", serif; color: #7b746b; } #resume i { display: block; height: 3px; border-radius: 2px; background: #e6dccb; margin-top: 5px; } #resume u { display: block; height: 3px; border-radius: 2px; background: #22344d; }
-    #resume em { width: 44px; height: 44px; border-radius: 50%; background: #22344d; display: grid; place-items: center; flex: none; } #resume em svg { margin-left: 3px; }
+    #resume > img { width: 30px; height: 30px; border-radius: 50%; background: #f3ede2; flex: none; }
+    #resume span { min-width: 0; font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } #resume b, #resume small { font: inherit; } #resume small { color: #7b746b; font-weight: 400; }
+    #resume i { position: absolute; left: 0; bottom: 0; height: 2px; background: #22344d; }
+    #resume em { width: 30px; height: 30px; border-radius: 50%; background: #22344d; display: grid; place-items: center; flex: none; } #resume em svg { margin-left: 2px; width: 10px; height: 12px; }
+    #tabs.shut + #resume { left: auto; right: 96px; transform: none; bottom: calc(18px + env(safe-area-inset-bottom)); width: 56px; height: 56px; padding: 0; justify-content: center; }
+    #tabs.shut + #resume > img, #tabs.shut + #resume span, #tabs.shut + #resume i { display: none; } #tabs.shut + #resume em { width: 44px; height: 44px; }
+    body.resuming #sheet { padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important; } body.resuming #records, body.resuming #trips { padding-bottom: 160px; }
     #tabs { position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20; display: flex; padding: 7px; border-radius: 40px;
       background: rgba(253,251,246,.8); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1); box-shadow: 0 10px 26px rgba(40,50,70,.18), inset 0 0 0 1px rgba(255,255,255,.7);
       transition: left .35s cubic-bezier(.3,1.3,.5,1), width .35s, border-radius .35s, padding .35s; }
@@ -183,8 +187,8 @@
   <div id="records" hidden><div id="memory"></div><div id="recSec">每个雪场</div><div id="recList"></div></div>
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
-  <a id="resume" hidden><img src="assets/icons/snowboard.png?v=1" alt=""><span><b></b><small></small><i><u></u></i></span><em><svg viewBox="0 0 10 12" width="16" height="18"><path d="M1 0L10 6L1 12Z" fill="#fdfbf6"/></svg></em></a>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="start.js?v=67"></script>
+  <a id="resume" hidden><img src="assets/icons/snowboard.png?v=1" alt=""><span><b></b> <small></small></span><i></i><em><svg viewBox="0 0 10 12" width="16" height="18"><path d="M1 0L10 6L1 12Z" fill="#fdfbf6"/></svg></em></a>
+  <script type="module" src="start.js?v=68"></script>
 </body>
 </html>
