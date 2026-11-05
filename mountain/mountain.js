@@ -5,10 +5,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js?v=5";
-import { Diorama } from "./diorama.js?v=17";
+import { Diorama } from "./diorama.js?v=20";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../sky.js?v=1";
 import { addStep } from "../roadbook.js?v=11";
-import { translatePage, myAvatar, t as tr } from "../i18n.js?v=19";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../i18n.js?v=19";
 import { openNav } from "../nav.js?v=9";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
@@ -500,6 +500,8 @@ async function main() {
     document.body.classList.remove("picking", "detail");
     $("introSkip").hidden = false;
     $("miniTitle").textContent = base.name;
+    $("miniKick").textContent = RESORT.name;
+    $("miniSub").textContent = EN ? `${Math.round(T.heightAt(base.x, base.z) + (R.hmin || 0)).toLocaleString("en-US")} m · ${ls.length} lifts` : `海拔 ${Math.round(T.heightAt(base.x, base.z) + (R.hmin || 0)).toLocaleString("en-US")} m · 缆车 ${ls.length} 条`;
     $("planOut").hidden = true;
     document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on"));
     dio.highlightFrom(null);

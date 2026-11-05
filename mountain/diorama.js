@@ -22,7 +22,7 @@ export class Diorama {
   constructor(renderer) {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0xe9edf2);
+    this.scene.background = new THREE.Color(0xf3ede2); // the app's paper
     this.camera = new THREE.PerspectiveCamera(24, innerWidth / innerHeight, 10, 40000);
     // Multisampled target: post-processing would otherwise drop antialiasing and look soft on phones.
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
@@ -119,7 +119,7 @@ export class Diorama {
   // The cut faces: a snow crust, then earth, then banded rock, like a cake slice.
   sides(x0, x1, z0, z1, Y) {
     const group = new THREE.Group();
-    const bands = [[0, 0xf6f8fb], [10, 0x7b5a40], [55, 0x8a7766], [85, 0x6d6762], [120, 0x847d77], [170, 0x5f5a56]];
+    const bands = [[0, 0xf6f8fb], [10, 0xb08a68], [36, 0xd2c4b0], [66, 0xb5aeac], [104, 0xa3a6b2], [150, 0x9095a6]]; // snow, earth, sand, then slate
     const bottom = -40;
     const edge = (ax, az, bx, bz) => {
       const n = Math.round(Math.hypot(bx - ax, bz - az) / STEP);
@@ -155,7 +155,7 @@ export class Diorama {
   plinth(x0, x1, z0, z1, title, front = -Math.PI / 4) {
     const group = new THREE.Group();
     const w = x1 - x0 + 120, d = z1 - z0 + 120, h = 260;
-    const base = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 6, 40), new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 0.35 }));
+    const base = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 6, 40), new THREE.MeshStandardMaterial({ color: 0xf6efe3, roughness: 0.8 }));
     base.position.set((x0 + x1) / 2, -40 - h / 2, (z0 + z1) / 2);
     base.castShadow = base.receiveShadow = true;
     group.add(base);
@@ -165,27 +165,29 @@ export class Diorama {
     const side = onX ? d : w, ph = h * 0.82;
     const c = document.createElement("canvas"), CH = 256;
     let g = c.getContext("2d"), px = 168;
-    const fit = () => { g.font = `700 ${px}px Helvetica, Arial, sans-serif`; return g.measureText(title).width + 150; };
+    const fit = () => { g.font = `700 ${px}px "Cormorant Garamond", Georgia, serif`; return g.measureText(title).width + 150; };
     let cw = fit();
     while ((cw / CH) * ph > side * 0.9 && px > 60) { px -= 8; cw = fit(); } // too long for the side: smaller letters
     c.width = Math.min(4096, Math.ceil(cw)); c.height = CH;
     g = c.getContext("2d"); fit();
-    g.fillStyle = "#2f343c"; g.fillRect(0, 0, c.width, CH);
-    g.strokeStyle = "#aab2bd"; g.lineWidth = 12; g.strokeRect(12, 12, c.width - 24, CH - 24);
-    g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
+    // a paper plaque: cream, a thin inked frame, navy serif letters, a pin in each corner
+    g.fillStyle = "#f4ecdc"; g.fillRect(0, 0, c.width, CH);
+    g.strokeStyle = "#b9a98f"; g.lineWidth = 6; g.strokeRect(14, 14, c.width - 28, CH - 28);
+    g.fillStyle = "#9a8a70"; for (const [x, y] of [[34, 34], [c.width - 34, 34], [34, CH - 34], [c.width - 34, CH - 34]]) { g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); }
+    g.fillStyle = "#22344d"; g.textAlign = "center"; g.textBaseline = "middle";
     g.fillText(title, c.width / 2, CH / 2 + 6);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
     const pw = (c.width / CH) * ph;
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, 14), [0, 0, 0, 0, 1, 0].map((i) => (i ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshStandardMaterial({ color: 0x2f343c }))));
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, 14), [0, 0, 0, 0, 1, 0].map((i) => (i ? new THREE.MeshBasicMaterial({ map: tex }) : new THREE.MeshStandardMaterial({ color: 0xe6dccb }))));
     // On the side facing the camera: the side the bearing points through.
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     if (onX) { plate.position.set(fx > 0 ? x1 + 68 : x0 - 68, -40 - h / 2, cz); plate.rotation.y = fx > 0 ? Math.PI / 2 : -Math.PI / 2; }
     else { plate.position.set(cx, -40 - h / 2, fz > 0 ? z1 + 68 : z0 - 68); plate.rotation.y = fz > 0 ? 0 : Math.PI; }
     group.add(plate);
     // A table to throw soft shadows on.
-    const table = new THREE.Mesh(new THREE.CircleGeometry(Math.max(w, d) * 3, 48), new THREE.MeshStandardMaterial({ color: 0xe4e8ee, roughness: 1 }));
+    const table = new THREE.Mesh(new THREE.CircleGeometry(Math.max(w, d) * 3, 48), new THREE.MeshStandardMaterial({ color: 0xefe7da, roughness: 1 }));
     table.rotation.x = -Math.PI / 2;
     table.position.set((x0 + x1) / 2, -40 - h - 1, (z0 + z1) / 2);
     table.receiveShadow = true;
@@ -421,7 +423,7 @@ export class Diorama {
 
   light(x0, x1, z0, z1) {
     for (const o of this.scene.children.filter((c) => c.isLight)) this.scene.remove(o);
-    this.scene.add(new THREE.HemisphereLight(0xf2f6ff, 0xb9c0cc, 1.1));
+    this.scene.add(new THREE.HemisphereLight(0xf6f4ef, 0xd9cfc0, 1.25)); this.scene.add(new THREE.AmbientLight(0xfff8ee, 0.75)); // so the cut sides away from the sun stay soft, not black
     const key = new THREE.DirectionalLight(0xfff4e6, 2.6);
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, size = Math.max(x1 - x0, z1 - z0);
     key.position.set(cx - size, size * 1.4, cz + size * 0.7);

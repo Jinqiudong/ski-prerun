@@ -202,6 +202,24 @@
     #timePanel .ticks.icons { margin: 0 -14px; } #timePanel .ticks.icons span { display: grid; justify-items: center; width: 50px; } #timePanel .ticks.icons img { width: 26px; height: 26px; }
     #timePanel .ticks small.on, #timePanel .ticks span.on small { color: #22344d; font-weight: 600; }
     #now .more { display: none; } #now::after { content: "⌄"; margin-left: auto; color: #6f675e; }
+    /* the base's miniature, in the same paper look */
+    #miniTop { top: 0 !important; left: 0 !important; right: 0 !important; padding: calc(12px + env(safe-area-inset-top)) 14px 22px; align-items: flex-start !important; gap: 10px !important; background: linear-gradient(#f3ede2 65%, rgba(243,237,226,0)); z-index: 6; }
+    #miniTop .tt { flex: 1; min-width: 0; } #miniTop .tt i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a6a5a; text-transform: uppercase; }
+    #miniTop .tt b { display: block; font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #miniTop .tt small { display: block; font: 12px "Noto Serif SC", serif; color: #6f675e; margin-top: 2px; }
+    #miniTop .rb { background: #fdfbf6 !important; border: 0 !important; }
+    #plansBar { top: calc(92px + env(safe-area-inset-top)) !important; }
+    .plans span { color: #6f675e !important; text-shadow: none !important; font-family: "Noto Serif SC", serif; }
+    .plans button { border: 0 !important; box-shadow: 0 3px 8px rgba(40,50,70,.12) !important; border-radius: 999px !important; }
+    #legend { background: rgba(253,251,246,.9) !important; border-radius: 999px !important; box-shadow: none !important; }
+    #introSkip { font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif !important; color: #fdfbf6 !important; background: #22344d !important; border: 0 !important; border-radius: 999px !important; padding: 9px 18px !important; box-shadow: 0 6px 14px rgba(34,52,77,.3) !important; }
+    .liftCard { border-radius: 18px !important; box-shadow: 0 8px 20px rgba(40,50,70,.16) !important; }
+    #detail { background: rgba(253,251,246,.97) !important; color: #33302c !important; border-radius: 22px 22px 0 0 !important; }
+    #detailClose i { background: #d6cdbf !important; } #detailGo { background: #22344d !important; border-radius: 999px !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif !important; font-size: 17px !important; }
+    #detailBody h2 { font: 600 22px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #detailBody h3, #detailBody .meta, #detailBody .hint { color: #8a8278 !important; }
+    .ltag b, .ltag small { background: rgba(253,251,246,.95) !important; border-color: #d9cdb9 !important; }
+    .ltag i { background: rgba(34,52,77,.5) !important; }
+    .ltag.on b, .ltag.on small { background: #22344d !important; color: #fdfbf6 !important; border-color: #22344d !important; }
   </style>
 </head>
 <body>
@@ -212,8 +230,11 @@
     <button id="navBtn" class="rb av" aria-label="菜单"><img alt=""></button></div>
   <div id="topFade"></div>
   <div id="vignette"></div>
-  <div id="miniTop"><div class="glass">🏠 <span id="miniTitle"></span></div><div style="display:flex;gap:8px"><button id="replay" class="glass">↻ 转一圈</button><button id="miniBack" class="glass">← 回全景</button></div></div>
-  <button id="introSkip" class="glass" hidden>跳过 ⏭</button>
+  <!-- A base's miniature: back to the mountain, the base's name under its resort's, its height and lifts; spin it again. -->
+  <div id="miniTop"><button id="miniBack" class="rb" aria-label="回全景"><img src="../assets/icons/back.png?v=1" alt=""></button>
+    <div class="tt"><i id="miniKick"></i><b id="miniTitle"></b><small id="miniSub"></small></div>
+    <button id="replay" class="rb" aria-label="转一圈"><img src="../assets/icons/refresh.png?v=1" alt=""></button></div>
+  <button id="introSkip" hidden>跳过 ›</button>
   <div id="liftTags"></div>
   <div id="plansBar"><div class="plans"><span>今天想怎么滑</span><button class="glass" data-plan="easy">热身（绿）</button><button class="glass" data-plan="intermediate">巡航（蓝）</button><button class="glass" data-plan="advanced">挑战（黑）</button></div><div id="planOut" class="glass" hidden></div><div id="legend" class="glass"><span class="sw full"></span>山顶直接出发 <span class="sw half"></span>滑下去能接上</div></div>
   <div id="liftCards"></div>
@@ -248,6 +269,6 @@
     <button id="layerFab" class="fabBtn" aria-label="图层"><img src="../assets/icons/layer_runs.png?v=1" alt=""></button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=48"></script>
+  <script type="module" src="mountain.js?v=52"></script>
 </body>
 </html>
