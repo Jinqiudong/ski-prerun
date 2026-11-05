@@ -2,9 +2,9 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=9";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=17";
-import { playIntro } from "./intro.js?v=12";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=10";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=18";
+import { playIntro } from "./intro.js?v=13";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
@@ -196,13 +196,14 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=36");
+    const { Collection } = await import("./collection.js?v=37");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
     await collection.build(await resortList(), stats, logOf());
     $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
+    $("allBtn").onclick = $("worldHome").onclick;
     collection.onPick = (r) => { $("tabs").classList.add("shut");
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       card.innerHTML = `<img class="st" src="assets/icons/${s?.touched ? "st_prerun" : "st_notyet"}.png?v=1" alt=""><b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
@@ -220,7 +221,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=24");
+    const { Trips } = await import("./trips.js?v=25");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -230,7 +231,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=10");
+  const { renderMemory } = await import("./memory.js?v=11");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
