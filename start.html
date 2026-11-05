@@ -122,11 +122,13 @@
     /* an opened mountain: the heading and the map's small words fade out; its name stands at the top */
     #worldHead, .cmark, .ctag { transition: opacity .35s; }
     #world.focus #worldHead, #world.focus .cmark, #world.focus .ctag, #world.focus #compass { opacity: 0 !important; pointer-events: none; }
-    #worldTitle { position: absolute; z-index: 4; left: 70px; right: 70px; top: calc(16px + env(safe-area-inset-top)); text-align: center; pointer-events: none; opacity: 0; transform: translateY(-8px); transition: opacity .35s, transform .35s; }
-    #world.focus #worldTitle { opacity: 1; transform: none; }
+    #worldTitle { position: absolute; z-index: 4; left: 50%; top: calc(14px + env(safe-area-inset-top)); max-width: calc(100% - 150px); display: flex; align-items: center; gap: 8px; padding: 8px 16px 8px 10px;
+      background: rgba(253,251,246,.94); border-radius: 16px; box-shadow: 0 6px 16px rgba(40,50,70,.16); pointer-events: none; opacity: 0; transform: translate(-50%, -8px); transition: opacity .35s, transform .35s; }
+    #world.focus #worldTitle { opacity: 1; transform: translate(-50%, 0); }
+    #worldTitle img { width: 38px; height: 38px; flex: none; } #worldTitle div { min-width: 0; } #worldTitle i { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #worldTitle i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .32em; text-transform: uppercase; color: #8a8278; }
-    #worldTitle b { display: block; font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; margin-top: 3px; text-shadow: 0 0 12px rgba(246,248,250,.95); }
-    #worldTitle small { display: block; font: 14px "Noto Serif SC", serif; color: #6f675e; margin-top: 2px; text-shadow: 0 0 8px rgba(246,248,250,.95); }
+    #worldTitle b { display: block; font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #worldTitle small { display: block; font: 13px "Noto Serif SC", serif; color: #6f675e; margin-top: 1px; }
     #compass { position: absolute; left: 18px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 54px; height: 54px; pointer-events: none; opacity: .9; }
     #worldCredit { position: absolute; left: 8px; right: 90px; bottom: 2px; text-align: center; font-size: 9px; color: rgba(60,50,40,.5); pointer-events: none; }
     [hidden] { display: none !important; }
@@ -165,6 +167,6 @@
   <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="start.js?v=53"></script>
+  <script type="module" src="start.js?v=56"></script>
 </body>
 </html>

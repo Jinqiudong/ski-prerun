@@ -196,7 +196,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=32");
+    const { Collection } = await import("./collection.js?v=35");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -206,7 +206,7 @@ async function openWorld() {
     collection.onPick = (r) => { $("tabs").classList.add("shut");
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       // An opened mountain: its name once, big at the top (the map's words step aside); the card keeps your progress and the way in.
-      $("worldTitle").innerHTML = `<i>${collection.townOf(r.id)}</i><b>${r.name}</b>${EN_ON ? "" : `<small>${r.zh}</small>`}`;
+      $("worldTitle").innerHTML = `<img src="assets/icons/challenge.png?v=1" alt=""><div><i>${collection.townOf(r.id)}</i><b>${r.name}</b>${EN_ON ? "" : `<small>${r.zh}</small>`}</div>`;
       card.innerHTML = `<small>${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
         <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
       card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
