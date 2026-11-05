@@ -237,20 +237,41 @@ function forest(T, mask) {
   return group;
 }
 
-// Runs as on a resort map: a white casing and a colored core.
-function runs(T, list) {
+// Runs as on a resort map: a coloured core in a casing, with a soft glow to read from far away. The style is
+// one set of numbers (widths in m, opacities, colours) so the look can be tuned in one place.
+const RUN_STYLE = { glow: 70, glowOp: [0.22, 0.12], casing: 34, casingOp: 0.9, casingColor: 0xffffff, core: 20, coreOp: 1, colors: RUN_COLOR };
+function runs(T, list, o = RUN_STYLE) {
   const group = new THREE.Group();
   const mat = (color, opacity, order) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: order, polygonOffsetUnits: order, fog: false });
-  const casing = mat(0xffffff, 0.9, -4), glows = {}, cores = {};
+  const casing = mat(o.casingColor, o.casingOp, -4), glows = {}, cores = {};
   for (const run of list) {
-    const pts = run.outline || run.pts, color = RUN_COLOR[run.level];
-    glows[run.level] ??= mat(color, run.level === "advanced" || run.level === "expert" ? 0.12 : 0.22, -3);
-    cores[run.level] ??= mat(color, 1, -6);
+    const pts = run.outline || run.pts, color = o.colors[run.level];
+    glows[run.level] ??= mat(color, run.level === "advanced" || run.level === "expert" ? o.glowOp[1] : o.glowOp[0], -3);
+    cores[run.level] ??= mat(color, o.coreOp, -6);
     if (!run.area) {
-      group.add(new THREE.Mesh(ribbon(T, pts, 70, 0.4), glows[run.level])); // a soft glow so runs read from far away
-      group.add(new THREE.Mesh(ribbon(T, pts, 34, 0.6), casing));
+      if (o.glow && o.glowOp[0]) group.add(new THREE.Mesh(ribbon(T, pts, o.glow, 0.4), glows[run.level]));
+      if (o.casing && o.casingOp) group.add(new THREE.Mesh(ribbon(T, pts, o.casing, 0.6), casing));
     }
-    group.add(new THREE.Mesh(ribbon(T, pts, run.area ? 9 : 20, 0.8), cores[run.level]));
+    group.add(new THREE.Mesh(ribbon(T, pts, run.area ? Math.min(9, o.core) : o.core, 0.8), cores[run.level]));
+  }
+  return group;
+}
+// Lifts drawn on the snow as on a paper map: a dashed line from bottom to top (the 3D towers and cables stay).
+function liftMarks(T, list, o) {
+  const group = new THREE.Group();
+  const m = new THREE.MeshBasicMaterial({ color: o.color, transparent: true, opacity: o.op ?? 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8, fog: false });
+  for (const l of list) {
+    const p = l.pts, dense = [];
+    for (let i = 1; i < p.length; i++) { const n = Math.max(1, Math.ceil(Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]) / 10)); for (let k = 0; k < n; k++) dense.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * k / n, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * k / n]); }
+    dense.push(p[p.length - 1]);
+    let run = [], along = 0;
+    for (let i = 0; i < dense.length; i++) {
+      if (i) along += Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
+      const on = !o.gap || along % (o.dash + o.gap) < o.dash;
+      if (on) run.push(dense[i]); else if (run.length > 1) { group.add(new THREE.Mesh(ribbon(T, run, o.w, 1), m)); run = []; } else run = [];
+    }
+    if (run.length > 1) group.add(new THREE.Mesh(ribbon(T, run, o.w, 1), m));
+    if (o.ends) for (const e of [p[0], p[p.length - 1]]) { const d = new THREE.Mesh(new THREE.CircleGeometry(o.ends, 16), m); d.rotation.x = -Math.PI / 2; d.position.set(e[0], T.heightAt(e[0], e[1]) + 1.2, e[1]); group.add(d); }
   }
   return group;
 }
@@ -328,8 +349,9 @@ async function main() {
   world.add(ground, ranges);
   await status("种树、画雪道…");
   world.add(forest(T, mask));
-  const runLayer = runs(T, R.runs);
+  let runLayer = runs(T, R.runs);
   world.add(runLayer);
+  let liftLayer = null;
   const lifts = new Lifts(T, R.lifts);
   world.add(lifts.group);
   const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d88a3, 0.35);
@@ -655,7 +677,11 @@ async function main() {
   });
   $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini", "picking", "detail"); });
   addEventListener("resize", () => dio.resize());
-  window.__mtn = { scene, renderer, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE }; // test hook
+  window.__mtn = { scene, renderer, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
+    restyle(run, lift) { // try a line style: rebuild the runs, and the lifts' marks on the snow (null: none)
+      world.remove(runLayer); runLayer = runs(T, R.runs, { ...RUN_STYLE, ...run }); world.add(runLayer);
+      if (liftLayer) world.remove(liftLayer); liftLayer = lift ? liftMarks(T, R.lifts, lift) : null; if (liftLayer) world.add(liftLayer);
+      if (lift?.cables === false) lifts.group.visible = false; } };
   window.__mini = { dio, get mini() { return mini; }, endIntro, openDetail, pickLift: (name) => pickLift(mini.lifts.find((l) => l.name === name), { scroll: true }) }; // test hook
   // Drag to turn the miniature after the intro.
   let drag = null, spin = 0;
