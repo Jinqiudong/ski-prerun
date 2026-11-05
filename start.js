@@ -2,8 +2,8 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
-import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=6";
-import { makeEntrance } from "./entrance.js?v=11";
+import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=8";
+import { makeEntrance } from "./entrance.js?v=14";
 import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
@@ -82,7 +82,7 @@ function enter() {
   if (!rider || editing) return;
   entrance.start(ROUTE_OF[shownChar?.fav] || "A", rider, turntable);
 }
-window.__stage = { scene, camera, turntable, entrance };
+window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; } };
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;

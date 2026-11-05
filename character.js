@@ -36,18 +36,18 @@ export async function makeCharacter(tpl) {
   const rel = (q = new THREE.Quaternion()) => { root.updateMatrixWorld(true); new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(bones.Board.matrixWorld).decompose(new THREE.Vector3(), q, new THREE.Vector3()); return q; };
   const boardRest = rel();
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(g.animations.map((c) => [c.name, c]));
-  let action = null, held = true, t = 0; const off = [];
+  let action = null, held = true, t = 0; const off = [], gaze = { y: 0, p: 0, ty: 0, tp: 0, wait: 3 };
   const C = {
-    root, tpl, bones,
+    root, tpl, bones, mixer,
     set(ch) { applyCharacter(root, CFG.templates[tpl], ch); },
     // A pose holds its frame at 1 s; a trick plays on a loop. Crossfade between them.
     // { once, dur }: play it through once (stretched to dur seconds) and hold the last frame.
-    play(name, { once = false, dur = 0 } = {}) {
+    play(name, { once = false, dur = 0, fade = 0.25 } = {}) {
       const clip = clips[name]; if (!clip) return;
       const a = mixer.clipAction(clip); held = POSES.some(([n]) => n === name);
       a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once;
       a.timeScale = held ? 0 : dur ? clip.duration / dur : 1; if (held) a.time = 1;
-      a.play(); if (action && action !== a) action.crossFadeTo(a, 0.25, false); action = a; C.current = name;
+      a.play(); if (action && action !== a) action.crossFadeTo(a, fade, false); action = a; C.current = name;
     },
     // The line a clip rides along (the character AI's method, rider_viewer.html): the clip plays in place,
     // and its board says where it goes: on the toe edge the path turns toward the toes, on the heel edge
@@ -77,9 +77,14 @@ export async function makeCharacter(tpl) {
       for (const [b, x, y, z] of off) { b.rotation.x -= x; b.rotation.y -= y; b.rotation.z -= z; } off.length = 0; // undo last frame's
       t += dt; mixer.update(dt);
       if (!held) return;
-      const br = Math.sin(t * 1.6), sw = Math.sin(t * 0.45), look = Math.sin(t * 0.31) * 0.6 + Math.sin(t * 0.77) * 0.25;
+      // Not a loop: a slow breath (about 4 s), the weight drifting between the feet on slow uneven waves,
+      // and the head picking somewhere to look, easing there, staying a few seconds (often back at you).
+      const br = Math.sin(t * 1.5) * 0.6 + Math.sin(t * 0.53) * 0.4, sw = Math.sin(t * 0.37) * 0.6 + Math.sin(t * 0.23 + 1) * 0.4;
+      if ((gaze.wait -= dt) < 0) { gaze.wait = 2.5 + Math.random() * 4; const away = Math.random() < 0.6; gaze.ty = away ? (Math.random() - 0.5) * 1.1 : 0; gaze.tp = away ? (Math.random() - 0.4) * 0.25 : 0; }
+      const k = 1 - Math.exp(-dt * 2.2); gaze.y += (gaze.ty - gaze.y) * k; gaze.p += (gaze.tp - gaze.p) * k;
       const add = (b, x, y, z) => { if (!b) return; b.rotation.x += x; b.rotation.y += y; b.rotation.z += z; off.push([b, x, y, z]); };
-      add(bones.Chest, br * 0.018, 0, 0); add(bones.Spine, 0, 0, sw * 0.02); add(bones.Hips, 0, 0, -sw * 0.012); add(bones.Head, br * 0.01, look * 0.35, 0);
+      add(bones.Chest, br * 0.014, gaze.y * 0.12, 0); add(bones.Spine, 0, gaze.y * 0.08, sw * 0.016); add(bones.Hips, 0, 0, -sw * 0.01);
+      add(bones.Neck, gaze.p * 0.4, gaze.y * 0.3, 0); add(bones.Head, gaze.p * 0.6 + br * 0.006, gaze.y * 0.5, 0);
     },
   };
   return C;

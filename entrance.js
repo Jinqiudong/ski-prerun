@@ -21,10 +21,10 @@ function fadeTex() {
 // What each friend does on the way down: clips in a row, each ridden along the line its own board implies
 // (character.js trace), the whole line turned to come at you out of the mountains and end at your feet.
 const ROUTES = {
-  A: { segs: [["Anim_Carve_Ref", 2, 7]] },                                   // long euro carves
+  A: { segs: [["Anim_Carve_Ref", 2, 5.5]] },                                   // long euro carves
   B: { segs: [["Anim_Chill_Cruise", 1, 6.5], ["Anim_Carve_Spin_Toe", 1, 6]] },  // ride in, then the carved spin
-  C: { segs: [["Anim_Carve_S", 2, 7]] },                                     // S turns down the fall line
-  D: { segs: [["Anim_Chill_Cruise", 2, 7], ["Anim_Method_Air", 1, 7]], kicker: { at: 0.12, h: 0.7, peak: 1.6 } }, // a kicker, a Method
+  C: { segs: [["Anim_Carve_S", 2, 5.5]] },                                     // S turns down the fall line
+  D: { segs: [["Anim_Chill_Cruise", 2, 7], ["Anim_Method_Air", 1, 7]], kicker: { at: 0.12, h: 0.7, peak: 0.9 } }, // a kicker, a Method
 };
 const LONG = 30; // the longest way in (m): longer lines are drawn in to this
 const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
@@ -38,11 +38,15 @@ function lineOf(char, r) {
   }
   // end at the origin; the start out toward the mountains (-z), a little to one side
   const [ex, ez] = pts[pts.length - 1], [sx, sz] = [pts[0][0] - ex, pts[0][1] - ez], L = Math.hypot(sx, sz), k = Math.min(1, LONG / L);
-  const ang = (x, z) => Math.atan2(-z, x), alpha = ang(-0.12, -1) - ang(sx, sz);
+  // Turned so its last stretch comes straight at you (then the skid stop is a quarter turn and ends facing
+  // you); if that leaves the start too near, turned so the start is out in the mountains instead.
+  const ang = (x, z) => Math.atan2(-z, x), m = pts[Math.floor(pts.length * 0.75)];
+  let alpha = ang(0.08, 1) - ang(ex - m[0], ez - m[1]);
+  if (rotY(sx, sz, alpha)[1] * k > -LONG * 0.5) alpha = ang(-0.12, -1) - ang(sx, sz);
   const P = pts.map(([x, z]) => rotY((x - ex) * k, (z - ez) * k, alpha));
   let H = hd.map((h) => h + alpha);
   // keep it in view: a line wandering out past the sides is drawn in sideways (and its headings follow)
-  const wide = Math.max(...P.map(([x, z]) => Math.abs(x) / (0.8 + 0.3 * Math.abs(z))));
+  const wide = Math.max(...P.map(([x, z]) => Math.abs(x) / (0.5 + 0.22 * Math.abs(z))));
   if (wide > 1) {
     const D = P.map(([x, z]) => [x / wide, z]);
     H = H.map((h, i) => { const a = D[Math.max(0, i - 1)], b = D[Math.min(D.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], q = P[Math.max(0, i - 1)], w = P[Math.min(P.length - 1, i + 1)];
@@ -104,19 +108,24 @@ export function makeEntrance(scene) {
     step(dt) {
       if (!run) return false;
       const { line, char, mover, air } = run;
-      if (run.done) { run.done += dt; mover.rotation.y += (Math.round(mover.rotation.y / (2 * Math.PI)) * 2 * Math.PI - mover.rotation.y) * Math.min(1, dt * 3); if (run.done > 1.5) run = null; return false; }
-      run.t += dt;
+      if (run.done) { run = null; return false; }
+      // The last stretch is a skid stop: the board swings across the line (the rider ends facing you), the
+      // slide slows over about two seconds, and they rise out of the move into standing.
+      const F = line.pts.length - 1, STOP = 30, fNow = run.t * line.fps, left = F - fNow;
+      run.t += dt * (left > STOP ? 1 : Math.max(0.08, left / STOP));
       const f = run.t * line.fps, i = Math.min(line.pts.length - 1, Math.floor(f)), j = Math.min(line.pts.length - 1, i + 1), u = f - Math.floor(f);
       const s = line.segAt.findLastIndex((sg) => i >= sg.i0);
-      if (s !== run.seg) { run.seg = s; const sg = line.segAt[s]; char.play(sg.clip, sg.once ? { once: true } : {}); }
+      if (s !== run.seg && !run.stopping) { run.seg = s; const sg = line.segAt[s]; char.play(sg.clip, sg.once ? { once: true } : {}); }
       const x = line.pts[i][0] + (line.pts[j][0] - line.pts[i][0]) * u, z = line.pts[i][1] + (line.pts[j][1] - line.pts[i][1]) * u, h = line.hd[i] + (line.hd[j] - line.hd[i]) * u;
       let y = groundY(z), flying = false;
       if (air && i >= air.i0 - 6 && i < air.i0) y += air.h * (i - air.i0 + 6 + u) / 6; // up the kicker
       if (air && i >= air.i0 && i < air.i1) { const q = (i - air.i0 + u) / (air.i1 - air.i0); y += air.h * (1 - q) + air.peak * 4 * q * (1 - q); flying = true; }
-      mover.position.set(x, y, z); mover.rotation.y = h;
+      const stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(h / (2 * Math.PI)) * 2 * Math.PI;
+      if (stopW > 0 && !run.stopping) { run.stopping = true; char.play("Stand_Idle", { fade: 1.2 }); }
+      mover.position.set(x, y, z); mover.rotation.y = h + (end - h) * sw;
       if (!flying) lay(x, y, z, h);
       if (air) kick.material.opacity = Math.min(1, Math.max(0, 1 - (i - air.i1) / 20));
-      if (i >= line.pts.length - 1) { run.done = 1e-6; char.play("Anim_Idle"); }
+      if (f >= F - 0.05) run.done = true;
       return false;
     },
   };
