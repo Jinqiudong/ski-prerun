@@ -16,7 +16,7 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "./skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar } from "./i18n.js?v=20";
+import { translatePage, openSettings, myAvatar } from "./i18n.js?v=21";
 import { navRow } from "./nav.js?v=9";
 
 const $ = (id) => document.getElementById(id);
@@ -2413,15 +2413,12 @@ async function main() {
   let skipping = null;
   $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
   $("again").addEventListener("click", () => location.reload());
-  // The player bar: back a stretch, pause, hold ⏩ to rush; 速度 cycles 1× 2× 4×; drag the line to jump.
+  // The ride bar: tap the chair for ×1 ×2 ×4, tap the flag to pause, drag the dot to go back or ahead (to the end: the top).
   const RATES = [1, 2, 4];
   if (TRIP) {
     $("rideBar").hidden = false; document.body.classList.add("riding");
     $("rbPause").onclick = () => { paused = !paused; $("rbPause").classList.toggle("paused", paused); };
-    $("rbBack").onclick = () => { d = Math.max(d0, d - (d1 - d0) * 0.12); };
-    for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) $("rbFwd").addEventListener(ev, (e) => { e.preventDefault(); fast = v; $("rbFwd").classList.toggle("on", v); });
-    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; $("rbSpeed").querySelector("b").textContent = `${rate}×`; };
-    $("rbRoute").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
+    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.hidden = rate === 1; };
     $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
   }
   const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
@@ -2433,8 +2430,20 @@ async function main() {
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
   const bubbleBtn = $("bubble");
-  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; };
+  const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; $("bubbleHint").querySelector("span").textContent = open ? "轻点车罩 · 放下挡风" : "轻点车罩 · 收起"; };
   bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
+  // Tap the canopy itself to pull it down or push it up (a short tap, not a drag to look around). The first
+  // time, a small note by the canopy says so.
+  const rc = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let tap0 = null;
+  renderer.domElement.addEventListener("pointerdown", (e) => (tap0 = { x: e.clientX, y: e.clientY, t: performance.now() }));
+  renderer.domElement.addEventListener("pointerup", (e) => {
+    if (!tap0 || !HAS_BUBBLE || CABIN || arrived || Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) > 10 || performance.now() - tap0.t > 400) return;
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); rc.setFromCamera(ndc, camera);
+    if (rc.intersectObject(myBubble, true).length) { setBubble(bubbleWant < 0.5); try { localStorage.setItem("prerunBubbleTip", "1"); } catch { /* fine */ } $("bubbleHint").hidden = true; }
+  });
+  let hintOn = TRIP && HAS_BUBBLE && !CABIN && !(() => { try { return localStorage.getItem("prerunBubbleTip"); } catch { return 1; } })();
+  const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names };
   renderer.setAnimationLoop((now) => {
@@ -2458,7 +2467,7 @@ async function main() {
     if (TRIP && !arrived) {
       $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
       const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = (d1 - d0) / (SPEED * 3);
-      document.querySelector("#rideBar .fill").style.width = `${u * 100}%`; document.querySelector("#rideBar .knob").style.left = `${u * 100}%`;
+      document.querySelector("#rideBar .fill").style.width = `${u * 100}%`; document.querySelector("#rideBar .knob").style.left = $("rbTime").style.left = `${u * 100}%`;
       if (document.activeElement !== $("rbSeek")) $("rbSeek").value = Math.round(u * 1000);
       $("rbTime").textContent = `${clock(u * full)} / ${clock(full)}`;
     }
@@ -2483,6 +2492,10 @@ async function main() {
     for (const c of [chairsUp, padsUp, chairsDown, padsDown, bubblesUp, bubblesDown, rimsUp, rimsDown]) c.instanceMatrix.needsUpdate = true;
     bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
     bubbleMatrix(bubbleOpen, myBubble.matrix);
+    if (hintOn) { // the note sits under the canopy's middle, on screen
+      if (arrived) { hintOn = false; $("bubbleHint").hidden = true; }
+      else { hb.setFromObject(myBubble.children[0]); hb.getCenter(hv).project(camera); const h = $("bubbleHint");
+        h.hidden = hv.z > 1; h.style.left = `${Math.min(innerWidth - 110, Math.max(110, (hv.x * 0.5 + 0.5) * innerWidth))}px`; h.style.top = `${(-hv.y * 0.5 + 0.5) * innerHeight}px`; } }
 
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;

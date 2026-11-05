@@ -165,21 +165,22 @@
     #bubble img { width: 28px; height: 28px; }
     #rideBar { position: fixed; left: 10px; right: 10px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 5; display: grid; gap: 10px; font-family: "Noto Serif SC", serif; color: #22344d; }
     #rideBar[hidden] { display: none; }
-    #rideBar .ctl { display: flex; align-items: center; justify-content: space-between; }
-    #rideBar .rnd { width: 66px; height: 66px; border-radius: 50%; border: 0; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.22); display: grid; place-content: center; justify-items: center; gap: 0; font: 600 12px "Noto Serif SC", serif; color: #22344d; cursor: pointer; padding: 0; }
-    #rideBar .rnd img { width: 32px; height: 32px; } #rideBar .rnd b { font: 600 20px "Cormorant Garamond", serif; line-height: 1.1; }
-    #rideBar .play { display: flex; align-items: center; gap: 14px; padding: 6px 14px; border-radius: 999px; background: rgba(34,52,77,.35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
-    #rideBar .play button { width: 44px; height: 44px; border: 0; background: none; color: #fdfbf6; font-size: 22px; cursor: pointer; padding: 0; }
-    #rideBar .play button.on { color: #f6c453; }
-    #rideBar .play .pp { width: 52px; height: 52px; border-radius: 50%; background: #fdfbf6; color: #22344d; font: 700 18px sans-serif; letter-spacing: -2px; box-shadow: 0 4px 10px rgba(0,0,0,.2); }
-    #rideBar .track { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.18); position: relative; }
-    #rideBar .track > img { width: 34px; height: 34px; flex: none; }
-    #rideBar .tr { flex: 1; position: relative; height: 26px; }
+    #rideBar .track { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 14px rgba(40,50,70,.18); }
+    #rbSpeed, #rbPause { position: relative; width: 50px; height: 50px; flex: none; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; cursor: pointer; }
+    #rbSpeed { background: #f3ede2; } #rbSpeed img { width: 36px; height: 36px; }
+    #rbSpeed b { position: absolute; right: -4px; bottom: -2px; font: 600 13px "Cormorant Garamond", serif; color: #fdfbf6; background: #b6463b; border-radius: 999px; padding: 0 6px; border: 2px solid #fdfbf6; }
+    #rbPause { background: #fdfbf6; box-shadow: inset 0 0 0 1.5px #cbbfa9; } #rbPause img { width: 34px; height: 34px; }
+    #rbPause svg { position: absolute; right: -3px; bottom: -3px; background: #22344d; border-radius: 50%; padding: 4px; border: 2px solid #fdfbf6; }
+    #rideBar .tr { flex: 1; position: relative; height: 26px; margin: 0 8px; }
     #rideBar .tr::before { content: ""; position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: #e6dccb; }
     #rideBar .tr .fill { position: absolute; left: 0; top: 11px; height: 4px; border-radius: 2px; background: #22344d; width: 0; }
     #rideBar .tr .knob { position: absolute; top: 4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #fdfbf6; box-shadow: 0 0 0 3px #22344d; left: 0; }
-    #rideBar .tr input { position: absolute; inset: 0; width: 100%; opacity: 0; margin: 0; cursor: pointer; }
-    #rideBar #rbTime { flex: none; font: 600 14px "Cormorant Garamond", serif; color: #6f675e; }
+    #rbTime { position: absolute; top: -30px; left: 0; transform: translateX(-50%); font: 600 13px "Cormorant Garamond", serif; color: #22344d; background: rgba(253,251,246,.95); border-radius: 999px; padding: 1px 8px; box-shadow: 0 2px 6px rgba(40,50,70,.15); white-space: nowrap; pointer-events: none; }
+    #rideBar .tr input { position: absolute; left: -10px; right: -10px; top: -6px; bottom: -6px; width: calc(100% + 20px); opacity: 0; margin: 0; cursor: pointer; }
+    #bubble { display: none !important; }
+    #bubbleHint { position: fixed; z-index: 4; display: flex; align-items: center; gap: 6px; transform: translate(-50%, 12px); font: 600 13px "Noto Serif SC", serif; color: #22344d; background: rgba(253,251,246,.94); border-radius: 999px; padding: 3px 12px 3px 4px; box-shadow: 0 3px 8px rgba(40,50,70,.2); pointer-events: none; }
+    #bubbleHint[hidden] { display: none; } #bubbleHint img { width: 24px; height: 24px; }
+    body.riding #top #desc { display: none; }
     #rbPause .pl { display: none; } #rbPause.paused .pl { display: inline; } #rbPause.paused .ps { display: none; }
     #rideBar .play button svg { display: block; margin: auto; }
     body.riding #credit { display: none; } body.menuOpen #rideBar { visibility: hidden; }
@@ -202,12 +203,14 @@
   <button id="bubble" aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span>放下防风罩</span></button>
   <!-- The chair ride as a player: back, pause, fast; the line from the bottom station to the flag at the top,
        drag it to jump ahead; 路线 opens the roadbook, 速度 cycles how fast the chair goes. -->
+  <!-- The chair ride as one bar: the chair is the speed (tap: ×1 ×2 ×4), drag the dot along the line, the
+       flag at the top is pause. Tap the canopy itself to pull it down. -->
   <div id="rideBar" hidden>
-    <div class="ctl"><button id="rbRoute" class="rnd"><img src="assets/icons/resorts.png?v=1" alt=""><span>路线</span></button>
-      <div class="play"><button id="rbBack" aria-label="后退"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M11 6 L3 12 L11 18Z M21 6 L13 12 L21 18Z" fill="currentColor"/></svg></button><button id="rbPause" class="pp" aria-label="暂停"><svg viewBox="0 0 24 24" width="22" height="22"><path class="ps" d="M7 5h3.5v14H7z M13.5 5H17v14h-3.5z" fill="currentColor"/><path class="pl" d="M8 5 L19 12 L8 19Z" fill="currentColor"/></svg></button><button id="rbFwd" aria-label="快进"><svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 6 L11 12 L3 18Z M13 6 L21 12 L13 18Z" fill="currentColor"/></svg></button></div>
-      <button id="rbSpeed" class="rnd"><b>1×</b><span>速度</span></button></div>
-    <div class="track"><img src="assets/icons/lift.png?v=1" alt=""><div class="tr"><i class="fill"></i><i class="knob"></i><input id="rbSeek" type="range" min="0" max="1000" value="0"></div><small id="rbTime">0:00 / 0:00</small><img src="assets/icons/challenge.png?v=1" alt=""></div>
+    <div class="track"><button id="rbSpeed" aria-label="速度"><img src="assets/icons/lift.png?v=1" alt=""><b hidden>×2</b></button>
+      <div class="tr"><i class="fill"></i><i class="knob"></i><span id="rbTime">0:00 / 0:00</span><input id="rbSeek" type="range" min="0" max="1000" value="0"></div>
+      <button id="rbPause" aria-label="暂停"><img src="assets/icons/challenge.png?v=1" alt=""><svg viewBox="0 0 24 24" width="16" height="16"><path class="ps" d="M7 5h3.5v14H7z M13.5 5H17v14h-3.5z" fill="#fdfbf6"/><path class="pl" d="M8 5 L19 12 L8 19Z" fill="#fdfbf6"/></svg></button></div>
   </div>
+  <div id="bubbleHint" hidden><img src="assets/icons/windy.png?v=1" alt=""><span>轻点车罩 · 放下挡风</span></div>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
@@ -226,6 +229,6 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="look.js?v=91"></script>
+  <script type="module" src="look.js?v=94"></script>
 </body>
 </html>
