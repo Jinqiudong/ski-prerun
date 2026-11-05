@@ -196,7 +196,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=31");
+    const { Collection } = await import("./collection.js?v=32");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -205,13 +205,15 @@ async function openWorld() {
     $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
     collection.onPick = (r) => { $("tabs").classList.add("shut");
       const s = logOf()[r.id]?.stats, card = $("worldCard");
-      card.innerHTML = `<b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
+      // An opened mountain: its name once, big at the top (the map's words step aside); the card keeps your progress and the way in.
+      $("worldTitle").innerHTML = `<i>${collection.townOf(r.id)}</i><b>${r.name}</b>${EN_ON ? "" : `<small>${r.zh}</small>`}`;
+      card.innerHTML = `<small>${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
         <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
       card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
       card.hidden = false;
     };
     collection.onExplore = () => $("tabs").classList.add("shut"); // turning or zooming the map folds the tabs away
-    const loop = (now) => { if (tab === "resort") { collection.frame(now / 1000); $("compass").style.transform = `rotate(${(collection.controls.getAzimuthalAngle() * 180 / Math.PI).toFixed(1)}deg)`; } requestAnimationFrame(loop); };
+    const loop = (now) => { if (tab === "resort") { collection.frame(now / 1000); $("world").classList.toggle("focus", !!collection.picked); $("compass").style.transform = `rotate(${(collection.controls.getAzimuthalAngle() * 180 / Math.PI).toFixed(1)}deg)`; } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
   collection.resize();

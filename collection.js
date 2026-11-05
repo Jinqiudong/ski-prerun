@@ -238,6 +238,8 @@ export class Collection {
     this.view(t.base.clone().setY(5), 70, 0.95, az);
     this.onPick?.(t.userData);
   }
+  // The town a resort is by, for the title over an opened tile.
+  townOf(id) { return TOWNS.find((tw) => tw.ids.includes(id))?.en || ""; }
   overview() { this.picked = null; this.moved = false; for (const x of this.tiles) x.userData.tag.classList.remove("on"); this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az); }
 
   resize() {
