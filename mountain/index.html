@@ -226,6 +226,39 @@
     .ltag.on b, .ltag.on small { background: #22344d !important; color: #fdfbf6 !important; border-color: #22344d !important; }
     #spin[hidden] { display: none !important; }
     .pi { width: 22px; height: 22px; vertical-align: -5px; margin-right: 5px; } .pin b { display: flex; align-items: center; } .pin b .pi { width: 26px; height: 26px; vertical-align: 0; }
+    /* choosing a lift and its detail, in the paper look */
+    #plansBar { top: calc(96px + env(safe-area-inset-top)) !important; gap: 6px !important; }
+    #legend { display: none !important; }
+    .plans { background: rgba(253,251,246,.95); border-radius: 999px; padding: 4px; box-shadow: 0 4px 12px rgba(40,50,70,.12); gap: 2px !important; flex-wrap: nowrap !important; }
+    .plans .lbl { font: 13px "Noto Serif SC", serif !important; color: #8a8278 !important; padding: 0 6px 0 10px; }
+    .plans button { box-shadow: none !important; background: none !important; border: 0 !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; padding: 5px 12px !important; display: flex !important; align-items: center; gap: 6px; border-radius: 999px !important; }
+    .plans button.on { background: #22344d !important; color: #fdfbf6 !important; }
+    .dt { width: 10px; height: 10px; display: inline-block; } .dt.e { background: #4fae6a; border-radius: 50%; } .dt.m { background: #3f78c8; } .dt.a { background: #2a2e36; transform: rotate(45deg) scale(.85); }
+    .plans button.on .dt.a { background: #fdfbf6; }
+    .ltag, .ltag.on { background: none !important; border: 0 !important; }
+    .ltag b { display: flex !important; align-items: center; gap: 6px; font: 600 15px "Cormorant Garamond", serif !important; padding: 4px 12px 4px 5px !important; border-radius: 999px !important; border: 0 !important; box-shadow: 0 4px 10px rgba(40,50,70,.18); }
+    .ltag b .pi { width: 24px !important; height: 24px !important; margin: 0 !important; background: #fdfbf6; border-radius: 50%; padding: 2px; }
+    /* the time and height under a tag: on its own small paper pill, so it reads on any ground */
+    .ltag small, .ltag.on small { display: block !important; margin-top: 3px; background: rgba(253,251,246,.95) !important; color: #22344d !important; border: 0 !important; border-radius: 999px !important; font: 600 12px "Noto Serif SC", serif !important; padding: 1px 9px !important; box-shadow: 0 2px 5px rgba(40,50,70,.15); }
+    .ltag i { height: 14px !important; width: 1.5px !important; background: rgba(34,52,77,.55) !important; }
+    .liftCard { border: 0 !important; border-radius: 22px !important; padding: 12px 14px !important; background: rgba(253,251,246,.97) !important; box-shadow: 0 10px 24px rgba(40,50,70,.18) !important; gap: 8px !important; }
+    .liftCard.on { box-shadow: 0 10px 24px rgba(40,50,70,.18), inset 0 0 0 2px #22344d !important; }
+    .liftCard .row1 b { font: 600 20px "Cormorant Garamond", serif !important; display: flex; align-items: center; gap: 8px; }
+    .liftCard .row1 b .pi { width: 34px !important; height: 34px !important; margin: 0 !important; background: #f3ede2; border-radius: 50%; padding: 3px; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; } .chips span { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #33302c; background: #f3ede2; border-radius: 999px; padding: 2px 10px 2px 7px; } .chips img { width: 18px; height: 18px; }
+    body.picking #credit { display: none !important; }
+    #detail { padding: 6px 18px 14px !important; }
+    #detailBody h2 { display: flex; align-items: center; gap: 10px; font-size: 26px !important; margin: 4px 0 8px !important; }
+    #detailBody h2 .pi { width: 44px !important; height: 44px !important; margin: 0 !important; background: #f3ede2; border-radius: 50%; padding: 4px; }
+    #detailBody h3 { display: flex; align-items: center; gap: 6px; font: 15px "Noto Serif SC", serif !important; color: #6f675e !important; margin: 16px 0 8px !important; }
+    #detailBody h3 img { width: 24px; height: 24px; } #detailBody h3::after { content: ""; flex: 1; height: 1px; background: #e6dccb; margin-left: 6px; }
+    #detailBody .runs { gap: 6px !important; margin-bottom: 6px !important; }
+    #detailBody .runs > span { display: inline-flex; align-items: center; gap: 5px; font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; background: #fdfbf6; border: 1px solid #e6dccb; border-radius: 999px; padding: 3px 12px 3px 9px; }
+    #detailBody .nx { display: grid !important; grid-template-columns: 34px 1fr auto; align-items: center; column-gap: 10px; background: #fdfbf6; border-radius: 14px; padding: 8px 12px; box-shadow: 0 2px 6px rgba(40,50,70,.07); margin: 0 0 8px !important; }
+    #detailBody .nx .pi { width: 34px !important; height: 34px !important; margin: 0 !important; grid-row: 1 / 3; background: #f3ede2; border-radius: 50%; padding: 3px; }
+    #detailBody .nx b { font: 600 18px "Cormorant Garamond", serif; color: #22344d; } #detailBody .nx small { grid-column: 2; font-size: 12px; color: #6f675e; }
+    #detailBody .nx .mins { grid-column: 3; grid-row: 1 / 3; font: 600 13px "Noto Serif SC", serif; color: #fdfbf6; background: #4f6a86; border-radius: 999px; padding: 3px 11px; white-space: nowrap; }
+    #detailBody .hint { color: #8a8278 !important; }
   </style>
 </head>
 <body>
@@ -242,7 +275,7 @@
     <button id="replay" class="rb" aria-label="转一圈"><img src="../assets/icons/refresh.png?v=1" alt=""></button></div>
   <button id="introSkip" hidden>跳过 ›</button>
   <div id="liftTags"></div>
-  <div id="plansBar"><div class="plans"><span>今天想怎么滑</span><button class="glass" data-plan="easy">热身（绿）</button><button class="glass" data-plan="intermediate">巡航（蓝）</button><button class="glass" data-plan="advanced">挑战（黑）</button></div><div id="planOut" class="glass" hidden></div><div id="legend" class="glass"><span class="sw full"></span>山顶直接出发 <span class="sw half"></span>滑下去能接上</div></div>
+  <div id="plansBar"><div class="plans"><span class="lbl">今天</span><button data-plan="easy"><i class="dt e"></i>热身</button><button data-plan="intermediate"><i class="dt m"></i>巡航</button><button data-plan="advanced"><i class="dt a"></i>挑战</button></div><div id="planOut" class="glass" hidden></div><div id="legend" class="glass"><span class="sw full"></span>山顶直接出发 <span class="sw half"></span>滑下去能接上</div></div>
   <div id="liftCards"></div>
   <div id="dim"></div>
   <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
@@ -278,6 +311,6 @@
     <button id="layerFab" class="fabBtn" aria-label="图层"><img src="../assets/icons/layer_runs.png?v=1" alt=""></button>
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module" src="mountain.js?v=58"></script>
+  <script type="module" src="mountain.js?v=59"></script>
 </body>
 </html>

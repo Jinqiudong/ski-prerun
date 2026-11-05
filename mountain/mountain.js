@@ -525,6 +525,7 @@ async function main() {
     return {
       l, runs, next, mins, beginner: l.rise < 40,
       what: l.rise < 40 ? "初学者短缆车" : `${(len / 1000).toFixed(1)} 公里 · 约 ${mins} 分钟`,
+      km: (len / 1000).toFixed(1),
       alt: Math.round(T.data.hmin + T.heightAt(top[0], top[1])),
       can: LEVELS.filter((k) => count[k]).map((k) => `<span class="cnt">${SYMBOL[k]}${count[k]}</span>`).join("") || "<span class=cnt>没有直接出发的雪道</span>",
     };
@@ -555,14 +556,14 @@ async function main() {
       const info = mini.info.get(l);
       const tag = document.createElement("button");
       tag.className = "ltag" + (info.beginner ? " small" : "");
-      tag.innerHTML = `<b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · 到 ${info.alt} 米`}</small><i></i>`;
+      tag.innerHTML = `<b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · ${info.alt} 米`}</small><i></i>`;
       tag.addEventListener("click", () => pickLift(l, { scroll: true }));
       tagBox.append(tag);
       info.tag = tag;
       const card = document.createElement("div");
       card.className = "liftCard";
       card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><span class="lvls">${info.can}</span></div>
-        <small>${info.what} · 到 ${info.alt} 米${info.next.length ? ` · 能接 ${info.next.length} 条缆车` : ""}</small>
+        ${chips(info, info.next.length ? `<span><img src="${IC("lift")}" alt="">能接 ${info.next.length} 条缆车</span>` : "")}
         <div class="acts"><button class="more">详情</button><button class="go">坐这条上山 ›</button></div>`;
       card.addEventListener("click", (e) => { if (!e.target.closest("button")) pickLift(l, { scroll: true }); });
       card.querySelector(".more").addEventListener("click", () => { pickLift(l, { scroll: true }); openDetail(true); });
@@ -617,13 +618,16 @@ async function main() {
     }, 90);
   }, { passive: true });
 
+  // Small paper chips, each with the owner's icon: how long, how far up, and so on.
+  const IC = (n) => `../assets/icons/${n}.png?v=1`;
+  const chips = (info, more) => info.beginner ? `<div class="chips"><span><img src="${IC("ski")}" alt="">初学者短缆车</span></div>` : `<div class="chips"><span><img src="${IC("trailmap")}" alt="">${info.km} 公里</span><span><img src="${IC("season")}" alt="">约 ${info.mins} 分钟</span><span><img src="${IC("alpine")}" alt="">到 ${info.alt} 米</span>${more || ""}</div>`;
   // Detail: the card grows into a sheet; the model dims and moves up a little but keeps its size.
   function fillDetail() {
     const info = mini.info.get(mini.pick), l = info.l;
     const byLevel = LEVELS.map((k) => info.runs.filter((r) => r.level === k)).filter((g) => g.length);
-    $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</h2><p class="meta">${info.what} · 到 ${info.alt} 米</p>
-      <h3>山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
-      ${info.next.length ? `<h3>上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<p class="nx"><span><img class="pi" src="../assets/icons/lift.png?v=1" alt=""><b>${n.o.name}</b></span><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""} · 约 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</small></p>`).join("")}` : ""}
+    $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</h2>${chips(info)}
+      <h3><img src="${IC("layer_runs")}" alt="">山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
+      ${info.next.length ? `<h3><img src="${IC("lift")}" alt="">上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<div class="nx"><img class="pi" src="../assets/icons/lift.png?v=1" alt=""><b>${n.o.name}</b><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""}</small><span class="mins">滑 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</span></div>`).join("")}` : ""}
       <p class="hint">山上最亮的是从山顶直接出发的雪道，半亮的是滑下去还能接上的。</p>`;
     $("detailGo").textContent = `坐 ${l.name} 上山 ›`;
   }
