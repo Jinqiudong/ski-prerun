@@ -2,9 +2,9 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RIDERS, PART_ZH, OUTFITS, loadBoarder, boarderModel, idleBoarder, dressRider } from "./boarder.js?v=14";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=5";
-import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=13";
-import { playIntro } from "./intro.js?v=8";
+import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=6";
+import { t, EN_ON, translatePage, openSettings } from "./i18n.js?v=14";
+import { playIntro } from "./intro.js?v=9";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
@@ -182,13 +182,21 @@ async function setTab(t) {
   if (t === "log") await openRecords();
 }
 let rider_ready = false;
+// The tabs fold into one round button while you look around — scrolling a page down, turning the rider,
+// exploring the map — and a tap on it opens them again; scrolling back to the top opens them too.
+const fold = () => $("tabs").classList.add("shut");
+for (const id of ["sheet", "trips", "records"]) {
+  let last = 0; const el = $(id);
+  el.addEventListener("scroll", () => { const y = el.scrollTop; if (y > last + 6 && y > 40) fold(); else if (y < 8) $("tabs").classList.remove("shut"); last = y; }, { passive: true });
+}
+canvas.addEventListener("pointerdown", fold);
 for (const b of $("tabs").children) b.onclick = () => { if ($("tabs").classList.contains("shut")) { $("tabs").classList.remove("shut"); return; } setTab(b.dataset.tab); }; // folded: a tap opens it
 $("useBtn").onclick = () => { st.rider = chosen().id; save(); setTab("resort"); };
 const resortList = async () => (await (await fetch("data/resorts.json")).json()).filter((r) => r.ready);
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=27");
+    const { Collection } = await import("./collection.js?v=28");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -212,7 +220,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=17");
+    const { Trips } = await import("./trips.js?v=19");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -222,7 +230,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=6");
+  const { renderMemory } = await import("./memory.js?v=7");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));

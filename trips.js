@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON } from "./i18n.js?v=13";
-import { daysOf } from "./roadbook.js?v=5";
+import { t, EN_ON } from "./i18n.js?v=14";
+import { daysOf } from "./roadbook.js?v=6";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -93,6 +93,11 @@ const wxIcon = (w) => {
   if (w.cm >= 0.5 || [71, 73, 75, 77, 85, 86].includes(c)) return w.cm >= 10 || c === 75 || c === 86 ? "heavysnow" : c <= 2 ? "snowsun" : w.cm < 2 || c === 71 || c === 85 ? "lightsnow" : "snow";
   return c === 0 ? "sunny" : c <= 2 ? "partly" : c === 45 || c === 48 ? "fog" : "cloudy";
 };
+const SEC = (icon, text) => `<div class="sec">${ICON(icon, "si")}${text}</div>`; // a section heading with its painted icon
+// Where a trip stands, as the owner's stamps: coming up, under way, done.
+const status = (tr, now) => (tr.to < now ? "st_done" : tr.from <= now ? "st_ontrip" : "st_booked");
+const WXWORD = { sunny: ["晴", "Sunny"], partly: ["少云", "Partly cloudy"], cloudy: ["多云", "Cloudy"], fog: ["雾", "Fog"], lightsnow: ["小雪", "Light snow"], snow: ["降雪", "Snow"], heavysnow: ["大雪", "Heavy snow"], snowsun: ["晴雪", "Snow & sun"] };
+const wxWord = (w) => WXWORD[wxIcon(w)][EN_ON ? 1 : 0];
 const CREW = ["av_rider", "av_fox", "av_hare", "av_marmot", "av_elk", "av_bear", "av_girl"]; // me first, then friends round the animals
 
 const SERIF = `"Cormorant Garamond", "Noto Serif SC", serif`;
@@ -103,6 +108,15 @@ const CSS = `
 .pl .lead { font-family: ${SERIF}; font-size: 16px; color: ${C.mute}; }
 .pl .lead i { font-style: normal; color: #c3b59d; margin: 0 6px; }
 .pl .sec { display: flex; align-items: center; gap: 10px; margin: 22px 0 8px; font-family: ${SERIF}; font-size: 18px; color: #6f675e; letter-spacing: .06em; }
+.pl .sec .si { width: 26px; height: 26px; margin: -4px -2px -4px 0; }
+.pl .tstamp { position: absolute; width: 64px; height: 64px; right: 4px; top: -16px; transform: rotate(10deg); pointer-events: none; filter: drop-shadow(0 3px 4px rgba(90,70,40,.2)); z-index: 2; }
+.pl .tstamp.big { width: 84px; height: 84px; right: 0; top: 0; }
+.pl .days7 { display: grid; gap: 8px; }
+.pl .days7 > div { display: grid; grid-template-columns: 54px 38px 1fr; align-items: center; gap: 8px; padding: 8px 10px; background: #fdfbf6; box-shadow: 0 2px 5px rgba(90,70,40,.08); }
+.pl .days7 small { font-family: Oswald, sans-serif; font-size: 10px; letter-spacing: .12em; color: ${C.mute}; line-height: 1.3; }
+.pl .days7 b { font: 600 16px ${SERIF}; color: ${C.ink}; display: block; } .pl .days7 span { font-size: 13px; color: #6f675e; }
+.pl .days7 .ic { width: 38px; height: 38px; }
+.pl .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .pl .chips span { font-size: 12px; padding: 2px 9px; border: 1px solid #cbbfa9; border-radius: 999px; color: ${C.ink}; }
 .pl .sec::after { content: ""; flex: 1; height: 1px; background: #d9cdb9; }
 .pl .back { font-family: ${SERIF}; font-size: 16px; color: ${C.mute}; background: none; border: 0; padding: 0; margin-bottom: 8px; cursor: pointer; }
 .pl button { cursor: pointer; }
@@ -203,6 +217,7 @@ const CSS = `
 .plsheet .quote { font-family: ${SERIF}; font-size: 18px; line-height: 1.45; color: #4a453f; }
 .plsheet .wx { display: grid; grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px; }
 .plsheet .wx div { background: #f2f4f5; border-radius: 6px; padding: 6px; text-align: center; font-family: ${SERIF}; font-size: 14px; }
+.pl .ni { width: 24px; height: 24px; display: block; } .pl .ni.inl { display: inline-block; vertical-align: -6px; } .plsheet .nums .ni { margin: 0 0 2px; }
 .plsheet .wx b { display: block; font-size: 22px; } .plsheet .wx b .ic { width: 40px; height: 40px; } .plsheet .wx small { display: block; color: ${C.mute}; font-size: 12px; }
 .plsheet .bar { display: flex; height: 12px; border-radius: 3px; overflow: hidden; }
 .plsheet .legend { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; color: #5b554e; }
@@ -295,7 +310,7 @@ export class Trips {
     if (this.shared) return this.show(this.shared, true);
     const list = this.list.sort((a, b) => a.from.localeCompare(b.from)), now = today();
     const coming = list.filter((x) => x.to >= now), past = list.filter((x) => x.to < now);
-    const row = (tr) => { const n = between(now, tr.from); return `<div class="triprow" data-id="${tr.id}"><div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0"><span translate="no">${esc(tr.name)}</span> · ${tr.maybe.length ? tr.maybe.map((id) => this.name(id)).join(" · ") : t("看雪定山")}</div></div>`; };
+    const row = (tr) => { const n = between(now, tr.from); return `<div class="triprow" data-id="${tr.id}" style="position:relative">${ICON(status(tr, now), "tstamp")}<div class="bp">${this.pass(tr, this.groups(tr)[0], 0, 1)}</div>${tr.to >= now ? `<span class="count">${n > 0 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 0 ? t("今天出发！") : t("进行中")}</span>` : ""}<div class="note" style="margin:6px 2px 0"><span translate="no">${esc(tr.name)}</span> · ${tr.maybe.length ? tr.maybe.map((id) => this.name(id)).join(" · ") : t("看雪定山")}</div></div>`; };
     this.box.innerHTML = `<div class="kicker">MY TRIPS</div><div class="h1">${t("我的行程")}</div>
       <button class="new">${t("＋ 新建行程")}<small>${t("先选雪卡，再看能去哪些山")}</small></button>
       ${coming.length ? `<div class="sec">${t("即将出发")}</div>${coming.map(row).join("")}` : ""}
@@ -306,19 +321,35 @@ export class Trips {
     this.box.scrollTop = 0;
   }
 
+  // The trip day by day: fly in and drive up, the riding days (where, as far as we know), the way home,
+  // and what to pack before you go.
+  daysHTML(tr, maybe) {
+    const len = between(tr.from, tr.to) + 1, where = maybe.length ? maybe.map((id) => this.name(id)).join(" / ") : t("看雪定山"), rows = [];
+    for (let i = 0; i < len; i++) {
+      const d = plus(tr.from, i), first = i === 0 && len > 1, last = i === len - 1 && len > 1;
+      const [icon, what, note] = first ? ["trailmap", EN_ON ? "Fly in, drive up" : "飞到 Denver，开车上山", EN_ON ? "check in, rent gear, early night" : "入住、取装备、早点睡"]
+        : last ? ["lodge", EN_ON ? "Last laps, head home" : "最后几趟，回程", EN_ON ? "pack the car by noon" : "中午前收拾好行李"]
+        : ["snowboard", EN_ON ? `Ride day ${i}` : `滑雪日 ${i}`, where];
+      rows.push(`<div><small>${fmt(d)}<br>${WK[day0(d).getDay()]}</small>${ICON(icon)}<div><b>${what}</b><span translate="no">${esc(note)}</span></div></div>`);
+    }
+    rows.push(`<div><small>${EN_ON ? "BEFORE" : "出发前"}</small>${ICON("packing")}<div><b>${EN_ON ? "Packing list" : "装备清单"}</b><div class="chips">${GEAR[EN_ON ? "en" : "zh"].map((g) => `<span>${esc(g)}</span>`).join("")}</div></div></div>`);
+    return rows.join("");
+  }
+
   // ---- One trip.
   show(tr, shared = false) {
     const now = today(), n = between(now, tr.from), len = between(tr.from, tr.to) + 1, maybe = this.maybeOf(tr), groups = this.groups(tr);
     const lead = n > 1 ? (EN_ON ? `${n} days to go` : `还有 ${n} 天`) : n === 1 ? (EN_ON ? "Tomorrow" : "明天出发") : n === 0 ? t("今天出发！") : tr.to >= now ? t("进行中") : fmt(tr.from);
     const face = (p, k) => `<div class="face">${ICON(CREW[k % CREW.length], "")}</div>`;
     this.box.innerHTML = `<button class="back">${t("‹ 我的行程")}</button>
-      <div class="kicker">${shared ? esc(t("朋友分享给你的行程")) : "TRIP"}</div><div class="h1" translate="no">${esc(tr.name)}</div>
+      <div class="kicker">${shared ? esc(t("朋友分享给你的行程")) : "TRIP"}</div><div style="position:relative;padding-right:84px"><div class="h1" translate="no">${esc(tr.name)}</div>${ICON(status(tr, now), "tstamp big")}</div>
       <div class="lead">${lead}<i>·</i>${fmt(tr.from)} – ${fmt(tr.to)}<i>·</i>${EN_ON ? `${len} days` : `${len} 天`}</div>
       <div class="deck"></div><div class="dealhint">${groups.length > 1 ? `↕ ${t("上下滑，抽下一张")} · ${groups.length} ${t("张机票")}` : ""}</div>
-      <div class="sec">${t("可能去的山")}</div><div class="tickets">${maybe.map((id) => this.ticketHTML(id)).join("")}</div>
+      ${SEC("resorts", t("可能去的山"))}<div class="tickets">${maybe.map((id) => this.ticketHTML(id)).join("")}</div>
       ${tr.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
-      <div class="sec">${t("日子")}</div><div class="cal"></div>
-      <div class="sec">${t("一起滑的人")}</div><div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
+      ${SEC("season", t("日子"))}<div class="cal"></div>
+      ${SEC("trailmap", t("每一天"))}<div class="days7">${this.daysHTML(tr, maybe)}</div>
+      ${SEC("av_rider", t("一起滑的人"))}<div class="crew">${(tr.people.length ? tr.people : [{ name: this.me, from: "" }]).map((p, k) => `<div class="p">${face(p, k)}<span translate="no">${esc(p.name === this.me && EN_ON ? t("我") : p.name)}</span><small>${esc(p.from || "")}</small></div>`).join("")}${shared ? "" : `<div class="p"><button class="add" data-invite>＋</button><small>${t("邀请")}</small></div>`}</div>
       <div class="acts">${shared ? `<button class="ghostbtn main keep">${t("存到我的行程")}</button>` : `<button class="ghostbtn main share">${t("🔗 分享给朋友")}</button><button class="ghostbtn edit">${t("改一改")}</button><button class="ghostbtn del">${t("删掉")}</button>`}</div>`;
     this.deck(tr, this.box.querySelector(".deck"));
     this.calendar(tr, this.box.querySelector(".cal"), null);
@@ -389,14 +420,14 @@ export class Trips {
     const m = (v) => `${v.toLocaleString("en-US")} m`;
     el.innerHTML = `<div class="s"><button class="x" aria-label="close">×</button><div class="hero" style="background-image:url(${paintUrl(id)})"><div class="t"><div class="kicker">RESORT GUIDE</div><div class="h1" style="margin:0;font-size:28px">${esc(r.name)}</div></div></div>
       <div class="b"><div class="quote">“${esc(EN_ON ? a.en : a.zh)}”</div>
-        <div class="sec">${t("这几天的雪")}</div><div class="wxbox"><div class="wish">Manifest for big snow ❄<small>${t("还太远，天气预报出来（出发前 2 周内）就会写在这里")}</small></div></div>
-        ${st ? `<div class="sec">${t("适合谁")}</div><div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span>${x[0]} ${t(x[1])} ${x[2]}</span>`).join("")}</div>
+        ${SEC("snowreport", t("这几天的雪"))}<div class="wxbox"><div class="wish">Manifest for big snow ❄<small>${t("还太远，天气预报出来（出发前 2 周内）就会写在这里")}</small></div></div>
+        ${st ? `${SEC("difficulty", t("适合谁"))}<div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span>${x[0]} ${t(x[1])} ${x[2]}</span>`).join("")}</div>
           <div class="note" style="font-size:15px;color:#4a453f">${EN_ON ? `${st.runs.easy + st.runs.intermediate} of ${total} named runs are green or blue.` : `${total} 条有名字的雪道里，绿道和蓝道有 ${st.runs.easy + st.runs.intermediate} 条。`}</div>
-        <div class="sec">${t("数字")}</div><div class="nums">${[["山顶", m(st.top)], ["山脚", m(st.base)], ["落差", m(st.top - st.base)], ["雪道", total], ["缆车", st.lifts], ["从 Denver", EN_ON ? `~${a.drive} h drive` : `开车约 ${a.drive} 小时`]].map(([k, v]) => `<div><small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
-        ${st?.flats?.length ? `<div class="sec">${t("单板注意")}</div><div class="note" style="font-size:15px;color:#4a453f;margin-top:0">${EN_ON ? "Flats where a board slows (carry speed into them):" : "这些地方比较平，单板容易减速，要提前带速度："}</div>
+        ${SEC("alpine", t("数字"))}<div class="nums">${[["山顶", m(st.top), "alpine"], ["山脚", m(st.base), "lodge"], ["落差", m(st.top - st.base), "difficulty"], ["雪道", total, "trailmap"], ["缆车", st.lifts, "lift"], ["从 Denver", EN_ON ? `~${a.drive} h drive` : `开车约 ${a.drive} 小时`, "trees"]].map(([k, v, ic]) => `<div>${ICON(ic, "ni")}<small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
+        ${st?.flats?.length ? `${SEC("groomed", t("单板注意"))}<div class="note" style="font-size:15px;color:#4a453f;margin-top:0">${EN_ON ? "Flats where a board slows (carry speed into them):" : "这些地方比较平，单板容易减速，要提前带速度："}</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">${st.flats.map(([n, , m]) => `<span style="font-size:13px;padding:2px 10px;background:#fbf1dc;border-left:3px solid #c9a24a">${esc(n)} · ${m} m</span>`).join("")}</div>` : ""}
         <div class="hikes"></div>
-        <div class="sec">${t("你的进度")}</div><div class="note" style="font-size:15px;color:#4a453f">${runs ? (EN_ON ? `Pre-ran ${runs} time${runs > 1 ? "s" : ""}` : `预滑过 ${runs} 趟`) : t("还没预滑过")}${log?.touched ? (EN_ON ? ` · seen ${Math.max(1, Math.round(log.share * 100))}% of the runs` : ` · 看过 ${Math.max(1, Math.round(log.share * 100))}% 的雪道`) : ""}</div>
+        ${SEC("challenge", t("你的进度"))}<div class="note" style="font-size:15px;color:#4a453f">${runs ? (EN_ON ? `Pre-ran ${runs} time${runs > 1 ? "s" : ""}` : `预滑过 ${runs} 趟`) : t("还没预滑过")}${log?.touched ? (EN_ON ? ` · seen ${Math.max(1, Math.round(log.share * 100))}% of the runs` : ` · 看过 ${Math.max(1, Math.round(log.share * 100))}% 的雪道`) : ""}</div>
         <div class="acts"><button class="ghostbtn main go">${t("去预滑 ›")}</button></div></div></div>`;
     document.body.append(el);
     const close = () => el.remove();
@@ -404,18 +435,18 @@ export class Trips {
     el.querySelector(".x").onclick = close;
     el.querySelector(".go").onclick = () => this.go(id);
     const hikes = await hikesOf(id);
-    if (hikes.length && el.isConnected) el.querySelector(".hikes").innerHTML = `<div class="sec">${t("徒步上去再滑")}</div>${hikes.map((h) => `<div style="margin:0 0 12px;padding:10px 12px;background:#f2f4f5">
-        <div style="font:600 19px ${SERIF};color:${C.ink}">🥾 ${esc(EN_ON ? h.name : h.zh)}</div>
+    if (hikes.length && el.isConnected) el.querySelector(".hikes").innerHTML = `${SEC("hike", t("徒步上去再滑"))}${hikes.map((h) => `<div style="margin:0 0 12px;padding:10px 12px;background:#f2f4f5">
+        <div style="font:600 19px ${SERIF};color:${C.ink}">${esc(EN_ON ? h.name : h.zh)}</div>
         <div style="font-size:13px;color:${C.mute};margin:2px 0 4px">${EN_ON ? `from the top of ${esc(h.from)} · about ${h.mins[0]}–${h.mins[1]} min${h.gain ? ` · +${h.gain} m` : ""}${h.summit ? ` · top ${h.summit[0].toLocaleString("en-US")} m` : ""}` : `从 ${esc(h.from)} 顶出发 · 约 ${h.mins[0]}–${h.mins[1]} 分钟${h.gain ? ` · 爬升约 ${h.gain} 米` : ""}${h.summit ? ` · 山顶 ${h.summit[0].toLocaleString("en-US")} 米` : ""}`}</div>
         <div style="font-size:14px;color:#4a453f">${esc(EN_ON ? h.enWhy : h.zhWhy)}</div>
-        ${h.snowcat ? `<div style="font-size:13px;color:${C.pine};margin-top:4px">🚜 ${esc(EN_ON ? h.snowcatEn : h.snowcat)}</div>` : ""}
+        ${h.snowcat ? `<div style="font-size:13px;color:${C.pine};margin-top:4px;display:flex;gap:6px;align-items:center">${ICON("groomed", "ni")}${esc(EN_ON ? h.snowcatEn : h.snowcat)}</div>` : ""}
         <ul style="margin:6px 0 0;padding-left:18px;font-size:13px;color:#4a453f">${(EN_ON ? h.tipsEn : h.tips).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}
-      <div style="font:15px ${SERIF};color:#6f675e;margin:4px 0 6px">${t("要带的东西")}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${GEAR[EN_ON ? "en" : "zh"].map((g) => `<span style="font-size:12px;padding:2px 9px;border:1px solid #cbbfa9;border-radius:999px;color:${C.ink}">${esc(g)}</span>`).join("")}</div>
+      <div style="font:15px ${SERIF};color:#6f675e;margin:4px 0 6px">${ICON("packing", "ni inl")} ${t("要带的东西")}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${GEAR[EN_ON ? "en" : "zh"].map((g) => `<span style="font-size:12px;padding:2px 9px;border:1px solid #cbbfa9;border-radius:999px;color:${C.ink}">${esc(g)}</span>`).join("")}</div>
       <div class="note">${EN_ON ? "Times and openings change: check the resort's daily report." : "时间和开放情况会变：以雪场当天公告为准。"}</div>`;
     const fc = await forecast(r, tr.from, tr.to);
     if (fc && el.isConnected) {
       const dates = []; for (let d = tr.from; d <= tr.to && dates.length < 7; d = plus(d, 1)) dates.push(d);
-      el.querySelector(".wxbox").innerHTML = `<div class="wx">${dates.map((d) => { const w = fc[d], k = kindOf(w); return `<div><small>${fmt(d)} · ${WK[day0(d).getDay()]}</small><b>${k ? ICON(wxIcon(w)) : "—"}</b>${w ? `<span style="color:${k === "snow" ? "#2f5e8a" : C.mute};font-weight:600">${k === "snow" && w.cm >= 1 ? `+${Math.round(w.cm)} cm` : WX[k].word(w)}</span><small>${Math.round(w.lo)}° / ${Math.round(w.hi)}°C</small>` : "<small>—</small>"}</div>`; }).join("")}</div><div class="note">Open-Meteo</div>`;
+      el.querySelector(".wxbox").innerHTML = `<div class="wx">${dates.map((d) => { const w = fc[d], k = kindOf(w); return `<div><small>${fmt(d)} · ${WK[day0(d).getDay()]}</small><b>${k ? ICON(wxIcon(w)) : "—"}</b>${w ? `<span style="color:${k === "snow" ? "#2f5e8a" : C.mute};font-weight:600"><span translate="no">${k === "snow" && w.cm >= 1 ? `+${Math.round(w.cm)} cm` : wxWord(w)}</span></span><small>${Math.round(w.lo)}° / ${Math.round(w.hi)}°C</small>` : "<small>—</small>"}</div>`; }).join("")}</div><div class="note">Open-Meteo</div>`;
     }
   }
 
