@@ -82,16 +82,17 @@
     #name { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 6px; border: 1px solid #cbbfa9; background: var(--paper); color: var(--ink); }
     /* Tabs along the bottom: rider, resorts (the conquest map), journal. */
     /* The tabs: a frosted pill floating over the page; on the map it folds into one round button while you explore. */
-    /* A pre-run left half way: a slim pill over the tabs, back to it from any tab (until "结束今天" on the
-       ride); it folds with the tabs into a round play button beside theirs. */
-    #resume { position: fixed; left: 50%; transform: translateX(-50%); max-width: calc(100% - 60px); bottom: calc(92px + env(safe-area-inset-bottom)); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 4px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 16px rgba(40,50,70,.18); text-decoration: none; color: #22344d; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); overflow: hidden; transition: all .35s cubic-bezier(.3,1.3,.5,1); }
+    /* A pre-run left half way: a small round button over the tabs' right end; tap it and it opens into a pill
+       (where, and ▶ to go back). It sits beside the tabs' round button when they fold. */
+    #resume { position: fixed; right: 22px; bottom: calc(92px + env(safe-area-inset-bottom)); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 6px 16px rgba(40,50,70,.18); text-decoration: none; color: #22344d; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); overflow: hidden; max-width: calc(100% - 44px); cursor: pointer; transition: bottom .35s, right .35s; }
     #resume[hidden] { display: none; }
-    #resume > img { width: 30px; height: 30px; border-radius: 50%; background: #f3ede2; flex: none; }
+    #resume > img { width: 40px; height: 40px; border-radius: 50%; background: #f3ede2; flex: none; }
     #resume span { min-width: 0; font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } #resume b, #resume small { font: inherit; } #resume small { color: #7b746b; font-weight: 400; }
     #resume i { position: absolute; left: 0; bottom: 0; height: 2px; background: #22344d; }
-    #resume em { width: 30px; height: 30px; border-radius: 50%; background: #22344d; display: grid; place-items: center; flex: none; } #resume em svg { margin-left: 2px; width: 10px; height: 12px; }
-    #tabs.shut + #resume { left: auto; right: 96px; transform: none; bottom: calc(18px + env(safe-area-inset-bottom)); width: 56px; height: 56px; padding: 0; justify-content: center; }
-    #tabs.shut + #resume > img, #tabs.shut + #resume span, #tabs.shut + #resume i { display: none; } #tabs.shut + #resume em { width: 44px; height: 44px; }
+    #resume em { width: 40px; height: 40px; border-radius: 50%; background: #22344d; display: grid; place-items: center; flex: none; } #resume em svg { margin-left: 2px; width: 10px; height: 12px; }
+    #resume:not(.open) span, #resume:not(.open) em, #resume:not(.open) i { display: none; }
+    #resume:not(.open)::after { content: ""; position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; border-radius: 50%; background: #22344d url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'><path d='M2 1L9 6L2 11Z' fill='%23fdfbf6'/></svg>") center/7px no-repeat; border: 2px solid #fdfbf6; }
+    #tabs.shut + #resume { right: 96px; bottom: calc(18px + env(safe-area-inset-bottom)); }
     body.resuming #sheet { padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important; } body.resuming #records, body.resuming #trips { padding-bottom: 160px; }
     #tabs { position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20; display: flex; padding: 7px; border-radius: 40px;
       background: rgba(253,251,246,.8); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1); box-shadow: 0 10px 26px rgba(40,50,70,.18), inset 0 0 0 1px rgba(255,255,255,.7);
@@ -189,6 +190,6 @@
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
   <a id="resume" hidden><img src="assets/icons/snowboard.png?v=1" alt=""><span><b></b> <small></small></span><i></i><em><svg viewBox="0 0 10 12" width="16" height="18"><path d="M1 0L10 6L1 12Z" fill="#fdfbf6"/></svg></em></a>
-  <script type="module" src="start.js?v=68"></script>
+  <script type="module" src="start.js?v=69"></script>
 </body>
 </html>

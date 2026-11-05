@@ -348,5 +348,8 @@ face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
   el.querySelector("small").textContent = ses.where;
   el.querySelector("i").style.width = `${Math.round((ses.phase === "ride" ? ses.at : 1) * 100)}%`;
   el.hidden = false; document.body.classList.add("resuming");
+  // Closed it's a small button; the first tap opens it, ▶ (or a second tap) goes; a tap elsewhere closes it.
+  el.addEventListener("click", (e) => { if (!el.classList.contains("open")) { e.preventDefault(); el.classList.add("open"); } });
+  addEventListener("pointerdown", (e) => { if (!el.contains(e.target)) el.classList.remove("open"); });
 })();
 translatePage();
