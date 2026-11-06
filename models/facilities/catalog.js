@@ -69,7 +69,7 @@ function roomUV(g) {
   g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
 
-const VER = q.get("v") || "10";
+const VER = q.get("v") || "11";
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 // Snow can be thinned or taken away: the layer shrinks along its normals (0 deep, 0.12 light, off: hidden).
 const SNOW = { thin: { value: 0 } }, snowMeshes = [];
