@@ -34,6 +34,11 @@ square, black diamond, orange for parks, yellow for slow).
 - Helpers in `lib.py`: `box`, `cyl`, `blob`, `slab`, `tri`, `curve_pipe`, `text`; materials `textured`,
   `wood(name, …)` (names in `SPEC` map to textures), `stone`, `flat`, `snow`, `glass`, `lit`. End each
   model with `finalize(name, size)`.
+- `signature.py` holds the real resorts' landmark buildings (village blocks, Sunspot, Thunderhead, the Sundeck,
+  the Aerie, Merry-Go-Round, …). Each entry in `../glb/<family>.json` may carry `"for"`: the research
+  building or lift names (`data/facilities/<id>.json`) it stands for, so the game can pick it by name.
+- Maker hoods (`terminal_detach_lpa`, `_omega`, `_unig`, `_dopp90`) keep the kit terminal's rope and have two
+  paint regions: material `paint_hood` (the shell) and `paint_band` (band, stripe or top).
 - Each family module lists its models in `MODELS = {"name": fn}`. In a family module use `lib.COL`
   and `lib._link` (module state), and `from lib import *` for the helpers.
 

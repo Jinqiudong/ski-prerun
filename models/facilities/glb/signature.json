@@ -1,0 +1,13 @@
+[{"name": "village_block_a", "label": "山脚村落楼 A：石材商铺、棕褐灰泥与木饰、老虎窗（铜山 Center Village）", "for": ["Center Village", "Snowmass Base Village"]},
+ {"name": "sunspot_lodge", "label": "Sunspot 山顶木屋（冬季公园）：原木与石墙、三座重木山墙、石砌烟囱塔和小亭", "for": ["The Lodge at Sunspot"]},
+ {"name": "village_block_b", "label": "山脚村落楼 B：红褐木板、奶白灰泥山墙、多层阳台（蒸汽船 Gondola Square、高地村）", "for": ["Gondola Square / Steamboat Base", "Highlands Village"]},
+ {"name": "village_block_c", "label": "山脚村落楼 C：灰绿木板、玻璃大山墙、三层（冬季公园村、雪团村）", "for": ["Zephyr Mountain Lodge", "Snowmass Mall", "East Village"]},
+ {"name": "thunderhead_lodge", "label": "Thunderhead 山腰餐厅（蒸汽船）：玻璃大山墙，内建吊厢顶站（蓝色屋罩）", "rope": [3.0, 9.5], "rope_x": 22.5, "for": ["Thunderhead Lodge", "Steamboat Gondola"]},
+ {"name": "sundeck", "label": "Sundeck 山顶餐厅（阿斯彭山）：长低木屋、镀锌屋面、中央木框玻璃山墙", "for": ["The Sundeck"]},
+ {"name": "silver_queen_top", "label": "Silver Queen 吊厢顶站（阿斯彭山）：灰色波纹钢人字屋罩、红色饰梁", "rope": [3.0, 4.25], "for": ["Silver Queen"]},
+ {"name": "the_aerie", "label": "The Aerie 山腰餐厅（铜山）：现代两层、炭灰墙板、木框落地窗、钢构顶层露台", "for": ["The Aerie"]},
+ {"name": "merry_go_round", "label": "Merry-Go-Round 山腰餐厅（阿斯彭高地）：单层长屋、宽缓坡屋顶、南面玻璃和大露台", "for": ["Merry-Go-Round"]},
+ {"name": "highland_peak", "label": "高地碗山顶（阿斯彭高地）：石堆、经幡、12,392 英尺山顶牌", "for": ["Highland Bowl ridge"]},
+ {"name": "bootpack", "label": "高地碗徒步雪道（12 米一段，脚踏台阶，游戏沿山脊串起来）", "for": ["Highland Bowl ridge"]},
+ {"name": "lap_lodge_green", "label": "深绿横向搭接板木屋：石基、金属人字屋面、露台（A-Basin Black Mountain Lodge、il Rifugio）", "for": ["Black Mountain Lodge", "il Rifugio"]},
+ {"name": "lap_lodge_charcoal", "label": "炭灰横向搭接板木屋：石基、蓝门、露台（A-Basin Steilhang Hut、冬季公园 Lunch Rock）", "for": ["Steilhang Hut", "Lunch Rock"]}]
