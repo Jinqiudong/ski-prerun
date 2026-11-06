@@ -23,3 +23,5 @@ Mountain page (cut from the owner's Copper Mountain mock): `back` `bookmark` `sn
 `view_close` `view_top` `autorotate` `layer_runs` `layer_lifts` `compass_rose` (painted compass, needle leans 38° east)
 
 | Animation | `ride_crayon_0` crouch, `ride_crayon_1` hop, `ride_crayon_2` hop and cheer — the crayon rider on the rider page's go button when there is a pre-run to go back to (from the owner's GIF) |
+
+Wanted (pets' emote bubbles on the map, `src/start/pets.js` `EMOTES` uses stand-ins until they arrive): `emo_heart` (比心 hand heart), `emo_happy` (happy sparkle star), `emo_music` (music notes), `emo_surprise` (!), `emo_question` (?), `emo_sleepy` (zzz with a moon), `emo_snow` (snowflake; `season` stands in).

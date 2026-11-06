@@ -15,13 +15,14 @@ const gltf = new GLTFLoader();
 // A 3D animal (assets/animals/3d, from tools/build_animals.py: rigged, with a walk cycle), standing `tall`.
 export function animal3d(kind) {
   const root = new THREE.Group(), tall = TALL[kind];
-  root.userData = { model: 1, mixer: null, last: 0 };
+  root.userData = { model: 1, mixer: null, action: null, head: null, last: 0, kind, tall }; // pets.js plays with these
   gltf.load(`assets/animals/3d/${kind}.glb?v=1`, (g) => {
     const o = g.scene, bb = new THREE.Box3().setFromObject(o);
     o.scale.setScalar(tall / Math.max(0.01, bb.max.y - bb.min.y));
     o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; m.material.roughness = 0.9; } });
     root.add(o);
-    if (g.animations[0]) { const mx = new THREE.AnimationMixer(o); mx.clipAction(g.animations[0]).play(); root.userData.mixer = mx; }
+    root.userData.head = o.getObjectByName("head");
+    if (g.animations[0]) { const mx = new THREE.AnimationMixer(o), act = mx.clipAction(g.animations[0]); act.play(); Object.assign(root.userData, { mixer: mx, action: act }); }
   });
   return root;
 }
