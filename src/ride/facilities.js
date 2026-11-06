@@ -158,7 +158,7 @@ export function paintMat(color = CHARCOAL) {
 
 // A model as its parts by kind: bake, paint, snow, glass, lit, lamp, flat. Loaded once, shared by all.
 export function kit(name) {
-  if (!cache.has(name)) cache.set(name, new Promise((ok, no) => loader.load(`${BASE}${name}.glb?v=${VER}`, (g) => {
+  if (!cache.has(name)) cache.set(name, new Promise((ok, no) => { let tries = 0; const go = () => loader.load(`${BASE}${name}.glb?v=${VER}`, (g) => {
     const parts = {};
     g.scene.updateMatrixWorld(true);
     g.scene.traverse((o) => {
@@ -177,7 +177,7 @@ export function kit(name) {
     const box = new THREE.Box3();
     for (const p of Object.values(parts)) box.union(p.geometry.boundingBox);
     ok({ name, parts, box });
-  }, undefined, no)));
+  }, undefined, (e) => (++tries < 3 ? setTimeout(go, 600 * tries) : no(e))); go(); })); // a dropped connection is tried again
   return cache.get(name);
 }
 export const kits = (names) => Promise.all(names.map(kit));
