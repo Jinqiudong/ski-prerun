@@ -198,7 +198,11 @@ def housing(yf, yc, z0, z1, M, R=4.4, nose=3.0, gauge=3.0):
             for k in range(6): box((0.1, 1.5, 0.05), (x + sx * 0.04, vy, z0 + 0.42 + k * 0.13), M["steel"], rot=(0, sx * 0.6, 0))
     # A row of small round inspection windows near the nose, and a hatch on top.
     for sx in (-1, 1): cyl(0.22, 0.04, (sx * (R + 0.02), yf + sgn * 2.6, z0 + 1.0), M["trim"], rot=(0, math.pi / 2, 0), verts=16)
-    # Under the hood: rails, tire conveyors, the bullwheel and its shaft.
+    machinery(yf, yc, z0, M, gauge)
+
+def machinery(yf, yc, z0, M, gauge=3.0):
+    """Under any detachable hood: rails, tire conveyors, the bullwheel and its shaft, lights over the load."""
+    sgn = 1 if yc > yf else -1
     zr = z0 - 0.3
     for sx in (-1, 1):
         box((0.14, abs(yc - yf) - 0.4, 0.26), (sx * gauge, (yf + yc) / 2 + sgn * 0.2, zr), M["steel"])
@@ -272,24 +276,28 @@ def maze(x0, x1, ys, M, posts=4, banners=True):
             if banners and j in (0, len(ys) - 1): box((b - a - 0.12, 0.012, 0.4), ((a + b) / 2, y, 0.77), M["navy"])
 
 # ---------- the models ----------
-def terminal_detach():
-    """A detachable chair terminal at the bottom (drive): concrete deck, the long hood over the bullwheel on
-    its steel frame, loading carpet and gates, a maze, the operator's hut, light posts, the name board.
-    Rope: x = +-3.0 (the up line at +3.0 leaves along -Y), z = 4.45, leaving the hood at y = -10."""
-    new_col("terminal_detach"); M = mats(); anchor(M["dark"])
-    yf, yc, z0, z1, zf = -10.0, 10.0, 4.75, 7.15, 0.3
-    # Deck: a concrete slab with joints and a kerb.
-    box((13.0, 27.0, zf), (0, 1.5, zf / 2), M["conc"], bevel=0.03)
-    for k in range(1, 7): box((12.9, 0.03, 0.01), (0, -12 + k * 3.9, zf + 0.002), M["dark"])
+def _hood_kit(yf, yc, z0, z1, M):
+    """The kit's hood: the rounded housing, heavy snow on it, the name board on the nose."""
     housing(yf, yc, z0, z1, M)
-    columns((-4.0, 6.0), zf, z0, M)
-    ladder(-0.62, 6.0, zf + 0.45, z0 - 0.05, M, along="y")
-    # Heavy snow on the hood.
     sl = abs(yc - yf) - 1.0
     slab((7.4, sl, 0.55), (0, (yf + yc) / 2 - 0.3, z1 + 0.12), M["snow"])
     cyl(3.7, 0.5, (0, yc, z1 + 0.12), M["snow"], verts=28, bevel=0.18, kind="snow")
     for sx in (-1, 1): cyl(0.2, abs(yc - yf) - 2.2, (sx * 3.75, (yf + yc) / 2 + 1.1, z1 - 0.02), M["snow"], rot=(math.pi / 2, 0, 0), verts=10, kind="snow")
     name_board(0, yf - 0.02, z0 + 0.85, 4.6, 0.75, M)
+
+def terminal_detach(name="terminal_detach", hood=None):
+    """A detachable chair terminal at the bottom (drive): concrete deck, the long hood over the bullwheel on
+    its steel frame, loading carpet and gates, a maze, the operator's hut, light posts, the name board.
+    Rope: x = +-3.0 (the up line at +3.0 leaves along -Y), z = 4.45, leaving the hood at y = -10.
+    `hood` draws a maker's hood instead of the kit's (the variants below); the rope stays the same."""
+    new_col(name); M = mats(); anchor(M["dark"])
+    yf, yc, z0, z1, zf = -10.0, 10.0, 4.75, 7.15, 0.3
+    # Deck: a concrete slab with joints and a kerb.
+    box((13.0, 27.0, zf), (0, 1.5, zf / 2), M["conc"], bevel=0.03)
+    for k in range(1, 7): box((12.9, 0.03, 0.01), (0, -12 + k * 3.9, zf + 0.002), M["dark"])
+    (hood or _hood_kit)(yf, yc, z0, z1, M)
+    columns((-4.0, 6.0), zf, z0, M)
+    ladder(-0.62, 6.0, zf + 0.45, z0 - 0.05, M, along="y")
     # Loading: carpet, gates, the load line, corral rails each side.
     slab((13.2, 10.6, 0.3), (0, -7.0, zf + 0.06), M["snow"])  # packed snow over the load area
     zs = zf + 0.2
@@ -314,7 +322,7 @@ def terminal_detach():
     blob((13.5, 1.3, 0.75), (0, 15.6, 0.12), M["snow"], lumps=0.12)
     blob((1.2, 13.0, 0.6), (7.0, 8.2, 0.1), M["snow"], lumps=0.12)
     for p in ((-3.0, 2.0), (-3.5, 11.5), (4.5, 10.5)): blob((1.6, 1.4, 0.35), (p[0], p[1], zf + 0.05), M["snow"], lumps=0.08)
-    finalize("terminal_detach", 1024, ao_dist=1.2)
+    finalize(name, 1024, ao_dist=1.2)
 
 def terminal_detach_top():
     """The detachable terminal at the top (return): the hood's half round over the bullwheel is uphill, at -Y.
@@ -527,4 +535,141 @@ def gondola_station():
     for xx in (-6.4, -2.9, 2.9, 6.4): box((0.2, 0.2, 0.32), (xx * 1.0 if abs(xx) > 5 else xx * 0 + (1.6 if xx > 0 else -1.6), fy - 0.2, F + 3.6), M["lamp"], kind="lamp")
     finalize("gondola_station", 2048, ao_dist=1.5)
 
-MODELS = {"terminal_detach": terminal_detach, "terminal_detach_top": terminal_detach_top, "terminal_fixed": terminal_fixed, "gondola_station": gondola_station}
+# ---------- makers' hoods for the detachable terminal ----------
+# Each is the kit's terminal with another hood; the deck, frame, machinery and rope (x = ±3.0, z = 4.45)
+# are the same. Two paint regions: `paint_hood` (the shell) and `paint_band` (band, stripe or top).
+def plan(hw, y0, y1, r0, r1, z, seg=7):
+    """A hood in plan at height z: half width hw from y0 (the nose) to y1 (over the bullwheel), corners
+    rounded by r0 at the nose and r1 at the far end (r1 = hw: a half round)."""
+    r0, r1 = max(0.05, min(r0, hw)), max(0.05, min(r1, hw)); pts = []
+    for cx, cy, r, a0 in ((hw - r1, y1 - r1, r1, 0), (-hw + r1, y1 - r1, r1, 90), (-hw + r0, y0 + r0, r0, 180), (hw - r0, y0 + r0, r0, 270)):
+        for k in range(seg + 1):
+            a = math.radians(a0 + 90 * k / seg); pts.append((cx + r * math.cos(a), cy + r * math.sin(a), z))
+    return pts
+
+def lid(ring, mat, kind="paint"):
+    """A flat cap over a closed ring of points."""
+    bm = bmesh.new(); bm.faces.new([bm.verts.new(p) for p in ring]); bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    for f in bm.faces:
+        if f.normal.z < 0: f.normal_flip()
+    return _obj(bm, mat, kind, "lid")
+
+def shell(rings, mat, kind="bake", cap=False):
+    bm = bmesh.new(); V = [[bm.verts.new(p) for p in r] for r in rings]; n = len(rings[0])
+    for a, b in zip(V, V[1:]):
+        for i in range(n): j = (i + 1) % n; bm.faces.new((a[i], a[j], b[j], b[i]))
+    if cap: bm.faces.new(V[-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return _obj(bm, mat, kind, "shell", smooth=40)
+
+def hood_profile(prof, hw, y0, y1, r0, r1, z0, M, seg=7):
+    """Loft a hood from a profile [(dz, inset, material key, kind)]: each row starts a band that runs to the next."""
+    rings = [plan(hw - d, y0 + d, y1 - d, r0 - d, r1 - d, z0 + dz, seg) for dz, d, *_ in prof]
+    for k in range(len(prof) - 1):
+        m, kind = prof[k][2], prof[k][3]
+        if m: shell([rings[k], rings[k + 1]], M[m], kind)
+    return rings
+
+def ribs(prof, hw, ys, z0, M, mat="trim", r=0.05):
+    """Ribs over a vault at each y: rods along the profile from one side over the top to the other."""
+    for y in ys:
+        side = [(hw - d, z0 + dz) for dz, d, *_ in prof]
+        pts = [(-x, y, z) for x, z in side] + [(x, y, z) for x, z in reversed(side)]
+        for a, b in zip(pts, pts[1:]): rod(a, b, r, M[mat], 6)
+
+def side_board(x, y, z, w, h, M, sx):
+    """A name board on the hood's side, facing ±X."""
+    rot = (math.pi / 2, 0, sx * math.pi / 2)
+    box((0.08, w + 0.14, h + 0.14), (x, y, z), M["trim"], bevel=0.02)
+    face([(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)], M["board"], "flat", loc=(x + sx * 0.045, y, z), rot=rot)
+
+def hood_mats(M, hood, band, glass_hex="#25303a"):
+    M["paint"] = flat("paint_hood", hood, 0.35, 0.3, grain=0); M["band"] = flat("paint_band", band, 0.4, 0.2, grain=0)
+    M["vault"] = flat("hood_glass", glass_hex, 0.12, grain=0)
+
+def hood_snow(M, hw, y0, y1, ztop, rf):
+    slab((2 * hw, y1 - y0 - rf - 0.5, 0.45), (0, (y0 + y1 - rf) / 2, ztop + 0.12), M["snow"])
+    cyl(hw, 0.42, (0, y1 - rf, ztop + 0.12), M["snow"], verts=24, bevel=0.15, kind="snow")
+
+def _hood_lpa(yf, yc, z0, z1, M):
+    """Leitner-Poma LPA: long and low, a band for the resort colour, a glazed barrel vault over it in silver
+    ribs that wraps the round ends, a silver skirt below."""
+    hood_mats(M, "#b9bec4", "#b0683a")
+    hw, y0, y1, r0, r1 = 4.1, yf - 0.3, yc + 4.4, 2.6, 4.1
+    prof = [(-0.45, 0.5, "paint", "paint"), (0.0, 0.0, "band", "paint"), (1.1, 0.0, "paint", "paint"), (1.24, 0.0, "vault", "bake"),
+            (1.7, 0.1, "vault", "bake"), (2.15, 0.38, "vault", "bake"), (2.5, 0.8, "vault", "bake"), (2.75, 1.35, "vault", "bake"),
+            (2.88, 1.95, "paint", "paint"), (2.93, 2.2, None, None)]
+    rings = hood_profile(prof, hw, y0, y1, r0, r1, z0, M)
+    lid(rings[-1], M["paint"])
+    ribs(prof[3:], hw, [y0 + r0 + 0.6 + k * 1.35 for k in range(int((y1 - r1 - y0 - r0) / 1.35) + 1)], z0, M, "trim", 0.045)
+    for sx in (-1, 1):
+        box((0.04, y1 - y0 - r0 - r1, 0.05), (sx * (hw + 0.01), (y0 + r0 + y1 - r1) / 2, z0 + 1.17), M["trim"])
+        side_board(sx * (hw + 0.02), (y0 + y1) / 2 - 2.5, z0 + 0.55, 6.0, 0.6, M, sx)
+    box((2.6, 0.5, 0.6), (0, y0 + 0.45, z0 + 3.1), M["trim"], bevel=0.05)  # the cab's vent hood over the nose
+    hood_snow(M, hw - 2.0, y0 + 1.0, y1, z0 + 2.93, 2.0)
+    machinery(yf, yc, z0, M)
+
+def _hood_omega(yf, yc, z0, z1, M):
+    """Poma Omega: a barrel vault of dark panels on green ribs, domed at both ends, over a deep band with a
+    flared skirt; the lift's name on the band."""
+    hood_mats(M, "#3f5a4a", "#3f5a4a", "#232a2e")
+    hw, y0, y1, r0, r1 = 4.0, yf - 0.4, yc + 4.4, 4.0, 4.0
+    prof = [(-0.4, 0.55, "paint", "paint"), (0.05, 0.0, "paint", "paint"), (1.05, 0.0, "band", "paint"), (1.2, -0.06, "vault", "bake"),
+            (1.7, 0.1, "vault", "bake"), (2.2, 0.45, "vault", "bake"), (2.6, 1.0, "vault", "bake"), (2.85, 1.7, "vault", "bake"),
+            (2.93, 2.4, "paint", "paint"), (2.95, 2.6, None, None)]
+    rings = hood_profile(prof, hw, y0, y1, r0, r1, z0, M, seg=9)
+    lid(rings[-1], M["paint"])
+    ribs(prof[3:], hw, [y0 + r0 + k * 1.6 for k in range(int((y1 - y0 - r0 - r1) / 1.6) + 1)], z0, M, "dark", 0.05)
+    for sx in (-1, 1): side_board(sx * (hw + 0.02), (y0 + y1) / 2 - 1.0, z0 + 0.55, 6.5, 0.65, M, sx)
+    hood_snow(M, hw - 2.4, y0 + r0, y1, z0 + 2.95, 1.6)
+    machinery(yf, yc, z0, M)
+
+def _hood_unig(yf, yc, z0, z1, M):
+    """Doppelmayr Uni-G: a smooth hood whose sides lean in to a rounded top in the band colour, dark window
+    strips along the shoulders, and a flat porch roof over the load and the operator's hut."""
+    hood_mats(M, "#c2462e", "#1f2226")
+    hw, y0, y1, r0, r1 = 4.3, yf - 0.3, yc + 4.4, 1.6, 4.3
+    prof = [(-0.3, 0.3, "paint", "paint"), (0.0, 0.0, "paint", "paint"), (0.9, 0.0, "paint", "paint"), (1.75, 0.5, "band", "paint"),
+            (2.1, 0.85, "band", "paint"), (2.25, 1.3, "band", "paint"), (2.3, 1.8, None, None)]
+    rings = hood_profile(prof, hw, y0, y1, r0, r1, z0, M)
+    lid(rings[-1], M["band"])
+    a = math.atan2(0.85, 0.5)
+    for sx in (-1, 1):
+        box((0.06, y1 - y0 - r0 - r1 - 0.6, 0.42), (sx * (hw - 0.26), (y0 + r0 + y1 - r1) / 2, z0 + 1.33), M["vault"], rot=(0, -sx * (math.pi / 2 - a), 0))
+        side_board(sx * (hw + 0.02), (y0 + y1) / 2 - 3.0, z0 + 0.5, 5.5, 0.6, M, sx)
+    # The porch roof on the +X side, over the maze and the hut, on two posts.
+    px0, px1, py0, py1, pz = hw - 0.2, 10.2, yf - 1.5, yf + 9.5, z0 + 0.6
+    box((px1 - px0, py1 - py0, 0.32), ((px0 + px1) / 2, (py0 + py1) / 2, pz), M["paint"], bevel=0.06, kind="paint")
+    box((px1 - px0 + 0.06, py1 - py0 + 0.06, 0.08), ((px0 + px1) / 2, (py0 + py1) / 2, pz - 0.2), M["dark"])
+    for y in (py0 + 0.6, py1 - 0.6): rod((px1 - 0.5, y, 0.3), (px1 - 0.5, y, pz - 0.2), 0.12, M["steel"], 10)
+    slab((px1 - px0 - 0.1, py1 - py0 - 0.1, 0.4), ((px0 + px1) / 2, (py0 + py1) / 2, pz + 0.3), M["snow"])
+    hood_snow(M, hw - 1.8, y0 + 1.0, y1, z0 + 2.3, 2.5)
+    machinery(yf, yc, z0, M)
+
+def _hood_dopp90(yf, yc, z0, z1, M):
+    """1990s Doppelmayr (Uni / Spacejet): a flat-topped silver box hood with a chamfered nose and a round
+    back, a red band under the roof edge, a flat roof."""
+    hood_mats(M, "#b4b9be", "#a5352c")
+    R, nose = 4.3, 2.9
+    prism(hood_outline(yf, yc, R, nose), z0, z1 - 0.5, M["paint"], "paint", bevel=0.12, seg=2)
+    prism(hood_outline(yf - 0.04, yc, R + 0.04, nose + 0.02), z1 - 0.52, z1 - 0.05, M["band"], "paint", bevel=0.05, seg=2)
+    prism(hood_outline(yf + 0.2, yc, R - 0.2, nose - 0.1), z1 - 0.05, z1 + 0.05, M["trim"], bevel=0.03, seg=1)
+    prism(hood_outline(yf - 0.06, yc, R + 0.06, nose + 0.03), z0 - 0.14, z0 + 0.06, M["dark"], bevel=0.02, seg=1)
+    L = abs(yc - yf) - 1.6
+    for sx in (-1, 1):
+        for i in range(1, 7): box((0.03, 0.04, z1 - z0 - 0.75), (sx * (R + 0.01), yf + 1.6 + i * L / 7, (z0 + z1 - 0.5) / 2), M["dark"])
+        box((0.05, 2.0, 0.8), (sx * (R + 0.02), yf + 2.4, z0 + 1.3), M["vault"])  # the window into the station
+        side_board(sx * (R + 0.02), yc - 3.4, z0 + 0.9, 5.0, 0.6, M, sx)
+    name_board(0, yf - 0.02, z0 + 0.95, 4.2, 0.7, M)
+    slab((2 * R - 0.6, abs(yc - yf) - 0.8, 0.5), (0, (yf + yc) / 2 - 0.2, z1 + 0.25), M["snow"])
+    cyl(R - 0.3, 0.48, (0, yc, z1 + 0.25), M["snow"], verts=28, bevel=0.16, kind="snow")
+    machinery(yf, yc, z0, M)
+
+def terminal_detach_lpa(): terminal_detach("terminal_detach_lpa", _hood_lpa)
+def terminal_detach_omega(): terminal_detach("terminal_detach_omega", _hood_omega)
+def terminal_detach_unig(): terminal_detach("terminal_detach_unig", _hood_unig)
+def terminal_detach_dopp90(): terminal_detach("terminal_detach_dopp90", _hood_dopp90)
+
+MODELS = {"terminal_detach_lpa": terminal_detach_lpa, "terminal_detach_omega": terminal_detach_omega,
+          "terminal_detach_unig": terminal_detach_unig, "terminal_detach_dopp90": terminal_detach_dopp90,
+          "terminal_detach": terminal_detach, "terminal_detach_top": terminal_detach_top, "terminal_fixed": terminal_fixed, "gondola_station": gondola_station}

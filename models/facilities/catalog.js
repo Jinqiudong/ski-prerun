@@ -69,7 +69,7 @@ function roomUV(g) {
   g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
 
-const VER = q.get("v") || "9";
+const VER = q.get("v") || "10";
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 // Snow can be thinned or taken away: the layer shrinks along its normals (0 deep, 0.12 light, off: hidden).
 const SNOW = { thin: { value: 0 } }, snowMeshes = [];
@@ -108,7 +108,7 @@ for (let i = 0; i < 90; i++) {
 for (const [x, z, s] of [[-12, -6, 1.1], [13, -9, 1.2], [-30, -2, 0.9], [20, 4, 0.85]]) { const t = pine.clone(); t.scale.setScalar(s); t.position.set(x, 0, z); scene.add(t); }
 
 // The catalogue: each family in a row of its own off to the east, carriers hung from a rope.
-const FAMILIES = [["lifts", "缆车"], ["stations", "站台"], ["signs", "路牌"], ["buildings", "建筑"], ["props", "道具"]];
+const FAMILIES = [["lifts", "缆车"], ["stations", "站台"], ["signs", "路牌"], ["buildings", "建筑"], ["props", "道具"], ["signature", "地标"]];
 // One family at a time is loaded (a phone can't hold all fifty models at once); switching drops the last.
 const lists = Object.fromEntries(await Promise.all(FAMILIES.map(async ([f]) => [f, await (await fetch(`glb/${f}.json?v=${VER}`)).json().catch(() => [])])));
 const rows = {}; let shown = null;
@@ -136,7 +136,13 @@ const isIn = (o, g) => { for (let p = o; p; p = p.parent) if (p === g) return tr
 let snowState = { light: 0.12, none: -1 }[q.get("snow")] ?? 0;
 function applySnow() { SNOW.thin.value = Math.max(0, snowState); for (const m of snowMeshes) m.visible = snowState >= 0; }
 let view = q.get("view") || "all", item = 0;
-const frame = (r) => { const y = r.e.hang ? 8 - r.size * 0.35 : r.size * 0.35, d = r.size * 1.5 + 3; return { pos: [r.x + d * 0.45, y + d * 0.3, r.z + d], at: [r.x, y, r.z], cap: r.e.label }; };
+// ?zoom=0.6&turn=0.8&lift=0.5 move the camera in, round (radians from the front) and up, for close looks.
+const ZOOM = +(q.get("zoom") || 1), TURN = q.get("turn"), LIFT = +(q.get("lift") || 0.3);
+const frame = (r) => {
+  const y = r.e.hang ? 8 - r.size * 0.35 : r.size * 0.35, d = (r.size * 1.5 + 3) * ZOOM, a = TURN === null ? null : +TURN;
+  const pos = a === null ? [r.x + d * 0.45, y + d * LIFT, r.z + d] : [r.x + d * Math.sin(a), y + d * LIFT, r.z + d * Math.cos(a)];
+  return { pos, at: [r.x, y * (ZOOM < 1 ? 0.6 : 1), r.z], cap: r.e.label };
+};
 async function go(v, k = 0) {
   if (lists[v] && !rows[v]) { document.getElementById("cap").textContent = "加载中…"; await loadFamily(v); applySnow(); }
   view = v; item = k;

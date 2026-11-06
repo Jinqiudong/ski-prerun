@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles/start.css?v=3">
+  <link rel="stylesheet" href="src/styles/start.css?v=4">
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
@@ -45,10 +45,9 @@
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
     <div id="worldHead"><b>去哪座山？</b><small></small></div><button id="worldHome">全图</button>
     <div id="worldCard" hidden></div><button id="allBtn">‹ 全部雪场</button><svg id="compass" viewBox="0 0 60 60" aria-hidden="true"><g fill="none" stroke="#6b5a4a" stroke-width="1"><circle cx="30" cy="32" r="16"/><circle cx="30" cy="32" r="12" stroke-dasharray="1.5 2"/></g><path d="M30 12 L33 32 L30 52 L27 32Z" fill="#8a7563"/><path d="M30 12 L33 32 L27 32Z" fill="#b6463b"/><path d="M10 32 L30 29 L50 32 L30 35Z" fill="#a8998a"/><text x="30" y="9" font-size="8" text-anchor="middle" fill="#6b5a4a" font-family="Cormorant Garamond">N</text></svg><div id="worldCredit">地形 AWS Terrain Tiles · 雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准</div></div>
-  <div id="records" hidden><div id="memory"></div><div id="recSec">每个雪场</div><div id="recList"></div></div>
-  <div id="jMap" hidden><canvas></canvas><div class="bar"><b></b><button id="jZoom">+</button><button id="jZoomOut">−</button><button id="jClose">×</button></div></div>
+  <div id="records" hidden><div id="memory"></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="src/start/start.js?v=7"></script>
+  <script type="module" src="src/start/start.js?v=12"></script>
 </body>
 </html>

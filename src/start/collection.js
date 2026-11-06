@@ -8,8 +8,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "../core/i18n.js?v=23";
-import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./resort-tiles.js?v=3";
+import { EN_ON } from "../core/i18n.js?v=25";
+import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=4";
+import { Pets } from "./pets.js?v=1";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
@@ -98,6 +99,7 @@ export class Collection {
     });
     const ask = () => { const E = globalThis.DeviceOrientationEvent; if (typeof E?.requestPermission === "function") E.requestPermission().catch(() => {}); };
     for (const ev of ["touchend", "click"]) addEventListener(ev, ask, { once: true, capture: true });
+    this.pets = new Pets(this); // the animals are desk pets: long-press to lift, tap to play (pets.js)
   }
 
   // Turn the camera about the target by the tilt: first take back last frame's turn, so the controls only
@@ -274,7 +276,7 @@ export class Collection {
     const hit = ray.intersectObjects(this.tiles.map((x) => x.group), true)[0];
     return hit ? this.tiles.find((x) => { let o = hit.object; while (o && o !== x.group) o = o.parent; return !!o; }) : null;
   }
-  tap(e) { const t = this.under(e); if (t) this.pick(t); }
+  tap(e) { if (this.pets.tap(e)) return; const t = this.under(e); if (t) this.pick(t); }
   pick(t) {
     this.picked = t;
     for (const x of this.tiles) x.userData.tag.classList.toggle("on", x === t);
@@ -315,7 +317,7 @@ export class Collection {
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
-    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S);
+    this.pets.frame(t);
     this.renderer.render(this.scene, this.camera);
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.
