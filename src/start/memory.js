@@ -4,7 +4,7 @@
 // the season's trips, days, mountains and runs and the friends on them sit above the deck. Each photo is
 // drawn once and kept in IndexedDB, and only the cards at the front of the deck are drawn. Tap the front
 // card to see it large and share or save it.
-import { t, EN_ON, myAvatar } from "../core/i18n.js?v=27";
+import { t, EN_ON, myAvatar } from "../core/i18n.js?v=28";
 import { memberId } from "./shared-trip.js?v=1";
 import { myRiderLook } from "../core/look.js?v=1";
 import { buildSeasons, summary, seasonOf, seasonName, seasonShort, photoKey, ymd } from "./season.js?v=1";

@@ -3,10 +3,10 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
-import { CFG, PART_LABEL, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=9";
+import { CFG, PART_LABEL, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=10";
 import { makeEntrance } from "./entrance.js?v=23";
 import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=27";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=28";
 import { playIntro } from "./intro.js?v=16";
 import { flyTo } from "../core/transition.js?v=2";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's

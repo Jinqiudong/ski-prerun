@@ -16,17 +16,21 @@ export function setHair(ch, style) { ch.parts.hair = style === "loose"; ch.parts
 // The game's colour parts and the template's materials they set (trim follows, a little darker).
 export const COLOR_MATS = { jacket: ["MAT_jacket"], pants: ["MAT_pants"], helmet: ["MAT_helmet"], lens: ["MAT_lens"], gloves: ["MAT_mitten"], boots: ["MAT_boot_panel", "MAT_boot_sole"] };
 // Poses held still (the template's frame at 1 s) and tricks played through.
-export const POSES = [["Stand_Idle", "站立"], ["Board_Hold", "抱板"], ["Sit_Snow", "坐雪地"]];
+export const POSES = [["Stand_Idle", "站立"], ["Board_Hold", "抱板"], ["Sit_Snow", "坐雪地"], ["Pose_Wave", "挥手"], ["Pose_Peace", "比耶"], ["Pose_Cheer", "欢呼"], ["Pose_Hold_Photo", "举照片"], ["Radio_Talk_Stand", "对讲机"]];
 export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Anim_Method_Air", "Method"], ["Anim_Nose_Press", "压板头"], ["Anim_Tail_Press", "压板尾"],
   ["Anim_Carve_Ref", "欧式刻滑"], ["Anim_Carve_Spin_Toe", "刻平陀螺"], ["Anim_Carve_S", "立刃 S 弯"], ["Anim_Skid_S", "搓雪 S 弯"], ["Anim_Pop_Ref", "坡上跳跃"], ["Anim_Toe_Slide_Ref", "平花倒滑"]];
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 const files = {};
-const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=2`));
+const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=3`));
+// The ride's clips (stance, turns, lift, air, stops, falls, chairlift talk, radio) live in a second, skeleton-only file;
+// tracks bind by bone name, so they play on the template as they are. Only the ride needs them.
+const rides = {};
+const rideOf = (tpl) => (rides[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_ride.glb?v=1`));
 
 // A fresh copy of a template, ready to dress and pose: { root, tpl, set(ch), play(name), step(dt) }.
-export async function makeCharacter(tpl) {
-  const g = await fileOf(tpl);
+export async function makeCharacter(tpl, { ride = false } = {}) {
+  const g = await fileOf(tpl), animations = ride ? [...g.animations, ...(await rideOf(tpl)).animations] : g.animations;
   const { clone } = await import("three/addons/utils/SkeletonUtils.js");
   const root = clone(g.scene);
   root.traverse((o) => {
@@ -40,7 +44,7 @@ export async function makeCharacter(tpl) {
   // The board's turn at rest, relative to the root (for reading its yaw and edge out of a clip).
   const rel = (q = new THREE.Quaternion(), p = new THREE.Vector3()) => { root.updateMatrixWorld(true); new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(bones.Board.matrixWorld).decompose(p, q, new THREE.Vector3()); return q; };
   const boardRest = rel();
-  const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(g.animations.map((c) => [c.name, c]));
+  const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(animations.map((c) => [c.name, c]));
   let action = null, held = true, t = 0; const off = [], gaze = { y: 0, p: 0, ty: 0, tp: 0, wait: 3 };
   const C = {
     root, tpl, bones, mixer,

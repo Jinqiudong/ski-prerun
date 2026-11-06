@@ -16,7 +16,7 @@ const EN = {
   "取消": "Cancel", "保存": "Save", "换装": "Dress up", "去哪个雪场": "Which resort",
   "🏔 去征服哪座山？": "🏔 Which mountain next?",
   "灰色的雪道还没滑过，滑过的变成彩色，全滑遍会开花 · 拖动移动，两指转动、倾斜、缩放": "Grey runs are still to ski; skied ones turn to colour, and a fully skied mountain flowers · drag to move, two fingers to turn, tilt, zoom",
-  "去征服哪座山？": "Which mountain next?", "去哪座山？": "Which mountain?", "去过 {a} 座 · {b} 座里滑了 {p}%": "{a} visited · {p}% of {b} mountains skied", "{b} 座山，还没开始": "{b} mountains, none yet", "每座山一块真实的地形 · 滑得越多颜色越足，全滑遍插上旗 · 拖动转一圈，两指缩放": "Each tile is the real mountain · the more you ski it the richer its colour, ski it all for a flag · drag to turn, pinch to zoom",
+  "去征服哪座山？": "Which mountain next?", "去哪座山？": "Which mountain?", "挥手": "Wave", "比耶": "Peace", "欢呼": "Cheer", "举照片": "Hold a photo", "对讲机": "Radio", "去过 {a} 座 · {b} 座里滑了 {p}%": "{a} visited · {p}% of {b} mountains skied", "{b} 座山，还没开始": "{b} mountains, none yet", "每座山一块真实的地形 · 滑得越多颜色越足，全滑遍插上旗 · 拖动转一圈，两指缩放": "Each tile is the real mountain · the more you ski it the richer its colour, ski it all for a flag · drag to turn, pinch to zoom",
   "地形 AWS Terrain Tiles · 雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准": "Terrain AWS Terrain Tiles · runs © OpenStreetMap contributors · a prototype: use the resort's official map",
   "全图": "All", "地形 AWS Terrain Tiles · 道路、河流和雪道 © OpenStreetMap 贡献者 · 原型，以雪场官方地图为准": "Terrain AWS Terrain Tiles · roads, rivers and runs © OpenStreetMap contributors · a prototype: use the resort's official map",
   "📖 我的滑雪记录": "📖 My ski log", "每个雪场你滑过多少（存在这台手机上）": "How much of each resort you've skied (kept on this phone)",
