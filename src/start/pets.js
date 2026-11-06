@@ -23,7 +23,11 @@ import * as THREE from "three";
 // emo_heart (比心: a hand heart), emo_happy (a happy sparkle star), emo_music (music notes), emo_surprise
 // ("!"), emo_question ("?"), emo_sleepy ("zzz" with a little moon), emo_snow (a snowflake; `season` may do),
 // emo_sweat (a sweat drop, puffing), emo_sun (basking in the sun), emo_relieved (phew, made it home),
-// emo_homesick (想回家, looking up at home), emo_missing (想家, missing its own mountain), emo_huff (哼, a huffy puff).
+// emo_homesick (想回家, looking up at home), emo_missing (想家, missing its own mountain), emo_huff (哼, a huffy puff),
+// emo_lost (找不着北), emo_ladder (想要梯子).
+// Bubbles are kept few: a reaction to what you just did (drop, tap, stroke) shows at once (emote); anything an
+// animal thinks of by itself (think) waits until no other animal on the map has a bubble up, and then each
+// animal stays quiet for a minute or two.
 const EMOTES = {
   heart: { icon: "st_favorite", text: "比心" }, // → emo_heart
   happy: { icon: "star", text: "" }, // → emo_happy
@@ -37,6 +41,8 @@ const EMOTES = {
   relieved: { icon: "rest", text: "呼~" }, // → emo_relieved
   homesick: { icon: "lodge", text: "想回家" }, // → emo_homesick
   missing: { icon: "resorts", text: "想家" }, // → emo_missing (on someone else's mountain, looking toward its own)
+  lost: { icon: "compass_rose", text: "找不着北" }, // → emo_lost
+  wantLadder: { icon: "lift", text: "想要梯子" }, // → emo_ladder
   huff: { icon: "windy", text: "哼" }, // → emo_huff
 };
 // Friends, rivals or neither: fixed for each pair of kinds (a hash of the two names), so it feels random but
@@ -93,7 +99,10 @@ export class Pets {
     this.shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
     this.shadow.visible = false; this.shadow.renderOrder = 2; col.scene.add(this.shadow);
     this.ball = new THREE.SphereGeometry(1, 8, 6);
-    this.hang = new THREE.Group(); this.swing = new THREE.Group(); this.hang.add(this.swing); col.scene.add(this.hang);
+    // The animal in your hand (and falling from it) is drawn in a pass of its own over the map, so it never
+    // looks sunk into a mountain or a cliff (after(), right after the map is drawn).
+    this.top = new THREE.Scene();
+    this.hang = new THREE.Group(); this.swing = new THREE.Group(); this.hang.add(this.swing); this.top.add(this.hang);
   }
 
   // ---- setup, once the tiles are built ----
@@ -255,7 +264,7 @@ export class Pets {
     ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), this.col.camera);
     const live = this.col.tiles.filter((t) => t.group.position.y > -1 && !(this.col.picked && this.col.picked !== t)).map((t) => t.group.children[0]);
     const hit = ray.intersectObjects(live, false)[0];
-    if (hit) return { ray: ray.ray, p: hit.point };
+    if (hit) return { ray: ray.ray, p: hit.point, tile: true };
     const p = new THREE.Vector3(); if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.floorY), p)) return null;
     return { ray: ray.ray, p };
   }
@@ -314,7 +323,7 @@ export class Pets {
     const p = this.held; this.held = null; this.col.controls.enabled = true; this.swallow = performance.now() + 120;
     const wp = p.a.getWorldPosition(new THREE.Vector3()), ws = p.a.getWorldScale(new THREE.Vector3()).x;
     const below = this.aim || this.surfaceAt(this.hang.position.x, this.hang.position.z); this.target(null);
-    this.col.scene.add(p.a); p.a.position.copy(wp); p.a.scale.setScalar(ws);
+    this.top.add(p.a); // falls in the pass drawn over the map p.a.position.copy(wp); p.a.scale.setScalar(ws);
     const yaw = p.a.rotation.y + this.hang.rotation.y, pitch = p.a.rotation.x;
     p.a.rotation.set(pitch, yaw, 0);
     p.mode = "fall"; p.fall = { from: wp.clone(), s0: ws, t0: this.now, vy: 0, to: below, yaw, pitch, tilt: this.swing.rotation.z };
@@ -324,6 +333,14 @@ export class Pets {
   poke(p) {
     p.poke = this.now;
     if (p.mode === "doze") { p.mode = p.wasMode || "wander"; this.emote(p, "surprise"); this.act(p, "hop", 0.55); return; }
+    const g = p.place?.g;
+    if (g === this.col.scene) { this.emote(p, this.floorThought(p)); this.act(p, "look", 1.2); return; } // down on the map: only its three thoughts
+    if (g && g !== p.homeG && (p.mode === "wander" || p.mode === "social" || p.mode === "bask")) { // on someone else's mountain
+      if (p.soc) this.endSocial(p.soc);
+      if (Math.random() < 0.5) { this.emote(p, "sun", 2.6); p.mode = "bask"; p.baskEnd = this.now + rnd(8, 12); p.sunAt = 1e9; }
+      else { this.emote(p, "missing", 2.6); this.act(p, "pine", 1.6, { yaw: this.yawHome(p) }); p.later = { at: this.now + 1.6, fn: () => { p.mood = "low"; this.startTrip(p, false); } }; }
+      return;
+    }
     // A random emote, never the same twice running, with the body to match.
     const e = pickOf(Object.keys(PETTED).filter((k) => k !== p.lastPet)), r = PETTED[e]; p.lastPet = e;
     this.act(p, r, { hop: 0.6, hop2: 1.1, sway: 1.4, look: 1.6, tilt: 1.3 }[r]);
@@ -341,8 +358,10 @@ export class Pets {
   // Back home the hard way: a sigh, then down off a strange tile, across the map, up its own tile's side and
   // uphill to the upper slopes, slowly, stopping to pant.
   startTrip(p, sigh) {
-    p.mode = "trip"; p.mood = "low"; p.trip = { stage: sigh ? "sigh" : null, t0: this.now, pause: 0, nextPause: this.now + rnd(3, 5), drip: this.now + 1 };
-    if (sigh) this.emote(p, "sweat", 2.6); else this.nextStage(p);
+    p.mode = "trip"; p.mood = "low"; p.trip = { stage: null, t0: this.now, pause: 0, nextPause: this.now + rnd(3, 5), drip: this.now + 1 };
+    if (sigh && p.place.g === this.col.scene) { p.trip.stage = "think"; p.trip.dur = rnd(2, 4); this.emote(p, this.floorThought(p), p.trip.dur); } // one short thought, then off to the ladder
+    else if (sigh) { p.trip.stage = "sigh"; this.emote(p, "sweat", 2.6); }
+    else this.nextStage(p);
   }
   nextStage(p) {
     const T = p.trip, g = p.place.g, col = this.col; T.t0 = this.now;
@@ -350,7 +369,11 @@ export class Pets {
       const up = this.range.get(g)?.up || [];
       let best = [0, 0], bd = 1e9; for (const [x, z] of up) { const d = Math.hypot(x - p.x, z - p.z); if (d < bd) { bd = d; best = [x, z]; } }
       Object.assign(T, { stage: "uphill", tx: best[0], tz: best[1] });
-    } else if (g === col.scene) T.stage = "map";
+    } else if (g === col.scene) { // near its own tile the ladder's there at once; farther, it walks over first
+      T.stage = "map";
+      const hb = col.tiles.find((x) => x.group === p.homeG)?.base, half = p.S / 2 * p.homeG.scale.x;
+      if (hb && !col.picked && Math.hypot(Math.max(0, Math.abs(p.x - hb.x) - half), Math.max(0, Math.abs(p.z - hb.z) - half)) < 20) this.ladder(p);
+    }
     else { // to this tile's edge on the side toward home
       const hc = g.worldToLocal(p.homeG.getWorldPosition(new THREE.Vector3())), m = p.S / 2 - 0.5, k = m / Math.max(Math.abs(hc.x), Math.abs(hc.z), 0.01);
       Object.assign(T, { stage: "edge", tx: hc.x * k, tz: hc.z * k });
@@ -373,26 +396,28 @@ export class Pets {
       if (u >= 1) this.nextStage(p);
       return o;
     }
-    if (t > T.drip) { T.drip = t + rnd(2, 3.5); this.sweat(p); }
-    if (T.pause > t) { o.sy = 1 + Math.sin(t * 16) * 0.035; o.hp = 0.4; o.hr = Math.sin(t * 3) * 0.1; return o; } // panting
-    if (t > T.nextPause) { T.pause = t + 1.5; T.at = null; T.nextPause = t + 1.5 + rnd(3.5, 6); this.sweat(p); if (Math.random() < 0.5) this.emote(p, "sweat", 2.2); return o; }
-    const v = (0.3 + 0.12 * p.tall) * 0.5 * this.pace; o.speed = 0.65 * this.pace; o.hp = 0.18; // a slow trudge, head low
+    if (T.stage === "think") { // a moment's thought (looking about, up at home), then straight to the ladder
+      const u = t - T.t0; o.hy = Math.sin(u * 2.2) * 0.5; o.hp = -0.25; o.hr = 0.15;
+      if (u > T.dur / Math.sqrt(this.pace)) this.nextStage(p);
+      return o;
+    }
+    const uphill = T.stage === "uphill"; // only the slope on its own tile is a slog; down on the map it just goes
+    if (uphill) {
+      if (t > T.drip) { T.drip = t + rnd(2, 3.5); this.sweat(p); }
+      if (T.pause > t) { o.sy = 1 + Math.sin(t * 16) * 0.035; o.hp = 0.4; o.hr = Math.sin(t * 3) * 0.1; return o; } // panting
+      if (t > T.nextPause) { T.pause = t + 1.5; T.at = null; T.nextPause = t + 1.5 + rnd(3.5, 6); this.sweat(p); return o; }
+    }
+    const v = (0.3 + 0.12 * p.tall) * (uphill ? 0.5 : 1.6) * this.pace; o.speed = (uphill ? 0.65 : 1.5) * this.pace; o.hp = uphill ? 0.18 : 0.05;
     if (T.stage === "uphill" && this.walkTo(p, T.tx, T.tz, v, dt)) { // home: phew
       p.mode = "wander"; p.mood = null; p.trip = null; p.hx = p.x; p.hz = p.z; p.wait = rnd(1, 2); p.poke = t;
-      this.emote(p, "relieved", 2.6); this.act(p, "hop2", 1.1); this.save();
+ this.think(p, "relieved", 2.4, false); this.act(p, "hop2", 1.1); this.save();
     } else if (T.stage === "edge" && this.walkTo(p, T.tx, T.tz, v, dt)) { // hop down onto the map
       const g = p.place.g, wc = g.getWorldPosition(new THREE.Vector3()), hc = p.homeG.getWorldPosition(new THREE.Vector3()).sub(wc).setY(0);
       const half = p.S / 2 * g.scale.x, k = (half + 1.7) / Math.max(Math.abs(hc.x), Math.abs(hc.z), 0.01), to = wc.clone().addScaledVector(hc, k);
       [to.x, to.z] = this.onMap(to.x, to.z, p.homeG); to.y = this.floorY;
       this.scramble(p, "jump", to, null, 0.75);
     } else if (T.stage === "map") {
-      if (col.picked) { // its mountain is away: it paces about nearby (not frozen) till it's back
-        T.at = null; T.nextPause = t + 2;
-        if (!T.pace || this.walkTo(p, T.pace[0], T.pace[1], v * 0.6, dt)) { const a = rnd(0, 6.28); T.pace = this.onMap(p.x + Math.sin(a) * 1.2, p.z + Math.cos(a) * 1.2, p.homeG); }
-        o.speed = 0.5; o.hp = 0.25; if (t > (T.missEm || 0)) { T.missEm = t + rnd(9, 14); this.emote(p, "missing", 2.4); }
-        return o;
-      }
-      T.pace = null;
+      if (col.picked) { T.at = null; o.speed = 0; o.hp = 0.2; o.hy = Math.sin(t * 0.6) * 0.3; return o; } // its mountain is away (a resort is open): it sits quietly till it's back
       const hb = col.tiles.find((x) => x.group === p.homeG).base, half = p.S / 2 * p.homeG.scale.x;
       const cx = clamp(p.x, hb.x - half, hb.x + half), cz = clamp(p.z, hb.z - half, hb.z + half), d = Math.hypot(p.x - cx, p.z - cz) || 1;
       const sx = cx + ((p.x - cx) / d) * 1.6, sz = cz + ((p.z - cz) / d) * 1.6;
@@ -408,27 +433,28 @@ export class Pets {
     } else if (T.stage === "toLadder") { // to the ladder's foot, then turn to the cliff
       if (col.picked) { this.foldLadder(p); T.stage = "map"; return o; }
       const L = p.lad;
-      if (this.walkTo(p, L.footW.x, L.footW.z, v, dt)) { T.stage = "look"; T.t0 = t; this.emote(p, "homesick", 2.6); }
+      if (this.walkTo(p, L.footW.x, L.footW.z, v, dt)) { T.stage = "look"; T.t0 = t; }
     } else if (T.stage === "look") { // looks up at home: 想回家
       if (col.picked) { this.foldLadder(p); T.stage = "map"; return o; }
       p.yaw += angTo(p.yaw, p.lad.faceW) * Math.min(1, dt * 4); o.speed = 0; o.hp = -0.55; o.hr = 0.15;
-      if (t - T.t0 > 2.2 / Math.sqrt(this.pace)) { this.climbLadder(p); return o; }
+      if (t - T.t0 > 0.8 / Math.sqrt(this.pace)) { this.climbLadder(p); return o; }
     }
     return o;
   }
-  // ---- homesick on someone else's mountain ----
-  // It wanders there a while, then looks toward its own mountain (想家) and sighs, wanders a little more, and
-  // sets off home: to this tile's edge, down to the map, across, and up the ladder.
+  // ---- down on the map, and lost on someone else's mountain ----
+  // Down on the map it has only three thoughts: lost far from home, else wanting a ladder or missing home.
+  floorThought(p) {
+    const hb = this.col.tiles.find((x) => x.group === p.homeG)?.base, far = hb && Math.hypot(p.x - hb.x, p.z - hb.z) > 26;
+    return far ? "lost" : pickOf(["wantLadder", "missing"]);
+  }
+  yawHome(p) { const hc = p.place.g.worldToLocal(p.homeG.getWorldPosition(new THREE.Vector3())); return Math.atan2(hc.x - p.x, hc.z - p.z); }
+  // On someone else's mountain it isn't happy; a long while later, if nothing else happens, it heads home quietly.
   homesick(p, t = this.now) {
-    const g = p.place?.g; p.missAt = p.leaveAt = 0;
-    if (g && g !== this.col.scene && g !== p.homeG) p.missAt = t + rnd(12, 20);
+    const g = p.place?.g; p.missAt = 0;
+    if (g && g !== this.col.scene && g !== p.homeG) p.missAt = t + rnd(90, 150);
   }
   missFrame(p, t) {
-    if (p.missAt && t > p.missAt) {
-      p.missAt = 0; p.leaveAt = t + rnd(8, 14) / this.pace;
-      const hc = p.place.g.worldToLocal(p.homeG.getWorldPosition(new THREE.Vector3()));
-      this.act(p, "pine", 3.2, { yaw: Math.atan2(hc.x - p.x, hc.z - p.z) }); this.emote(p, "missing", 3);
-    } else if (p.leaveAt && t > p.leaveAt && !p.act) { p.leaveAt = 0; p.mood = "low"; this.startTrip(p, true); }
+    if (p.missAt && t > p.missAt && !p.act) { p.missAt = 0; this.think(p, "missing", 2.4); this.act(p, "pine", 1.8, { yaw: this.yawHome(p) }); p.later = { at: t + 1.8, fn: () => { if (p.mode === "wander") { p.mood = "low"; this.startTrip(p, false); } } }; }
   }
 
   // ---- the ladder home ----
@@ -450,7 +476,7 @@ export class Pets {
     lad.position.copy(foot).setY(yMap); lad.rotation.y = Math.atan2(n.x, n.z); lad.scale.set(1, 0.01, 1); g.add(lad);
     p.lad = { g, n, edge, foot, yMap, top, H, d, R, len, lad, born: this.now, footW: new THREE.Vector3(fx, this.floorY, fz), faceW: Math.atan2(-n.x, -n.z) + g.rotation.y };
     this.props.push({ lad, t0: this.now, kind: "pop" });
-    this.emote(p, "surprise", 1.1); T.stage = "toLadder"; T.t0 = this.now; T.at = null;
+    T.stage = "toLadder"; T.t0 = this.now; T.at = null;
     return true;
   }
   climbLadder(p) {
@@ -465,7 +491,7 @@ export class Pets {
     if (L.k < L.R) {
       const u = (t - L.t0) / step;
       if (u < 1) { f = (L.k + ease(u)) / L.R; speed = 2.4 * this.pace; }
-      else { f = (L.k + 1) / L.R; if (L.k % 4 === 3) { sy = 1 + Math.sin(t * 16) * 0.03; hp = 0.2; if (!L.wiped) { L.wiped = 1; this.sweat(p); if (Math.random() < 0.6) this.emote(p, "sweat", 1.8); } } }
+      else { f = (L.k + 1) / L.R; if (L.k % 4 === 3) { sy = 1 + Math.sin(t * 16) * 0.03; hp = 0.2; if (!L.wiped) { L.wiped = 1; this.sweat(p); } } }
       if (u >= 1 + rest / step) { L.k++; L.t0 = t; L.wiped = 0; }
       const at = L.foot.clone().setY(L.yMap).add(new THREE.Vector3(-n.x * L.d * f, L.H * f - 0.15 * f, -n.z * L.d * f)).addScaledVector(n, p.tall * 0.22);
       p.a.position.copy(at); p.a.rotation.set(-(Math.PI / 2 - lean) * 0.85, yawL, Math.sin(t * 9) * 0.05 * (speed ? 1 : 0)); p.a.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy));
@@ -477,7 +503,7 @@ export class Pets {
       if (u >= 1) {
         this.settle(p, L.g, land.x, land.z, yawL); this.foldLadder(p);
         p.mode = "wander"; p.mood = null; p.trip = null; p.wait = rnd(1.2, 2); p.poke = t; p.hx = p.x - n.x * 0.8; p.hz = p.z - n.z * 0.8;
-        this.emote(p, "relieved", 2.6); this.act(p, "hop2", 1.1); this.puff(p.a.getWorldPosition(new THREE.Vector3()), p.tall * 0.4); this.save();
+        this.think(p, "relieved", 2.4, false); this.act(p, "hop2", 1.1); this.puff(p.a.getWorldPosition(new THREE.Vector3()), p.tall * 0.4); this.save();
         return;
       }
     }
@@ -505,7 +531,7 @@ export class Pets {
     }
     return best;
   }
-  startSocial(a, b) {
+  startSocial(a, b, byYou = false) {
     const t = this.now, rel = relation(a.kind, b.kind);
     for (const q of [a, b]) { if (q.hx === undefined || q.mode === "loop") { q.hx = q.x; q.hz = q.z; } q.wasMood = q.mood; q.mode = "social"; q.act = null; q.trip = null; q.poke = t; }
     const S = { rel, a, b, t0: t, end: t + (rel === "like" ? rnd(20, 40) : rel === "dislike" ? rnd(8, 14) : 2.6), nextHeart: t + rnd(4, 7) };
@@ -513,9 +539,11 @@ export class Pets {
     // Friends sit side by side facing you; work out which way that is.
     const cam = a.place.g.worldToLocal(this.col.camera.position.clone()); let fx = -S.uz, fz = S.ux; if (fx * (cam.x - S.mx) + fz * (cam.z - S.mz) < 0) { fx = -fx; fz = -fz; } S.face = Math.atan2(fx, fz);
     a.soc = b.soc = S;
-    if (rel === "like") { this.emote(a, "heart"); b.later = { at: t + 0.5, fn: () => this.emote(b, "heart") }; }
-    else if (rel === "dislike") { this.emote(a, "huff"); b.later = { at: t + 0.6, fn: () => this.emote(b, "huff") }; }
-    else { const w = pickOf([a, b]); w.later = { at: t + 0.9, fn: () => this.emote(w, "question") }; }
+    // The one you dropped answers at once; the other's bubble waits its turn.
+    const say = (q, e) => (byYou ? this.emote(q, e) : this.think(q, e, 2.4, false));
+    if (rel === "like") { say(a, "heart"); b.later = { at: t + 2.7, fn: () => this.think(b, "heart", 2.4, false) }; }
+    else if (rel === "dislike") { say(a, "huff"); b.later = { at: t + 2.7, fn: () => this.think(b, "huff", 2.4, false) }; }
+    else if (a.place.g === a.homeG || a.place.g === this.col.scene) say(pickOf([a, b]), "question");
   }
   endSocial(S, picked = null) {
     const t = this.now;
@@ -539,7 +567,7 @@ export class Pets {
           const lx = Math.cos(p.yaw), lz = -Math.sin(p.yaw), side = Math.sign((o.x - p.x) * lx + (o.z - p.z) * lz) || 1; // the other's on my left (+) or right (-)
           out.roll = -side * 0.12 + Math.sin(t * 1.2) * 0.03; out.hr = out.roll * 2.2; out.hy = -side * 0.25; out.sy = 0.97 + Math.sin(t * 1.2 + me) * 0.01;
         }
-        if (p === S.a && t > S.nextHeart) { S.nextHeart = t + rnd(4, 8); this.emote(pickOf([S.a, S.b]), "heart"); }
+        if (p === S.a && t > S.nextHeart) { S.nextHeart = t + rnd(15, 25); this.think(pickOf([S.a, S.b]), "heart", 2.4, false); }
       }
     } else if (S.rel === "dislike") {
       if (u < 1.0) { p.yaw += angTo(p.yaw, toO) * Math.min(1, dt * 6); out.sy = 1.04; } // a glare
@@ -547,7 +575,7 @@ export class Pets {
         const d = Math.hypot(o.x - p.x, o.z - p.z), want = (p.tall + o.tall) * 0.45 + 0.2;
         if (d < want) go(p.x - Math.sin(toO) * 0.2, p.z - Math.cos(toO) * 0.2, 0.5);
         p.yaw += angTo(p.yaw, toO + Math.PI) * Math.min(1, dt * 4); out.sy = 1.05; out.hp = -0.25;
-        if (!p.huffAt || t > p.huffAt + 0.3) { if (!p.huffAt || t > p.huffAt) { p.huffAt = t + rnd(2.5, 4); if (u > 2 && Math.random() < 0.4) this.emote(p, "huff", 1.6); } }
+        if (!p.huffAt || t > p.huffAt + 0.3) { if (!p.huffAt || t > p.huffAt) { p.huffAt = t + rnd(2.5, 4); if (u > 2 && Math.random() < 0.4) this.think(p, "huff", 1.6); } }
         if (p.huffAt && p.huffAt - t > 0 && p.huffAt - t < 0.25) out.hop = Math.sin(((0.25 - (p.huffAt - t)) / 0.25) * Math.PI) * p.tall * 0.08;
       }
       if (t > S.end && p === S.a) { // one of them walks off
@@ -594,6 +622,15 @@ export class Pets {
     const at = p.a.localToWorld(new THREE.Vector3(0, p.tall * 0.92, p.tall * 0.25)), s = p.a.getWorldScale(new THREE.Vector3()).x;
     this.puff(at, p.tall * s * 0.35, { color: 0x8cc4ef, n: 3, grav: 1, life: 0.7, r: [0.07, 0.1] });
   }
+  // A thought of its own: only when nobody else is showing one, and not again for 60–120 s (own = false: an
+  // event in a story you started, which skips the per-animal quiet but still waits its turn on the map).
+  think(p, name, dur = 2.4, own = true) {
+    if (p.bubble || this.list.some((q) => q.bubble && q !== p) || this.now < (this.calm || 0)) return false; // and a quiet spell map-wide after each
+    if (own && this.now < (p.quiet || 0)) return false;
+    this.emote(p, name, dur); if (own) p.quiet = this.now + rnd(60, 120);
+    this.calm = this.now + dur + rnd(15, 25);
+    return true;
+  }
   act(p, kind, dur, extra = {}) { p.act = { kind, t0: this.now, dur, ...extra }; }
   emote(p, name, dur = 2.4) {
     const E = EMOTES[name]; if (!E) return;
@@ -602,7 +639,42 @@ export class Pets {
     el.className = `pemo${E.text ? "" : " solo"}`; el.dataset.emote = name;
     el.innerHTML = `<span><img src="assets/icons/${E.icon}.png?v=1" alt="">${E.text ? `<i>${E.text}</i>` : ""}</span>${E.drop ? "<b class=drop></b>" : ""}`;
     this.col.labels.append(el);
-    p.bubble = { el, t0: this.now, dur, name };
+    p.bubble = { el, t0: this.now, dur, name }; p.quiet = Math.max(p.quiet || 0, this.now + 30);
+  }
+
+  after() {
+    if (!this.held && !this.list.some((p) => p.mode === "fall")) return;
+    const r = this.col.renderer;
+    if (!this.topLit) { this.topLit = 1; for (const o of this.col.scene.children) if (o.isLight) { const c = o.clone(); c.castShadow = false; this.top.add(c); } }
+    r.autoClear = false; r.clearDepth(); r.render(this.top, this.col.camera); r.autoClear = true;
+  }
+  // The highest ground (a tile's top, or the map) within r of a world point.
+  groundTop(x, z, r) {
+    let y = this.floorY;
+    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) {
+      const px = x + dx * r, pz = z + dz * r;
+      for (const t of this.col.tiles) {
+        const g = t.group, h = this.hOf.get(g); if (!h || g.position.y < -1 || (this.col.picked && this.col.picked !== t)) continue;
+        const S = g.children[0]?.geometry?.parameters?.width || 12, l = g.worldToLocal(new THREE.Vector3(px, g.position.y, pz));
+        if (Math.abs(l.x) <= S / 2 && Math.abs(l.z) <= S / 2) y = Math.max(y, g.localToWorld(l.setY(h(l.x, l.z))).y);
+      }
+    }
+    return y;
+  }
+  // Finger on the map beside a tile's cliff (or on the cliff itself, where the ray goes through the wall to the
+  // map under it): slide the hanging point toward the camera until its body is clear of the wall.
+  offWalls(P, r) {
+    const cam = this.col.camera.position;
+    for (let pass = 0; pass < 3; pass++) for (const t of this.col.tiles) {
+      const g = t.group; if (g.position.y < -1 || (this.col.picked && this.col.picked !== t)) continue;
+      const S = g.children[0]?.geometry?.parameters?.width || 12, h2 = (S / 2) * g.scale.x + r;
+      const l = g.worldToLocal(new THREE.Vector3(P.x, g.position.y, P.z)).multiplyScalar(g.scale.x);
+      if (Math.abs(l.x) >= h2 || Math.abs(l.z) >= h2) continue;
+      const d = new THREE.Vector3(cam.x - P.x, 0, cam.z - P.z).normalize(), dl = d.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -g.rotation.y);
+      const ex = (v, dv) => (dv > 1e-6 ? (h2 - v) / dv : dv < -1e-6 ? (-h2 - v) / dv : 1e9), k = Math.min(ex(l.x, dl.x), ex(l.z, dl.z)) + 0.05;
+      P.x += d.x * k; P.z += d.z * k;
+    }
+    return P;
   }
 
   // ---- every frame ----
@@ -616,7 +688,7 @@ export class Pets {
         const mine = this.list.find((p) => p.place?.g === pk.group && p.mode !== "held");
         if (mine && Math.random() < 0.6) mine.later = { at: t + 1.4, fn: () => { this.act(mine, "hop2", 1.1); this.emote(mine, "happy"); } };
         const others = this.list.filter((p) => p !== mine && p.place?.g === this.col.scene && (p.mode === "wander" || p.mode === "loop"));
-        if (others.length && Math.random() < 0.35) { const o = pickOf(others); o.later = { at: t + 2, fn: () => { this.act(o, "look", 1.6); this.emote(o, pickOf(["question", "surprise"])); } }; }
+
       }
     }
     for (const p of this.list) {
@@ -644,7 +716,9 @@ export class Pets {
     // It hangs straight above the ground under your fingertip (where its shadow falls, and where it will land).
     const gu = this.groundUnder(g.x, g.y - (g.touch ? LIFT_PX : 0));
     if (gu) {
-      const aim = gu.p.clone(); aim.y += L + p.tall * sc * 0.75 + 0.6;
+      // Clear of everything under its body: off any cliff beside it, and its lowest point above the highest ground below.
+      const r = Math.max(p.tall * sc * 0.9, L * 0.7), P = gu.tile ? gu.p.clone() : this.offWalls(gu.p.clone(), r); // over a tile's top: lifted above it instead
+      const aim = P.clone(); aim.y = this.groundTop(P.x, P.z, r) + L + p.tall * sc * 0.75 + 0.6;
       const before = this.hang.position.clone();
       this.hang.position.lerp(aim, 1 - Math.exp(-dt * 22));
       this.target(this.magnet(gu.p));
@@ -721,9 +795,11 @@ export class Pets {
       sy = 1 - 0.38 * Math.exp(-u * 7) * Math.cos(u * 17);
       if (u < 0.45) hop = Math.max(0, Math.sin(Math.min(1, u / 0.45) * Math.PI)) * p.tall * 0.22 * (u > 0.08 ? 1 : 0);
       const nb = u > 0.55 && !p.shook ? this.neighbour(p) : null;
-      if (nb) this.startSocial(p, nb); // dropped right beside another: friends, rivals or neither
+      const away = p.place.g !== this.col.scene && p.place.g !== p.homeG, rel = nb && relation(p.kind, nb.kind);
+      if (nb && (!away || rel !== "neutral")) this.startSocial(p, nb, true); // dropped right beside another: friends, rivals or neither
+      else if (u > 0.55 && away) { p.mode = "wander"; p.mood = null; p.wait = rnd(1, 2); this.emote(p, "lost", 2.6); this.act(p, "look", 1.6); this.homesick(p); } // someone else's mountain: lost
       else if (u > 0.55 && p.mood === "low") { p.mode = "wander"; this.startTrip(p, true); }
-      else if (u > 0.55 && p.mood === "high") { p.mode = "bask"; p.baskEnd = t + rnd(20, 32); p.sunAt = t; }
+      else if (u > 0.55 && p.mood === "high") { p.mode = "bask"; p.baskEnd = t + rnd(20, 32); p.sunAt = p.baskFrom = t; }
       else if (u > 0.55 && u < 1.35) { const s = (u - 0.55) / 0.8; roll = Math.sin(s * Math.PI * 9) * 0.22 * (1 - s); hr = -roll * 1.5; if (!p.shook) { p.shook = 1; this.emote(p, "snow", 1.8); } }
       if (u > 1.35 && u < 3.2) { const s = (u - 1.35) / 1.85; hy = Math.sin(s * Math.PI * 2) * 0.75; hp = -0.15; if (s > 0.62) { hy = clamp(angTo(p.yaw, toCam), -0.9, 0.9); hr = 0.3; } }
       if (u >= 3.2) { p.mode = "wander"; p.shook = 0; p.wait = rnd(0.3, 1.2); this.newTarget(p); }
@@ -737,11 +813,11 @@ export class Pets {
       const to = this.sunYaw - (p.place.g === this.col.scene ? 0 : p.place.g.rotation.y);
       p.yaw += angTo(p.yaw, to) * Math.min(1, dt * 2);
       sy = 0.86 + Math.sin(t * 1.1) * 0.015; roll = Math.sin(t * 1.3) * 0.05; hp = -0.38; hr = Math.sin(t * 0.9) * 0.18; hy = Math.sin(t * 0.45) * 0.2;
-      if (t > p.sunAt) { this.emote(p, "sun", 3); p.sunAt = t + rnd(8, 12); }
+      if (t > p.sunAt) { if (p.sunAt === p.baskFrom) this.emote(p, "sun", 3); else this.think(p, "sun", 3); p.sunAt = t + rnd(30, 50); }
       if (t > p.baskEnd) { p.mode = "wander"; p.mood = null; p.wait = rnd(0.5, 1.5); this.newTarget(p); this.act(p, "wiggle", 0.9); this.save(); }
     } else if (p.mode === "doze") {
       const u = t - p.dozeAt; sy = 0.86 + Math.sin(t * 1.6) * 0.025; hp = Math.min(0.55, u * 0.4); hr = 0.15;
-      if (t > p.zzz) { this.emote(p, "sleepy", 3); p.zzz = t + rnd(5, 8); }
+      if (t > p.zzz) { this.think(p, "sleepy", 3); p.zzz = t + rnd(20, 40); }
       if (u > 45 + p.seed * 10) { p.mode = p.wasMode || "wander"; p.poke = t; this.act(p, "wiggle", 0.8); }
     }
     // A reaction on top.
@@ -763,7 +839,7 @@ export class Pets {
     if ((p.mode === "wander" || p.mode === "loop") && !p.act && t - p.poke > this.dozeAfter + p.seed * 8) {
       p.wasMode = p.mode; p.mode = "doze"; p.dozeAt = t; p.zzz = t + 1.2; if (p.action) p.action.time = 0;
     }
-    if ((p.mode === "wander" || p.mode === "loop") && !p.act && t > p.next) { p.next = t + rnd(90, 240); this.emote(p, pickOf(["music", "snow", "happy"])); }
+    if ((p.mode === "wander" || p.mode === "loop") && !p.act && t > p.next && p.place.g === p.homeG) { p.next = t + rnd(60, 120); this.think(p, pickOf(["music", "snow", "happy"])); }
     const a = p.a, y = p.place.h(p.x, p.z);
     a.position.set(p.x, y + Math.max(0, hop), p.z); // never below the ground
     a.rotation.set(pitch, p.yaw + spin, roll); a.scale.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy));
