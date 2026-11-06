@@ -90,15 +90,14 @@ export function ago(at, now = Date.now()) {
   const d = Math.round(h / 24); return [`${d} 天前`, `${d} d ago`];
 }
 
-// ---- Live: a Realtime socket on trip:<id>, plus refetching on focus and every 20 s.
+// ---- A Realtime broadcast channel on one topic (a raw WebSocket, no library): join, hear broadcasts as
+// onMessage(event, payload), broadcast(event, payload). Reconnects every 5 s while open. Riding together
+// (src/ride/together.js) uses one per trip and resort; Live below is the trip page's.
 const WS = `${SB_URL.replace(/^http/, "ws")}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
-export class Live {
-  constructor(id, onChange, { every = 20000 } = {}) {
-    this.id = id; this.onChange = onChange; this.topic = `realtime:trip:${id}`; this.ref = 1; this.alive = true; this.joined = false;
+export class Channel {
+  constructor(topic, onMessage, { onJoin = null } = {}) {
+    this.name = topic; this.topic = `realtime:${topic}`; this.onMessage = onMessage; this.onJoin = onJoin; this.ref = 1; this.alive = true; this.joined = false;
     this.connect();
-    this.poll = setInterval(() => { if (!document.hidden) onChange("poll"); }, every);
-    this.wake = () => { if (!document.hidden) onChange("focus"); };
-    addEventListener("focus", this.wake); document.addEventListener("visibilitychange", this.wake);
   }
   send(event, payload) { this.ws?.readyState === 1 && this.ws.send(JSON.stringify({ topic: event === "heartbeat" ? "phoenix" : this.topic, event, payload, ref: String(this.ref++), join_ref: "1" })); }
   connect() {
@@ -111,21 +110,34 @@ export class Live {
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch { return; }
       if (m.topic !== this.topic) return;
-      if (m.event === "phx_reply" && m.payload?.status === "ok") this.joined = true;
-      if (m.event === "broadcast" && m.payload?.event === "changed") this.onChange("live", m.payload.payload);
+      if (m.event === "phx_reply" && m.payload?.status === "ok" && !this.joined) { this.joined = true; this.onJoin?.(); }
+      if (m.event === "broadcast" && m.payload?.event) this.onMessage(m.payload.event, m.payload.payload);
     };
     ws.onclose = () => { clearInterval(this.beat); this.joined = false; if (this.alive) this.retry = setTimeout(() => this.connect(), 5000); };
     ws.onerror = () => { try { ws.close(); } catch { /* closed */ } };
   }
+  // On the socket when it's up (true); false when it isn't (nothing sent).
+  broadcast(event, payload) { if (!this.joined) return false; this.send("broadcast", { type: "broadcast", event, payload }); return true; }
+  close() { this.alive = false; clearInterval(this.beat); clearTimeout(this.retry); try { this.ws?.close(); } catch { /* closed */ } }
+}
+
+// ---- Live: a Realtime socket on trip:<id>, plus refetching on focus and every 20 s.
+export class Live extends Channel {
+  constructor(id, onChange, { every = 20000 } = {}) {
+    super(`trip:${id}`, (event, payload) => { if (event === "changed") onChange("live", payload); });
+    this.id = id;
+    this.poll = setInterval(() => { if (!document.hidden) onChange("poll"); }, every);
+    this.wake = () => { if (!document.hidden) onChange("focus"); };
+    addEventListener("focus", this.wake); document.addEventListener("visibilitychange", this.wake);
+  }
   // Tell everyone else on the trip to refetch: on the socket if it's up, else through the REST endpoint.
   ping(version = null) {
     const payload = { version, by: me() };
-    if (this.joined) { this.send("broadcast", { type: "broadcast", event: "changed", payload }); return; }
+    if (this.broadcast("changed", payload)) return;
     fetch(`${SB_URL}/realtime/v1/api/broadcast`, { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ messages: [{ topic: `trip:${this.id}`, event: "changed", payload }] }) }).catch(() => {});
   }
   close() {
-    this.alive = false; clearInterval(this.poll); clearInterval(this.beat); clearTimeout(this.retry);
+    super.close(); clearInterval(this.poll);
     removeEventListener("focus", this.wake); document.removeEventListener("visibilitychange", this.wake);
-    try { this.ws?.close(); } catch { /* closed */ }
   }
 }

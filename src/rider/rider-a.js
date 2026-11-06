@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 
 // The riders you can pick. Each part you can recolour lists its materials; `trim` materials (seams, zip
 // tape) follow the part's colour a shade darker. More riders (men's and women's) get added here.
@@ -82,11 +83,14 @@ const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 
 // root sits at the board's base with local +z the direction of travel, the way board.js's physics moves it:
 //   root → yaw (board skidding across) → lean (board on its edge, rider inclined into the turn) → model
-export function boarderModel() {
+// friend: { colors, stance } builds a copy for a friend riding with you (their own materials, so their own
+// colours), posed by the same functions; without it, the one rider on the mountain: you.
+export function boarderModel(friend = null) {
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group();
-  const model = gltf.scene; // one rider on the mountain, so no clone
+  const model = friend ? cloneSkinned(gltf.scene) : gltf.scene; // you: no clone
+  if (friend) model.traverse((o) => { delete o.userData.mixed; if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); }); // (userData was copied as JSON)
   model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); // it may have been built before (another stance)
-  const me = myRider();
+  const me = friend ? { base: "rider_a", colors: friend.colors || {}, stance: friend.stance === "goofy" ? "goofy" : "regular" } : myRider();
   dressRider(model, me.base, me.colors);
   root.add(yaw); yaw.add(lean); lean.add(model);
   model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });

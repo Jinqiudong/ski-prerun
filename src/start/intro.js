@@ -2,7 +2,7 @@
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. With a trip near (on now, coming up, or just over), the opening is
 // about that trip instead: its crew's little planes on their way to Denver (see tripIntro).
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=28";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=29";
 import { pickTrip, progress, resortsOf, resortOn, crewOf, spread, bearing, ymd, between, LOOK_BACK } from "./trip-intro.js?v=1";
 
 const CSS = `
@@ -132,7 +132,7 @@ async function nearestTrip() {
   const near = list.filter((tr) => tr?.shared && tr.id && /^\d{4}-\d{2}-\d{2}$/.test(tr.to) && between(tr.to, today) <= LOOK_BACK).slice(0, 4);
   if (near.length) {
     try {
-      const S = await import("./shared-trip.js?v=1");
+      const S = await import("./shared-trip.js?v=2");
       const got = await Promise.race([Promise.all(near.map((tr) => S.api.get(tr.id).catch(() => null))), wait(1200).then(() => [])]);
       for (const s of got) { if (!s) continue; const tr = S.toLocal(s), i = list.findIndex((x) => x?.id === tr.id); if (i >= 0 && S.isMember(tr)) list[i] = tr; }
     } catch { /* offline: the copies on this phone */ }
@@ -178,7 +178,7 @@ function stage(box, st, mood, still) {
 //   during  "day 2 · Copper today", the planes parked at Denver, a tap straight to the mountain
 //   after   the week after: the planes fly home over the whole way, a tap to the Memory tab
 async function tripData(P) {
-  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=29"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
+  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=31"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
   const tr = P.trip, today = ymd(new Date()), byId = Object.fromEntries((Array.isArray(resorts) ? resorts : []).map((r) => [r.id, r]));
   const crew = crewOf(tr, { mine: myAvatar(), avatars: AVATARS }).slice(0, 6);
   if (!crew.length) crew.push({ name: "", from: "", face: myAvatar(), me: true, note: "" });
@@ -212,7 +212,8 @@ function tripIntro(box, st, D, hooks, still) {
   // The buttons: each fades the opening out, then opens its page.
   const H = { open: hooks.open || (() => { location.href = "start.html?tab=trip"; }), go: hooks.go || ((id) => { location.href = `mountain/?resort=${encodeURIComponent(id)}`; }), memory: hooks.memory || (() => { location.href = "start.html?tab=log"; }) };
   for (const b of box.querySelectorAll("[data-open]")) b.onclick = (e) => { e.stopPropagation(); S.end(() => H.open(tr.id)); };
-  for (const b of box.querySelectorAll("[data-go]")) b.onclick = (e) => { e.stopPropagation(); S.end(() => H.go(b.dataset.go)); };
+  // Going to today's mountain from a shared trip: the ride joins that trip's friends (src/ride/together.js).
+  for (const b of box.querySelectorAll("[data-go]")) b.onclick = (e) => { e.stopPropagation(); try { if (tr.shared) sessionStorage.setItem("prerunRideTrip", tr.id); } catch { /* storage off */ } S.end(() => H.go(b.dataset.go)); };
   for (const b of box.querySelectorAll("[data-memory]")) b.onclick = (e) => { e.stopPropagation(); S.end(() => H.memory()); };
   // The forecast for the day the words are about, when Open-Meteo has it.
   const wxAt = phase === "soon" ? (D.left <= 15 ? resortOn(tr, tr.from) || (plan.length === 1 ? plan[0] : null) : null) : phase === "after" ? null : dayR;
