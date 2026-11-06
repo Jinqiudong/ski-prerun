@@ -14,7 +14,9 @@ meta = json.load(open("data/region.json"))
 S, N, W, E = meta["bounds"]; LAT0, LON0, KX, KZ = meta["origin"]; GW, GH = meta["grid"]
 px = np.asarray(Image.open("data/region.png").convert("RGB")).astype(np.float32)
 H = np.minimum(4400, (px[..., 0] * 256 + px[..., 1]) / 2)
-TW = 1600; TH = round(TW * GH / GW)
+# ~7.2 px per km (the look was tuned at that scale: tree sizes, blurs), at most 4096 wide for phones' GPUs
+TW = min(4096, round((E - W) * KX * 7.16)); TH = round(TW * GH / GW)
+PXKM = TW / ((E - W) * KX)
 H = np.asarray(Image.fromarray(H).resize((TW, TH), Image.BICUBIC))
 cell = (E - W) * KX * 1000 / TW
 gz, gx = np.gradient(H, cell)
@@ -60,7 +62,7 @@ img = Image.alpha_composite(img, ink.filter(ImageFilter.GaussianBlur(0.6)))
 # spruce: little painted trees in the forest belt (2300-3300 m, not too steep), in clumps
 trees = Image.new("RGBA", (TW, TH), (0, 0, 0, 0)); tg = ImageDraw.Draw(trees)
 clump = noise(40, 9)
-for _ in range(26000):
+for _ in range(round(26000 * TW * TH / (1600 * 1383))):  # the same density as on the first, smaller map
     x, y = rng.integers(4, TW - 4), rng.integers(8, TH - 2)
     hh = H[y, x]
     if not (2300 < hh < 3300) or slope[y, x] > 0.6 or clump[y, x] < 0.55 or rng.random() > (clump[y, x] - 0.5) * 2: continue
@@ -81,8 +83,15 @@ x = x * (1 - (gran[..., None] - 0.5) * 0.08 * (0.5 + (1 - Lm[..., None])))
 x = x * (0.975 + 0.04 * noise(120, 5)[..., None])
 # fade the borders into the plain snowy ground the map lies on (collection.js), so it has no edge
 EDGE = np.array([0xec, 0xef, 0xf2]) / 255
-fx = np.minimum(xx, TW - 1 - xx) / (TW * 0.09); fy = np.minimum(yy, TH - 1 - yy) / (TH * 0.09)
+fx = np.minimum(xx, TW - 1 - xx) / (PXKM * 20); fy = np.minimum(yy, TH - 1 - yy) / (PXKM * 20)  # over ~20 km
 f = np.clip(np.minimum(fx, fy) + (noise(18, 7) - 0.5) * 0.5, 0, 1)[..., None] ** 1.5
 x = x * f + EDGE * (1 - f)
-Image.fromarray((np.clip(x, 0, 1) * 255).astype(np.uint8)).save(OUT, quality=84)
-print(OUT, TW, TH)
+# a phone downloads it: if it comes out heavy, step it down until it's under ~1.4 MB
+out = Image.fromarray((np.clip(x, 0, 1) * 255).astype(np.uint8)); k = 1.0
+while True:
+    im = out if k == 1 else out.resize((round(TW * k), round(TH * k)), Image.LANCZOS)
+    im.save(OUT, quality=84, optimize=True, progressive=True)
+    import os
+    if os.path.getsize(OUT) < 1.4e6 or k < 0.5: break
+    k *= 0.9
+print(OUT, im.size, os.path.getsize(OUT))

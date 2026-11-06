@@ -1,5 +1,5 @@
 // The resorts as little dioramas (resort-tiles.js) standing on a snowy watercolour map of central Colorado
-// (tools/bake_map_snow.py): each one a square
+// (tools/bake_map_snow.py), fading toward the screen's edges: each one a square
 // of the resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, set
 // where it is (Aspen's four, too close together, sit as a two-by-two in their valley); each framed with the
 // town it's by; the drives between them along the roads, with how long they take (data/drives.json), and
@@ -15,9 +15,13 @@ import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./resort-
 const DIO = !new URLSearchParams(location.search).has("flat");
 
 const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
-const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78, w: 140 }; // the painted map (tools/bake_map.py) and its width in scene units
-const KM = MAP.w / ((MAP.E - MAP.W) * 85.3); // scene units per km
-const at = (lat, lon) => new THREE.Vector3((lon - (MAP.W + MAP.E) / 2) * 85.3 * KM, 0, -(lat - (MAP.N + MAP.S) / 2) * 111 * KM);
+// The painted map's bounds (tools/bake_region.py, tools/bake_map_snow.py): wide enough to fill a portrait
+// phone at the home view, where west is the top of the screen and east the bottom.
+const MAP = { S: 38.0, N: 41.5, W: -110.0, E: -103.2 };
+// The scene's origin and scale are fixed (the first, smaller map's middle and 140 units across its 2.62°),
+// so the tiles, towns, drives and the camera stay where they were whatever the map's bounds.
+const O = { lat: 39.85, lon: -106.09 }, KM = 140 / (2.62 * 85.3); // scene units per km
+const at = (lat, lon) => new THREE.Vector3((lon - O.lon) * 85.3 * KM, 0, -(lat - O.lat) * 111 * KM);
 // The towns, and which resorts each frames. Aspen's four sit as a two-by-two around the valley's middle.
 const TOWNS = [
   { zh: "Aspen · Snowmass Village", en: "Aspen · Snowmass Village", ids: ["snowmass", "buttermilk", "highlands", "aspenmountain"], grid: [["snowmass", "buttermilk"], ["highlands", "aspenmountain"]] },
@@ -47,18 +51,27 @@ export class Collection {
     s.add(sun);
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
     // The painted map the tiles stand on (it takes their shadows too).
-    const mh = MAP.w * ((MAP.N - MAP.S) * 111) / ((MAP.E - MAP.W) * 85.3);
-    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=4", (x) => (x.colorSpace = THREE.SRGBColorSpace));
+    const mw = (MAP.E - MAP.W) * 85.3 * KM, mh = (MAP.N - MAP.S) * 111 * KM;
+    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=5", (x) => (x.colorSpace = THREE.SRGBColorSpace));
     tex.anisotropy = 8;
-    // Its edges fade into the snow it lies on, so the sheet has no hard border on screen.
-    const fade = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256);
-      for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const e = Math.min(i, 255 - i, j, 255 - j) / 256, a = Math.min(1, Math.max(0, (e - 0.01) / 0.14)); const k = (j * 256 + i) * 4; g.data[k] = g.data[k + 1] = g.data[k + 2] = 255 * a * a * (3 - 2 * a); g.data[k + 3] = 255; }
+    // Its own border fades into the snow it lies on, over ~40 km, so the sheet has no edge anywhere.
+    const fade = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256), kw = mw / KM, kh = mh / KM;
+      const ss = (e) => { const a = Math.min(1, Math.max(0, (e - 4) / 40)); return a * a * (3 - 2 * a); };
+      for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const a = ss(Math.min(Math.min(i, 255 - i) / 255 * kw, Math.min(j, 255 - j) / 255 * kh)); const k = (j * 256 + i) * 4; g.data[k] = g.data[k + 1] = g.data[k + 2] = 255 * a; g.data[k + 3] = 255; }
       x.putImageData(g, 0, 0); return new THREE.CanvasTexture(c); })();
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1, alphaMap: fade, transparent: true, depthWrite: false }));
-    floor.rotation.x = -Math.PI / 2; floor.position.y = -PLINTH; floor.receiveShadow = true; s.add(floor);
-    // The sheet's edge, a little thickness of paper.
+    const fmat = new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1, alphaMap: fade, transparent: true, depthWrite: false });
+    // And it weakens toward the screen's edges, the farther from the middle the fainter, into the snow: a
+    // vignette that follows the screen, not the sheet.
+    this.vig = { value: new THREE.Vector2(1, 1) };
+    fmat.onBeforeCompile = (sh) => {
+      sh.uniforms.vigRes = this.vig;
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform vec2 vigRes;")
+        .replace("#include <alphamap_fragment>", "#include <alphamap_fragment>\nvec2 vq = abs(gl_FragCoord.xy / vigRes - 0.5) * 2.0;\nfloat vd = pow(pow(vq.x, 2.5) + pow(vq.y, 2.5), 0.4);\ndiffuseColor.a *= 1.0 - smoothstep(0.3, 1.12, vd);");
+    };
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), fmat);
+    floor.rotation.x = -Math.PI / 2; floor.position.copy(at((MAP.N + MAP.S) / 2, (MAP.W + MAP.E) / 2)).setY(-PLINTH); floor.receiveShadow = true; s.add(floor);
     // the snowy ground the map lies on, far past its (faded) edges
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w * 8, mh * 8), new THREE.MeshStandardMaterial({ color: 0xeceff2, roughness: 1 }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(mw * 8, mh * 8), new THREE.MeshStandardMaterial({ color: 0xeceff2, roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -PLINTH - 0.03; ground.receiveShadow = true; s.add(ground);
     this.marks = []; // HTML labels pinned to the map: towns, drive times, Denver
     this.camera = new THREE.PerspectiveCamera(30, 1, 4, 900);
@@ -276,6 +289,7 @@ export class Collection {
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     this.renderer.setSize(w, h, false);
+    this.renderer.getDrawingBufferSize(this.vig.value);
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
     if (this.home && !this.picked && !this.moved) this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az, false);
   }
