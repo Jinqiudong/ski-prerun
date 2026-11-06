@@ -42,7 +42,7 @@
   <button id="bubbleHint" hidden aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span hidden></span></button>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
-  <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
+  <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a class="again" href="look.html">再坐一次</a></div></div>
   <div id="skiHud" class="glass" hidden><div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
   <div id="turnCue" hidden></div>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
@@ -57,6 +57,6 @@
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { liftRide } from "./src/core/transition.js?v=2"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=11"></script>
+  <script type="module" src="src/ride/ride.js?v=12"></script>
 </body>
 </html>

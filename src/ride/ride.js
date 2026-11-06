@@ -1529,7 +1529,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     addStep(RESORT, { k: "arrive", title });
     $("arriveNote").textContent = note;
     skiLog.save(true);
-    $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">📜 预滑路书</button><button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" onclick="location.reload()">再来一次</button>`;
+    $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">📜 预滑路书</button><button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" id="againDown">再来一次</button>`;
+    $("againDown").onclick = rideAgain;
     $("seeLog").onclick = openJournal;
     $("seeBook").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
   }
@@ -2036,6 +2037,13 @@ const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun")
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
 const withResort = (url) => url + (url.includes("?") ? "&" : "?") + `resort=${RESORT}`;
 for (const a of document.querySelectorAll('a[href="mountain/"]')) a.href = withResort("mountain/");
+// Once at the top, the address says so (?at=1, set on arrival), so a reload comes back to the top instead
+// of riding the lift again (iOS Safari, for one, reloads a tab it had to drop for memory, and the top, the
+// ride's world plus the miniature built over it, is where this page needs the most). Riding again is asked for
+// (再坐一次, 再来一次): the same address without ?at, from the bottom.
+const atTop = () => { const u = new URL(location.href); u.searchParams.set("at", "1"); history.replaceState(history.state, "", u); };
+const rideAgain = () => { const u = new URL(location.href); u.searchParams.delete("at"); location.replace(u); };
+document.querySelector(".pickLinks .again").addEventListener("click", (e) => { e.preventDefault(); rideAgain(); });
 // The avatar's tools drop down under it as round buttons; the mountain (bottom left) pops the app's pages up.
 // Tap outside to fold them back.
 const fold = () => { for (const id of ["fanDown", "fanUp", "fanDim"]) $(id).hidden = true; $("menuBtn").classList.remove("on"); $("tabFab").classList.remove("on"); };
@@ -2105,7 +2113,7 @@ async function main() {
   // Skip: the chair speeds up the line and glides into the top station (about two seconds).
   let skipping = null;
   $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
-  $("again").addEventListener("click", () => location.reload());
+  $("again").addEventListener("click", rideAgain);
   // The ride bar: tap the chair for ×1 ×2 ×4, tap the flag to pause, drag the dot to go back or ahead (to the end: the top).
   const RATES = [1, 2, 4];
   if (TRIP) {
@@ -2167,6 +2175,7 @@ async function main() {
           along(line.up, d, p); along(line.up, d + 4, q);
           myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0); myChair.updateMatrixWorld(true);
           top.start(now);
+          atTop();
         }
       } else d = d0;
     }
