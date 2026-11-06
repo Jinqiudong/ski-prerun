@@ -3,8 +3,6 @@
 // assets, materials and light change, so the two can be compared fairly.
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
 import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=12";
@@ -21,6 +19,8 @@ import { navRow } from "../core/nav.js?v=9";
 import { rideSound } from "../audio/index.js?v=3";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=3";
 import { dropIn } from "../core/transition.js?v=1";
+import { Facilities } from "./kitworld.js?v=1";
+import { loadResearch, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -45,23 +45,28 @@ const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 // Chairs per lift. Verified: American Flyer is a Leitner-Poma detachable six-pack with blue bubbles (2018,
 // 182 chairs, 5 m/s). The other six-packs are from news of Copper's Leitner-Poma lifts; lifts not listed
 // are drawn as quads until checked.
-const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true }, "American Eagle": { seats: 6 }, "Super Bee": { seats: 6 }, "Timberline Express": { seats: 6 } };
+const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true, bubbleColor: "#2a6fe0" }, "American Eagle": { seats: 6 }, "Super Bee": { seats: 6 }, "Timberline Express": { seats: 6 } };
 // Elsewhere the seats and bubbles come from OpenStreetMap (aerialway:occupancy, aerialway:bubble); a
 // gondola is drawn as a closed cabin with glass all round.
-const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, SPEED = 5;
-let CHAIR_GAP = 33, CHAIR_STEP = 33, HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false;
-function setLiftKind(lift) {
-  CABIN = lift.kind === "gondola" || lift.kind === "cable_car";
-  const k = (RESORT === "copper" && LIFT_KIND[lift.name]) || { seats: Math.min(8, Math.max(2, lift.seats || 4)), bubble: !!lift.bubble };
-  const gap = 0.64;
-  SEAT_X = CABIN ? [-0.45, 0.45] : Array.from({ length: k.seats }, (_, i) => (i - (k.seats - 1) / 2) * gap);
+// The models (models/facilities) come from the lift's real kind, seats and bubble: the research file
+// data/facilities/<resort>.json when there is one, else the OpenStreetMap tags (facilities.js).
+const TOWER_EVERY = 85, SPEED = 5;
+let CHAIR_GAP = 33, CHAIR_STEP = 33, HALF_GAUGE = 3.0, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false, SPEC = null, SEAT = null;
+function setLiftKind(lift, research) {
+  const known = RESORT === "copper" ? LIFT_KIND[lift.name] : null;
+  SPEC = liftSpec({ ...lift, seats: Math.min(8, Math.max(2, lift.seats || 4)) }, research, known);
+  if (!SPEC.carrier) SPEC = { ...SPEC, carrier: "chair2" }; // a surface lift ridden as a chair (none are offered)
+  SEAT = seatOf(SPEC.carrier);
+  CABIN = SPEC.cabin;
+  SEAT_X = SEAT.xs;
   MY_SEAT = SEAT_X[1];
-  HAS_BUBBLE = CABIN || !!k.bubble;
-  HALF_GAUGE = CABIN ? 3.0 : k.seats >= 6 ? 3.3 : k.seats >= 4 ? 2.7 : 2.3;
+  if (SEAT.pivot) BUBBLE_PIVOT.set(0, SEAT.pivot[0], SEAT.pivot[1]);
+  HAS_BUBBLE = CABIN || SPEC.bubble;
+  HALF_GAUGE = SPEC.gauge;
   CHAIR_GAP = CABIN ? 55 : 33;
 }
-// The bubble hinges at its top back edge and swings up and back when raised.
-const BUBBLE_PIVOT = new THREE.Vector3(0, -1.12, -0.5), BUBBLE_UP = -1.35;
+// The bubble hinges at the restraint bar's pivots and swings up and back when raised.
+const BUBBLE_PIVOT = new THREE.Vector3(), BUBBLE_UP = -2.0;
 
 function liftLine(T, lift) {
   const ground = lift.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
@@ -82,19 +87,25 @@ function liftLine(T, lift) {
     const p = dense[i];
     towers.push({ s, p: new THREE.Vector3(p.x, T.heightAt(p.x, p.z), p.z) });
   }
-  // Stations sit level at the highest ground under them, so no slope pokes through the deck.
-  for (const t of [towers[0], towers[towers.length - 1]]) {
-    let hi = -Infinity;
-    for (let dx = -16; dx <= 16; dx += 4) for (let dz = -16; dz <= 16; dz += 4) hi = Math.max(hi, T.heightAt(t.p.x + dx, t.p.z + dz));
-    t.p.y = hi;
-    t.h = STATION_H;
+  // Stations sit level at the highest ground under their decks, so no slope pokes through; the rope
+  // runs through them at the terminal model's own height.
+  const dir0 = new THREE.Vector3().subVectors(ground[ground.length - 1], ground[0]).setY(0).normalize();
+  const terms = [];
+  for (const [t, name, top] of [[towers[0], SPEC.bottom, false], [towers[towers.length - 1], SPEC.top, true]]) {
+    const pl = terminalPlace(name, top, t.p, dir0), lv = deckLevel(T, name, pl);
+    gradePad(T, name, pl, lv.mean); // a graded pad, as real terminals stand on
+    t.p.y = pl.origin.y = lv.mean; lv.lo = lv.mean;
+    t.h = TERMINAL[name].ropeH;
+    terms.push({ name, top, place: pl, low: lv.lo });
   }
+  for (const t of towers.slice(1, -1)) t.p.y = T.heightAt(t.p.x, t.p.z); // the pads changed the ground near the ends
+  for (const g of ground) g.y = T.heightAt(g.x, g.z);
   // The rope runs level through each station (20 m), then climbs to the first tower.
   const pointAtS = (s) => { const i = Math.min(dense.length - 1, Math.max(0, cum.findIndex((c) => c >= s))); return dense[i].clone(); };
   const inA = pointAtS(20), inB = pointAtS(total - 20);
   inA.y = towers[0].p.y; inB.y = towers[towers.length - 1].p.y;
-  towers.splice(1, 0, { s: 20, p: inA, h: STATION_H, station: true });
-  towers.splice(towers.length - 1, 0, { s: total - 20, p: inB, h: STATION_H, station: true });
+  towers.splice(1, 0, { s: 20, p: inA, h: towers[0].h, station: true });
+  towers.splice(towers.length - 1, 0, { s: total - 20, p: inB, h: towers[towers.length - 1].h, station: true });
   while (towers.length > 4 && towers[2].s < 40) towers.splice(2, 1); // no tower inside a station
   while (towers.length > 4 && towers[towers.length - 3].s > total - 40) towers.splice(towers.length - 3, 1);
   const dir = new THREE.Vector3().subVectors(ground[ground.length - 1], ground[0]).setY(0).normalize();
@@ -110,7 +121,7 @@ function liftLine(T, lift) {
   };
   const up = [], down = [];
   for (let s = 0; s <= total; s += 2) { up.push(ropeAt(s, HALF_GAUGE)); down.push(ropeAt(total - s, -HALF_GAUGE)); }
-  return { towers, dir, side, up, down, total, ground };
+  return { towers, dir, side, up, down, total, ground, terms };
 }
 
 // Point and heading at distance d along a sampled path (2 m steps).
@@ -119,89 +130,7 @@ function along(path, d, out = new THREE.Vector3()) {
   return out.copy(path[i]).lerp(path[i + 1], t);
 }
 
-// ---------- Chairs ----------
-// A detachable six-pack. Origin at the grip on the rope, +z the way it travels, y up.
-// A gondola cabin around the same seat: the rider on the back bench facing the way up, a bench opposite,
-// glass from the seats up. Same parts as a chair (metal, pads, glass, frames) so it is drawn the same way.
-function cabinParts() {
-  const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
-  const X = 1.05, Z0 = -0.5, Z1 = 1.65, CZ = (Z0 + Z1) / 2, YT = -0.95, YW = -2.5, YB = -3.05;
-  const metal = [
-    new THREE.BoxGeometry(0.28, 0.36, 0.7).translate(0, -0.12, 0), // grip
-    tube([[0, -0.25, 0], [0, -0.6, CZ * 0.5], [0, YT, CZ]], 0.07), // hanger
-    new RoundedBoxGeometry(2 * X + 0.1, 0.16, Z1 - Z0 + 0.1, 2, 0.06).translate(0, YT, CZ), // roof
-    new RoundedBoxGeometry(2 * X + 0.1, 0.1, Z1 - Z0 + 0.1, 2, 0.04).translate(0, YB, CZ), // floor
-  ];
-  // Solid lower walls, waist high.
-  for (const s of [-1, 1]) metal.push(new THREE.BoxGeometry(0.05, YW - YB, Z1 - Z0).translate(s * X, (YW + YB) / 2, CZ));
-  for (const z of [Z0, Z1]) metal.push(new THREE.BoxGeometry(2 * X, YW - YB, 0.05).translate(0, (YW + YB) / 2, z));
-  const pad = [];
-  for (const [z, back] of [[0.07, -1], [Z1 - 0.32, 1]]) { // two benches, facing each other (low backs, so the view stays open)
-    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.11, 0.5, 2, 0.04).translate(0, -2.41, z));
-    pad.push(new RoundedBoxGeometry(2 * X - 0.15, 0.26, 0.08, 2, 0.03).translate(0, -2.24, z + back * 0.3));
-  }
-  // Glass all round from the walls to the roof.
-  const glass = [];
-  for (const s of [-1, 1]) glass.push(new THREE.PlaneGeometry(Z1 - Z0, YT - YW).rotateY(Math.PI / 2).translate(s * X, (YT + YW) / 2, CZ));
-  for (const z of [Z0, Z1]) glass.push(new THREE.PlaneGeometry(2 * X, YT - YW).translate(0, (YT + YW) / 2, z));
-  const rim = [];
-  for (const x of [-X, X]) for (const z of [Z0, Z1]) rim.push(tube([[x, YW, z], [x, YT, z]], 0.035)); // corner posts
-  for (const y of [YW, YT + 0.05]) rim.push(tube([[-X, y, Z0], [X, y, Z0], [X, y, Z1], [-X, y, Z1], [-X, y, Z0]], 0.03));
-  const merge = (list) => mergeGeometries(list.map((g) => (g.index ? g.toNonIndexed() : g)).map((g) => { g.deleteAttribute("uv"); return g; }));
-  return { metal: merge(metal), pad: merge(pad), bubble: merge(glass), rim: merge(rim) };
-}
-
-function chairParts() {
-  if (CABIN) return cabinParts();
-  const tube = (pts, r = 0.04) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)), false, "catmullrom", 0.1), Math.max(8, pts.length * 6), r, 6);
-  const H = SEAT_X[SEAT_X.length - 1] + 0.35; // half the chair's width
-  const metal = [
-    new THREE.BoxGeometry(0.28, 0.36, 0.7).translate(0, -0.12, 0), // grip
-    tube([[0, -0.25, 0], [0, -0.75, -0.14], [0, -1.35, -0.55], [0, -1.95, -0.5], [0, -2.15, -0.32]], 0.06), // hanger
-    tube([[-0.9, -1.25, -0.56], [0.9, -1.25, -0.56]], 0.04), // bubble hinge bar
-    tube([[-H, -2.47, -0.22], [H, -2.47, -0.22]], 0.045), tube([[-H, -2.47, 0.36], [H, -2.47, 0.36]], 0.04),
-  ];
-  for (const s of [-1, 1]) {
-    metal.push(tube([[s * H, -2.47, 0.36], [s * H, -2.47, -0.22], [s * H, -1.82, -0.32]]));
-    metal.push(tube([[s * H, -2.15, -0.26], [s * H, -2.12, 0.3]], 0.035)); // armrest
-    metal.push(tube([[s * H, -1.8, -0.3], [s * H, -1.88, 0.2], [s * (H - 0.03), -1.96, 0.55]], 0.035)); // safety bar arms, lowered
-  }
-  for (let i = 0; i < SEAT_X.length; i += 2) { // a footrest for each pair of riders
-    const x = i + 1 < SEAT_X.length ? (SEAT_X[i] + SEAT_X[i + 1]) / 2 : SEAT_X[i]; // an odd seat out gets its own
-    for (const d of [-0.22, 0.22]) metal.push(tube([[x + d, -1.96, 0.56], [x + d, -2.5, 0.6], [x + d, -2.88, 0.62]], 0.028));
-    metal.push(new THREE.BoxGeometry(0.62, 0.04, 0.24).translate(x, -2.9, 0.68));
-  }
-  metal.push(tube([[-H + 0.03, -1.96, 0.55], [H - 0.03, -1.96, 0.55]], 0.035)); // safety bar
-  const pad = [];
-  for (const x of SEAT_X) { // a cushion per seat
-    pad.push(new RoundedBoxGeometry(0.6, 0.11, 0.56, 2, 0.04).translate(x, -2.41, 0.07));
-    pad.push(new RoundedBoxGeometry(0.6, 0.55, 0.09, 2, 0.04).rotateX(-0.14).translate(x, -2.08, -0.25));
-  }
-  // The bubble, lowered: a curved shell from over the heads down in front to the shins, with flat ends.
-  const C = new THREE.Vector3(0, -2.05, -0.15), R = 1.0, a0 = -0.33, a1 = 2.2, NA = 18, NX = 12;
-  const pos = [], idx = [];
-  for (let i = 0; i <= NA; i++) for (let j = 0; j <= NX; j++) {
-    const a = a0 + (a1 - a0) * i / NA, x = -H - 0.1 + (2 * H + 0.2) * j / NX;
-    pos.push(x, C.y + R * Math.cos(a), C.z + R * Math.sin(a));
-    if (i < NA && j < NX) { const k = i * (NX + 1) + j; idx.push(k, k + NX + 1, k + 1, k + 1, k + NX + 1, k + NX + 2); }
-  }
-  for (const x of [-H - 0.1, H + 0.1]) { // end caps: a fan from the curve's centre
-    const c = pos.length / 3;
-    pos.push(x, C.y, C.z);
-    for (let i = 0; i <= NA; i++) { const a = a0 + (a1 - a0) * i / NA; pos.push(x, C.y + R * Math.cos(a), C.z + R * Math.sin(a)); }
-    for (let i = 0; i < NA; i++) idx.push(c, c + 1 + i, c + 2 + i);
-  }
-  const bubble = new THREE.BufferGeometry();
-  bubble.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  bubble.setIndex(idx);
-  bubble.computeVertexNormals();
-  // Its frame: the bottom edge and the two ends.
-  const arc = (x) => Array.from({ length: NA + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / NA; return [x, C.y + R * Math.cos(a), C.z + R * Math.sin(a)]; });
-  const rim = mergeGeometries([tube(arc(-H - 0.1), 0.03), tube(arc(H + 0.1), 0.03),
-    tube([[-H - 0.1, C.y + R * Math.cos(a1), C.z + R * Math.sin(a1)], [H + 0.1, C.y + R * Math.cos(a1), C.z + R * Math.sin(a1)]], 0.035)].map((g) => g.toNonIndexed()));
-  return { metal: mergeGeometries(metal.map((g) => g.toNonIndexed())), pad: mergeGeometries(pad.map((g) => g.toNonIndexed())), bubble, rim };
-}
-
+// ---------- Chairs: the kit carriers (facilities.js); the rider's own is built in build() ----------
 // The bubble's transform for an opening u: 0 lowered, 1 raised (turned up and back about its hinge).
 const _bm = new THREE.Matrix4(), _bt = new THREE.Matrix4();
 function bubbleMatrix(u, out = new THREE.Matrix4()) {
@@ -511,106 +440,10 @@ function runRibbon(T, pts, width, lift) {
   return geo;
 }
 
-// ---------- Lift hardware ----------
-function towerGeometries(line) {
-  const metal = [], dark = [];
-  for (let i = 1; i < line.towers.length - 1; i++) {
-    if (line.towers[i].station) continue;
-    const { p } = line.towers[i];
-    const top = ROPE_H - 0.9;
-    const yaw = Math.atan2(line.dir.x, line.dir.z);
-    const place = (g) => g.rotateY(yaw).translate(p.x, p.y, p.z);
-    metal.push(place(new THREE.CylinderGeometry(0.32, 0.55, top, 10).translate(0, top / 2, 0)));
-    metal.push(place(new THREE.BoxGeometry(HALF_GAUGE * 2 + 1.4, 0.45, 0.45).translate(0, top, 0)));
-    metal.push(place(new THREE.CylinderGeometry(0.9, 1.1, 0.5, 10).translate(0, 0.25, 0))); // footing
-    for (const s of [-1, 1]) {
-      const x = s * HALF_GAUGE;
-      metal.push(place(new THREE.BoxGeometry(0.2, 0.22, 3.4).translate(x, ROPE_H - 0.45, 0))); // sheave beam
-      metal.push(place(new THREE.BoxGeometry(0.12, 0.5, 0.12).translate(x, ROPE_H - 0.68, 0)));
-      for (let w = 0; w < 4; w++) dark.push(place(new THREE.CylinderGeometry(0.24, 0.24, 0.1, 14).rotateZ(Math.PI / 2).translate(x, ROPE_H - 0.24, -1.2 + w * 0.8)));
-    }
-  }
-  const strip = (g) => { g = g.toNonIndexed(); g.deleteAttribute("uv"); return g; };
-  return { metal: mergeGeometries(metal.map(strip)), dark: dark.length ? mergeGeometries(dark.map(strip)) : null };
-}
-
-// A detachable terminal, after photos of American Flyer's top ("unload area with exposed bullwheel",
-// "unloading ramp"): an exposed horizontal bullwheel, a steel carrier along the rope, a canopy on posts
-// wrapped in grey foam pads, the operator's glass booth, and at the top an unload ramp ending at a big sign
-// with the lift's name. Local frame: the bullwheel at the origin, +z toward the line.
-function liftSign(lines, w = 6.4, h = 1.9) {
-  const c = document.createElement("canvas");
-  c.width = 1024; c.height = Math.round(1024 * h / w);
-  const g = c.getContext("2d");
-  g.fillStyle = "#123a6b"; g.fillRect(0, 0, c.width, c.height);
-  g.strokeStyle = "#ffffff"; g.lineWidth = 10; g.strokeRect(14, 14, c.width - 28, c.height - 28);
-  g.fillStyle = "#ffffff"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.font = `800 ${Math.round(c.height * 0.36)}px -apple-system, "Helvetica Neue", sans-serif`;
-  g.fillText(lines[0], c.width / 2, c.height * 0.38);
-  g.font = `600 ${Math.round(c.height * 0.2)}px -apple-system, "PingFang SC", sans-serif`;
-  g.fillText(lines[1], c.width / 2, c.height * 0.74);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }));
-}
-
-function terminal(p, dir, mats, { name, alt, top, upSide }) {
-  const g = new THREE.Group();
-  const W = HALF_GAUGE + 2.2, steel = mats.metal;
-  const foam = new THREE.MeshStandardMaterial({ color: 0x8d939b, roughness: 0.95 });
-  const white = new THREE.MeshStandardMaterial({ color: 0xe9ecef, roughness: 0.5 });
-  const snow = new THREE.MeshStandardMaterial({ color: 0xf6f8fb, roughness: 0.9 });
-  const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
-  // Bullwheel: rim, spokes, hub, at rope height.
-  const wheel = new THREE.Group();
-  wheel.add(new THREE.Mesh(new THREE.TorusGeometry(HALF_GAUGE, 0.16, 10, 64), steel));
-  for (let i = 0; i < 8; i++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(HALF_GAUGE * 2, 0.12, 0.18), steel); sp.rotation.z = (i / 8) * Math.PI; wheel.add(sp); }
-  wheel.add(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.6, 16).rotateX(Math.PI / 2), mats.dark));
-  wheel.rotation.x = Math.PI / 2;
-  wheel.position.y = STATION_H;
-  g.add(wheel);
-  // Carrier: the steel beam the chairs run under through the station, on a column over the wheel.
-  add(new THREE.BoxGeometry(W * 2 - 1.6, 0.7, 16), steel, 0, STATION_H + 0.9, 8);
-  add(new THREE.CylinderGeometry(0.45, 0.6, STATION_H + 0.6, 12), steel, 0, (STATION_H + 0.6) / 2, 0);
-  // Canopy on four posts, each post wrapped in a grey foam pad at rider height.
-  // A flat canopy well above a rider's head on the chair (and the camera behind them).
-  const roof = add(new RoundedBoxGeometry(W * 2 + 1.2, 0.35, 19, 2, 0.12), white, 0, STATION_H + 4.2, 6);
-  roof.rotation.x = 0.03;
-  for (const x of [-W, W]) for (const z of [-3, 15]) {
-    add(new THREE.CylinderGeometry(0.22, 0.22, STATION_H + 4.2, 10), steel, x, (STATION_H + 4.2) / 2, z);
-    add(new RoundedBoxGeometry(0.75, 2.0, 0.75, 2, 0.2), foam, x, 1.1, z);
-  }
-  // Operator booth on the other side from where riders get on or off.
-  const bx = -upSide * (W + 2.6);
-  add(new THREE.BoxGeometry(2.6, 2.6, 2.6), new THREE.MeshStandardMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.45, roughness: 0.05, metalness: 0.3 }), bx, 1.6, 6);
-  add(new THREE.BoxGeometry(3.0, 0.3, 3.0), mats.roof, bx, 3.05, 6);
-  add(new THREE.BoxGeometry(2.7, 0.35, 2.7), mats.dark, bx, 0.2, 6);
-  // The deck riders stand on, level snow.
-  // A snow-covered deck on a concrete foundation that reaches down to the slope.
-  add(new THREE.BoxGeometry(W * 2 + 6, 0.5, 26), snow, 0, 0, 6);
-  add(new THREE.BoxGeometry(W * 2 + 5, 8, 25), new THREE.MeshStandardMaterial({ color: 0x8f8b85, roughness: 0.95 }), 0, -4.2, 6);
-  const signAt = new THREE.Vector3(upSide * HALF_GAUGE, 0, -11);
-  if (top) {
-    // Unload ramp: from under the arriving chairs, sloping down and away past the wheel.
-    const ramp = add(new THREE.BoxGeometry(4.2, 0.6, 16), snow, upSide * HALF_GAUGE, 0.05, -1); // skis just clear it
-    ramp.rotation.x = -0.06;
-  }
-  // The sign, facing the riders as they come in (or wait to load).
-  for (const x of [-2.8, 2.8]) add(new THREE.CylinderGeometry(0.1, 0.1, 4.2, 8), mats.dark, signAt.x + x, 2.1, signAt.z);
-  const sign = liftSign([name.toUpperCase(), top ? `顶站 · 海拔 ${alt.toLocaleString()} 米` : `底站 · 海拔 ${alt.toLocaleString()} 米`]);
-  sign.position.set(signAt.x, 3.3, signAt.z + 0.06);
-  g.add(sign);
-  g.position.copy(p);
-  g.rotation.y = Math.atan2(dir.x, dir.z);
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  return g;
-}
-
 // ---------- The scene for a look ----------
-let world = null, sun = null, myChair = null, chairsUp = null, chairsDown = null, padsUp = null, padsDown = null;
+let world = null, sun = null, myChair = null;
 let topTerm = null;
-let bubblesUp = null, bubblesDown = null, rimsUp = null, rimsDown = null, myBubble = null, bubbleOpen = 1, bubbleWant = 1;
+let myBubble = null, bubbleOpen = 1, bubbleWant = 1;
 // ---------- The snow's colour, baked: ridge shadows (blue), the floor under the woods, rock ----------
 // Ridges throw long shadows across the slopes in the low winter sun; seen from the air those shadowed
 // slopes are blue. Marched once on every other vertex (and filled in) to keep loading quick on phones.
@@ -638,53 +471,6 @@ function farForest(T, mask, near, coarse) {
     spots.push({ x: px, z: pz, y: T.heightAt(px, pz), d: 9999, v: rand() });
   }
   return spots;
-}
-
-// ---------- Other lifts, seen while skiing ----------
-// Every lift near the way down: towers every 85 m, its two ropes, a station at each end, and its name
-// floating over the bottom station so you can find it from a distance.
-function otherLift(T, l) {
-  const g = new THREE.Group(), pts = l.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
-  const along = [];
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1], b = pts[i], L = a.distanceTo(b), n = Math.max(1, Math.round(L / 85));
-    for (let k = i === 1 ? 0 : 1; k <= n; k++) along.push(a.clone().lerp(b, k / n));
-  }
-  const dir = pts[pts.length - 1].clone().sub(pts[0]).setY(0).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x);
-  const steel = new THREE.MeshStandardMaterial({ color: 0x8d96a3, metalness: 0.5, roughness: 0.5 });
-  const H = 11, towers = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.35, 0.45, H, 8), steel, along.length);
-  const arms = new THREE.InstancedMesh(new THREE.BoxGeometry(6, 0.4, 0.4), steel, along.length);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), side), one = new THREE.Vector3(1, 1, 1);
-  along.forEach((p, i) => {
-    towers.setMatrixAt(i, m.compose(new THREE.Vector3(p.x, p.y + H / 2, p.z), new THREE.Quaternion(), one));
-    arms.setMatrixAt(i, m.compose(new THREE.Vector3(p.x, p.y + H, p.z), q, one));
-  });
-  towers.castShadow = true;
-  g.add(towers, arms);
-  for (const s of [-2.8, 2.8]) {
-    const rope = along.map((p) => new THREE.Vector3(p.x + side.x * s, p.y + H - 0.3, p.z + side.z * s));
-    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rope), new THREE.LineBasicMaterial({ color: 0x2a2e35 })));
-  }
-  const house = new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }), roof = new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 });
-  for (const p of [pts[0], pts[pts.length - 1]]) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(9, 5, 7), house); b.position.set(p.x, p.y + 2.5, p.z); b.castShadow = true;
-    const r = new THREE.Mesh(new THREE.BoxGeometry(11, 0.8, 9), roof); r.position.set(p.x, p.y + 5.4, p.z);
-    g.add(b, r);
-  }
-  // The name over the bottom station, always facing you.
-  const c = document.createElement("canvas"), cx = c.getContext("2d"), label = `🚡 ${l.name}`;
-  cx.font = "700 44px -apple-system, PingFang SC, sans-serif";
-  c.width = Math.ceil(cx.measureText(label).width) + 48; c.height = 72;
-  const ctx2 = c.getContext("2d");
-  ctx2.fillStyle = "rgba(242,182,50,.95)"; ctx2.beginPath(); ctx2.roundRect(0, 0, c.width, 72, 36); ctx2.fill();
-  ctx2.font = "700 44px -apple-system, PingFang SC, sans-serif"; ctx2.fillStyle = "#1d1606"; ctx2.textBaseline = "middle"; ctx2.fillText(label, 24, 38);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, fog: false }));
-  tag.scale.set((c.width / 72) * 7, 7, 1);
-  tag.position.set(pts[0].x, pts[0].y + 18, pts[0].z);
-  tag.renderOrder = 5;
-  g.add(tag);
-  return g;
 }
 
 // ---------- Night: floodlit runs ----------
@@ -856,56 +642,23 @@ function build(ctx) {
     ctx.forest(ctx.farSpots, -1);
   }
 
-  // Lift: towers, ropes, terminals, chairs.
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0x8b929c, metalness: 0.65, roughness: 0.42 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.5, roughness: 0.5 });
-  const tg = towerGeometries(line);
-  const towers = new THREE.Mesh(tg.metal, metalMat);
-  towers.castShadow = towers.receiveShadow = true;
-  world.add(towers);
-  if (tg.dark) { const d = new THREE.Mesh(tg.dark, darkMat); d.castShadow = true; world.add(d); }
+  // Lift: the kit's towers, terminals and carriers (kitworld.js), the ropes.
   const ropeMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.7, roughness: 0.35 });
   for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, 0.03, 5), ropeMat));
-  const houseMats = { house: new THREE.MeshStandardMaterial({ color: 0x9a6b45, roughness: 0.8 }), roof: new THREE.MeshStandardMaterial({ color: 0x3a4250, roughness: 0.6 }), metal: metalMat };
-  const g0 = line.ground[0], g1 = line.ground[line.ground.length - 1];
+  const fac = ctx.fac = new Facilities({ T, R, world, renderer, research: ctx.research, resort: RESORT, known: RESORT === "copper" ? LIFT_KIND : null });
+  fac.liftKits = ctx.liftKits;
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
-  // Chairs go up on the +side rope: at the bottom that is local +x, at the top (turned round) local -x.
-  world.add(terminal(line.towers[0].p.clone(), line.dir, { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g0), top: false, upSide: 1 }));
-  world.add(topTerm = terminal(line.towers[line.towers.length - 1].p.clone(), line.dir.clone().negate(), { ...houseMats, dark: darkMat }, { name: ctx.lift.name, alt: altOf(g1), top: true, upSide: -1 }));
+  // Chairs evenly round the loop with ours as one of them: the gap is shrunk a touch so the last
+  // chair ahead never lands on ours.
+  const n = Math.max(1, Math.floor(line.total / CHAIR_GAP)); CHAIR_STEP = line.total / (n + 1); ctx.chairN = n;
+  const mine = fac.rideLift({ line, spec: SPEC, lift: ctx.lift, rider, alt: altOf, seat: SEAT, myPos: { x: MY_SEAT } });
+  myChair = mine.myChair; myBubble = mine.myBubble; topTerm = mine.topTerm;
+  myBubble.visible = HAS_BUBBLE;
   if (ctx.night > 0) for (const t of [line.towers[0].p, line.towers[line.towers.length - 1].p]) { // the stations are lit at night
     const l = new THREE.PointLight(0xffe7c2, 900 * ctx.night, 90, 1.5);
     l.position.copy(t).add(new THREE.Vector3(0, 9, 0));
     world.add(l);
   }
-
-  const parts = ctx.chair;
-  const chairMetal = metalMat;
-  const padMat = new THREE.MeshStandardMaterial({ color: 0x1f2c47, roughness: 0.55 });
-  // Chairs evenly round the loop with ours as one of them: the gap is shrunk a touch so the last
-  // chair ahead never lands on ours.
-  const n = Math.max(1, Math.floor(line.total / CHAIR_GAP)); CHAIR_STEP = line.total / (n + 1);
-  chairsUp = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsUp = new THREE.InstancedMesh(parts.pad, padMat, n);
-  chairsDown = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsDown = new THREE.InstancedMesh(parts.pad, padMat, n);
-  // Copper's signature blue bubbles: tinted, glossy, see-through.
-  const bubbleMat = new THREE.MeshStandardMaterial({ color: CABIN ? 0xa9c4d8 : 0x2a6fe0, transparent: true, opacity: CABIN ? 0.22 : 0.42, roughness: 0.05, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
-  const rimMat = new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.5 });
-  bubblesUp = new THREE.InstancedMesh(parts.bubble, bubbleMat, n); bubblesDown = new THREE.InstancedMesh(parts.bubble, bubbleMat, n);
-  rimsUp = new THREE.InstancedMesh(parts.rim, rimMat, n); rimsDown = new THREE.InstancedMesh(parts.rim, rimMat, n);
-  for (const m of [bubblesUp, bubblesDown]) { m.renderOrder = 2; m.frustumCulled = false; m.visible = HAS_BUBBLE; world.add(m); }
-  for (const m of [rimsUp, rimsDown]) { m.frustumCulled = false; m.castShadow = true; m.visible = HAS_BUBBLE; world.add(m); }
-  for (const m of [chairsUp, padsUp, chairsDown, padsDown]) { m.castShadow = true; m.frustumCulled = false; world.add(m); }
-  myChair = new THREE.Group();
-  myChair.add(new THREE.Mesh(parts.metal, chairMetal), new THREE.Mesh(parts.pad, padMat));
-  myBubble = new THREE.Group();
-  myBubble.add(new THREE.Mesh(parts.bubble, bubbleMat), new THREE.Mesh(parts.rim, rimMat));
-  myBubble.matrixAutoUpdate = false;
-  myBubble.children[0].renderOrder = 2;
-  myBubble.visible = HAS_BUBBLE;
-  myChair.add(myBubble);
-  myChair.traverse((o) => { o.castShadow = o.receiveShadow = true; });
-  rider.position.set(MY_SEAT, -2.95, 0.12);
-  myChair.add(rider);
-  world.add(myChair);
   if (!TRIP) $("desc").textContent = "画面样稿：半写实的云杉、压雪的雪道、真实的天空和远山";
 }
 
@@ -1112,7 +865,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (const l of R.lifts) {
       if (liftsShown.has(l) || l.kind === "magic_carpet" || l.pts.length < 2) continue;
       if (!l.pts.some(([x, z]) => path.some(([rx, rz]) => Math.hypot(rx - x, rz - z) < 900))) continue;
-      liftsShown.add(l); world.add(otherLift(T, l));
+      liftsShown.add(l); ctx.fac.addOtherLift(l);
     }
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
@@ -1360,7 +1113,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     spawn = { t0: clock() }; // the arrival: see stepSki
     flash();
   }
-  const liftsShown = new Set([lift]);
+  const liftsShown = ctx.liftsShown;
   function dress(P) {
     const path = P.path;
     // The other lifts near the way down, so a lift you can take is there to see.
@@ -1368,7 +1121,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       if (liftsShown.has(l) || l.kind === "magic_carpet" || l.pts.length < 2) continue;
       if (!l.pts.some(([x, z]) => path.some(([rx, rz], i) => i % 4 === 0 && Math.hypot(rx - x, rz - z) < 900))) continue;
       liftsShown.add(l);
-      world.add(otherLift(T, l));
+      ctx.fac.addOtherLift(l);
     }
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
@@ -1380,7 +1133,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       let k = j.i, d = 0;
       while (k > 0 && d < 25) { d += Math.hypot(path[k][0] - path[k - 1][0], path[k][1] - path[k - 1][1]); k--; }
       const h = pathDir(path, k), [x, z] = path[k];
-      group.add(junctionSign(T, x - Math.cos(h) * 17, z + Math.sin(h) * 17, h + Math.PI, j.options, renderer));
+      const sx = x - Math.cos(h) * 17, sz = z + Math.sin(h) * 17;
+      group.add(ctx.fac.junctionSign(sx, sz, h + Math.PI, j.options, () => junctionSign(T, sx, sz, h + Math.PI, j.options, renderer)));
       const way = j.options.find((o) => o.route);
       if (way && Math.abs(way.bearing) > 0.18) group.add(chevrons(T, path, j.i, way.bearing));
     }
@@ -1873,7 +1627,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // Where the rider stands after getting off: down the ramp, beside the sign.
   const standAt = () => {
     topTerm.updateMatrixWorld(true);
-    return topTerm.localToWorld(new THREE.Vector3(-HALF_GAUGE, 0.25, -7.5));
+    return topTerm.localToWorld(topTerm.userData.stand.clone());
   };
   const marks = new THREE.Group(); // faint: every run from this top; bold: the chosen plan, drawn in order
   let chosen = null, routeMarks = [], reveal = null;
@@ -2397,7 +2151,7 @@ $("tabFab").onclick = () => {
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxToggle").textContent = t(i.hidden ? "雪况 ⌄" : "收起 ⌃"); };
 const riderLoad = loadBoarder(); // start early, it is a few MB
 async function main() {
-  const [R, far] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json())]);
+  const [R, far, research] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT)]);
   const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
@@ -2411,12 +2165,14 @@ async function main() {
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
   const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
-  setLiftKind(lift);
+  setLiftKind(lift, research);
+  // The lift's models (carrier, tower parts, terminals): the ride waits for these; the rest comes later.
+  const [carrier, base, shaft, head, bottom, top0] = await kits([SPEC.carrier, "tower_base", "tower_shaft", "tower_head", SPEC.bottom, SPEC.top]);
   if (TRIP) addStep(RESORT, { k: "lift", name: lift.name });
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), chair: chairParts(), rider: boarderModel(), lift, mask };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: boarderModel(), lift, mask, research, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
   ctx.tex.cord.repeat.set(1, 1);
   build(ctx);
   $("status").remove();
@@ -2430,7 +2186,7 @@ async function main() {
   weather(params, flakes, R.origin, ctx.applySky);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
-  const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - 9 : line.total * 0.66; // from the loading point to the unload ramp
+  const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - (TERMINAL[SPEC.top].unload || 9) : line.total * 0.66; // from the loading point to the unload ramp
   let fast = false, arrived = false, paused = false, rate = 1;
   const fastBtn = $("fast");
   fastBtn.hidden = !TRIP;
@@ -2482,7 +2238,10 @@ async function main() {
   let hintOn = TRIP && HAS_BUBBLE && !CABIN;
   const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
-  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names };
+  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC };
+  // The lifts around this one, seen from the chair; then the buildings, signs and props.
+  for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
+  setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -2514,20 +2273,8 @@ async function main() {
     myChair.position.copy(p);
     myChair.rotation.set(0, yaw, 0);
     // The other chairs keep their spacing from ours; the down line runs the other way.
-    for (let i = 0; i < chairsUp.count; i++) {
-      const s = (d + (i + 1) * CHAIR_STEP) % line.total;
-      along(line.up, s, p); along(line.up, s + 4, q);
-      rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
-      chairsUp.setMatrixAt(i, m.compose(p, rot, one)); padsUp.setMatrixAt(i, m);
-      // Riders going up keep some bubbles down, some up; empty chairs come down with them closed.
-      bm2.copy(m).multiply((i * 7) % 5 < 3 && !CABIN ? bOpen : bShut); bubblesUp.setMatrixAt(i, bm2); rimsUp.setMatrixAt(i, bm2);
-      const s2 = (line.total - d + i * CHAIR_STEP + CHAIR_STEP / 2) % line.total;
-      along(line.down, s2, p); along(line.down, s2 + 4, q);
-      rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
-      chairsDown.setMatrixAt(i, m.compose(p, rot, one)); padsDown.setMatrixAt(i, m);
-      bm2.copy(m).multiply(bShut); bubblesDown.setMatrixAt(i, bm2); rimsDown.setMatrixAt(i, bm2);
-    }
-    for (const c of [chairsUp, padsUp, chairsDown, padsDown, bubblesUp, bubblesDown, rimsUp, rimsDown]) c.instanceMatrix.needsUpdate = true;
+    ctx.fac.cam.copy(camera.position);
+    ctx.fac.placeChairs(line, d, CHAIR_STEP, ctx.chairN, along, bOpen, bShut, CABIN);
     bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
     if (!top.phase) snd?.lift({ d, total: line.total, towers: line.towers, rate: fast ? 20 / 3 : rate, shelter: 1 - bubbleOpen, dt }); // the bubble down keeps the wind off
     bubbleMatrix(bubbleOpen, myBubble.matrix);
@@ -2543,13 +2290,13 @@ async function main() {
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
-    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); renderer.render(scene, camera); top.hud?.(); return; }
+    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
-    const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, -1.5, -Math.sin(yaw) * MY_SEAT));
+    const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, SEAT.top + 0.86, -Math.sin(yaw) * MY_SEAT));
     // Behind and above a chair; behind a cabin at window height, looking in through its back glass.
-    if (CABIN) camera.position.copy(head).addScaledVector(view, -4.2).add(new THREE.Vector3(0, 0.35, 0));
+    if (CABIN) camera.position.copy(head).addScaledVector(view, -4.2).setY(myChair.position.y + SEAT.glassY);
     else camera.position.copy(head).addScaledVector(view, -4.5).add(new THREE.Vector3(0, 2.2, 0));
     // Look up the slope, not at a fixed angle: aim 30 m ahead on the line, a little below the rope, so
     // the snow ahead (higher than the chair on the way up) and the names carved in it stay in view.
@@ -2559,6 +2306,7 @@ async function main() {
     sun.position.copy(head).addScaledVector(sun.userData.dir, 400);
     sun.target.position.copy(head);
     fadeNames(names, camera);
+    ctx.fac.update(camera.position, dt);
     renderer.render(scene, camera);
   });
 }
