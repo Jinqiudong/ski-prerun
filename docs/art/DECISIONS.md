@@ -48,6 +48,24 @@ Next: storyboard of the day flow (step 3 for this flow), then build.
 - Proposed by Claude, pending the owner's review: nav cues at 200 m and again at 50 m; keep a compact
   slope profile in run previews.
 
+## From the air (2026-11-06)
+
+- The owner rejected the miniature block above (toy cone trees, rainbow riders on box chairs, black-box
+  stations, the cake-layer plinth, table and name plaque: a style apart from the rest of the app) and
+  approved the "aerial" look of the start page's map for every 3D view of a resort.
+- The look: the start map's tile recipe baked larger (`tools/bake_tiles.py --aerial`, 2048 px over the
+  resort's baked area): snow lit from the north-west, cool blue-grey in shade; dark woods from the real
+  tree mask with the runs cut through them as white ribbons; grey rock on the steeps. It fades into the
+  paper at its edges, never a hard block edge.
+- Runs are thin ink ribbons (a little over 2 px on screen at any distance, 0.8 opacity) in the painted
+  map's ink: easy #2e8b4f, intermediate #2a5db0, advanced and expert #1c1f25. Lifts are thin dark cables
+  on small towers with small grey stations; the chosen lift has a thin amber glow. Base lodges are the
+  kit's `base_lodge` model. Calm light; no tilt-shift.
+- Picking a base: no separate block; the camera flies down from the whole mountain to a steep look
+  (about 63°) over that base on the same terrain, and back up on "←". The intro turn, tags, cards and
+  plans stay as they were. The top of a lift in the ride uses the same view, with a calmer "you are here".
+- Screenshots: `docs/art/aerial/`.
+
 ## Art direction for the ride (2026-11-01)
 
 - Owner compared two looks of the American Flyer ride (`/look.html`): A semi-realistic (reference: Grand

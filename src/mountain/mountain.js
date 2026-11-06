@@ -1,23 +1,22 @@
-// Style frame for step 1 of the art direction: the mountain alone, semi-realistic.
-// Real terrain, runs and lifts; a bright winter day; resort-map run colors on white snow.
+// The resort page: the whole mountain from the air, in the start map's style (src/mountain/aerial.js):
+// real terrain, the runs in ink, the lifts as thin cables, fading into the paper. Pick a base and the camera
+// flies down to it, steeply over the same terrain, to choose a lift.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Sky } from "three/addons/objects/Sky.js";
-import { Terrain, farTerrain, treeMaskFn, ribbon, Lifts } from "../ride/world.js?v=5";
+import { Terrain } from "../ride/world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
-import { Diorama } from "./diorama.js?v=20";
+import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
 import { addStep } from "../ride/roadbook.js?v=12";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=28";
 import { openNav } from "../core/nav.js?v=9";
 import { liftTicket } from "../core/transition.js?v=2";
 
-const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
 const RESORT_ID = (() => { try { return new URLSearchParams(location.search).get("resort") || JSON.parse(localStorage.getItem("prerun") || "{}").resort || "copper"; } catch { return "copper"; } })().replace(/[^a-z0-9-]/g, "");
 const RESORT = { lat: 39.4775, lon: -106.1605, tz: "America/Denver", name: "Copper Mountain" };
-const RUN_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
+const FLY = 1.8; // seconds: down to a base; back up is a little quicker
 const $ = (id) => document.getElementById(id);
 const status = (t) => { $("status").textContent = t; return new Promise((r) => setTimeout(r, 20)); };
 
@@ -27,257 +26,12 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xb4cfee, 20000, 95000);
-const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 5, 120000);
+scene.background = new THREE.Color(PAPER);
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 20, 120000);
 const controls = new OrbitControls(camera, renderer.domElement);
 Object.assign(controls, { enableDamping: true, maxPolarAngle: 1.42, minDistance: 400, maxDistance: 26000, autoRotate: true, autoRotateSpeed: 0.35 });
 addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
-
-function skyDome() {
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { sun: { value: SUN.clone() }, top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, hor: { value: new THREE.Color() }, glow: { value: new THREE.Color() } },
-    vertexShader: "varying vec3 v; void main(){ v = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
-    fragmentShader: `varying vec3 v; uniform vec3 sun, top, mid, hor, glow;
-      void main(){
-        float h = clamp(v.y, -0.05, 1.0);
-        vec3 c = mix(hor, mid, smoothstep(0.0, 0.22, h));
-        c = mix(c, top, smoothstep(0.22, 0.9, h));
-        float s = max(dot(normalize(v), sun), 0.0);
-        c += glow * (pow(s, 8.0) * 0.25 + pow(s, 600.0) * 1.2);
-        gl_FragColor = vec4(c, 1.0);
-      }`,
-  });
-  const m = new THREE.Mesh(new THREE.SphereGeometry(100000, 32, 16), mat);
-  m.renderOrder = -1;
-  return m;
-}
-
-// Soft cumulus made of many overlapping puffs, drawn once to a canvas.
-function cloudTexture(seed) {
-  const c = document.createElement("canvas");
-  c.width = 512; c.height = 256;
-  const g = c.getContext("2d");
-  let s = seed;
-  const rand = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 70; i++) {
-    const x = 90 + rand() * 330, y = 150 - Math.sin(((x - 90) / 330) * Math.PI) * (40 + rand() * 60) + rand() * 30, r = 28 + rand() * 46;
-    const grad = g.createRadialGradient(x, y - r * 0.3, 0, x, y, r);
-    const shade = 235 + rand() * 20;
-    grad.addColorStop(0, `rgba(255,255,255,0.9)`);
-    grad.addColorStop(0.6, `rgba(${shade},${shade},${shade + 5},0.55)`);
-    grad.addColorStop(1, "rgba(220,230,245,0)");
-    g.fillStyle = grad;
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-function clouds(base) {
-  const group = new THREE.Group();
-  const textures = [1, 7, 13, 21, 34].map(cloudTexture);
-  let s = 5;
-  const rand = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 26; i++) {
-    const a = rand() * Math.PI * 2, d = 14000 + rand() * 26000, w = 3500 + rand() * 6000;
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: textures[i % textures.length], transparent: true, opacity: 0.92, depthWrite: false, fog: false }));
-    sp.scale.set(w, w * 0.5, 1);
-    sp.position.set(Math.cos(a) * d, base + 2200 + rand() * 2600, Math.sin(a) * d);
-    group.add(sp);
-  }
-  return group;
-}
-
-// Falling snow around the camera.
-function snowParticles() {
-  const n = 4000, pos = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * 3000, Math.random() * 1500, (Math.random() - 0.5) * 3000], i * 3);
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  const dot = document.createElement("canvas");
-  dot.width = dot.height = 32;
-  const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-  grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 5, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false, fog: false }));
-  pts.visible = false;
-  pts.frustumCulled = false;
-  pts.onBeforeRender = (r, sc, cam) => {
-    const t = performance.now() / 1000;
-    pts.position.set(cam.position.x, cam.position.y - 150 - ((t * 60) % 1500), cam.position.z);
-  };
-  return pts;
-}
-
-const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`../assets/tex/${f}`, (t) => {
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
-  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-  res(t);
-}));
-
-// Snow with sculpted detail; exposed rock on steep faces; a soft blue in shadow.
-function snowMaterial(snowD, snowN, rockD) {
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 });
-  mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { snowD: { value: snowD }, snowN: { value: snowN }, rockD: { value: rockD } });
-    sh.vertexShader = sh.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vWP; varying vec3 vWN;")
-      .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);");
-    sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform sampler2D snowD, snowN, rockD; varying vec3 vWP; varying vec3 vWN;")
-      .replace("#include <color_fragment>", `#include <color_fragment>
-        float d = length(vWP - cameraPosition);
-        float fade = smoothstep(500.0, 4000.0, d);
-        vec3 sn = mix(texture2D(snowD, vWP.xz / 9.0).rgb * 1.12, vec3(0.97), fade);
-        sn = mix(sn, texture2D(snowD, vWP.xz / 140.0).rgb * 1.1, 0.35 * (1.0 - fade * 0.5));
-        float steep = 1.0 - vWN.y;
-        float rockW = smoothstep(0.34, 0.52, steep + (texture2D(rockD, vWP.xz / 300.0).r - 0.5) * 0.12);
-        vec3 rk = texture2D(rockD, vWP.xz / 60.0).rgb * vec3(0.95, 0.92, 0.9);
-        diffuseColor.rgb *= mix(sn, rk * 1.25, rockW);`)
-      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
-        vec3 nt = texture2D(snowN, vWP.xz / 9.0).xyz * 2.0 - 1.0;
-        vec3 nt2 = texture2D(snowN, vWP.xz / 120.0).xyz * 2.0 - 1.0;
-        vec3 wp = vec3(nt.x, 0.0, -nt.y) * 0.5 * (1.0 - fade) + vec3(nt2.x, 0.0, -nt2.y) * 0.35;
-        normal = normalize(normal + (viewMatrix * vec4(wp, 0.0)).xyz);`);
-  };
-  return mat;
-}
-
-// Baked colors: forest floor, and the shadows the mountains cast for the current sun.
-function shadeTerrain(geo, T, mask, sunDir, strength) {
-  const { gw, gh } = T, col = geo.attributes.color;
-  const shadow = new THREE.Color(0x8ea6d6), forestFloor = new THREE.Color(0xb7c2cf), c = new THREE.Color();
-  for (let r = 0; r < gh; r++) {
-    for (let j = 0; j < gw; j++) {
-      const k = r * gw + j, x = T.x0 + j * T.cell, z = T.z0 + ((T.z1 - T.z0) * r) / (gh - 1);
-      c.set(0xffffff);
-      if (mask(x, z)) c.lerp(forestFloor, 0.5);
-      if (strength > 0.05) c.lerp(shadow, T.sunShadow(x, z, T.h[k], sunDir) * 0.7 * strength);
-      col.setXYZ(k, c.r, c.g, c.b);
-    }
-  }
-  col.needsUpdate = true;
-}
-
-function terrainMesh(T, mask) {
-  const { gw, gh } = T;
-  const pos = new Float32Array(gw * gh * 3), col = new Float32Array(gw * gh * 3).fill(1);
-  for (let r = 0; r < gh; r++) {
-    for (let j = 0; j < gw; j++) {
-      const k = r * gw + j;
-      pos.set([T.x0 + j * T.cell, T.h[k], T.z0 + ((T.z1 - T.z0) * r) / (gh - 1)], k * 3);
-    }
-  }
-  const idx = new Uint32Array((gw - 1) * (gh - 1) * 6);
-  let p = 0;
-  for (let r = 0; r < gh - 1; r++) for (let j = 0; j < gw - 1; j++) { const a = r * gw + j; idx.set([a, a + gw, a + 1, a + 1, a + gw, a + gw + 1], p); p += 6; }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-  geo.setIndex(new THREE.BufferAttribute(idx, 1));
-  geo.computeVertexNormals();
-  return geo;
-}
-
-// Spruce with snow lying on every tier.
-function spruce() {
-  // Four tiers, seven sides: ~50 triangles, so a dense forest stays light enough for a phone.
-  const tiers = [[0.6, 6.5, 4.4], [4.2, 6.0, 3.5], [7.8, 5.2, 2.5], [11.0, 4.6, 1.4]];
-  const pos = [], col = [];
-  const needles = new THREE.Color(0x14301f), snow = new THREE.Color(0xe9f0f8), c = new THREE.Color();
-  for (const [y, h, r] of tiers) {
-    const g = new THREE.ConeGeometry(r, h, 7, 1, true).toNonIndexed();
-    g.translate(0, y + h / 2, 0);
-    g.computeVertexNormals();
-    const p = g.attributes.position, n = g.attributes.normal;
-    for (let i = 0; i < p.count; i++) {
-      pos.push(p.getX(i), p.getY(i), p.getZ(i));
-      const up = Math.max(0, n.getY(i)), top = (p.getY(i) - y) / h;
-      const lump = 0.5 + 0.5 * Math.sin(p.getX(i) * 7.1 + p.getZ(i) * 5.3);
-      c.copy(needles).lerp(snow, Math.min(0.85, up * (0.5 + 0.5 * top) * (0.6 + 0.7 * lump)));
-      col.push(c.r, c.g, c.b);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function forest(T, mask) {
-  const [mw, mh] = mask.grid, spots = [];
-  let s = 11;
-  const rand = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let r = 0; r < mh; r++) for (let c = 0; c < mw; c++) {
-    if (!mask.at(c, r) || rand() > 0.085) continue;
-    const x = T.x0 + ((T.x1 - T.x0) * (c + rand() - 0.5)) / (mw - 1), z = T.z0 + ((T.z1 - T.z0) * (r + rand() - 0.5)) / (mh - 1);
-    spots.push([x, z, rand()]);
-  }
-  const CH = 10, buckets = Array.from({ length: CH * CH }, () => []);
-  for (const sp of spots) {
-    const c = Math.min(CH - 1, Math.max(0, Math.floor(((sp[0] - T.x0) / (T.x1 - T.x0)) * CH)));
-    const r = Math.min(CH - 1, Math.max(0, Math.floor(((sp[1] - T.z0) / (T.z1 - T.z0)) * CH)));
-    buckets[r * CH + c].push(sp);
-  }
-  const geo = spruce(), mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 });
-  const group = new THREE.Group(), m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
-  for (const b of buckets) {
-    if (!b.length) continue;
-    const mesh = new THREE.InstancedMesh(geo, mat, b.length);
-    b.forEach(([x, z, v], i) => {
-      const k = 1.5 + v * 1.1; // drawn larger than life so the forest reads at map scale
-      m.compose(p.set(x, T.heightAt(x, z) - 0.5, z), q.setFromAxisAngle(Y, v * 6.28), sc.set(k, (k * (0.9 + v * 0.4)) / EXAG, k));
-      mesh.setMatrixAt(i, m);
-    });
-    mesh.computeBoundingSphere();
-    group.add(mesh);
-  }
-  return group;
-}
-
-// Runs as on a resort map: a coloured core in a casing, with a soft glow to read from far away. The style is
-// one set of numbers (widths in m, opacities, colours) so the look can be tuned in one place.
-// The owner's pick (2026-11-05): a thin coloured core in a thin white casing, no glow; lifts as red lines with dots at both ends.
-const RUN_STYLE = { glow: 0, glowOp: [0, 0], casing: 24, casingOp: 0.85, casingColor: 0xffffff, core: 12, coreOp: 1, colors: { easy: 0x4fae6a, intermediate: 0x3f78c8, advanced: 0x2a2e36, expert: 0x2a2e36 } };
-const LIFT_STYLE = { color: 0xb6463b, w: 14, dash: 0, gap: 0, ends: 32 };
-function runs(T, list, o = RUN_STYLE) {
-  const group = new THREE.Group();
-  const mat = (color, opacity, order) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: order, polygonOffsetUnits: order, fog: false });
-  const casing = mat(o.casingColor, o.casingOp, -4), glows = {}, cores = {};
-  for (const run of list) {
-    const pts = run.outline || run.pts, color = o.colors[run.level];
-    glows[run.level] ??= mat(color, run.level === "advanced" || run.level === "expert" ? o.glowOp[1] : o.glowOp[0], -3);
-    cores[run.level] ??= mat(color, o.coreOp, -6);
-    if (!run.area) {
-      if (o.glow && o.glowOp[0]) group.add(new THREE.Mesh(ribbon(T, pts, o.glow, 0.4), glows[run.level]));
-      if (o.casing && o.casingOp) group.add(new THREE.Mesh(ribbon(T, pts, o.casing, 0.6), casing));
-    }
-    group.add(new THREE.Mesh(ribbon(T, pts, run.area ? Math.min(9, o.core) : o.core, 0.8), cores[run.level]));
-  }
-  return group;
-}
-// Lifts drawn on the snow as on a paper map: a dashed line from bottom to top (the 3D towers and cables stay).
-function liftMarks(T, list, o) {
-  const group = new THREE.Group();
-  const m = new THREE.MeshBasicMaterial({ color: o.color, transparent: true, opacity: o.op ?? 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8, fog: false });
-  for (const l of list) {
-    const p = l.pts, dense = [];
-    for (let i = 1; i < p.length; i++) { const n = Math.max(1, Math.ceil(Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]) / 10)); for (let k = 0; k < n; k++) dense.push([p[i - 1][0] + (p[i][0] - p[i - 1][0]) * k / n, p[i - 1][1] + (p[i][1] - p[i - 1][1]) * k / n]); }
-    dense.push(p[p.length - 1]);
-    let run = [], along = 0;
-    for (let i = 0; i < dense.length; i++) {
-      if (i) along += Math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]);
-      const on = !o.gap || along % (o.dash + o.gap) < o.dash;
-      if (on) run.push(dense[i]); else if (run.length > 1) { group.add(new THREE.Mesh(ribbon(T, run, o.w, 1), m)); run = []; } else run = [];
-    }
-    if (run.length > 1) group.add(new THREE.Mesh(ribbon(T, run, o.w, 1), m));
-    if (o.ends) for (const e of [p[0], p[p.length - 1]]) { const d = new THREE.Mesh(new THREE.CircleGeometry(o.ends, 16), m); d.rotation.x = -Math.PI / 2; d.position.set(e[0], T.heightAt(e[0], e[1]) + 1.2, e[1]); group.add(d); }
-  }
-  return group;
-}
 
 // ---------- Bases: where a day starts. Pick one, see the lifts that leave from it. ----------
 const BASE_RADIUS = 350; // lift bottoms within this distance belong to the base
@@ -323,7 +77,7 @@ function setView(name) {
 const RIDEABLE = ["chair_lift", "mixed_lift", "gondola", "cable_car"];
 async function main() {
   await status("下载地形…");
-  const [R, far] = await Promise.all([fetch(`../data/${RESORT_ID}.json`).then((r) => r.json()), fetch(`../data/${RESORT_ID}-far.json`).then((r) => r.json())]);
+  const R = await fetch(`../data/${RESORT_ID}.json`).then((r) => r.json());
   Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // all Colorado so far: Denver time
   document.title = `${R.name} · 雪场预滑`;
   document.querySelector("#title b").textContent = R.name;
@@ -336,44 +90,23 @@ async function main() {
     $("counts").innerHTML = rows.map(([k, v, css]) => `<span><i class="d" style="${css}"></i>${tr(k)} ${v}</span>`).join("");
   }).catch(() => {});
 
-  const [snowD, snowN, rockD] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true)]);
-  await status("生成山体和阴影…");
+  await status("生成山体、画雪道…");
   const T = new Terrain(R);
-  const mask = treeMaskFn(R, T);
-  const geo = terrainMesh(T, mask);
-  const ground = new THREE.Mesh(geo, snowMaterial(snowD, snowN, rockD));
-  const ranges = farTerrain(far, T);
-  ranges.material = snowMaterial(snowD, snowN, rockD);
-  // Everything on the mountain lives in one group, stretched vertically for relief.
-  const world = new THREE.Group();
-  world.scale.y = EXAG;
-  const dome = skyDome(), cloudLayer = clouds(900);
-  scene.add(dome, cloudLayer, world);
-  world.add(ground, ranges);
-  await status("种树、画雪道…");
-  world.add(forest(T, mask));
-  let runLayer = runs(T, R.runs);
-  world.add(runLayer);
-  let liftLayer = liftMarks(T, R.lifts, LIFT_STYLE);
-  world.add(liftLayer);
-  const lifts = new Lifts(T, R.lifts);
-  world.add(lifts.group);
-  lifts.group.visible = false; // on the whole mountain, lifts are drawn as lines on the snow (liftMarks)
-  const hemi = new THREE.HemisphereLight(0xcfe2ff, 0x7d88a3, 0.35);
-  const sun = new THREE.DirectionalLight(0xfff0dc, 3.6);
+  // The whole resort from the air: whole around its runs, lifts and bases, fading into the paper past them.
+  const villages = R.places.filter((p) => p.kind === "village");
+  const reach = [...R.runs.flatMap((r) => r.pts), ...R.lifts.flatMap((l) => l.pts), ...villages.map((p) => [p.x, p.z])];
+  const ext = (k, f) => f(...reach.map((p) => p[k]));
+  const air = new Aerial(renderer, { scene, camera, exag: EXAG, root: "../" }).layers({
+    T, R, id: RESORT_ID, lifts: R.lifts, lodges: villages, keep: [ext(0, Math.min) - 200, ext(0, Math.max) + 200, ext(1, Math.min) - 200, ext(1, Math.max) + 200],
+  });
+  // The picture holds its own light; these light the stations and the lodges, and follow the hour.
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xd9d0c2, 1.4);
+  const sun = new THREE.DirectionalLight(0xfff4e6, 1.8);
   scene.add(hemi, sun);
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const physSky = new Sky();
-  physSky.scale.setScalar(10000);
-  physSky.material.uniforms.rayleigh.value = 1.4;
-  physSky.material.uniforms.turbidity.value = 2;
-  const envScene = new THREE.Scene();
-  envScene.add(physSky);
-  const snowfall = snowParticles();
-  scene.add(snowfall);
 
-  // Light the scene for a moment in time and a kind of weather.
-  let shadedFor = "";
+  // Light the scene for a moment in time and a kind of weather: the picture is tinted (warm low sun, blue
+  // night, greyer under cloud); the lights follow the sun.
+  const tint = new THREE.Color();
   const look = { live: true, date: new Date(), kind: "clear", temp: null };
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${RESORT.lat}&longitude=${RESORT.lon}&current=temperature_2m,weather_code,cloud_cover&timezone=${encodeURIComponent(RESORT.tz)}`;
   const fetchWeather = async () => {
@@ -386,29 +119,15 @@ async function main() {
   const applyLook = () => {
     const s0 = solar(look.date, RESORT.lat, RESORT.lon), elDeg = (s0.el * 180) / Math.PI;
     const dir = sunVector(s0), p = palette(elDeg, look.kind), day = dir.y > 0.02;
-    const u = dome.material.uniforms;
-    u.sun.value.copy(dir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor);
-    u.glow.value.copy(p.sun).multiplyScalar(look.kind === "clear" ? 1 : 0.3);
-    scene.fog.color.copy(p.hor);
-    look.fog = p.fog;
     const lightDir = day ? dir : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
     sun.position.copy(lightDir).multiplyScalar(1000);
     sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0));
-    sun.intensity = day ? p.si : 0.5;
-    hemi.intensity = p.amb;
-    renderer.toneMappingExposure = p.exp;
-    cloudLayer.children.forEach((c, i) => {
-      c.material.opacity = Math.min(0.95, p.clouds * (i % 3 === 0 || look.kind !== "clear" ? 0.95 : 0.25));
-      c.material.color.copy(p.hor).lerp(new THREE.Color(0xffffff), 0.6);
-    });
-    snowfall.visible = look.kind === "snow";
-    physSky.material.uniforms.sunPosition.value.copy(lightDir);
-    scene.environment?.dispose();
-    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
-    scene.environmentIntensity = day ? 0.35 : 0.12;
-    // Re-cast mountain shadows only when the sun has moved noticeably.
-    const key = `${Math.round(elDeg / 3)}:${Math.round((s0.az * 180) / Math.PI / 6)}:${look.kind}`;
-    if (key !== shadedFor) { shadedFor = key; shadeTerrain(geo, T, mask, lightDir, day ? p.shadow : 0.4); }
+    sun.intensity = day ? Math.min(2, p.si * 0.6) : 0.4;
+    hemi.intensity = day ? 1.4 : 0.6;
+    tint.set(day ? 0xffffff : 0x8391ad);
+    if (day && elDeg < 10) tint.lerp(new THREE.Color(0xf3d6b8), 1 - Math.max(0, elDeg) / 10);
+    if (look.kind === "overcast" || look.kind === "snow") tint.multiplyScalar(0.93);
+    air.groundU.uTint.value.copy(tint);
     const local = look.date.toLocaleTimeString("zh-CN", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" });
     // the weather bar: the owner's icon for the sky, now or the hour you're previewing
     $("nowIcon").src = `../assets/icons/${{ clear: day ? "sunny" : "partly", cloudy: "partly", overcast: "cloudy", snow: "snow_now" }[look.kind] || "cloudy"}.png?v=1`;
@@ -480,8 +199,8 @@ async function main() {
   document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
   const toggle = (id, fn) => $(id).addEventListener("click", () => { $(id).classList.toggle("on"); fn($(id).classList.contains("on")); });
   toggle("spin", (on) => (controls.autoRotate = on));
-  toggle("runs", (on) => (runLayer.visible = on));
-  toggle("lifts", (on) => (liftLayer.visible = on));
+  toggle("runs", (on) => (air.runLayer.visible = on));
+  toggle("lifts", (on) => (air.liftLayer.visible = on));
   renderer.domElement.addEventListener("pointerdown", () => { controls.autoRotate = false; $("spin").classList.remove("on"); fold(); $("timePanel").classList.remove("show"); });
   // The two round buttons: tap one to open its pop-up (the other folds); choosing a view or tapping the map
   // folds them; they fold themselves after a while.
@@ -494,10 +213,11 @@ async function main() {
   for (const id of ["spin", "runs", "lifts"]) $(id).addEventListener("click", keep);
   $("compassBtn").addEventListener("click", () => setView("hero"));
 
-  // ---------- A base as a miniature world: 10 s around it, then pick a lift ----------
+  // ---------- A base, flown down to: 10 s around it, then pick a lift ----------
   const graph = buildGraph(R, (x, z) => T.heightAt(x, z));
-  const dio = new Diorama(renderer);
+  air.graph = graph;
   let mini = null; // { base, lifts, t0, intro }
+  let leaving = null; // flying back up: the whole mountain's camera place
   const liftsAt = (base) => R.lifts.filter((l) => Math.hypot(l.pts[0][0] - base.x, l.pts[0][1] - base.z) < BASE_RADIUS)
     .sort((a, b) => b.rise - a.rise);
   const runsFromTop = (l) => {
@@ -534,12 +254,16 @@ async function main() {
   const tagBox = $("liftTags"), cards = $("liftCards");
   function openBase(base) {
     const ls = liftsAt(base).filter((l) => RIDEABLE.includes(l.kind)); // carpets and drag lifts aren't ridden in the game
-    // Seen from the base looking up its main lift: the turn starts and ends there, the name plate on that side.
+    // Seen from the base looking up its main lift: the camera flies down from the whole mountain to there,
+    // then the turn starts and ends there.
     const main = [...ls].sort((a, b) => b.rise - a.rise)[0];
-    const u0 = main ? dio.facing(main) : 0;
-    dio.build({ T, R, mask, graph, base, lifts: ls, title: base.name, front: -Math.PI / 4 + u0 * Math.PI * 2 });
+    const u0 = main ? air.facing(main) : 0;
+    air.frame({ base, lifts: ls });
+    air.flyFrom(leaving ? air.last : air.poseOf(camera.position, controls.target), FLY);
+    leaving = null;
+    controls.enabled = false;
     spin = u0;
-    mini = { base, lifts: ls, info: new Map(ls.map((l) => [l, liftInfo(l)])), t0: performance.now(), intro: true, pick: null, spinTo: null, raise: 0, spin0: u0 };
+    mini = { base, lifts: ls, info: new Map(ls.map((l) => [l, liftInfo(l)])), t0: performance.now() + FLY * 1000, intro: true, pick: null, spinTo: null, raise: 0, spin0: u0 };
     document.body.classList.add("mini");
     document.body.classList.remove("picking", "detail");
     $("introSkip").hidden = false;
@@ -548,8 +272,8 @@ async function main() {
     $("miniSub").textContent = EN ? `${Math.round(T.heightAt(base.x, base.z) + (R.hmin || 0)).toLocaleString("en-US")} m · ${ls.length} lifts` : `海拔 ${Math.round(T.heightAt(base.x, base.z) + (R.hmin || 0)).toLocaleString("en-US")} m · 缆车 ${ls.length} 条`;
     $("planOut").hidden = true;
     document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on"));
-    dio.highlightFrom(null);
-    dio.focusLift(null);
+    air.highlightFrom(null);
+    air.focusLift(null);
     // Floating tags in the world, one per lift; tap one to pick it.
     tagBox.innerHTML = "";
     cards.innerHTML = "";
@@ -586,16 +310,16 @@ async function main() {
     if (!mini || !l) return;
     const changed = mini.pick !== l;
     mini.pick = l;
-    dio.focusLift(l);
+    air.focusLift(l);
     for (const [x, info] of mini.info) {
       info.tag.classList.toggle("on", x === l);
       info.card.classList.toggle("on", x === l);
     }
-    if (route) { dio.highlightRoute(route); dio.aim(l, route); }
-    else if (changed) { dio.aim(l, [...dio.highlightFrom(l).fromTop]); $("planOut").hidden = true; $("legend").hidden = false; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
+    if (route) { air.highlightRoute(route); air.aim(l, route); }
+    else if (changed) { air.aim(l, [...air.highlightFrom(l).fromTop]); $("planOut").hidden = true; $("legend").hidden = false; document.querySelectorAll("[data-plan]").forEach((x) => x.classList.remove("on")); }
     if (changed) {
       // Turn the model so the lift is seen from below, the short way round.
-      let u = dio.facing(l);
+      let u = air.facing(l);
       u += Math.round(spin - u);
       mini.spinTo = u;
       navigator.vibrate?.(8);
@@ -659,7 +383,7 @@ async function main() {
     const level = b.dataset.plan, out = $("planOut");
     const was = b.classList.contains("on");
     document.querySelectorAll("[data-plan]").forEach((x) => x.classList.toggle("on", !was && x === b));
-    if (was) { out.hidden = true; $("legend").hidden = false; dio.highlightFrom(mini.pick); return; }
+    if (was) { out.hidden = true; $("legend").hidden = false; air.highlightFrom(mini.pick); return; }
     let best = null;
     for (const l of mini.lifts) {
       const back = mini.lifts.map((x) => graph.liftNodes.get(x).bottom);
@@ -681,21 +405,24 @@ async function main() {
     if (!mini) return;
     openDetail(false);
     mini.intro = true; mini.t0 = performance.now(); mini.spinTo = null;
-    dio.aim(null);
-    dio.focusLift(null);
+    air.aim(null);
+    air.focusLift(null);
     spin = spin % 1;
     mini.spin0 = spin;
     document.body.classList.remove("picking");
     $("introSkip").hidden = false;
   });
-  $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini", "picking", "detail"); });
-  addEventListener("resize", () => dio.resize());
-  window.__mtn = { scene, renderer, camera, controls, world, T, R, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
-    restyle(run, lift) { // try a line style: rebuild the runs, and the lifts' marks on the snow (null: none)
-      world.remove(runLayer); runLayer = runs(T, R.runs, { ...RUN_STYLE, ...run }); world.add(runLayer);
-      if (liftLayer) world.remove(liftLayer); liftLayer = lift ? liftMarks(T, R.lifts, lift) : null; if (liftLayer) world.add(liftLayer);
-      if (lift?.cables === false) lifts.group.visible = false; } };
-  window.__mini = { dio, get mini() { return mini; }, endIntro, openDetail, pickLift: (name) => pickLift(mini.lifts.find((l) => l.name === name), { scroll: true }) }; // test hook
+  // Back to the whole mountain: every run and lift as it was, and the camera flies back up.
+  $("miniBack").addEventListener("click", () => {
+    mini = null; document.body.classList.remove("mini", "picking", "detail");
+    air.focusLift(null); air.showAll();
+    const v = VIEWS.hero(center);
+    leaving = air.poseOf(new THREE.Vector3(...v.pos), new THREE.Vector3(...v.target));
+    air.flyFrom(air.last, FLY * 0.8);
+  });
+  addEventListener("resize", () => air.resize());
+  window.__mtn = { scene, renderer, camera, controls, air, T, R, look, applyLook, THREE }; // test hook
+  window.__mini = { air, get mini() { return mini; }, endIntro, openDetail, pickLift: (name) => pickLift(mini.lifts.find((l) => l.name === name), { scroll: true }) }; // test hook
   // Drag to turn the miniature after the intro.
   let drag = null, spin = 0;
   renderer.domElement.addEventListener("pointerdown", (e) => { if (mini && !mini.intro) { drag = { x: e.clientX, s: spin }; mini.spinTo = null; } });
@@ -707,7 +434,7 @@ async function main() {
     const placed = [];
     const order = [...mini.info.values()].sort((a, b) => (b.l === mini.pick) - (a.l === mini.pick));
     for (const info of order) {
-      const p = dio.screenOf(info.l), tag = info.tag;
+      const p = air.screenOf(info.l), tag = info.tag;
       if (p) {
         tag.w ||= tag.offsetWidth; tag.h ||= tag.offsetHeight;
         const r = { x0: p.x - tag.w / 2, x1: p.x + tag.w / 2, y0: p.y - tag.h, y1: p.y };
@@ -727,7 +454,7 @@ async function main() {
       const dt = Math.min(0.05, (now - (mini.last || now)) / 1000);
       mini.last = now;
       if (mini.intro) {
-        const u = Math.min(1, (now - mini.t0) / 10000); // one turn in ten seconds
+        const u = Math.min(1, Math.max(0, now - mini.t0) / 10000); // one turn in ten seconds, once down
         spin = (mini.spin0 || 0) + ease(u);
         if (u >= 1) endIntro();
       } else if (mini.spinTo != null) {
@@ -735,25 +462,27 @@ async function main() {
         if (Math.abs(mini.spinTo - spin) < 1e-4) mini.spinTo = null;
       }
       const glide = 1 - Math.exp(-dt * 3.5); // glide and zoom to the chosen lift
-      dio.focus.lerp(dio.focusTo, glide);
-      dio.size += (dio.sizeTo - dio.size) * glide;
+      air.focus.lerp(air.focusTo, glide);
+      air.size += (air.sizeTo - air.size) * glide;
       // A fixed frame between the top bar and the cards, so the model never shrinks; the detail
       // sheet only raises it.
       const topPx = 100, botPx = 150, want = document.body.classList.contains("detail") ? 0.2 : 0;
       mini.raise += (want - mini.raise) * (1 - Math.exp(-dt * 6));
-      dio.orbit(spin, Math.max(0.4, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, mini.raise);
+      air.orbit(spin, Math.max(0.4, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, mini.raise);
       placeTags();
-      dio.render(t);
+      air.render();
       return;
     }
-    lifts.update(t);
+    if (leaving) { // flying back up; at the top the controls take over from the same place
+      if (!air.glide(leaving)) { setView("hero"); leaving = null; controls.enabled = true; }
+      air.render();
+      placePins();
+      return;
+    }
     controls.update();
     // the painted compass turns with the view (its needle leans 38° east in the picture)
     { const ci = document.querySelector("#compassBtn img"); if (ci) ci.style.transform = `rotate(${(controls.getAzimuthalAngle() * 180 / Math.PI - 38).toFixed(1)}deg)`; }
-    // Fog counts from the resort, not from the camera: this view looks from many km out, and in snow a
-    // fog a few km deep would hide the whole mountain. Past the resort it closes in as the weather says.
-    if (look.fog) { const d = camera.position.distanceTo(controls.target); scene.fog.near = d * 0.8 + look.fog[0]; scene.fog.far = d + look.fog[1]; }
-    renderer.render(scene, camera);
+    air.render();
     placePins();
   });
 }
