@@ -101,18 +101,21 @@ export function buildSeasons({ trips = [], book = {}, valid = () => true, me, to
   }
   const out = [...by.values()].sort((a, b) => b.season - a.season);
   for (const S of out) {
-    const friends = new Map(), runs = new Set(), trips = new Set();
-    for (const d of S.days) {
-      if (d.trip) trips.add(d.trip.id ?? d.trip.name);
-      for (const p of d.people) if (!p.me && !friends.has(p.key)) friends.set(p.key, p);
-      for (const r of d.runs) runs.add(`${d.resort}:${r}`);
-    }
-    S.first = S.days[0]?.date;
-    S.stats = { trips: trips.size, days: new Set(S.days.map((d) => d.date)).size, mountains: new Set(S.days.map((d) => d.resort).filter(Boolean)).size, runs: runs.size };
-    S.friends = [...friends.values()];
+    Object.assign(S, summary(S.days));
     S.days.reverse(); // newest first on the page
   }
   return out;
+}
+
+// Any set of days at a glance: trips, days, mountains, runs, and the friends on them (first seen first).
+export function summary(days) {
+  const friends = new Map(), runs = new Set(), trips = new Set();
+  for (const d of days) {
+    if (d.trip) trips.add(d.trip.id ?? d.trip.name);
+    for (const p of d.people) if (!p.me && !friends.has(p.key)) friends.set(p.key, p);
+    for (const r of d.runs) runs.add(`${d.resort}:${r}`);
+  }
+  return { stats: { trips: trips.size, days: new Set(days.map((d) => d.date)).size, mountains: new Set(days.map((d) => d.resort).filter(Boolean)).size, runs: runs.size }, friends: [...friends.values()] };
 }
 
 // What a photo is, as a string: the same day, place, held picture and people (in their looks) make the
