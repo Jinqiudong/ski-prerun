@@ -8,6 +8,7 @@ import { makeEntrance } from "./entrance.js?v=21";
 import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=23";
 import { playIntro } from "./intro.js?v=14";
+import { flyTo } from "../core/transition.js?v=1";
 playIntro();
 
 const $ = (id) => document.getElementById(id);
@@ -280,7 +281,7 @@ async function openWorld() {
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       card.innerHTML = `<img class="st" src="assets/icons/${s?.touched ? "st_prerun" : "st_notyet"}.png?v=1" alt=""><b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
         <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
-      card.querySelector("button").onclick = () => { st.resort = r.id; save(); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
+      card.querySelector("button").onclick = () => { st.resort = r.id; save(); flyTo(r.id); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
       card.hidden = false;
     };
     collection.onExplore = () => $("tabs").classList.add("shut"); // turning or zooming the map folds the tabs away
@@ -295,7 +296,7 @@ async function openTrips() {
   if (!trips) {
     const { Trips } = await import("./trips.js?v=27");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
-    trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
+    trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); flyTo(id); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);
   }

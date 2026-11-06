@@ -14,7 +14,7 @@ Product contract: [venture-lab `product-incubator/products/48/PRODUCT.md`](https
 
 ## Layout
 - Pages (their URLs are shared, keep them): `index.html` → `start.html` (rider, map, trips, log), `mountain/` (a resort as a miniature: pick a base and a lift), `look.html` (the ride).
-- `src/core/` — shared: `i18n.js` (copy, English, avatars), `nav.js`, `route.js` (route graph and planner, no three.js; tested), `skilog.js` (what you've skied).
+- `src/core/` — shared: `i18n.js` (copy, English, avatars), `nav.js`, `route.js` (route graph and planner, no three.js; tested), `skilog.js` (what you've skied), `transition.js` (the short scenes between pages: the flight to a resort, the lift ticket, the drop-in card; its `COPY` pool is where the owner adds lines).
 - `src/start/` — the first screen: `start.js`, `collection.js` (the Colorado map), `resort-tiles.js` (resort tiles as dioramas, animals), `intro.js` (the opening), `trips.js` (trips and sharing), `memory.js` (the log), `entrance.js` (each friend's entrance on the rider page).
 - `src/rider/` — `character.js` (templates: body, fit, parts, colours, moves, presets), `rider-a.js` (the ride's rider: model, clips, poses).
 - `src/mountain/` — `mountain.js` (the resort page), `diorama.js` (the miniature, also used by the ride's maps).

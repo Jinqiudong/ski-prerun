@@ -10,6 +10,7 @@ import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.
 import { addStep } from "../ride/roadbook.js?v=12";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=23";
 import { openNav } from "../core/nav.js?v=9";
+import { liftTicket } from "../core/transition.js?v=1";
 
 const SUN = new THREE.Vector3(-0.62, 0.46, 0.62).normalize(); // replaced by the real sun on load
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
@@ -646,7 +647,11 @@ async function main() {
     }
     go2(l);
   }
-  function go2(l) { if (mini?.base) addStep(RESORT_ID, { k: "base", name: mini.base.name }); location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
+  function go2(l) {
+    if (mini?.base) addStep(RESORT_ID, { k: "base", name: mini.base.name });
+    const info = mini?.info?.get(l); // the lift ticket the ride page punches while it loads
+    liftTicket({ resort: RESORT_ID, name: l.name, kind: l.kind, seats: l.seats || 4, bubble: !!l.bubble, km: l.length ? (l.length / 1000).toFixed(1) : 0, mins: info?.mins || Math.max(1, Math.round((l.length || 0) / 270)) });
+    location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.
   document.querySelectorAll("[data-plan]").forEach((b) => b.addEventListener("click", () => {
