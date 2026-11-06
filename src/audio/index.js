@@ -1,13 +1,25 @@
 // The ride's sound, as the ride (src/ride/ride.js) uses it: one RideSound with a call per frame for the
 // phase you're in. Also the music's "listen together" hooks (play, current) and duck() for voice chat.
-import { start, settings, set, duck, onState, context } from "./engine.js?v=2";
-import { BoardSound } from "./snow.js?v=2";
-import { Ambience } from "./ambience.js?v=2";
+import { start, settings, set, duck, onState, context } from "./engine.js?v=3";
+import { BoardSound } from "./snow.js?v=3";
+import { Ambience } from "./ambience.js?v=3";
 import { Music } from "./music.js?v=1";
 
 export { settings, set, duck, onState, context };
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const MOOD = { lift: "lift", top: "calm", hike: "calm", ski: "ski" };
+
+// The tower the chair is about to pass, if this frame is when its sound should start: `lead` seconds before
+// the chair reaches it (so the middle sheave lands on the tower). prev, d: metres along the line last frame
+// and now; towers: ride.js liftLine towers (stations and terminals, which have h, don't count). Nothing
+// when the line jumped (dragging, skipping) or runs faster than a fast-forward (over 70 m/s).
+export function towerDue(prev, d, dt, towers, lead) {
+  if (prev == null || !(d > prev) || dt <= 0) return null;
+  const v = (d - prev) / dt;
+  if (d - prev > 40 || v > 70) return null;
+  const ahead = v * lead;
+  return towers.find((tw) => !tw.station && tw.h == null && tw.s - ahead > prev && tw.s - ahead <= d) || null;
+}
 
 export class RideSound {
   // mix: engine.js makeMixer(ctx). timer: false for offline renders (then call music.pump yourself).
@@ -43,8 +55,8 @@ export class RideSound {
     this.setPhase("lift");
     const p = this.prevD; this.prevD = d;
     if (!this.live) return;
-    if (p != null && d > p && d - p < 40 && t - this.towerAt > 0.35) // rolled over a tower (not a jump along the line)
-      for (const tw of towers) if (!tw.station && tw.s > p && tw.s <= d) { this.amb.tower(1, rate, t); this.towerAt = t; break; }
+    // A tower coming: start its sheave train a moment early (never more than one every 1.2 s).
+    if (t - this.towerAt > 1.2 && towerDue(p, d, dt, towers, this.amb.towerLead(rate))) { this.amb.tower(1, rate, t); this.towerAt = t; }
     const end = Math.min(d, total - d);
     this.amb.update({ wind: 0.32 + 0.06 * Math.min(rate, 4), bed: 0.45, hum: 1, station: clamp(1 - (end - 10) / 70), shelter }, dt, t);
   }

@@ -3,16 +3,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { snowTexture, sprayTexture, crunch, thump, clack, rng } from "../src/audio/buffers.js";
+import { snowTexture, sprayTexture, crunch, thump, sheavePass, sheaveLead, rng } from "../src/audio/buffers.js";
 import { boardMix, SURFACES } from "../src/audio/snow.js";
 import { STYLES } from "../src/audio/music.js";
+import { towerDue } from "../src/audio/index.js";
 
 const SR = 16000;
 const peak = (x) => x.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 
 test("buffers are seeded, finite and at a sane level", () => {
   assert.deepEqual(snowTexture(SR, 1, 3).slice(0, 50), snowTexture(SR, 1, 3).slice(0, 50));
-  for (const x of [crunch(SR, 2), thump(SR), clack(SR, 6, 0.1)]) { // one-shots: normalised below full scale
+  for (const x of [crunch(SR, 2), thump(SR), sheavePass(SR, 8, 0.15)]) { // one-shots: normalised below full scale
     assert.ok(x.every(Number.isFinite));
     assert.ok(peak(x) > 0.5 && peak(x) <= 1);
   }
@@ -69,4 +70,18 @@ test("every track in the manifest is complete and free to use", () => {
     if (x.file) assert.ok(readFileSync(new URL(`../assets/audio/music/${x.file}`, import.meta.url)).length > 1000);
   }
   for (const m of ["lift", "ski", "calm"]) assert.ok(tracks.some((x) => x.mood === m), m);
+});
+
+test("a tower's sound starts just before the chair reaches it, once, and not on jumps", () => {
+  const towers = [{ s: 0, h: 3.5 }, { s: 20, station: true }, { s: 105 }, { s: 190 }, { s: 1980, station: true }, { s: 2000, h: 3.5 }];
+  const lead = sheaveLead(8, 0.15), dt = 1 / 60, v = 15, hits = [];
+  for (let d = 10; d < 300; d += v * dt) { const tw = towerDue(d, d + v * dt, dt, towers, lead); if (tw) hits.push([tw.s, d + v * dt]); }
+  assert.deepEqual(hits.map((h) => h[0]), [105, 190]); // each tower once, stations and terminals never
+  for (const [s, at] of hits) assert.ok(Math.abs(s - at - v * lead) < v * dt + 1e-9); // lead seconds early
+  assert.equal(towerDue(80, 120, dt, towers, lead), null); // dragged along the line
+  assert.equal(towerDue(100, 100 + 100 * dt, dt, towers, 0), null); // fast-forward (×20)
+  assert.equal(towerDue(110, 100, dt, towers, 0), null); // going back
+  // the middle of the wheels: louder around the tower than at the start of the buffer
+  const x = sheavePass(16000, 8, 0.15), at = (sec) => { let m = 0; for (let i = Math.floor(sec * 16000) - 400; i < sec * 16000 + 400; i++) m = Math.max(m, Math.abs(x[i])); return m; };
+  assert.ok(at(lead) > 2 * at(0.1));
 });

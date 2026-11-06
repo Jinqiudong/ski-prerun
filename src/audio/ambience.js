@@ -1,12 +1,12 @@
 // The air around you: wind (rising with speed, gusting on its own), the mountain's quiet bed, and the lift
-// (the rope's hum, a clack-clack each time the chair rolls over a tower, the station's machinery).
+// (the rope's hum, the ka-thunk of the grip rolling over each tower's sheaves, the station's machinery).
 // Everything is built once; update() moves a few params a frame.
-import { pink, brown, clack, clunk, rng } from "./buffers.js?v=2";
+import { pink, brown, sheavePass, sheaveLead, clunk, rng } from "./buffers.js?v=3";
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 
 export class Ambience {
-  constructor(ctx, out, send, sfx) { // out: the ambience bus; send: the reverb; sfx: where clacks and clunks go
+  constructor(ctx, out, send, sfx) { // out: the ambience bus; send: the reverb; sfx: where tower passes and clunks go
     this.ctx = ctx; const sr = ctx.sampleRate;
     const buf = (x) => { const b = ctx.createBuffer(1, x.length, sr); b.copyToChannel(x, 0); return b; };
     const loop = (b, rate = 1) => { const s = ctx.createBufferSource(); s.buffer = b; s.loop = true; s.playbackRate.value = rate; s.start(); return s; };
@@ -33,7 +33,8 @@ export class Ambience {
     chain(loop(low, 0.6), stF, this.stationG, this.out);
     const whine = ctx.createOscillator(), wg = gain(0.012); whine.type = "triangle"; whine.frequency.value = 415; chain(whine, wg, this.stationG); whine.start();
     const drone = ctx.createOscillator(), dg = gain(0.05); drone.type = "triangle"; drone.frequency.value = 110; chain(drone, dg, this.stationG); drone.start();
-    this.clacks = [0, 1, 2].map((k) => buf(clack(sr, 7 + k, 0.085 + k * 0.012, 5 + k)));
+    // Tower passes at three tempos (the ride's ×1, ×2, ×4), 8 wheels each: [buffer, seconds to the tower].
+    this.passes = [0.15, 0.115, 0.09].map((gap, k) => [buf(sheavePass(sr, 8, gap, 5 + k)), sheaveLead(8, gap)]);
     this.clunkB = buf(clunk(sr));
     this.r = rng(77); this.gust = 0.5; this.gustTo = 0.5; this.gustT = 0; this.clunkT = 3; this.k = 0; this.last = {};
   }
@@ -62,8 +63,11 @@ export class Ambience {
     if (station > 0.25) { this.clunkT -= dt; if (this.clunkT <= 0) { this.clunkT = 5 + this.r() * 3; this.hit(this.clunkB, 0.35 * station, t, 0.9 + this.r() * 0.2); } }
   }
 
-  // The chair over a tower. rate: how fast the line runs (the time-lapse ×1 ×2 ×4 rolls the wheels faster).
-  tower(vol = 1, rate = 1, t = this.ctx.currentTime) { this.hit(this.clacks[this.k++ % 3], 0.55 * vol, t, Math.min(1.6, 0.9 + 0.12 * (rate - 1) + this.r() * 0.08)); }
+  // The chair over a tower. rate: how fast the ride plays (×1, ×2, ×4 roll over the wheels faster).
+  // Start it towerLead(rate) seconds before the chair reaches the tower, so the middle wheel lands on it.
+  passFor(rate = 1) { return this.passes[rate >= 3 ? 2 : rate >= 1.5 ? 1 : 0]; }
+  towerLead(rate = 1) { return this.passFor(rate)[1]; }
+  tower(vol = 1, rate = 1, t = this.ctx.currentTime) { this.hit(this.passFor(rate)[0], 0.6 * vol, t, 0.97 + this.r() * 0.06); }
 
   hit(buffer, vol, t = this.ctx.currentTime, rate = 1) {
     const s = this.ctx.createBufferSource(), g = this.ctx.createGain();

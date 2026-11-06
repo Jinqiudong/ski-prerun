@@ -1,10 +1,10 @@
-// The page's one AudioContext and its mixer. Buses: sfx (the board, landings, the lift's clacks),
+// The page's one AudioContext and its mixer. Buses: sfx (the board, landings, the lift's tower passes),
 // ambience (wind, the mountain, the lift's hum), music, and voice (kept for voice chat between friends).
 // sfx, ambience and music each pass through a duck gain, so voice can push them down: duck(amount, s).
 // Phones only let sound start from a tap, so the context is resumed on the first touch, click or key.
 // On / off and the volumes are kept on this phone (localStorage "prerunSound").
 
-import { impulse } from "./buffers.js?v=2";
+import { impulse } from "./buffers.js?v=3";
 
 const KEY = "prerunSound";
 // Music sits well under the snow and wind; the whole mix is gentle for a phone's speaker. v: the mix these

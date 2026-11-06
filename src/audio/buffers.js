@@ -1,5 +1,5 @@
 // Sound material made from numbers (no files): textured noise for the snow, grit for a skid, crunches for
-// a step, a landing thump, the clack of a chair over a tower's sheaves, a station clunk and a reverb tail.
+// a step, a landing thump, the chair rolling over a tower's sheaves, a station clunk and a reverb tail.
 // Pure functions: Float32Arrays at a sample rate, seeded so every phone (and the tests) makes the same ones.
 
 export function rng(seed = 1) { // mulberry32
@@ -114,22 +114,42 @@ export function thump(sr) {
   return normalize(x, 0.85);
 }
 
-// The chair's grip rolling over a tower's sheave train: a quick run of metal clacks (each a few ringing
-// partials and a knock), louder in the middle, and the chair's sway after. gap: seconds between wheels.
-export function clack(sr, wheels = 8, gap = 0.1, seed = 5) {
-  const r = rng(seed), n = Math.floor(sr * (wheels * gap + 1.4)), x = new Float32Array(n);
-  const partials = [[620, 9], [1420, 14], [2730, 22], [4110, 30]];
-  for (let w = 0; w < wheels; w++) {
-    const at = Math.floor(sr * (w * gap + (r() - 0.5) * 0.008)), amp = 0.55 + 0.45 * Math.sin((Math.PI * (w + 0.5)) / wheels);
-    for (const [f0, d] of partials) {
-      const f = f0 * (0.97 + r() * 0.06), a = amp * (0.3 + r() * 0.4);
-      for (let i = 0; i < sr * 0.25 && at + i < n; i++) x[at + i] += Math.sin((2 * Math.PI * f * i) / sr) * a * Math.exp((-i / sr) * d) * 0.35;
-    }
-    for (let i = 0; i < sr * 0.03 && at + i < n; i++) { const t = i / sr; x[at + i] += Math.sin(2 * Math.PI * 95 * t) * amp * Math.exp(-t * 80) * 0.9; } // the knock
+// The chair's grip rolling over a tower's sheave train: the rope's rumble swelling as the tower comes, then
+// a rhythmic "ka-thunk… ka-thunk-ka-thunk" as the grip rolls across each rubber-lined wheel (a soft knock
+// as it meets the wheel, a round low thunk as it rides over; metal, but muffled), louder up to the tower
+// and quieter on its far side; then the chair swaying on its hanger with a slight creak.
+// The tower itself (the middle wheel) is at `sheaveLead(wheels, gap)` seconds into the buffer.
+export const sheaveLead = (wheels, gap) => 0.45 + ((wheels - 1) / 2) * gap;
+export function sheavePass(sr, wheels = 8, gap = 0.15, seed = 5) {
+  const r = rng(seed), pre = 0.45, end = pre + wheels * gap, n = Math.floor(sr * (end + 2.2)), x = new Float32Array(n);
+  const rumble = biquad(biquad(brown(sr, n / sr, seed + 3), sr, "lowpass", 420, 0.7), sr, "highpass", 120, 0.7);
+  for (let i = 0; i < n; i++) { // the rope roaring through the wheels: swells in, holds, lets go
+    const t = i / sr, e = t < pre ? (t / pre) ** 2 : t < end ? 1 : Math.exp(-(t - end) * 3.5);
+    x[i] = rumble[i] * 0.55 * e;
   }
-  const creak = pink(sr, n / sr, seed + 9); biquad(creak, sr, "bandpass", 340, 6); // the hanger swaying after
-  const end = wheels * gap;
-  for (let i = 0; i < n; i++) { const t = i / sr - end; if (t > 0) x[i] += creak[i] * 1.6 * Math.sin(Math.PI * Math.min(1, t / 1.2)) * (0.5 + 0.5 * Math.sin(t * 9)); }
+  const noise = new Float32Array(Math.floor(sr * 0.05));
+  for (let w = 0; w < wheels; w++) {
+    const u = (w + 0.5) / wheels, amp = Math.sin(Math.PI * Math.min(1, u * 1.15)) * (u > 0.5 ? 0.65 : 1) * (0.85 + r() * 0.3); // softer past the tower
+    const at = pre + w * gap * (0.97 + r() * 0.06);
+    // "ka": the grip meeting the wheel, a short muffled knock
+    for (let i = 0; i < noise.length; i++) noise[i] = r() * 2 - 1;
+    biquad(noise, sr, "bandpass", 700 + r() * 300, 1.5);
+    const k0 = Math.floor(at * sr);
+    for (let i = 0; i < sr * 0.03 && k0 + i < n; i++) { const t = i / sr; x[k0 + i] += noise[i] * amp * 0.5 * Math.min(1, t / 0.003) * Math.exp(-t * 90); }
+    // "thunk": riding over it, a round low knock with a dull metal ring
+    const k1 = Math.floor((at + Math.min(0.045, gap * 0.33)) * sr);
+    for (let i = 0; i < sr * 0.25 && k1 + i < n; i++) {
+      const t = i / sr, env = Math.min(1, t / 0.004);
+      const ph = 2 * Math.PI * (150 + 60 * Math.exp(-t * 40)) * t; // pitched up enough to carry on a phone speaker
+      let v = (Math.sin(ph) + 0.35 * Math.sin(2 * ph)) * Math.exp(-t * 26);
+      for (const [f, d, a2] of [[330, 20, 0.45], [540, 28, 0.32], [880, 40, 0.14]]) v += Math.sin(2 * Math.PI * f * (1 + (r() - 0.5) * 0.002) * t) * a2 * Math.exp(-t * d);
+      x[k1 + i] += v * amp * 0.9 * env;
+    }
+  }
+  // the chair swaying after, the hanger creaking a little
+  const creak = biquad(pink(sr, n / sr, seed + 9), sr, "bandpass", 380, 5);
+  for (let i = 0; i < n; i++) { const t = i / sr - end + 0.1; if (t > 0) x[i] += creak[i] * 1.3 * Math.sin(Math.PI * Math.min(1, t / 1.8)) * (0.55 + 0.45 * Math.sin(t * 5.5)); }
+  biquad(x, sr, "lowpass", 2200, 0.6); // nothing sharp
   return normalize(x, 0.8);
 }
 
