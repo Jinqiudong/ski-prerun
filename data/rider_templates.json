@@ -31,35 +31,35 @@
    "label": "体重",
    "morph": "weight",
    "lo": 28,
-   "hi": 62
+   "hi": 76
   },
   {
    "key": "muscle",
    "label": "肌肉",
    "morph": "muscle",
    "lo": 30,
-   "hi": 69
+   "hi": 84
   },
   {
    "key": "jease",
    "label": "外套宽松",
    "morph": "jacket_ease",
    "lo": 61,
-   "hi": 88
+   "hi": 99
   },
   {
    "key": "jlen",
    "label": "外套长度",
    "morph": "jacket_length",
-   "lo": -6,
-   "hi": -1
+   "lo": -8,
+   "hi": 1
   },
   {
    "key": "pease",
    "label": "裤子宽松",
    "morph": "pants_ease",
    "lo": 47,
-   "hi": 92
+   "hi": 110
   }
  ],
  "presets": {
@@ -77,7 +77,8 @@
     "vest": false,
     "visor": false,
     "stickers": false,
-    "grid": false
+    "grid": false,
+    "hair_braid": false
    },
    "glossyHelmet": false,
    "colors": {
@@ -95,7 +96,8 @@
     "MAT_hair": "#3f2a1f",
     "MAT_vest": "#17171a",
     "MAT_vest_lining": "#e2531f"
-   }
+   },
+   "entrance": "Entrance_A"
   },
   "B": {
    "tpl": "M",
@@ -111,7 +113,8 @@
     "vest": false,
     "visor": false,
     "stickers": false,
-    "grid": true
+    "grid": true,
+    "hair_braid": false
    },
    "glossyHelmet": false,
    "colors": {
@@ -129,7 +132,8 @@
     "MAT_hair": "#3f2a1f",
     "MAT_vest": "#17171a",
     "MAT_vest_lining": "#e2531f"
-   }
+   },
+   "entrance": "Entrance_B"
   },
   "C": {
    "tpl": "F",
@@ -145,7 +149,8 @@
     "vest": false,
     "visor": true,
     "stickers": false,
-    "grid": false
+    "grid": false,
+    "hair_braid": false
    },
    "glossyHelmet": false,
    "colors": {
@@ -163,7 +168,8 @@
     "MAT_hair": "#3f2a1f",
     "MAT_vest": "#17171a",
     "MAT_vest_lining": "#e2531f"
-   }
+   },
+   "entrance": "Entrance_C"
   },
   "D": {
    "tpl": "M",
@@ -179,7 +185,8 @@
     "vest": true,
     "visor": false,
     "stickers": true,
-    "grid": false
+    "grid": false,
+    "hair_braid": false
    },
    "glossyHelmet": true,
    "colors": {
@@ -197,7 +204,8 @@
     "MAT_hair": "#3f2a1f",
     "MAT_vest": "#17171a",
     "MAT_vest_lining": "#e2531f"
-   }
+   },
+   "entrance": "Entrance_D"
   }
  },
  "clips": [
@@ -294,6 +302,27 @@
     [
      "Stand_Idle",
      "自然站立"
+    ]
+   ]
+  ],
+  [
+   "入场",
+   [
+    [
+     "Entrance_A",
+     "A 入场·欧式刻滑 ×2"
+    ],
+    [
+     "Entrance_B",
+     "B 入场·后刃-前刃-后刃-前刃 渐低 + 刻平陀螺"
+    ],
+    [
+     "Entrance_C",
+     "C 入场·立刃 S 弯 ×2 + 坡上跳跃"
+    ],
+    [
+     "Entrance_D",
+     "D 入场·chill 滑行 ×2 + Method"
     ]
    ]
   ]

@@ -5,9 +5,14 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
-export const CFG = await (await fetch("data/rider_templates.json?v=1")).json();
-export const PARTS = { hair: "ACC_Hair", hood: "ACC_Hood", vest: "ACC_Vest", visor: "ACC_Visor", stickers: "ACC_Stickers" };
-export const PART_LABEL = { hair: "长发", hood: "帽兜", vest: "马甲", visor: "帽檐", stickers: "贴纸", grid: "格纹" };
+export const CFG = await (await fetch("data/rider_templates.json?v=2")).json();
+export const PARTS = { hair: "ACC_Hair", hood: "ACC_Hood", vest: "ACC_Vest", visor: "ACC_Visor", stickers: "ACC_Stickers", hair_braid: "ACC_Hair_Braid" };
+// The parts toggled on and off (the hair is a style, below).
+export const PART_LABEL = { hood: "帽兜", vest: "马甲", visor: "帽檐", stickers: "贴纸", grid: "格纹" };
+// The woman's hair: loose (ACC_Hair), a braid (ACC_Hair_Braid) or none, never both (the man's template has none).
+export const HAIR = [["loose", "披发"], ["braid", "辫子"], ["none", "不要头发"]];
+export const hairOf = (ch) => (ch.parts.hair_braid ? "braid" : ch.parts.hair ? "loose" : "none");
+export function setHair(ch, style) { ch.parts.hair = style === "loose"; ch.parts.hair_braid = style === "braid"; }
 // The game's colour parts and the template's materials they set (trim follows, a little darker).
 export const COLOR_MATS = { jacket: ["MAT_jacket"], pants: ["MAT_pants"], helmet: ["MAT_helmet"], lens: ["MAT_lens"], gloves: ["MAT_mitten"], boots: ["MAT_boot_panel", "MAT_boot_sole"] };
 // Poses held still (the template's frame at 1 s) and tricks played through.
@@ -17,7 +22,7 @@ export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Ani
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 const files = {};
-const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=1`));
+const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=2`));
 
 // A fresh copy of a template, ready to dress and pose: { root, tpl, set(ch), play(name), step(dt) }.
 export async function makeCharacter(tpl) {
@@ -33,7 +38,7 @@ export async function makeCharacter(tpl) {
   });
   const bones = {}; root.traverse((o) => { if (o.isBone) bones[o.name] = o; });
   // The board's turn at rest, relative to the root (for reading its yaw and edge out of a clip).
-  const rel = (q = new THREE.Quaternion()) => { root.updateMatrixWorld(true); new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(bones.Board.matrixWorld).decompose(new THREE.Vector3(), q, new THREE.Vector3()); return q; };
+  const rel = (q = new THREE.Quaternion(), p = new THREE.Vector3()) => { root.updateMatrixWorld(true); new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(bones.Board.matrixWorld).decompose(p, q, new THREE.Vector3()); return q; };
   const boardRest = rel();
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(g.animations.map((c) => [c.name, c]));
   let action = null, held = true, t = 0; const off = [], gaze = { y: 0, p: 0, ty: 0, tp: 0, wait: 3 };
@@ -52,25 +57,26 @@ export async function makeCharacter(tpl) {
     // The line a clip rides along (the character AI's method, rider_viewer.html): the clip plays in place,
     // and its board says where it goes: on the toe edge the path turns toward the toes, on the heel edge
     // toward the heels, tighter the higher the edge; a board turned across the line (spins, slides) stops
-    // steering. From (0, 0) heading 0 (+x), v m/s; returns { pts: [[x, z]], hd: [heading], fps }.
+    // steering. From (0, 0) heading 0 (+x), v m/s; returns { pts: [[x, z]], hd: [heading], by: [the board's
+    // height in the clip, unscaled: a jump's lift], fps }.
     trace(name, reps = 1, v = 7) {
       const clip = clips[name]; if (!clip) return null;
-      const FPS = 30, d = clip.duration, N = Math.round(d * FPS) * reps, pts = [], hd = [];
+      const FPS = 30, d = clip.duration, N = Math.round(d * FPS) * reps, pts = [], hd = [], by = [];
       const m2 = new THREE.AnimationMixer(root), a = m2.clipAction(clip); a.play();
-      const q = new THREE.Quaternion(), inv = boardRest.clone().invert(), lng = new THREE.Vector3(), nrm = new THREE.Vector3(), toe = new THREE.Vector3();
+      const q = new THREE.Quaternion(), bp = new THREE.Vector3(), inv = boardRest.clone().invert(), lng = new THREE.Vector3(), nrm = new THREE.Vector3(), toe = new THREE.Vector3();
       let x = 0, z = 0, h = 0;
       for (let i = 0; i <= N; i++) {
         a.time = Math.min((i / FPS) % d, d - 1e-4); m2.update(0);
-        rel(q).multiply(inv);
+        rel(q, bp).multiply(inv);
         lng.set(1, 0, 0).applyQuaternion(q); nrm.set(0, 1, 0).applyQuaternion(q);
         const psi = Math.atan2(-lng.z, lng.x); toe.set(-Math.sin(psi), 0, Math.cos(psi));
         const phi = Math.asin(Math.max(-1, Math.min(1, nrm.dot(toe)))), w = Math.pow(Math.abs(Math.cos(psi)), 6);
         const kap = Math.abs(phi) > 0.05 ? (Math.sin(phi) / 6) * w : 0;
-        pts.push([x, z]); hd.push(h);
+        pts.push([x, z]); hd.push(h); by.push(bp.y);
         h -= kap * v / FPS; x += (Math.cos(h) * v) / FPS; z += (-Math.sin(h) * v) / FPS;
       }
       m2.stopAllAction(); m2.uncacheRoot(root); if (action) mixer.update(0);
-      return { pts, hd, fps: FPS };
+      return { pts, hd, by, fps: FPS };
     },
     // Alive while standing: a slow breath in the chest, the weight shifting, the head looking about.
     step(dt) {
@@ -114,7 +120,7 @@ export function applyCharacter(root, tpl, ch) {
       if (id !== undefined) o.morphTargetInfluences[id] = dn;
     }
   });
-  for (const k in PARTS) { const o = root.getObjectByName(PARTS[k]); if (o) o.visible = !!ch.parts[k]; }
+  for (const k in PARTS) { const o = root.getObjectByName(PARTS[k]); if (o) o.visible = !!ch.parts[k] && !(k === "hair" && ch.parts.hair_braid); } // one hair style at a time
   root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) {
     const c = ch.colors[m.name]; if (c) m.color.set(c);
     const side = m.name === "MAT_board_top" ? "top" : m.name === "MAT_board_base" ? "base" : null;

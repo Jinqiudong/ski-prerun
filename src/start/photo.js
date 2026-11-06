@@ -126,7 +126,7 @@ function dressed(sh, cols) {
 
 // ---- Who wears what. A look's rider: { ch } (its colours by material), { preset, colors } or { preset }.
 let presets = null;
-const presetsOf = () => (presets ||= fetch("data/rider_templates.json?v=1").then((r) => r.json()).then((j) => j.presets).catch(() => ({}))); // the four friends' colours (character.js presets)
+const presetsOf = () => (presets ||= fetch("data/rider_templates.json?v=2").then((r) => r.json()).then((j) => j.presets).catch(() => ({}))); // the four friends' colours (character.js presets)
 export function coloursOf(rider, key, P) {
   const pal = PALETTE[hashOf(key) % PALETTE.length];
   const ch = rider?.ch || P[rider?.preset] || null, legacy = rider?.colors || {};
