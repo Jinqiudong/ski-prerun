@@ -37,11 +37,11 @@ export async function loadResearch(resort) {
 // The kit's own lists (glb/<family>.json): a model may say which real lifts or buildings it stands for
 // ("for"), so a lift gets its own terminal hood or carrier and a named building its landmark model.
 export async function loadKitIndex() {
-  const fams = ["lifts", "stations", "buildings", "signature"], index = { has: new Set(), for: new Map() };
+  const fams = ["lifts", "stations", "buildings", "signature"], index = { has: new Set(), for: new Map(), byName: new Map() };
   await Promise.all(fams.map(async (f) => {
     const list = await fetch(`${BASE}${f}.json?v=${VER}`).then((r) => r.json()).catch(() => []);
     for (const e of list) {
-      index.has.add(e.name);
+      index.has.add(e.name); index.byName.set(e.name, e);
       for (const n of e.for || []) { const k = n.toLowerCase(); if (!index.for.has(k)) index.for.set(k, []); index.for.get(k).push({ ...e, family: f }); }
     }
   }));
@@ -70,28 +70,37 @@ export function liftSpec(lift, research, known, index = null) {
   }
   // The lift's own models from the kit, where it has them: chondola chairs and cabins, the terminal hood
   // its maker builds, a landmark top station (Thunderhead Lodge, Silver Queen).
-  const own = modelsFor(index, lift.name).filter((e) => TERMINAL[e.name] || CARRIERS.includes(e.name));
+  const named = modelsFor(index, lift.name), own = named.filter((e) => TERMINAL[e.name] || CARRIERS.includes(e.name));
   const ownCarrier = own.find((e) => e.family === "lifts" && e.name !== "chondola_cabin")?.name;
   if (ownCarrier) carrier = ownCarrier;
   const isCabin = /^gondola|cabriolet/.test(carrier || "");
   const term = isCabin ? ["gondola_station", "gondola_station"] : detachable ? ["terminal_detach", "terminal_detach_top"] : ["terminal_fixed", "terminal_fixed"];
   const bottomOwn = own.find((e) => e.family === "stations" && TERMINAL[e.name] && !TERMINAL[e.name].topOnly);
   const topOwn = own.find((e) => TERMINAL[e.name]?.topOnly);
-  if (bottomOwn && detachable && !isCabin) term[0] = bottomOwn.name;
+  if (bottomOwn && detachable && !isCabin) term[0] = term[1] = bottomOwn.name; // the maker's hood at both ends (turned round at the top)
   if (topOwn) term[1] = topOwn.name;
+  // Its own towers (the 40 m lattice towers of the Silver Queen): the rope at the model's height.
+  const tw = named.find((e) => e.family === "lifts" && /^tower_/.test(e.name) && e.rope);
   return {
     cabinCarrier: own.some((e) => e.name === "chondola_cabin") ? "chondola_cabin" : null,
     carrier, cabin: isCabin, surface, seats, detachable,
     bubble: /bubble/.test(carrier || ""), bottom: term[0], top: term[1],
-    gauge: TERMINAL[term[0]].gauge, ...colours(r, known), researched: !!r.type, chondola: type === "chondola" || lift.kind === "mixed_lift" && !!r.cabin_model, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
+    gauge: TERMINAL[term[0]].gauge, tower: tw?.name || null, towerRope: tw ? tw.rope[1] : null,
+    ...colours(r, known, isCabin), researched: !!r.type, chondola: type === "chondola" || lift.kind === "mixed_lift" && !!r.cabin_model, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
   };
 }
 
-// Paint per part: the chairs, the terminal hood, the towers (else the hood's colour), the bubble.
-function colours(r, known) {
+// Paint per part: the chairs, the terminal hood, the towers (else the hood's colour) and their footings,
+// the bubble; a cabin's body (tinted over the kit's graphite, tintMat), its lettering, colour groups.
+function colours(r, known, isCabin) {
   const c = typeof r.color === "string" ? { chair: r.color } : r.color || r.colour || {};
-  const chair = c.chair || CHARCOAL, terminal = c.terminal || CHARCOAL; // cabins keep the kit's graphite
-  return { color: chair, terminalColor: terminal, towerColor: c.tower || terminal, bubbleColor: c.bubble || known?.bubbleColor || null, bandColor: c.terminal_band || c.terminal_stripe || null, cabinColor: c.cabin || null };
+  const chair = c.chair || CHARCOAL, terminal = c.terminal || CHARCOAL;
+  return {
+    color: chair, terminalColor: terminal, towerColor: c.tower || terminal, towerBaseColor: c.tower_base || null,
+    bubbleColor: c.bubble || known?.bubbleColor || null, bandColor: c.terminal_band || c.terminal_stripe || null,
+    cabinColor: c.cabin || (isCabin && c.cabin_groups?.[0]) || null, cabinGroups: isCabin && Array.isArray(c.cabin_groups) ? c.cabin_groups : null,
+    cabinText: isCabin && r.cabin_text ? { text: r.cabin_text, color: c.cabin_logo || "#ffffff" } : null,
+  };
 }
 
 // Terminals in the game's frame (+z the way up, +x the up rope's side). `bull`: the local z of the
@@ -107,8 +116,11 @@ export const TERMINAL = {
   thunderhead_lodge: { gauge: 3.0, ropeH: 9.5, bull: 0, bx: 22.5, box: [-28, 31, -19.6, 17.4], stand: [12, 0.5, -23], unload: 8, topOnly: true },
   silver_queen_top: { gauge: 3.0, ropeH: 4.25, bull: 9, box: [-15.5, 7, -15, 15], stand: [-4, 0.5, -10], unload: 10, topOnly: true },
 };
-// The makers' detachable hoods (stations.json) stand where terminal_detach does.
-for (const n of ["terminal_detach_lpa", "terminal_detach_omega", "terminal_detach_unig", "terminal_detach_dopp90"]) TERMINAL[n] = TERMINAL.terminal_detach;
+// The makers' detachable hoods (stations.json) stand where terminal_detach does. At the top the same hood is
+// turned round and mirrored (as terminal_fixed is): the bullwheel uphill, the up rope still on its +x
+// side, so the chairs come in under the hood past the operator's hut and stop over the deck; the rider
+// gets off on the up rope's side and stands on the snow beyond the deck, uphill of the maze, by the sign.
+for (const n of ["terminal_detach_lpa", "terminal_detach_omega", "terminal_detach_unig", "terminal_detach_dopp90"]) TERMINAL[n] = { ...TERMINAL.terminal_detach, top: { flip: true, mirror: true }, stand: [8.5, 0.3, -7], unload: 13 };
 // Where a terminal stands: its origin, yaw and mirror, for the line's end p heading dir (the way up).
 export function terminalPlace(name, atTop, p, dir) {
   const t = TERMINAL[name], f = (atTop && t.top) || {};
@@ -181,7 +193,51 @@ function roomUV(g) {
   for (let i = 0; i < p.count; i++) { const side = Math.abs(n.getX(i)) > Math.abs(n.getZ(i)); uv[i * 2] = (side ? p.getZ(i) : p.getX(i)) / 6.5; uv[i * 2 + 1] = (p.getY(i) - 1.0) / 4.2; }
   g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
-const paints = new Map();
+const paints = new Map(), tints = new Map();
+// The kit's cabins have no paint part: their body is baked graphite in the atlas. A tinted copy of the baked
+// material swaps that graphite for a colour (per instance in a pool, else `color`), keeping the atlas's
+// shading; the bright parts (hangers, trim, roof) stay as they are.
+const BODY = new THREE.Color("#242c34");
+export function tintMat(base, color = null) {
+  const key = base.uuid + (color ? new THREE.Color(color).getHexString() : ":i");
+  if (!tints.has(key)) {
+    const m = base.clone(), u = { tint: { value: new THREE.Color(color || BODY) }, body: { value: BODY } };
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform vec3 tint;\nvarying vec3 vTint;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\n#ifdef USE_INSTANCING_COLOR\nvTint = instanceColor;\n#else\nvTint = tint;\n#endif");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform vec3 body;\nvarying vec3 vTint;")
+        .replace("#include <color_fragment>", `{ vec3 W = vec3(0.2126, 0.7152, 0.0722); float l = dot(diffuseColor.rgb, W), lb = dot(body, W);
+          float w = 1.0 - smoothstep(lb * 2.2, lb * 5.0, l);
+          vec3 t = mix(vec3(dot(vTint, W)), vTint, 0.8) * 0.85; // a touch under the paint: the tone curve deepens a baked colour
+          diffuseColor.rgb = mix(diffuseColor.rgb, t * min(l / lb, 1.6), w); }`);
+    };
+    m.customProgramCacheKey = () => "kit-tint";
+    tints.set(key, m);
+  }
+  return tints.get(key);
+}
+// White lettering on a cabin's two sides (Silver Queen's "ASPEN"), as one quad pair with a canvas texture.
+const letterings = new Map();
+export function cabinLettering(k, { text, color }) {
+  const key = k.name + "|" + text + "|" + color;
+  if (letterings.has(key)) return letterings.get(key);
+  // The body's side under the windows: its half-width there, from the baked geometry.
+  const p = k.parts.bake.geometry.attributes.position, gy = k.parts.glass?.geometry.boundingBox.min.y ?? -2.2;
+  const y = gy - 0.62; // the black band under the windows, clear of the door rails
+  let half = 0;
+  for (let i = 0; i < p.count; i++) if (Math.abs(p.getY(i) - y) < 0.15 && Math.abs(p.getZ(i)) < 0.25) half = Math.max(half, Math.abs(p.getX(i)));
+  const depth = k.box.max.z - k.box.min.z, w = depth * 0.5, h = w * 0.2;
+  const c = document.createElement("canvas"); c.width = 512; c.height = 104; const g = c.getContext("2d");
+  g.fillStyle = color; g.textAlign = "center"; g.textBaseline = "middle";
+  fit(g, text.toUpperCase(), 490, 92, 800, '"Helvetica Neue", Arial, sans-serif');
+  g.fillText(text.toUpperCase(), 256, 56);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const sides = [1, -1].map((s) => new THREE.PlaneGeometry(w, h).rotateY((s * Math.PI) / 2).translate(s * (half + 0.012), y, 0));
+  const out = { geometry: mergeGeometries(sides), material: new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 }) };
+  letterings.set(key, out);
+  return out;
+}
 export function paintMat(color = CHARCOAL) {
   const k = new THREE.Color(color).getHexString();
   if (!paints.has(k)) paints.set(k, new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.45, metalness: 0.35 }));
@@ -238,13 +294,22 @@ export function towerParts([base, shaft, head], ropeH = ROPE_H, surface = false)
     { geometry: bs(B.bake.geometry), material: B.bake.material },
     { geometry: sh(S.bake.geometry), material: S.bake.material },
     { geometry: hd(H.bake.geometry), material: H.bake.material },
-    { geometry: mergeSame([bs(B.paint?.geometry), sh(S.paint?.geometry), hd(H.paint?.geometry)]), paint: true },
+    { geometry: mergeSame([sh(S.paint?.geometry), hd(H.paint?.geometry)]), paint: true },
+    { geometry: bs(B.paint?.geometry), paint: 2 }, // the footing's own paint where a lift has one (Wild Blue's red), else the tower's
     { geometry: mergeSame([bs(B.snow?.geometry), hd(H.snow?.geometry)]), material: SNOW },
   ];
   // Far away: the shaft and a plain crossarm.
   const w = surface ? 1.9 : 2 * 2.8 + 0.5, arm = new THREE.BoxGeometry(w, 0.42, 0.42).translate(surface ? 0.85 : 0, foot + L + (surface ? 0.45 : 0.85), 0);
   const far = [{ geometry: mergeSame([sh(S.paint.geometry), arm, new THREE.CylinderGeometry(0.9, 0.95, 0.9, 8).translate(0, 0.2, 0)]), paint: true }];
   return { parts, far, ropeY: ropeH };
+}
+// A lattice tower (tower_lattice: the Silver Queen's), stretched up or down to its height; far away a
+// tapered post and a crossarm.
+export function latticeParts(k, top = 40) {
+  const P = k.parts, arm = new THREE.BoxGeometry(7, 0.6, 0.6).translate(0, top, 0);
+  const parts = [{ geometry: P.bake.geometry, material: P.bake.material }, { geometry: P.paint?.geometry, paint: true }, { geometry: P.snow?.geometry, material: SNOW }];
+  const far = [{ geometry: mergeSame([new THREE.CylinderGeometry(0.5, 2.4, top, 4).rotateY(Math.PI / 4).translate(0, top / 2, 0), arm]), paint: true }];
+  return { parts, far };
 }
 
 // A plain stand-in for a carrier far away.
@@ -287,7 +352,9 @@ export function splitRim(k) {
 // ---------- Instanced pools with a near and a far level of detail ----------
 const _m = new THREE.Matrix4();
 export class Pool {
-  // parts: [{ geometry, material | paint }]; each instance can carry its own paint colour (per lift).
+  // parts: [{ geometry, material | paint | tint }]; each instance can carry its own paint colour (per lift):
+  // `paint` parts are painted that colour (paint: 2, the item's second colour if it has one), `tint` parts
+  // are the baked atlas with its graphite body tinted that colour (tintMat).
   constructor(group, parts, far, cap = 64, { shadow = true, nearR = 250, farR = 900 } = {}) {
     Object.assign(this, { group, partsDef: parts.filter((p) => p.geometry), farDef: (far || []).filter((p) => p.geometry), shadow, nearR, farR, cap: 0, items: [], meshes: [], farMeshes: [] });
     this.grow(cap);
@@ -296,23 +363,23 @@ export class Pool {
     for (const m of [...this.meshes, ...this.farMeshes]) { this.group.remove(m); m.dispose(); }
     this.cap = cap;
     const make = (p, shadow) => {
-      const m = new THREE.InstancedMesh(p.geometry, p.paint ? paintMat("#ffffff") : p.material, cap); // paint: white × each instance's colour
-      if (p.paint) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
-      m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true; m.renderOrder = p.order || 0; m.userData.paint = !!p.paint;
+      const m = new THREE.InstancedMesh(p.geometry, p.paint ? paintMat("#ffffff") : p.tint ? tintMat(p.material) : p.material, cap); // paint: white × each instance's colour
+      if (p.paint || p.tint) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
+      m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = true; m.renderOrder = p.order || 0; m.userData.paint = p.paint || p.tint ? (p.paint === 2 ? 2 : 1) : 0;
       this.group.add(m); return m;
     };
     this.meshes = this.partsDef.map((p) => make(p, this.shadow));
     this.farMeshes = this.farDef.map((p) => make(p, false));
   }
   // Static items: { m: Matrix4, color } (positions in m.elements[12..14]).
-  add(m, color = CHARCOAL) { this.items.push({ m: m.clone(), color: new THREE.Color(color) }); if (this.items.length > this.cap) this.grow(Math.max(this.items.length, this.cap * 2)); this.dirty = true; }
+  add(m, color = CHARCOAL, color2 = null) { this.items.push({ m: m.clone(), color: new THREE.Color(color), color2: color2 ? new THREE.Color(color2) : null }); if (this.items.length > this.cap) this.grow(Math.max(this.items.length, this.cap * 2)); this.dirty = true; }
   // Place the instances near the camera with the full model, the rest (to farR) with the stand-in.
   refresh(cam, items = this.items, count = items.length) {
     let n = 0, f = 0;
     const nr = this.nearR * this.nearR, fr = this.farR * this.farR;
     for (let i = 0; i < count; i++) {
       const it = items[i], e = it.m.elements, d = (e[12] - cam.x) ** 2 + (e[13] - cam.y) ** 2 + (e[14] - cam.z) ** 2;
-      if (d < nr || !this.farMeshes.length && d < fr) { for (const m of this.meshes) { m.setMatrixAt(n, it.m); if (m.userData.paint) m.setColorAt(n, it.color); } this.uvOff?.(n, it); n++; }
+      if (d < nr || !this.farMeshes.length && d < fr) { for (const m of this.meshes) { m.setMatrixAt(n, it.m); if (m.userData.paint) m.setColorAt(n, m.userData.paint === 2 && it.color2 || it.color); } this.uvOff?.(n, it); n++; }
       else if (d < fr) { for (const m of this.farMeshes) { m.setMatrixAt(f, it.m); if (m.userData.paint) m.setColorAt(f, it.color); } f++; }
       if (n >= this.cap || f >= this.cap) break;
     }
@@ -342,10 +409,11 @@ function canvasTex(c, renderer) {
   t.anisotropy = renderer ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 4; return t;
 }
 // The lift's name on a terminal's board (4.6 × 0.75 m or 6 × 0.48 m): navy letters on cream.
-export function nameBoard(part, name, sub, renderer) {
+export function nameBoard(part, name, sub, renderer, mirror = false) {
   const b = part.geometry.boundingBox, w = Math.max(b.max.x - b.min.x, b.max.z - b.min.z), h = b.max.y - b.min.y;
   const c = document.createElement("canvas"); c.width = 1024; c.height = Math.round((1024 * h) / w); const g = c.getContext("2d");
   g.fillStyle = "#ece2cd"; g.fillRect(0, 0, c.width, c.height);
+  if (mirror) { g.translate(c.width, 0); g.scale(-1, 1); } // a mirrored terminal (a hood at the top) reads right way round
   g.strokeStyle = "#1f2f4a"; g.lineWidth = 8; g.strokeRect(10, 10, c.width - 20, c.height - 20);
   g.fillStyle = "#1f2f4a"; g.textAlign = "center"; g.textBaseline = "middle";
   fit(g, name.toUpperCase(), c.width - 80, Math.round(c.height * (sub ? 0.5 : 0.62)));

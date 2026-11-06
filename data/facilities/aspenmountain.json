@@ -111,6 +111,7 @@
       "manufacturer": "Poma",
       "year": 1986,
       "cabin_model": "CWA Omega III LWI",
+      "cabin_text": "ASPEN",
       "color": {
         "cabin": "#1c1d20",
         "cabin_logo": "#ffffff",

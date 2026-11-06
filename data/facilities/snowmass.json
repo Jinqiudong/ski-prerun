@@ -155,6 +155,7 @@
       "manufacturer": "Leitner-Poma",
       "year": 2006,
       "cabin_model": "CWA Omega III 8 LWI",
+      "cabin_text": "Snowmass",
       "color": {
         "cabin": "#222428",
         "cabin_logo": "#ffffff"

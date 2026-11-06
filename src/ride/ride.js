@@ -20,8 +20,8 @@ import { navRow } from "../core/nav.js?v=9";
 import { rideSound } from "../audio/index.js?v=4";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=4";
 import { dropIn } from "../core/transition.js?v=2";
-import { Facilities } from "./kitworld.js?v=1";
-import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=1";
+import { Facilities } from "./kitworld.js?v=2";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -100,6 +100,7 @@ function liftLine(T, lift) {
     terms.push({ name, top, place: pl, low: lv.lo });
   }
   for (const t of towers.slice(1, -1)) t.p.y = T.heightAt(t.p.x, t.p.z); // the pads changed the ground near the ends
+  if (SPEC.towerRope) for (const t of towers.slice(1, -1)) t.h = SPEC.towerRope; // the lift's own towers (Silver Queen's 40 m lattice)
   for (const g of ground) g.y = T.heightAt(g.x, g.z);
   // The rope runs level through each station (20 m), then climbs to the first tower.
   const pointAtS = (s) => { const i = Math.min(dense.length - 1, Math.max(0, cum.findIndex((c) => c >= s))); return dense[i].clone(); };

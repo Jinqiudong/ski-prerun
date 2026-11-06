@@ -3,7 +3,7 @@
 // a few props. Everything instanced is pooled (facilities.js Pool): full models near the camera, a plain
 // stand-in further out, nothing beyond. GLBs load lazily, only those this resort and this ride need.
 import * as THREE from "three";
-import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, farCarrier, splitRim, Pool, paintMat, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=1";
+import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=2";
 
 const GRAPHITE = "#2c3138";
 // Packed snow banked under a deck or building where the ground falls away: a mound whose sides slope out.
@@ -11,6 +11,17 @@ const BANK = new THREE.MeshStandardMaterial({ color: 0xf2f5fa, roughness: 0.9 })
 const Y = new THREE.Vector3(0, 1, 0);
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _m = new THREE.Matrix4();
 const compose = (x, y, z, yaw, sx = 1, sy = 1, sz = 1) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(Y, yaw), new THREE.Vector3(sx, sy, sz));
+const isCabin = (name) => /^gondola|cabriolet/.test(name || "");
+// A cabin's colour by its place on the line: the lift's cabin colour, or groups of three (Sky Cab's pulse).
+const cabinColorAt = (spec, i) => (spec.cabinGroups ? spec.cabinGroups[Math.floor(i / 3) % spec.cabinGroups.length] : spec.cabinColor || GRAPHITE);
+// A carrier's parts for a pool: a cabin's baked body tinted per instance, its lettering if it has one.
+function carrierParts(k, { text = null, skipGlass = false } = {}) {
+  const cab = isCabin(k.name);
+  const near = Object.values(k.parts).filter((p) => p.kind !== "lit" && p.kind !== "lamp" && !(skipGlass && p.kind === "glass"))
+    .map((p) => ({ geometry: p.geometry, material: p.material, paint: p.kind === "paint", tint: cab && p.kind === "bake", order: p.kind === "glass" ? 2 : 0 }));
+  if (text && cab) near.push(cabinLettering(k, text));
+  return near;
+}
 
 // A kit model as a group of meshes sharing the kit's geometry (one per building or terminal).
 function instance(k, { paint = CHARCOAL, band = null, board = null, shadow = true } = {}) {
@@ -66,17 +77,16 @@ export class Facilities {
     const K = this.liftKits, color = spec.color, g = spec.gauge;
     this.spec = spec;
     // Towers: footing, shaft and head, at each tower the line computes, the head at the line's gauge.
-    const yaw = Math.atan2(line.dir.x, line.dir.z), towers = this.towerPool();
+    const yaw = Math.atan2(line.dir.x, line.dir.z);
     this.myTowers = [];
-    for (let i = 1; i < line.towers.length - 1; i++) {
-      const t = line.towers[i]; if (t.station) continue;
-      towers.add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8), spec.towerColor);
-      this.myTowers.push(t.p);
-    }
+    const mine = line.towers.slice(1, -1).filter((t) => !t.station);
+    if (spec.tower) this.latticePool(spec.tower).then((pool) => { for (const t of mine) pool.add(compose(t.p.x, t.p.y, t.p.z, yaw, 1, (t.h || spec.towerRope) / spec.towerRope, 1), spec.towerColor); this.lastRefresh.set(1e9, 0, 0); });
+    else for (const t of mine) this.towerPool().add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8), spec.towerColor, spec.towerBaseColor);
+    for (const t of mine) this.myTowers.push(t.p);
     // Terminals at both ends, on plinths where the ground falls away, the lift's name on the board.
     const term = (info) => {
       const k = info.top ? K.top : K.bottom, T0 = TERMINAL[info.name];
-      const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, lift.name, `${info.top ? "顶站" : "底站"} · 海拔 ${alt(info.place.origin).toLocaleString("en-US")} 米`, this.renderer) });
+      const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, lift.name, `${info.top ? "顶站" : "底站"} · 海拔 ${alt(info.place.origin).toLocaleString("en-US")} 米`, this.renderer, info.place.mirror < 0) });
       if (info.place.origin.y - info.low > 0.3) grp.add(plinth(T0.box, info.place.origin.y - info.low + 1.5));
       grp.position.copy(info.place.origin); grp.rotation.y = info.place.yaw; grp.scale.x = info.place.mirror;
       grp.userData.stand = new THREE.Vector3(...(T0.stand || [8, 0.5, 0]));
@@ -88,17 +98,24 @@ export class Facilities {
     const C = K.carrier, split = spec.bubble ? splitRim(C) : { bake: C.parts.bake.geometry, rim: null };
     let glassMat = C.parts.glass?.material;
     if (glassMat && spec.bubbleColor) { glassMat = glassMat.clone(); glassMat.color.set(spec.bubbleColor); glassMat.opacity = 0.45; }
-    const near = [{ geometry: split.bake, material: C.parts.bake.material }, { geometry: C.parts.paint?.geometry, paint: true }, { geometry: C.parts.snow?.geometry, material: C.parts.snow?.material }, { geometry: C.parts.flat?.geometry, material: C.parts.flat?.material }];
+    const near = [{ geometry: split.bake, material: C.parts.bake.material, tint: spec.cabin }, { geometry: C.parts.paint?.geometry, paint: true }, { geometry: C.parts.snow?.geometry, material: C.parts.snow?.material }, { geometry: C.parts.flat?.geometry, material: C.parts.flat?.material }];
     if (C.parts.glass && !spec.bubble) near.push({ geometry: C.parts.glass.geometry, material: glassMat, order: 2 });
+    if (spec.cabin && spec.cabinText) near.push(cabinLettering(C, spec.cabinText));
     this.chairs = new Pool(this.group, near, [{ geometry: farCarrier(spec.carrier), paint: true }], 8, { nearR: 170, farR: 2400 });
-    this.chairColor = spec.cabin ? GRAPHITE : color;
+    this.chairColor = spec.cabin ? cabinColorAt(spec, 0) : color;
+    // A chondola (American Eagle): a cabin every fifth carrier on the line you ride too.
+    if (spec.chondola && spec.cabinCarrier) kit(spec.cabinCarrier).then((k) => {
+      this.cabins = new Pool(this.group, carrierParts(k), [{ geometry: farCarrier("gondola"), paint: true }], 8, { nearR: 170, farR: 2400 });
+      for (const m of this.cabins.meshes) if (m.material.transparent) m.castShadow = false;
+      this.cabinColor = spec.cabinColor || GRAPHITE;
+    }).catch(() => {});
     if (spec.bubble) {
       this.bubbles = new Pool(this.group, [{ geometry: C.parts.glass.geometry, material: glassMat, order: 2 }, { geometry: split.rim, material: C.parts.bake.material }], null, 8, { nearR: 170, farR: 170 });
       this.bubbles.meshes[0].castShadow = false;
     }
     this.chairItems = [];
     const myChair = new THREE.Group();
-    for (const p of near.slice(0, 4)) if (p.geometry) myChair.add(new THREE.Mesh(p.geometry, p.paint ? paintMat(this.chairColor) : p.material));
+    for (const p of [...near.slice(0, 4), ...(spec.cabin && spec.cabinText ? near.slice(-1) : [])]) if (p.geometry) myChair.add(new THREE.Mesh(p.geometry, p.paint ? paintMat(this.chairColor) : p.tint ? tintMat(p.material, this.chairColor) : p.material));
     const myBubble = new THREE.Group();
     if (spec.bubble) { const gl = new THREE.Mesh(C.parts.glass.geometry, glassMat); gl.renderOrder = 2; myBubble.add(gl); if (split.rim) myBubble.add(new THREE.Mesh(split.rim, C.parts.bake.material)); }
     else if (C.parts.glass) { // a cabin's glass, clearer for looking out through it
@@ -126,7 +143,7 @@ export class Facilities {
     // Pads round the towers that stand beside a run.
     kit("pole_pad").then((k) => {
       const pool = this.propPool("pole_pad", k);
-      for (const p of this.myTowers) if (this.clear(p.x, p.z, 0) < 8) pool.add(compose(p.x, p.y + 0.73, p.z, yaw));
+      if (!spec.tower) for (const p of this.myTowers) if (this.clear(p.x, p.z, 0) < 8) pool.add(compose(p.x, p.y + 0.73, p.z, yaw));
       this.lastRefresh.set(1e9, 0, 0);
     }).catch(() => {});
     return { myChair, myBubble, topTerm, bottomTerm };
@@ -134,8 +151,9 @@ export class Facilities {
 
   // The line's carriers: n on each rope, spaced from ours; the up ones some with bubbles raised.
   placeChairs(line, d, step, n, along, bOpen, bShut, cabin) {
-    const p = _v, q = new THREE.Vector3(), items = this.chairItems;
+    const p = _v, q = new THREE.Vector3(), items = this.chairItems, spec = this.spec;
     while (items.length < 2 * n) items.push({ m: new THREE.Matrix4(), color: new THREE.Color(this.chairColor) });
+    if (spec.cabinGroups) for (let i = 0; i < 2 * n; i++) items[i].color.set(cabinColorAt(spec, i < n ? i + 1 : n + i));
     const bub = this.bubbles ? (this.bubItems ||= []) : null;
     for (let i = 0; i < n; i++) {
       for (const up of [true, false]) {
@@ -150,9 +168,16 @@ export class Facilities {
       }
     }
     items.length = bub ? (bub.length = 2 * n) : 2 * n;
-    if (items.length > this.chairs.cap) this.chairs.grow(items.length);
+    let list = items;
+    if (this.cabins) { // every fifth carrier (counted from ours) a cabin
+      const cab = (this.cabItems ||= []); list = (this.chairOnly ||= []); list.length = cab.length = 0;
+      items.forEach((it, k) => { if ((k % n) % 5 === 4) { it.color.set(this.cabinColor); cab.push(it); } else list.push(it); });
+      if (cab.length > this.cabins.cap) this.cabins.grow(cab.length);
+      this.cabins.refresh(this.cam, cab);
+    }
+    if (list.length > this.chairs.cap) this.chairs.grow(list.length);
     if (bub && bub.length > this.bubbles.cap) this.bubbles.grow(bub.length);
-    this.chairs.refresh(this.cam, items);
+    this.chairs.refresh(this.cam, list);
     if (bub) this.bubbles.refresh(this.cam, bub);
   }
 
@@ -179,7 +204,7 @@ export class Facilities {
     // Towers every 85 m along the ground line, clear of the stations.
     const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
     const total = cum[cum.length - 1], at = (s) => { let i = 1; while (i < pts.length - 1 && cum[i] < s) i++; const t = (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1); return pts[i - 1].clone().lerp(pts[i], Math.min(1, Math.max(0, t))); };
-    const H = surface ? SURFACE_H : ROPE_H, nT = Math.max(1, Math.round(total / 85)), towers = [];
+    const H = surface ? SURFACE_H : spec.towerRope || ROPE_H, nT = Math.max(1, Math.round(total / 85)), towers = [];
     for (let k = 0; k <= nT; k++) { const s = (total * k) / nT; if (s < 28 || s > total - 28) continue; const p = at(s); p.y = T.heightAt(p.x, p.z); towers.push({ s, p }); }
     o.total = total;
     // The rope: from the bottom bullwheel over the towers to the top one.
@@ -211,14 +236,14 @@ export class Facilities {
         const put = () => { for (const t of towers) this._surface.add(compose(t.p.x, t.p.y, t.p.z, yaw), spec.towerColor); this.lastRefresh.set(1e9, 0, 0); };
         if (this._surface) put(); else (this._surfaceQ ||= []).push(put);
       } else {
-        const pool = this.towerPool();
-        for (const t of towers) pool.add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8), spec.towerColor);
+        if (spec.tower) this.latticePool(spec.tower).then((pool) => { for (const t of towers) pool.add(compose(t.p.x, t.p.y, t.p.z, yaw), spec.towerColor); this.lastRefresh.set(1e9, 0, 0); });
+        else { const pool = this.towerPool(); for (const t of towers) pool.add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8), spec.towerColor, spec.towerBaseColor); }
         // Terminals, seen within a budget of distance.
         for (const [name, top] of [[spec.bottom, false], [spec.top, true]]) {
           kit(name).then((k) => {
             const pl = terminalPlace(name, top, top ? pts[pts.length - 1] : pts[0], dir), lv = deckLevel(T, name, pl);
             pl.origin.y = lv.hi;
-            const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, l.name, null, this.renderer) });
+            const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, l.name, null, this.renderer, pl.mirror < 0) });
             if (lv.hi - lv.lo > 0.3) grp.add(plinth(TERMINAL[name].box, lv.hi - lv.lo + 1.5));
             grp.position.copy(pl.origin); grp.rotation.y = pl.yaw; grp.scale.x = pl.mirror;
             o.group.add(grp);
@@ -227,25 +252,36 @@ export class Facilities {
         }
       }
       if (spec.carrier) {
-        const C = this.carrierPool(spec.carrier);
+        const C = this.carrierPool(spec.carrier, spec.cabinText);
         o.pool = C; o.gap = spec.cabin ? 55 : surface ? 25 : 33; o.speed = spec.detachable ? 5 : surface ? 3 : 2.3;
-        o.color = new THREE.Color(spec.cabin ? GRAPHITE : spec.color);
+        o.color = new THREE.Color(spec.cabin ? cabinColorAt(spec, 0) : spec.color);
+        if (spec.cabinGroups) o.colors = spec.cabinGroups.map((c) => new THREE.Color(c));
         if (spec.chondola) { o.pool2 = this.carrierPool(spec.cabinCarrier || "gondola"); o.color2 = new THREE.Color(spec.cabinColor || GRAPHITE); } // a cabin every fifth carrier
       }
       this.lastRefresh.set(1e9, 0, 0);
     }).catch(() => {});
   }
-  carrierPool(name) {
-    if (!this.carrierPools.has(name)) {
+  // One pool per carrier model (and lettering: Silver Queen's cabins say ASPEN, Elk Camp's SNOWMASS).
+  carrierPool(name, text = null) {
+    const key = text ? `${name}|${text.text}` : name;
+    if (!this.carrierPools.has(key)) {
       const pool = { items: [], n: 0, pool: null };
-      this.carrierPools.set(name, pool);
+      this.carrierPools.set(key, pool);
       kit(name).then((k) => {
-        const near = Object.values(k.parts).filter((p) => p.kind !== "lit" && p.kind !== "lamp").map((p) => ({ geometry: p.geometry, material: p.material, paint: p.kind === "paint", order: p.kind === "glass" ? 2 : 0 }));
-        pool.pool = new Pool(this.group, near, [{ geometry: farCarrier(name), paint: true }], 32, { nearR: 220, farR: 1300 });
+        pool.pool = new Pool(this.group, carrierParts(k, { text }), [{ geometry: farCarrier(name), paint: true }], 32, { nearR: 220, farR: 1300 });
         for (const m of pool.pool.meshes) if (m.material.transparent) m.castShadow = false;
       });
     }
-    return this.carrierPools.get(name);
+    return this.carrierPools.get(key);
+  }
+  // Lattice towers (tower_lattice), one pool for the resort.
+  latticePool(name) {
+    return (this._lattice ||= kit(name).then((k) => {
+      const lp = latticeParts(k, this.index?.byName?.get(name)?.top || 40);
+      const pool = new Pool(this.group, lp.parts, lp.far, 16, { nearR: 420, farR: 2600 });
+      this.pools.push(pool);
+      return pool;
+    }));
   }
   stepOthers(dt) {
     this.t += Math.max(0, dt || 0);
@@ -264,7 +300,7 @@ export class Facilities {
           if ((x - c.x) ** 2 + (z - c.z) ** 2 > 1300 * 1300) continue;
           const cabin = o.pool2?.pool && i % 5 === 4, cp = cabin ? o.pool2 : o.pool;
           const it = cp.items[cp.n] ||= { m: new THREE.Matrix4(), color: o.color };
-          cp.n++; it.color = cabin ? o.color2 : o.color;
+          cp.n++; it.color = cabin ? o.color2 : o.colors ? o.colors[Math.floor(i / 3) % o.colors.length] : o.color;
           it.m.compose(_v.set(x, y, z), _q.setFromAxisAngle(Y, Math.atan2(b.x - a.x, b.z - a.z)), _s.set(1, 1, 1));
         }
       }
@@ -291,7 +327,7 @@ export class Facilities {
     const KIND = { restaurant: "restaurant", base_lodge: "base_lodge", village_block: "base_lodge", warming_hut: "warming_hut", patrol: "firstaid", ticket: "ticket_office" };
     const list = this.research?.buildings?.length
       ? this.research.buildings.filter((b) => b.model !== "gondola_station" && b.kind !== "gondola_station" && !isStation(b.name)).map((b) => ({
-        name: b.name, exact: true, heading: b.footprint_m?.heading_deg, at: toXZ(b),
+        name: b.name, exact: true, heading: b.footprint_m?.heading_deg, foot: b.footprint_m, at: toXZ(b),
         model: landmark(b.name) || (own.has(b.model) ? b.model : KIND[b.kind] || "restaurant"),
       })).filter((b) => b.at)
       : [...villages.map((v) => ({ name: v.name, model: "base_lodge", at: [v.x, v.z] })),
@@ -299,13 +335,18 @@ export class Facilities {
     this.placed = [];
     const jobs = list.map(async (b) => {
       const k = await kit(b.model);
-      const site = this.siteFor(b.at[0], b.at[1], k.box, b);
+      // The real footprint (OSM): the model scaled to it, one scale for all three axes so doors and windows
+      // stay a plausible size (0.6 to 1.8), its long side along the footprint's.
+      const mx = k.box.max.x - k.box.min.x, mz = k.box.max.z - k.box.min.z;
+      const sc = b.foot?.length > 0 && b.foot?.width > 0 ? Math.min(1.8, Math.max(0.6, Math.sqrt((Math.max(b.foot.length, b.foot.width) / Math.max(mx, mz)) * (Math.min(b.foot.length, b.foot.width) / Math.min(mx, mz))))) : 1;
+      const box = new THREE.Box3(k.box.min.clone().multiplyScalar(sc), k.box.max.clone().multiplyScalar(sc));
+      const site = this.siteFor(b.at[0], b.at[1], box, { ...b, longZ: mz > mx });
       if (!site) return;
       const grp = instance(k);
       const { x, z, yaw, y, lo } = site;
-      if (y - lo > 0.3) grp.add(plinth([k.box.min.x + 0.3, k.box.max.x - 0.3, k.box.min.z + 0.3, k.box.max.z - 0.3], y - lo + 1));
-      grp.position.set(x, y, z); grp.rotation.y = yaw;
-      grp.userData.name = b.name;
+      if (y - lo > 0.3) grp.add(plinth([k.box.min.x + 0.3, k.box.max.x - 0.3, k.box.min.z + 0.3, k.box.max.z - 0.3], (y - lo + 1) / sc));
+      grp.position.set(x, y, z); grp.rotation.y = yaw; grp.scale.setScalar(sc);
+      grp.userData.name = b.name; grp.userData.foot = b.foot ? { ...b.foot, at: b.at, scale: sc } : null;
       this.group.add(grp);
       this.visibles.push({ obj: grp, p: grp.position, far: 1700, detail: 700 });
       if (b.model === "restaurant") this.outside(grp, k.box);
@@ -313,6 +354,7 @@ export class Facilities {
     // Run signs at the top of every named run.
     jobs.push(this.runSigns());
     jobs.push(this.snowGuns(villages));
+    jobs.push(this.carpets());
     kit("sign_junction").then((k) => (cache.junction = k)).catch(() => {}); // ready for the way down
     await Promise.allSettled(jobs);
     this.lastRefresh.set(1e9, 0, 0);
@@ -338,7 +380,7 @@ export class Facilities {
     const toward = t ? Math.atan2(t[0] - best.x, t[1] - best.z) : Math.atan2(n.x, n.z);
     if (b.heading != null) { // the real footprint's long side, the front (of the two ways) toward the run
       const a = Math.PI / 2 - (b.heading * Math.PI) / 180, d = (u) => Math.abs(Math.atan2(Math.sin(u - toward), Math.cos(u - toward)));
-      best.yaw = [a, a + Math.PI, a + Math.PI / 2, a - Math.PI / 2].slice(0, 2).sort((p, q) => d(p) - d(q))[0];
+      best.yaw = [a, a + Math.PI, a + Math.PI / 2, a - Math.PI / 2].slice(b.longZ ? 2 : 0, b.longZ ? 4 : 2).sort((p, q) => d(p) - d(q))[0];
     } else best.yaw = toward;
     this.placed.push({ x: best.x, z: best.z, rad });
     return best;
@@ -388,6 +430,32 @@ export class Facilities {
       const m = compose(s.x, T.heightAt(s.x, s.z) - 0.1, s.z, s.yaw, 1.25, 1.25, 1.25);
       pool.add(m); faces.add(m); faces.items[faces.items.length - 1].uv = atlas.uvOf(i, 0, 0);
     });
+  }
+  // Magic carpets: the kit's 20 m section (magic_carpet) tiled along each carpet's line, each section
+  // stretched a little to fit a whole number into the line and pitched to lie on the ground.
+  async carpets() {
+    const { R, T } = this, X = new THREE.Vector3(1, 0, 0);
+    const list = R.lifts.filter((l) => l.pts.length >= 2 && (l.kind === "magic_carpet" || this.research?.lifts.get(String(l.id))?.type === "magic_carpet"));
+    if (!list.length) return;
+    const k = await kit("magic_carpet");
+    const pool = new Pool(this.group, Object.values(k.parts).map((p) => ({ geometry: p.geometry, material: p.material, order: p.kind === "glass" ? 2 : 0 })), null, 32, { nearR: 380, farR: 380 });
+    for (const m of pool.meshes) if (m.material.transparent) m.castShadow = false;
+    this.pools.push(pool);
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), qp = new THREE.Quaternion();
+    for (const l of list) {
+      let pts = l.pts;
+      if (T.heightAt(...pts[0]) > T.heightAt(...pts[pts.length - 1])) pts = [...pts].reverse(); // up the slope
+      const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const total = cum[cum.length - 1], f = total / 20, n = Math.max(1, Math.abs(Math.log(f / Math.floor(f || 1))) < Math.abs(Math.log(Math.ceil(f) / f)) ? Math.floor(f) : Math.ceil(f)), len = total / n; // the section count that stretches least
+      const at = (s, out) => { let i = 1; while (i < pts.length - 1 && cum[i] < s) i++; const t = Math.min(1, Math.max(0, (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1))); const x = pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, z = pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t; return out.set(x, T.heightAt(x, z), z); };
+      for (let i = 0; i < n; i++) {
+        at(i * len, a); at((i + 1) * len, b);
+        const h = Math.hypot(b.x - a.x, b.z - a.z), L = Math.hypot(h, b.y - a.y);
+        _q.setFromAxisAngle(Y, Math.atan2(b.x - a.x, b.z - a.z)).multiply(qp.setFromAxisAngle(X, -Math.atan2(b.y - a.y, h)));
+        pool.add(new THREE.Matrix4().compose(_v.copy(a).setY(a.y - 0.08), _q, _s.set(1, 1, L / 20)));
+      }
+    }
+    this.carpetN = pool.items.length;
   }
   // A snow gun or two beside the main runs near each base.
   async snowGuns(villages) {
