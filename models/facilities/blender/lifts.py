@@ -5,6 +5,7 @@ up. Towers come in parts the game stacks: `tower_base` (footing; the shaft stand
 `tower_shaft` (1 m, origin at its foot, stretched to the tower's height) and `tower_head` /
 `tower_head_surface` (origin at the top of the shaft). The part the resort paints is kind `paint`."""
 import math, random
+import bmesh
 from mathutils import Vector
 from lib import *
 import lib
@@ -517,7 +518,106 @@ def magic_carpet():
     for s in (-1, 1): blob((0.8, L + 0.6, 0.75), (s * (Wt / 2 + 0.3), -L / 2, 0.1), SN, lumps=0.1)
     finalize("magic_carpet", 1024, ao_dist=0.8)
 
-MODELS = {"gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
+# ---------- the chondola (Copper's American Eagle) ----------
+def loft(rings, mat, kind="bake", cap_top=True, cap_bot=False, smooth=True):
+    """A surface through closed rings of points (each ring the same count), capped at the ends."""
+    me = bpy.data.meshes.new("loft"); bm = bmesh.new()
+    V = [[bm.verts.new(p) for p in r] for r in rings]; n = len(rings[0])
+    for a, b in zip(V, V[1:]):
+        for i in range(n): j = (i + 1) % n; bm.faces.new((a[i], a[j], b[j], b[i]))
+    if cap_top: bm.faces.new(V[-1])
+    if cap_bot: bm.faces.new(V[0][::-1])
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bm.to_mesh(me); bm.free(); o = bpy.data.objects.new("loft", me); bpy.context.scene.collection.objects.link(o)
+    for p in o.data.polygons: p.use_smooth = smooth
+    return lib._link(o, mat, kind)
+
+def rrect(hx, hy, r, z, seg=4):
+    """A rounded rectangle at height z: half sizes hx, hy, corner radius r, seg points per corner."""
+    pts = []
+    for cx, cy, a0 in ((hx - r, hy - r, 0), (-hx + r, hy - r, 90), (-hx + r, -hy + r, 180), (hx - r, -hy + r, 270)):
+        for k in range(seg + 1):
+            a = math.radians(a0 + 90 * k / seg); pts.append((cx + r * math.cos(a), cy + r * math.sin(a), z))
+    return pts
+
+def copper_logo(c, s, face, M_W, M_D):
+    """Copper Mountain's logo: a fat white C whose two ends curl in towards the mouth, a snowflake in its
+    bowl. Centred at c, s metres tall, on the face whose outward normal is face (-1: -Y, +1: +Y)."""
+    R, r0, ox = 0.5 * s, 0.19 * s, 0.07 * s
+    out = [(R * math.cos(math.radians(a)), R * math.sin(math.radians(a))) for a in range(42, 319, 12)]
+    inn = [(ox + r0 * math.cos(math.radians(a)), r0 * math.sin(math.radians(a))) for a in range(300, 59, -15)]
+    rot = (math.pi / 2, 0, 0 if face < 0 else math.pi); sx = 1 if face < 0 else -1
+    def place(x, z, dy=0.0): return (c[0] + sx * x, c[1] + face * dy, c[2] + z)
+    me = bpy.data.meshes.new("logo"); bm = bmesh.new()
+    bm.faces.new([bm.verts.new((sx * x, 0, z)) for x, z in out + inn]); bm.to_mesh(me); bm.free()
+    o = bpy.data.objects.new("logo", me); bpy.context.scene.collection.objects.link(o); o.location = c; lib._link(o, M_W, "flat")
+    for e in (-1, 1):  # the curled ends: round lobes reaching in over the mouth
+        a = math.radians(e * 40); x, z = 0.33 * s * math.cos(a) + 0.04 * s, 0.33 * s * math.sin(a)
+        cyl(0.165 * s, 0.004, place(x, z, 0.001), M_W, rot=(math.pi / 2, 0, 0), verts=16, kind="flat")
+    for k in range(3):  # the snowflake
+        box((0.17 * s, 0.006, 0.026 * s), place(-0.31 * s, 0, 0.004), M_D, rot=(0, math.pi / 3 * k, 0), kind="flat")
+    return o
+
+def chondola_cabin():
+    """Copper's American Eagle cabin: a Leitner-Poma Sigma Diamond 8-seater in charcoal slate (`paint`),
+    tall smoked windows on every side, ribbed panels below, sliding doors with a ski rack outside, the
+    white Copper "C" front and back. It rides the same LPA grip and hangs at the chairs' height
+    (floor 3.35 m under the rope)."""
+    new_col("chondola_cabin"); K = kit()
+    P = flat("paint_cabin", "#3a454c", 0.4, 0.25, grain=0)
+    GL = glass("cabin_glass", "#1d252d", 0.68)
+    TRIM, DARK = flat("silver", "#b8bec6", 0.3, 0.6, grain=0), K["DARK"]
+    hx, hy, top, h = 0.98, 0.86, -1.2, 2.15
+    zb, zg0, zg1 = top - h, top - h + 0.86, top - 0.16
+    taper = lambda z: 1.0 - 0.06 * (zg0 - z) / (zg0 - zb) if z < zg0 else 1.0  # the lower body narrows a little
+    ring = lambda z, r=0.22, d=0.0: rrect(hx * taper(z) + d, hy * taper(z) + d, r, z)
+    loft([rrect(hx * 0.86, hy * 0.86, 0.16, zb), ring(zb + 0.08), ring(zg0)], P, "paint", cap_top=False, cap_bot=True)
+    loft([ring(zg0), ring(zg1)], GL, "glass", cap_top=False)
+    loft([ring(zg1), ring(top - 0.05), rrect(hx - 0.06, hy - 0.06, 0.18, top)], P, "paint")
+    for z in (zb + 0.3, zb + 0.52, zg0 - 0.09):  # ribs on the lower panels
+        loft([ring(z - 0.012, d=0.008), ring(z + 0.012, d=0.008)], DARK, cap_top=False)
+    loft([ring(zg0 - 0.02, d=0.01), ring(zg0 + 0.03, d=0.01)], P, "paint", cap_top=False)
+    loft([ring(zg1 - 0.03, d=0.01), ring(zg1 + 0.02, d=0.01)], P, "paint", cap_top=False)
+    # Corner posts and the door seams (doors on the ±X sides, which face the platform).
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            a = math.atan2(sy, sx); cx, cy = sx * (hx - 0.22 + 0.22 * 0.72), sy * (hy - 0.22 + 0.22 * 0.72)
+            box((0.09, 0.05, zg1 - zg0), (cx, cy, (zg0 + zg1) / 2), P, rot=(0, 0, a + math.pi / 2), kind="paint")
+        box((0.04, 0.06, zg1 - zb - 0.1), (sx * (hx + 0.005), 0, (zb + 0.1 + zg1) / 2), P, kind="paint")
+        for y in (-0.03, 0.03): box((0.012, 0.012, zg1 - zg0 - 0.1), (sx * (hx + 0.03), y, (zg0 + zg1) / 2), DARK)
+        # The ski and board rack outside the door: a silver frame of slots.
+        box((0.12, 0.62, 0.34), (sx * (hx + 0.09), 0.0, zg0 - 0.15), TRIM, bevel=0.02)
+        for k in range(6): box((0.13, 0.02, 0.3), (sx * (hx + 0.1), -0.25 + k * 0.1, zg0 - 0.15), DARK)
+        for y in (-0.55, 0.55): cyl(0.07, 0.03, (sx * (hx + 0.02), y, zg0 + 0.38), DARK, rot=(0, math.pi / 2, 0), verts=12)  # bumpers
+    # The white C front and back, the cabin number.
+    W, D = flat("logo_white", "#f4f4f2", 0.5, grain=0), flat("logo_dark", "#2b3238", 0.5, grain=0)
+    for f in (-1, 1): copper_logo((-0.12 * f, f * (hy + 0.012), (zg0 + zg1) / 2 - 0.12), 0.58, f, W, D)
+    text("4", 0.09, (hx - 0.25, -(hy * taper(zb + 0.1) + 0.01), zb + 0.14), W, extrude=0.003)
+    # Inside: a bench at each end, the floor.
+    SEAT = flat("seat", "#2a2f35", 0.6, grain=0.04)
+    for s in (-1, 1):
+        box((2 * hx - 0.45, 0.4, 0.09), (0, s * (hy - 0.3), zb + 0.5), SEAT, bevel=0.03)
+        box((2 * hx - 0.45, 0.09, 0.42), (0, s * (hy - 0.12), zb + 0.8), SEAT, bevel=0.03)
+    box((2 * hx - 0.3, 2 * hy - 0.3, 0.04), (0, 0, zb + 0.1), DARK)
+    # Roof: the suspension frame, the hanger, the LPA grip shared with the chairs; a little snow on the roof.
+    box((0.9, 0.7, 0.12), (0, 0, top + 0.06), TRIM, bevel=0.04)
+    box((0.3, 1.3, 0.08), (0, 0, top + 0.14), TRIM, bevel=0.02)
+    grip_detach(K)
+    pipe([(0, 0, -0.3), (0, 0.02, -0.62), (0, 0.32, -0.85), (0, 0.3, top + 0.35), (0, 0.06, top + 0.18)], 0.06, TRIM)
+    for s in (-1, 1): box((0.42, 0.3, 0.05), (s * 0.45, 0, top + 0.05), K["SN"], bevel=0.02, kind="snow")
+    finalize("chondola_cabin", 512, ao_dist=0.5)
+
+def chondola_chair():
+    """The American Eagle six-seat chair: the kit's open detachable six (no bubble) with Copper's black
+    seats, on the same LPA grip and hanger height as the chondola cabin."""
+    k0 = globals()["kit"]
+    def k():
+        K = k0(); K["P"] = flat("paint", "#9aa2a9", 0.4, 0.3, grain=0); K["PAD"] = flat("pad_black", "#24272b", 0.75, grain=0.05); K["SHELL"] = flat("shell", "#1d2024", 0.5, grain=0.03); return K
+    globals()["kit"] = k
+    try: _chair_detach("chondola_chair", 6)
+    finally: globals()["kit"] = k0
+
+MODELS = {"chondola_cabin": chondola_cabin, "chondola_chair": chondola_chair, "gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
           "chair2": chair2, "chair3": chair3, "chair4_fixed": chair4_fixed,
           "chair4": chair4, "chair6": chair6, "chair6_bubble": chair6_bubble, "chair8_bubble": chair8_bubble,
           "tower_head": tower_head, "tower_shaft": tower_shaft, "tower_base": tower_base, "tower_head_surface": tower_head_surface,
