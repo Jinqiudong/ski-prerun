@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { snowTexture, scrapeTexture, crunch, thump, clack, rng } from "../src/audio/buffers.js";
+import { snowTexture, sprayTexture, crunch, thump, clack, rng } from "../src/audio/buffers.js";
 import { boardMix, SURFACES } from "../src/audio/snow.js";
 import { STYLES } from "../src/audio/music.js";
 
@@ -16,12 +16,22 @@ test("buffers are seeded, finite and at a sane level", () => {
     assert.ok(x.every(Number.isFinite));
     assert.ok(peak(x) > 0.5 && peak(x) <= 1);
   }
-  for (const x of [snowTexture(SR, 1), scrapeTexture(SR, 1)]) { // loops: set by loudness (grit can peak higher)
+  for (const x of [snowTexture(SR, 1), sprayTexture(SR, 1)]) { // loops: set by loudness
     const rms = Math.sqrt(x.reduce((s, v) => s + v * v, 0) / x.length);
-    assert.ok(x.every(Number.isFinite) && Math.abs(rms - 0.22) < 0.01 && peak(x) < 4);
+    assert.ok(x.every(Number.isFinite) && Math.abs(rms - 0.22) < 0.01 && peak(x) < 1.5);
   }
   const r = rng(5), v = Array.from({ length: 1000 }, r);
   assert.ok(v.every((x) => x >= 0 && x < 1));
+});
+
+test("the snow is smooth: no clicks or crackle (the owner heard 啪啪啪 in the first version)", () => {
+  const rms = (x) => Math.sqrt(x.reduce((s, v) => s + v * v, 0) / x.length);
+  for (const x of [snowTexture(48000, 1), sprayTexture(48000, 1), crunch(48000, 1)]) {
+    let jump = 0, sq = 0;
+    for (let i = 1; i < x.length; i++) { const d = x[i] - x[i - 1]; jump = Math.max(jump, Math.abs(d)); sq += d * d; }
+    assert.ok(Math.sqrt(sq / x.length) < 0.25 * rms(x), "too much top end"); // little energy up high
+    assert.ok(jump < 1.2 * rms(x), "a click"); // no single sample-to-sample snap
+  }
 });
 
 test("a loop joins without a jump", () => {

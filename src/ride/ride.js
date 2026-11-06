@@ -18,8 +18,8 @@ import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
 import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=23";
 import { navRow } from "../core/nav.js?v=9";
-import { rideSound } from "../audio/index.js?v=1";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=1";
+import { rideSound } from "../audio/index.js?v=2";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;

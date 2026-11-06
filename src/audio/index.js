@@ -1,8 +1,8 @@
 // The ride's sound, as the ride (src/ride/ride.js) uses it: one RideSound with a call per frame for the
 // phase you're in. Also the music's "listen together" hooks (play, current) and duck() for voice chat.
-import { start, settings, set, duck, onState, context } from "./engine.js?v=1";
-import { BoardSound } from "./snow.js?v=1";
-import { Ambience } from "./ambience.js?v=1";
+import { start, settings, set, duck, onState, context } from "./engine.js?v=2";
+import { BoardSound } from "./snow.js?v=2";
+import { Ambience } from "./ambience.js?v=2";
 import { Music } from "./music.js?v=1";
 
 export { settings, set, duck, onState, context };

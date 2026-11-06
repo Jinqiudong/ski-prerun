@@ -1,7 +1,7 @@
 // The sound drawer (from the ride's menu): sound on or off, music and effects volumes, what's playing
 // (and "next"), and where each track comes from with its licence. Same drawer as Settings (i18n.js).
 import { EN_ON } from "../core/i18n.js?v=22";
-import { settings, set, rideSound, current } from "./index.js?v=1";
+import { settings, set, rideSound, current } from "./index.js?v=2";
 
 const EN = { 声音: "Sound", 开: "On", 关: "Off", 音乐: "Music", 音效: "Board, wind, lift", 正在播放: "Now playing", 换一首: "Next", 音乐来源: "Music credits",
   "iPhone 的静音键打开时听不到声音": "With the iPhone's silent switch on, there is no sound", 应用内生成: "made in the app", 还没有音乐: "No music yet" };
