@@ -117,7 +117,7 @@ await Promise.all(FAMILIES.map(async ([f], fi) => {
   for (const [e, o] of items) {
     const box = new THREE.Box3().setFromObject(o), w = box.max.x - box.min.x;
     x += w / 2; o.position.set(x - (box.min.x + box.max.x) / 2, e.hang ? 8 : 0, z); scene.add(o);
-    if (e.hang) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, w + 4, 6), ropeMat); r.rotation.z = Math.PI / 2; r.position.set(x, 8, z); scene.add(r); }
+    if (e.hang) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 10, 6), ropeMat); r.rotation.x = Math.PI / 2; // the rope runs the way up (game z), through the grips r.position.set(x, 8, z); scene.add(r); }
     row.push({ e, o, x, z, size: Math.max(w, box.max.y - box.min.y, box.max.z - box.min.z) }); x += w / 2 + 4;
   }
   rows[f] = row;

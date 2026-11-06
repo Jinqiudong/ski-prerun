@@ -225,6 +225,11 @@ def finalize(name, size=2048, ao_dist=1.5, samples=48):
             nd.select = True; m.node_tree.nodes.active = nd
         select_only([body]); bpy.ops.object.bake(margin=8, **kw); return img
     sc.world.light_settings.distance = ao_dist
+    # A diffuse-colour bake reads black for metal: bake the paint colour with metal off; the baked
+    # material stays non-metallic, and shine comes from the game's environment.
+    for m in body.data.materials:
+        bs = next((x for x in m.node_tree.nodes if x.type == "BSDF_PRINCIPLED"), None)
+        if bs: bs.inputs["Metallic"].default_value = 0
     col = bake("color", type="DIFFUSE", pass_filter={"COLOR"}); ao = bake("ao", type="AO"); nor = bake("normal", type="NORMAL", normal_space="TANGENT")
     c = np.array(col.pixels[:], np.float32).reshape(-1, 4); a = np.array(ao.pixels[:], np.float32).reshape(-1, 4)[:, :1]
     c[:, :3] *= 0.38 + 0.62 * a
