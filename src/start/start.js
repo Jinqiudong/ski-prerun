@@ -379,7 +379,7 @@ face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
   if (!ses || Date.now() - ses.t > 36 * 3600e3) return;
   const btn = $("useBtn"), name = ses.resort.replace(/(^|-)\w/g, (m) => m.toUpperCase()).replace(/-/g, " ");
   btn.classList.add("resume");
-  btn.innerHTML = [0, 1, 2].map((i) => `<img class="f${i}" src="assets/icons/ride_crayon_${i}.png?v=1" alt="">`).join("");
+  btn.innerHTML = `<span class="hop"><span>${[0, 1, 2].map((i) => `<img class="f${i}" src="assets/icons/ride_crayon_${i}.png?v=2" alt="">`).join("")}</span></span>`;
   btn.setAttribute("aria-label", `${t("继续")} · ${name} ${ses.where || ""}`);
   btn.onclick = () => { st.rider = chosen().id; save(); location.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`; };
 })();
