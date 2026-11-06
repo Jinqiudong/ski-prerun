@@ -163,6 +163,8 @@ export class Music {
     return this.list;
   }
   tracks() { return this.list; }
+  // The tracks the ride plays: those not marked "rotation": false (the rest stay for the sound lab).
+  rotation() { const r = this.list.filter((x) => x.rotation !== false); return r.length ? r : this.list; }
   // The phase's mood: calm (lift top, hiking), lift, ski. Crossfades to a track of that mood, unless a
   // track was asked for by name (play), which keeps playing until follow().
   setMood(mood, fade = 4) {
@@ -174,11 +176,12 @@ export class Music {
   }
   // Another track of the same mood (the sound panel's "next").
   next() {
-    const mood = this.now?.spec.mood || this.mood, ok = this.list.filter((x) => x.mood === mood);
+    const mood = this.now?.spec.mood || this.mood, ok = this.rotation().filter((x) => x.mood === mood);
     const i = ok.findIndex((x) => x.id === this.now?.spec.id), pick = ok[(i + 1) % ok.length];
     if (pick && pick.id !== this.now?.spec.id) this._switch(pick, 0, 2);
   }
-  pickFor(mood) { const ok = this.list.filter((x) => x.mood === mood); return ok[Math.floor(Math.random() * ok.length)] || this.list[0]; }
+  // A track of the mood, or else the first in rotation (one track can serve every phase).
+  pickFor(mood) { const r = this.rotation(), ok = r.filter((x) => x.mood === mood); return ok[Math.floor(Math.random() * ok.length)] || r[0]; }
   // Play a track by its id from a second into it (for "listen together": the same on every phone).
   play(trackId, atSeconds = 0, fade = 2) {
     const spec = this.list.find((x) => x.id === trackId);

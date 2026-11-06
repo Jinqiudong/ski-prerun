@@ -1,0 +1,91 @@
+{
+  "about": "Real recordings the ride plays, picked by the owner in the sound lab (sound.html). All CC0 from Freesound (made from the site's preview of each CC0 original) by tools/game_audio.mjs: trimmed, faded, normalised to about -20 dBFS, mono AAC 96 kbps. board-run's segments: stretches (seconds into the file) that sound like carving (turn) or slowing (slow).",
+  "items": [
+    {
+      "id": "board-run",
+      "file": "board-run.m4a",
+      "title": "Snowboard run: turns and slowing",
+      "author": "Nox_Sound",
+      "licence": "CC0-1.0",
+      "source": "https://freesound.org/people/Nox_Sound/sounds/667729/",
+      "excerpt": "30–100 s",
+      "loop": false,
+      "use": "a real layer under the board's sound, turns and slows",
+      "segments": [
+        {
+          "kind": "turn",
+          "from": 2.5,
+          "to": 9.5
+        },
+        {
+          "kind": "turn",
+          "from": 10,
+          "to": 20
+        },
+        {
+          "kind": "slow",
+          "from": 23.5,
+          "to": 27
+        },
+        {
+          "kind": "slow",
+          "from": 28,
+          "to": 30
+        },
+        {
+          "kind": "turn",
+          "from": 30,
+          "to": 37.5
+        },
+        {
+          "kind": "turn",
+          "from": 38,
+          "to": 45.5
+        },
+        {
+          "kind": "turn",
+          "from": 46.5,
+          "to": 67.5
+        },
+        {
+          "kind": "turn",
+          "from": 68.5,
+          "to": 70
+        }
+      ]
+    },
+    {
+      "id": "passby",
+      "file": "passby.m4a",
+      "title": "A skier passing by",
+      "author": "cribbler",
+      "licence": "CC0-1.0",
+      "source": "https://freesound.org/people/cribbler/sounds/592379/",
+      "excerpt": "whole",
+      "loop": false,
+      "use": "other riders passing close by"
+    },
+    {
+      "id": "station",
+      "file": "station.m4a",
+      "title": "Chairlift base station",
+      "author": "SoundsLikeYukon",
+      "licence": "CC0-1.0",
+      "source": "https://freesound.org/people/SoundsLikeYukon/sounds/819799/",
+      "excerpt": "0–25 s",
+      "loop": true,
+      "use": "the stations, at the bottom and on arrival at the top"
+    },
+    {
+      "id": "slope",
+      "file": "slope.m4a",
+      "title": "Beside a ski slope: quiet day, skiers now and then",
+      "author": "xkeril",
+      "licence": "CC0-1.0",
+      "source": "https://freesound.org/people/xkeril/sounds/720302/",
+      "excerpt": "0–30 s",
+      "loop": true,
+      "use": "the mountain's bed at the top and under the ride down"
+    }
+  ]
+}

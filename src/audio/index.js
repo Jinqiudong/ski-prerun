@@ -3,7 +3,8 @@
 import { start, settings, set, duck, onState, context } from "./engine.js?v=3";
 import { BoardSound } from "./snow.js?v=3";
 import { Ambience } from "./ambience.js?v=3";
-import { Music } from "./music.js?v=1";
+import { Music } from "./music.js?v=2";
+import { loadReal, RealSounds } from "./real.js?v=1";
 
 export { settings, set, duck, onState, context };
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -28,7 +29,7 @@ export class RideSound {
   constructor(ctx, mix, { timer = true } = {}) {
     this.ctx = ctx; this.mix = mix; this.offline = typeof ctx.startRendering === "function";
     this.music = new Music(ctx, mix, { timer });
-    this.board = this.amb = null; this.surface = "groomed";
+    this.board = this.amb = this.real = null; this.surface = "groomed";
     this.phase = null; this.prevD = null; this.towerAt = -1;
   }
   get live() {
@@ -36,9 +37,15 @@ export class RideSound {
     if (!this.offline && this.ctx.state !== "running") return false;
     this.board = new BoardSound(this.ctx, this.mix.sfx.input); this.board.setSurface(this.surface);
     this.amb = new Ambience(this.ctx, this.mix.ambience.input, this.mix.reverb, this.mix.sfx.input);
+    if (!this.offline) this.loadReal().catch(() => {}); // the real recordings join when they have loaded
     if (this.phase && this.music.list.length) this.music.setMood(MOOD[this.phase] || "calm");
     return true;
   }
+  // The real recordings (real.js): the board's layer, riders passing, the stations, the slope's bed.
+  async loadReal(base) { this.realP ||= loadReal(this.ctx, base).then((R) => (this.real = new RealSounds(this.ctx, { sfx: this.mix.sfx.input, ambience: this.mix.ambience.input }, R))); return this.realP; }
+  // Real beds and pass-bys, every frame: station 0..1 (how near a station), slope 0..1 (the mountain's
+  // bed), pass: how often riders pass (0 none), passVol: how close.
+  _real(dt, t, { station = 0, slope = 0, pass = 0, passVol = 0.5 }) { if (!this.real) return; this.real.beds(station, slope, t); this.real.passby(dt, t, pass, passVol); }
   async loadMusic(url) { await this.music.load(url); if (this.phase && this.board) this.music.setMood(MOOD[this.phase] || "calm"); }
   setPhase(p) {
     if (p === this.phase) return;
@@ -58,26 +65,35 @@ export class RideSound {
     // A tower coming: start its sheave train a moment early (never more than one every 1.2 s).
     if (t - this.towerAt > 1.2 && towerDue(p, d, dt, towers, this.amb.towerLead(rate))) { this.amb.tower(1, rate, t); this.towerAt = t; }
     const end = Math.min(d, total - d);
-    this.amb.update({ wind: 0.32 + 0.06 * Math.min(rate, 4), bed: 0.45, hum: 1, station: clamp(1 - (end - 10) / 70), shelter }, dt, t);
+    const station = clamp(1 - (end - 10) / 70); // loading at the bottom, the first seconds of the ride; arriving at the top
+    this.amb.update({ wind: 0.32 + 0.06 * Math.min(rate, 4), bed: 0, hum: 1, station, shelter }, dt, t);
+    this._real(dt, t, { station, slope: 0.2 });
   }
   // At the top, choosing (and getting off): the station behind you, the mountain's quiet.
   top({ station = 0.3, dt = 1 / 60, t = this.ctx.currentTime } = {}) {
     this.setPhase("top"); this.prevD = null;
-    if (this.live) this.amb.update({ wind: 0.12, bed: 1, hum: 0.3 * station, station }, dt, t);
+    if (!this.live) return;
+    this.amb.update({ wind: 0.12, bed: 0, hum: 0.3 * station, station }, dt, t);
+    this.real?.board(null, false, t);
+    this._real(dt, t, { station, slope: 1, pass: 0.6, passVol: 0.3 });
   }
   hike({ dt = 1 / 60, t = this.ctx.currentTime } = {}) {
     this.setPhase("hike");
-    if (this.live) this.amb.update({ wind: 0.3, bed: 1 }, dt, t);
+    if (!this.live) return;
+    this.amb.update({ wind: 0.3, bed: 0 }, dt, t);
+    this._real(dt, t, { slope: 0.8 });
   }
   // Skiing, every frame: r is the board.js Rider; air: metres off the snow (a trick's hop); station:
   // 0..1 how close the top station still is; paused: the map is open, nothing moves.
   ski(r, { air = 0, station = 0, paused = false, dt = 1 / 60, t = this.ctx.currentTime } = {}) {
     this.setPhase("ski"); this.prevD = null;
     if (!this.live) return;
-    if (paused || !r) { this.board.hush(t); this.amb.update({ wind: 0.1, bed: 0.8, station }, dt, t); return; }
+    if (paused || !r) { this.board.hush(t); this.real?.board(null, false, t); this.amb.update({ wind: 0.1, bed: 0, station }, dt, t); this._real(dt, t, { station, slope: 0.8 }); return; }
     this.board.update(r, { air, dt, t });
+    this.real?.board(r, air > 0.08, t); // the real snow under the synth
     const v = r.speed || 0;
-    this.amb.update({ wind: (v / 15) * (1 + 0.15 * (r.tuck || 0)), bed: 0.35, hum: 0.3 * station, station }, dt, t);
+    this.amb.update({ wind: (v / 15) * (1 + 0.15 * (r.tuck || 0)), bed: 0, hum: 0.3 * station, station }, dt, t);
+    this._real(dt, t, { station, slope: 0.35, pass: v > 2 ? 1 : 0, passVol: 0.55 }); // riders passing now and then
   }
   bump(vol = 0.8) { if (this.live) this.board.hit(this.board.thumpB, vol, this.ctx.currentTime, 0.8); } // into a tree
 }

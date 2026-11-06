@@ -1,11 +1,82 @@
 {
-  "about": "Music for the ride. Each track: id, title, artist, licence (SPDX id), source (where it comes from), mood (lift, ski or calm), and either file (a file in this folder) or gen (written by src/audio/music.js in the browser from a seed: style, key as a MIDI note, seed, bars). Only CC0 or CC-BY files; CC-BY needs the artist and source here, and they are shown in the sound panel's credits.",
+  "about": "Music for the ride. Each track: id, title, artist, licence (SPDX id), source (where it comes from), mood (lift, ski or calm), and either file (a file in this folder) or gen (written by src/audio/music.js in the browser from a seed: style, key as a MIDI note, seed, bars). Only CC0 or CC-BY files; CC-BY needs the artist and source here, and they are shown in the sound panel's credits. \"rotation\": false keeps a track out of the ride (it stays in the sound lab); the owner picked \"Bubble Up\" for every phase.",
   "tracks": [
-    { "id": "gen-calm-1", "title": "First Light on the Ridge", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "calm", "gen": { "key": 50, "seed": 1, "bars": 32 } },
-    { "id": "gen-calm-2", "title": "Cornice", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "calm", "gen": { "key": 53, "seed": 7, "bars": 32 } },
-    { "id": "gen-lift-1", "title": "Chair 9", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "lift", "gen": { "key": 52, "seed": 3, "bars": 32 } },
-    { "id": "gen-lift-2", "title": "Bubble Up", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "lift", "gen": { "key": 48, "seed": 12, "bars": 32 } },
-    { "id": "gen-ski-1", "title": "Corduroy", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "ski", "gen": { "key": 45, "seed": 5, "bars": 32 } },
-    { "id": "gen-ski-2", "title": "Fall Line", "artist": "Ski Pre-Run (generated in the app)", "licence": "CC0-1.0", "source": "src/audio/music.js", "mood": "ski", "gen": { "key": 47, "seed": 21, "bars": 32 } }
+    { "id": "gen-calm-1",
+      "title": "First Light on the Ridge",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "calm",
+      "gen": {
+        "key": 50,
+        "seed": 1,
+        "bars": 32
+      },
+      "rotation": false
+    },
+    { "id": "gen-calm-2",
+      "title": "Cornice",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "calm",
+      "gen": {
+        "key": 53,
+        "seed": 7,
+        "bars": 32
+      },
+      "rotation": false
+    },
+    { "id": "gen-lift-1",
+      "title": "Chair 9",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "lift",
+      "gen": {
+        "key": 52,
+        "seed": 3,
+        "bars": 32
+      },
+      "rotation": false
+    },
+    { "id": "gen-lift-2",
+      "title": "Bubble Up",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "lift",
+      "gen": {
+        "key": 48,
+        "seed": 12,
+        "bars": 32
+      }
+    },
+    { "id": "gen-ski-1",
+      "title": "Corduroy",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "ski",
+      "gen": {
+        "key": 45,
+        "seed": 5,
+        "bars": 32
+      },
+      "rotation": false
+    },
+    { "id": "gen-ski-2",
+      "title": "Fall Line",
+      "artist": "Ski Pre-Run (generated in the app)",
+      "licence": "CC0-1.0",
+      "source": "src/audio/music.js",
+      "mood": "ski",
+      "gen": {
+        "key": 47,
+        "seed": 21,
+        "bars": 32
+      },
+      "rotation": false
+    }
   ]
 }

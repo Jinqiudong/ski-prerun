@@ -10,6 +10,7 @@ computed from seeds in `buffers.js`. Music files can be added later through the 
 | `snow.js` | `BoardSound`: the board on snow, driven every frame by `board.js` `Rider`. `boardMix()` is the mapping, and it is pure and tested. |
 | `ambience.js` | Wind (speed plus gusts, cut by the bubble), the mountain bed, the lift's hum, tower passes, and station machinery. |
 | `music.js` | `Music`: the manifest player. It crossfades by mood and has `play(id, atSeconds)`, `current()` and `follow()`. It also writes the generated tracks. |
+| `real.js` | The real recordings the owner picked in the lab, from `assets/audio/game/`. A snowboard run (Nox_Sound) plays under the synth board in short carving or slowing stretches, crossfaded; `realBoardMix()` (pure, tested) sets its level from the carve or skid. Riders pass close now and then (cribbler), panned from one side to the other. The lift station (SoundsLikeYukon) plays at the bottom and on arrival at the top. A quiet ski slope (xkeril) is the mountain's bed at the top and under the ride down, replacing the synth bed. |
 | `index.js` | `RideSound`, with one call per frame for each phase: `lift()`, `top()`, `ski()` and `hike()`. Also `rideSound()` (the page's single instance) and the exports `play`, `current`, `follow` and `duck`. |
 | `lab.js` | The sound lab (`sound.html`). Every synth sound is played live with sliders for its parameters, next to real CC0 recordings and music candidates. Each row has a pick box; the picks are kept in localStorage `prerunSoundLab` and listed at the bottom to copy. |
 | `panel.js` | The sound drawer in the ride's menu, plus the credit line. |
@@ -41,3 +42,10 @@ Render offline to WAV with an OfflineAudioContext. `makeMixer(ctx)` plus `new Ri
 
 ## The sound lab
 `sound.html` is where the owner listens and chooses. The real recordings are in `assets/audio/lab/`, and `manifest.json` gives each one's author, CC0 licence, source page and excerpt. They are made by `tools/lab_audio.mjs` from the list in `tools/lab_audio.json`, using Freesound's preview mp3s and OpenGameArt files and macOS `afconvert`. Each is trimmed, faded, normalised and encoded as mono AAC at 96 kbps. All of them together stay under 8 MB, which a test checks.
+
+## The owner's picks (applied)
+- **Board:** the synth glide, carve, skid and powder, plus the real snowboard layer and other riders passing.
+- **Wind, rope hum, tower pass, station machinery:** synth.
+- **Real recordings:** the station at both ends of the lift, and the slope bed at the top (all through the ride, quietly).
+- **Music:** only "Bubble Up" (`gen-lift-2`) in every phase. The other tracks are marked `"rotation": false` and stay in the sound lab.
+- `tools/game_audio.mjs` makes `assets/audio/game/` (CC0, sources in its manifest and in the sound drawer). It also marks the board run's turn and slow stretches.

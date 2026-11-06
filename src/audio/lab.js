@@ -6,7 +6,7 @@ import { EN_ON } from "../core/i18n.js?v=25";
 import { makeMixer } from "./engine.js?v=3";
 import { BoardSound } from "./snow.js?v=3";
 import { Ambience } from "./ambience.js?v=3";
-import { Music } from "./music.js?v=1";
+import { Music } from "./music.js?v=2";
 
 const EN = {
   声音样品室: "Sound lab", 选这个: "Pick", 合成: "Synth", 真实录音: "Recording", 生成音乐: "Generated", 真实音乐: "Real music", 我的选择: "My picks", 复制: "Copy", 已复制: "Copied",

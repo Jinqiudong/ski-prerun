@@ -7,6 +7,7 @@ import { snowTexture, sprayTexture, crunch, thump, sheavePass, sheaveLead, rng }
 import { boardMix, SURFACES } from "../src/audio/snow.js";
 import { STYLES } from "../src/audio/music.js";
 import { towerDue } from "../src/audio/index.js";
+import { realBoardMix } from "../src/audio/real.js";
 
 const SR = 16000;
 const peak = (x) => x.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
@@ -100,4 +101,20 @@ test("the sound lab's recordings are all CC0 with a source, and small enough for
   }
   assert.ok(bytes < 8 * 1024 * 1024, `${bytes} bytes`);
   assert.ok(Array.isArray(missing));
+});
+
+test("the real snow follows the ride, and the ride's real recordings are CC0 with turn and slow stretches", () => {
+  assert.equal(realBoardMix({ speed: 0.2, lean: 0.5 }).g, 0); // stopped
+  assert.equal(realBoardMix({ speed: 10, lean: 0.5 }, true).g, 0); // in the air
+  const c8 = realBoardMix({ speed: 8, lean: 0.6 }), c15 = realBoardMix({ speed: 15, lean: 0.6 }), sk = realBoardMix({ speed: 10, skid: 1 });
+  assert.ok(c15.g > c8.g && c8.kind === "turn");
+  assert.equal(sk.kind, "slow"); assert.ok(sk.g > 0.3);
+  const dir = new URL("../assets/audio/game/", import.meta.url), { items } = JSON.parse(readFileSync(new URL("manifest.json", dir)));
+  assert.deepEqual(items.map((x) => x.id).sort(), ["board-run", "passby", "slope", "station"]);
+  for (const x of items) { assert.equal(x.licence, "CC0-1.0"); assert.ok(x.source.startsWith("https://freesound.org/")); assert.ok(readFileSync(new URL(x.file, dir)).length > 1000); }
+  const segs = items.find((x) => x.id === "board-run").segments;
+  for (const k of ["turn", "slow"]) assert.ok(segs.some((q) => q.kind === k && q.to - q.from >= 1.5), k);
+  // music: one track in rotation, Bubble Up
+  const { tracks } = JSON.parse(readFileSync(new URL("../assets/audio/music/manifest.json", import.meta.url)));
+  assert.deepEqual(tracks.filter((x) => x.rotation !== false).map((x) => x.id), ["gen-lift-2"]);
 });
