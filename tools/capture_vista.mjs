@@ -8,8 +8,8 @@ await p.setViewport({ width: 900, height: 700, deviceScaleFactor: 1 });
 await p.goto("http://127.0.0.1:8766/start.html"); await p.evaluate(() => localStorage.setItem("prerun", JSON.stringify({ rider: "rider_a" })));
 for (const r of process.argv.slice(2)) {
   await p.goto(`http://127.0.0.1:8766/mountain/?resort=${r}`);
-  await p.waitForFunction(() => document.querySelector("[data-weather]"), { timeout: 60000 }); await new Promise((x) => setTimeout(x, 12000));
-  await p.evaluate(() => { const s = document.getElementById("hour"); s.value = 10; s.dispatchEvent(new Event("input")); document.querySelector("[data-weather=clear]").click(); for (const b of document.querySelectorAll("button")) if (["雪道", "缆车"].includes(b.textContent.trim())) b.click();
+  await p.waitForFunction(() => document.querySelector("[data-wx]"), { timeout: 60000 }); await new Promise((x) => setTimeout(x, 12000));
+  await p.evaluate(() => { const s = document.getElementById("hour"); s.value = 10; s.dispatchEvent(new Event("input")); document.querySelector("[data-wx=clear]").click(); for (const b of document.querySelectorAll("button")) if (["雪道", "缆车"].includes(b.textContent.trim())) b.click();
     const st = document.createElement("style"); st.textContent = "body > *:not(canvas) { display: none !important; }"; document.head.append(st); });
   await new Promise((x) => setTimeout(x, 2500));
   await p.screenshot({ path: `vista_${r}.png` });

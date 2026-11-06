@@ -6,7 +6,7 @@ import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=8";
 import { makeEntrance } from "./entrance.js?v=21";
 import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=25";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=26";
 import { playIntro } from "./intro.js?v=16";
 import { flyTo } from "../core/transition.js?v=2";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
@@ -322,7 +322,7 @@ async function openRecords() {
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
 async function openBook(r) {
-  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=7")]);
+  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=8")]);
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
   openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });

@@ -2,7 +2,7 @@
 
 Work that waits on something else. Newest first.
 
-## Painted mini map (approved 2026-11-05, build after shared trips)
+## Painted mini map (approved 2026-11-05) — built in `src/ride/paintedmap.js`; friends' live positions wait for "Riding together" (`setPeople`, and the 去找他 / 跟随 handlers)
 - Small: a round corner map over the resort's watercolour (`assets/wc/<id>.jpg`), around where you are, "已滑 N%" under it. Smaller than today's square map.
 - Open: the whole watercolour as a sheet that pinches and pans; difficulty progress (green/blue/black/double); friends; everything the big map does now (tap anywhere to start there, tap a run for its name and level).
 - Runs from `data/vista/<id>.json` (`tools/bake_vista_lines.mjs`, bake all nine resorts). Skied runs: clean, smooth coloured ink lines with a thin paper casing — not wobbly. Not skied: a faint pencil dash.
