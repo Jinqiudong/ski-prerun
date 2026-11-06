@@ -200,9 +200,12 @@ def sunspot_lodge():
     """The Lodge at Sunspot, at the top of Winter Park's Gondola (10,700 ft): a big log-and-stone lodge.
     A stacked-stone ground storey, honey round-log walls above, three steep heavy-timber gables across the
     front with glass gable ends and log trusses, a stone chimney tower with a little cupola at the east end,
-    cedar-shingle roofs under deep snow, and a raised deck with log railings facing the Divide.
-    Sources: winterparkresort.com dining page, liftblog.com The Gondola (Winter Park) photos; OSM gives only
-    a point, so the size (about 34 x 18 m plus the gables and deck) is an estimate."""
+    cedar-shingle roofs under deep snow, and a log-railed terrace facing the Divide. The middle gable is the
+    entrance: stacked stone from the snow to the peak, glazed doors in a timber portal, with the stone chimney
+    tower rising right behind its peak to a lit cupola, and a second, timber cupola on the main ridge.
+    Sources: winterparkresort.com Sunspot hero photo (entrance gable, tower and cupolas), liftblog.com The
+    Gondola (Winter Park) photos (2019-01, the lodge beyond the top terminal); OSM gives only a point, so the
+    size (about 34 x 18 m plus the gables) is an estimate."""
     new_col("sunspot_lodge"); M = mats(); B.anchor(M)
     ST, TIM, SN, LOGY = M["st"], M["tim"], M["sn"], M["logy"]
     W, D, G, T, R = 34.0, 18.0, 3.6, 7.8, 6.2
@@ -232,34 +235,46 @@ def sunspot_lodge():
         box((w, P + 0.3, G), (x, fy - P / 2 + 0.1, G / 2), ST, bevel=0.05)
         box((w - 0.4, P, T - G), (x, fy - P / 2 + 0.2, (G + T) / 2), M["inner"])
         for s in (-1, 1): logwall(x + s * w / 2, fy, x + s * w / 2, yf, G, T, M, phase=0.17)
-        g.box((w - 0.7, 0.08, T - G - 0.25), (0, 0.15, (G + T) / 2), M["win"], kind="lit")
-        g.prism([(-w / 2, 0.18, T), (w / 2, 0.18, T), (0, 0.18, T + rise)], 0.05, M["win"], kind="lit")
-        nm = round(w / 1.6)
-        for k in range(1, nm): g.box((0.16, 0.2, T - G), (-w / 2 + k * w / nm, 0.06, (G + T) / 2), TIM)
-        g.box((w, 0.22, 0.16), (0, 0.06, G + 2.7), TIM)
-        for k in range(1, 4):
-            xx = -w / 2 + k * w / 4; hh = rise * (1 - abs(xx) / (w / 2)) - 0.1; g.box((0.16, 0.22, hh), (xx, 0.06, T + hh / 2), TIM)
         a = math.atan2(rise, w / 2)
-        for s in (-1, 1):
-            g.cyl(0.3, T - G - 0.9, (s * (w / 2 - 0.1), -0.35, (G + 0.9 + T) / 2), LOGY, verts=12)
-            g.box((0.9, 0.9, 0.9), (s * (w / 2 - 0.1), -0.35, G + 0.45), ST, bevel=0.05); g.pad((0.85, 0.85, 0.14), (s * (w / 2 - 0.1), -0.35, G + 0.95), SN)
-            g.box((math.hypot(w / 2, rise) + 0.6, 0.34, 0.34), (s * w / 4, -0.2, T + rise / 2), TIM, rot=(0, s * a, 0), bevel=0.03)
-            g.box((0.24, 0.24, 1.9), (s * (w / 2 - 0.75), -0.35, T - 0.75), TIM, rot=(0, -s * 0.75, 0))
-        B.truss(g, w + 0.3, -0.35, T + 0.05, rise - 0.45, M, r=0.32)
-        B.gable_roof(Frame((x, 0, 0)), w, yf - 1.4, fy + rise / (R / (D / 2)) + 0.8, T, rise, 0.95, M, thick=0.42, st=0.7, ice=12, ends=(True, False))
-        if x == 0:
-            B.door(g, -1.5, 0.3, 2.2, 2.6, M, double=True, glazed=True, y=-0.2); B.door(g, 1.5, 0.3, 2.2, 2.6, M, double=True, glazed=True, y=-0.2)
-            g.box((5.6, 0.14, 0.75), (0, -0.62, T - 0.55), M["sign"], bevel=0.03)
-            text("THE LODGE AT SUNSPOT", 0.36, g.p(0, -0.71, T - 0.55), M["cream"], rot=(PI / 2, 0, 0), extrude=0.01)
+        if x == 0:  # the entrance gable: stone from the snow to the peak, a timber portal round the doors
+            g.box((w + 0.3, 0.7, T), (0, 0.05, T / 2), ST, bevel=0.05)
+            g.prism([(-w / 2 - 0.15, 0.4, T), (w / 2 + 0.15, 0.4, T), (0, 0.4, T + rise + 0.1)], 0.7, ST)
+            g.box((5.6, 0.3, 3.3), (0, -0.34, 1.95), M["inner"])
+            B.door(g, -1.3, 0.3, 2.2, 2.6, M, double=True, glazed=True, y=-0.45); B.door(g, 1.3, 0.3, 2.2, 2.6, M, double=True, glazed=True, y=-0.45)
+            g.box((0.3, 0.4, 0.4), (0, -0.55, 3.15), TIM)
+            for xx in (-2.95, 2.95): g.box((0.42, 0.5, 3.4), (xx, -0.5, 1.75), TIM, bevel=0.03)
+            g.box((6.6, 0.55, 0.5), (0, -0.55, 3.6), TIM, bevel=0.03)
+            for xx in (-2.2, 2.2): g.box((0.3, 0.5, 0.9), (xx, -0.55, 4.3), TIM)
+            g.box((6.0, 0.5, 0.4), (0, -0.55, 4.9), TIM, bevel=0.03)
+            win(g, 0, T - 1.2, 2.6, 2.4, M, cols=3, y=-0.35)
+            for xx in (-4.0, 4.0): g.box((1.1, 0.12, 0.8), (xx, -0.4, 2.2), M["sign"], bevel=0.02)
+            g.box((4.4, 0.14, 0.6), (0, -0.84, 5.6), M["sign"], bevel=0.03)
+            text("THE LODGE AT SUNSPOT", 0.28, g.p(0, -0.92, 5.6), M["cream"], rot=(PI / 2, 0, 0), extrude=0.01)
+            for s in (-1, 1): g.box((math.hypot(w / 2, rise) + 0.9, 0.5, 0.45), (s * w / 4, -0.45, T + rise / 2 + 0.1), TIM, rot=(0, s * a, 0), bevel=0.03)
         else:
+            g.box((w - 0.7, 0.08, T - G - 0.25), (0, 0.15, (G + T) / 2), M["win"], kind="lit")
+            g.prism([(-w / 2, 0.18, T), (w / 2, 0.18, T), (0, 0.18, T + rise)], 0.05, M["win"], kind="lit")
+            nm = round(w / 1.6)
+            for k in range(1, nm): g.box((0.16, 0.2, T - G), (-w / 2 + k * w / nm, 0.06, (G + T) / 2), TIM)
+            g.box((w, 0.22, 0.16), (0, 0.06, G + 2.7), TIM)
+            for k in range(1, 4):
+                xx = -w / 2 + k * w / 4; hh = rise * (1 - abs(xx) / (w / 2)) - 0.1; g.box((0.16, 0.22, hh), (xx, 0.06, T + hh / 2), TIM)
+            for s in (-1, 1):
+                g.cyl(0.3, T - G - 0.9, (s * (w / 2 - 0.1), -0.35, (G + 0.9 + T) / 2), LOGY, verts=12)
+                g.box((0.9, 0.9, 0.9), (s * (w / 2 - 0.1), -0.35, G + 0.45), ST, bevel=0.05); g.pad((0.85, 0.85, 0.14), (s * (w / 2 - 0.1), -0.35, G + 0.95), SN)
+                g.box((math.hypot(w / 2, rise) + 0.6, 0.34, 0.34), (s * w / 4, -0.2, T + rise / 2), TIM, rot=(0, s * a, 0), bevel=0.03)
+                g.box((0.24, 0.24, 1.9), (s * (w / 2 - 0.75), -0.35, T - 0.75), TIM, rot=(0, -s * 0.75, 0))
+            B.truss(g, w + 0.3, -0.35, T + 0.05, rise - 0.45, M, r=0.32)
             for xx in (-2.0, 2.0): win(g, xx, 0.9, 2.2, 1.7, M, cols=3, y=-0.2)
-    # The chimney tower at the east end: stacked stone to a cupola of log posts under a pyramid roof.
-    cx, cy, cw, ch = W / 2 + 1.6, -3.0, 4.4, 15.6
-    box((cw, cw, ch), (cx, cy, ch / 2), ST, bevel=0.06)
-    for z in (G, T + 2.0): box((cw + 0.3, cw + 0.3, 0.3), (cx, cy, z), ST, bevel=0.04)
+        B.gable_roof(Frame((x, 0, 0)), w, yf - 1.4, fy + rise / (R / (D / 2)) + 0.8, T, rise, 0.95, M, thick=0.42, st=0.7, ice=12, ends=(True, False))
+    # The chimney tower right behind the entrance gable's peak: stacked stone up through the roofs to a lit
+    # cupola of log posts under a pyramid roof.
+    cx, cy, cw, ch = 0.0, fy + 1.6, 4.2, 17.4
+    box((cw, cw, ch - 6.0), (cx, cy, 6.0 + (ch - 6.0) / 2), ST, bevel=0.06)
     box((cw + 0.5, cw + 0.5, 0.35), (cx, cy, ch), ST, bevel=0.05)
-    win(Frame((cx + cw / 2, cy, 0), PI / 2), 0, T + 3.0, 1.1, 1.8, M, cols=1)
-    win(Frame((cx, cy - cw / 2, 0)), 0, T + 3.0, 1.1, 1.8, M, cols=1)
+    box((cw + 0.3, cw + 0.3, 0.3), (cx, cy, ch - 2.4), ST, bevel=0.04)
+    win(Frame((cx, cy - cw / 2, 0)), 0, ch - 2.0, 1.0, 1.5, M, cols=1, snow=False)
+    for s in (-1, 1): win(Frame((cx + s * cw / 2, cy, 0), s * PI / 2), 0, ch - 2.0, 1.0, 1.5, M, cols=1, snow=False)
     cz = ch + 0.18
     for sx in (-1, 1):
         for sy in (-1, 1): cyl(0.16, 2.3, (cx + sx * 1.5, cy + sy * 1.5, cz + 1.15), LOGY, verts=10)
@@ -270,24 +285,25 @@ def sunspot_lodge():
     cyl(0.05, 1.0, (cx, cy, cz + 5.0), M["steel"], verts=6)
     B.pad((cw + 0.2, cw + 0.2, 0.3), (cx, cy, ch + 0.2), SN)
     B.chimney(-W / 2 - 0.95, 3.0, T + R + 1.2, M, w=1.8, d=2.2, step=G + 1.8)
-    # The deck: raised on log posts in front of the gables, boards, log railings, tables, steps down at the west.
-    dy0, dd = yf, 5.5; dx0, dx1 = -W / 2 - 0.5, W / 2 - 0.5
-    box((dx1 - dx0, dd, 0.35), ((dx0 + dx1) / 2, dy0 - dd / 2, G - 0.18), TIM, bevel=0.03)
-    box((dx1 - dx0, fy - yf + 0.1, 0.3), ((dx0 + dx1) / 2, (fy + yf) / 2, G - 0.15), TIM)
-    for i in range(int(dd / 0.25)): box((dx1 - dx0 - 0.1, 0.22, 0.07), ((dx0 + dx1) / 2, dy0 - 0.12 - i * 0.25, G + 0.02), M["deck"], bevel=0.01)
-    for x in [dx0 + 0.3 + k * (dx1 - dx0 - 0.6) / 6 for k in range(7)]:
-        cyl(0.24, G, (x, dy0 - dd + 0.3, G / 2 - 0.1), LOGY, verts=10)
-        box((0.8, 0.8, 0.5), (x, dy0 - dd + 0.3, 0.2), ST, bevel=0.04)
-        box((0.2, 0.2, 2.2), (x, dy0 - dd + 1.0, G - 1.0), TIM, rot=(0.7, 0, 0))
-    ry = dy0 - dd + 0.15
-    lograil(dx0 + 3.0, ry, dx1, ry, G, M); lograil(dx1, ry, dx1, fy, G, M)
-    lograil(dx0, ry + 2.2, dx0, fy, G, M)
-    for i in range(10): box((2.6, 0.42, 0.22), (dx0 + 1.5, ry - 0.3 - i * 0.38, G - 0.2 - i * 0.34), ST, bevel=0.03)
-    for i, x in enumerate((-13, -6, 6, 13)): B.picnic((x, dy0 - 2.8, G + 0.06), M["deck"], SN, rot=0.06 * (i - 1.5))
-    for x, col in ((-9.5, "#8e3b32"), (9.5, "#e6dac3")): B.parasol((x, dy0 - 2.8, G + 0.06), TIM, flat("cloth" + col, col, 0.9), SN)
-    B.pad((dx1 - dx0 - 1.0, dd * 0.4, 0.2), ((dx0 + dx1) / 2, dy0 - dd * 0.7, G + 0.1), SN)
-    for x in (-15, 15): B.rack((x, dy0 - dd - 1.8, 0), TIM, SN, rot=PI / 2)
-    B.drifts([(0, D / 2 + 0.8, W + 3, 1.8), (-W / 2 - 0.8, 0, 1.6, D), (0, dy0 - dd - 0.6, W, 1.4)], M, h=0.9)
+    # The second cupola, timber-boarded under a pyramid roof, on the main ridge east of the tower.
+    kx, ky = 8.5, 0.0; kz = mtop(0.0) - 0.4
+    box((2.2, 2.2, 2.0), (kx, ky, kz + 1.0), M["boards"])
+    for sx in (-1, 1):
+        for sy in (-1, 1): box((0.18, 0.18, 2.0), (kx + sx * 1.05, ky + sy * 1.05, kz + 1.0), TIM)
+    for s in (-1, 1): win(Frame((kx, ky + s * 1.12, 0), 0 if s < 0 else PI), 0, kz + 0.7, 1.0, 0.8, M, cols=2, snow=False)
+    cyl(2.0, 1.3, (kx, ky, kz + 2.65), M["roof"], verts=4, r2=0.05, rot=(0, 0, PI / 4))
+    cyl(1.9, 1.1, (kx, ky, kz + 2.75), SN, verts=4, r2=0.2, rot=(0, 0, PI / 4), kind="snow")
+    # The terrace before the gables, on the snow: flagstones, a split-log fence with a gap at the entrance,
+    # tables and parasols, ski racks.
+    dy0, dd = yf, 7.0; dx0, dx1 = -W / 2 - 0.5, W / 2 + 0.5
+    box((dx1 - dx0, dd, 0.2), ((dx0 + dx1) / 2, dy0 - dd / 2 + 0.3, 0.1), ST, bevel=0.03)
+    ry = dy0 - dd + 0.3
+    lograil(dx0, ry, -3.0, ry, 0.1, M); lograil(3.0, ry, dx1, ry, 0.1, M)
+    for x in (dx0, dx1): lograil(x, ry, x, fy, 0.1, M)
+    for i, x in enumerate((-13, -6, 6, 13)): B.picnic((x, dy0 - 3.4, 0.2), M["deck"], SN, rot=0.06 * (i - 1.5))
+    for x, col in ((-9.5, "#8e3b32"), (9.5, "#e6dac3")): B.parasol((x, dy0 - 3.4, 0.2), TIM, flat("cloth" + col, col, 0.9), SN)
+    for x in (-15, 15): B.rack((x, ry - 2.0, 0), TIM, SN, rot=PI / 2)
+    B.drifts([(0, D / 2 + 0.8, W + 3, 1.8), (-W / 2 - 0.8, 0, 1.6, D), (W / 2 + 0.8, 0, 1.6, D)], M, h=0.9)
     finalize("sunspot_lodge", 2048, ao_dist=1.5)
 
 # ---------- Steamboat: Thunderhead Lodge with the gondola terminal built in ----------
@@ -641,72 +657,62 @@ def the_aerie():
 
 # ---------- Aspen Highlands: Merry-Go-Round ----------
 def merry_go_round():
-    """Merry-Go-Round, mid-mountain at Aspen Highlands where the main lifts meet: a long, low single-storey
-    restaurant under one broad, shallow-pitched standing-seam roof with deep eaves, a stone base, dark board
-    walls, glass all along the south front in timber frames, a lantern of clerestory windows along the ridge,
-    and a big south deck with tables, parasols and ski racks. Sources: aspensnowmass.com Merry-Go-Round
-    page; OSM way 151179417 (49 x 34 m, 435 seats). The roof's colour is not confirmed."""
+    """Merry-Go-Round, mid-mountain at Aspen Highlands where the main lifts meet (remodelled): a long, low
+    single-storey restaurant under one broad, almost flat roof whose ends kick up a little, on a thin charcoal
+    fascia with a deep dark soffit; the whole south front floor-to-ceiling glass in dark steel frames between
+    charcoal columns; a terrace of red brick pavers at snow level with red tables, and ski racks all along it.
+    Sources: aspensnowmass.com Merry-Go-Round hero photo (2025-26); OSM way 151179417 (49 x 34 m, 435 seats).
+    Built here 48 x 26 m with a 10 m terrace."""
     new_col("merry_go_round"); M = mats(); B.anchor(M)
-    ST, TIM, SN, BR = M["st"], M["tim"], M["sn"], M["brown"]
-    L, D, F, T = 48.0, 26.0, 0.9, 5.2; R = D / 2 * 0.24
-    box((L + 0.4, D + 0.4, F), (0, 0, F / 2), ST, bevel=0.05)
+    ST, SN, CH, BR = M["st"], M["sn"], M["char"], M["brown"]
+    L, D, F, T = 48.0, 26.0, 0.35, 4.8
+    box((L + 0.4, D + 0.4, F), (0, 0, F / 2), ST, bevel=0.04)
     box((L, D, T - F), (0, 0, (F + T) / 2), BR)
-    box((L + 0.3, D + 0.3, 0.12), (0, 0, F + 0.06), TIM)
     fr = Frame((0, -D / 2 - 0.04, 0))
-    nb = 12
-    for k in range(nb + 1): fr.box((0.32, 0.32, T - F), (-L / 2 + k * L / nb, -0.15, (F + T) / 2), TIM)
+    nb = 12; bw = L / nb
     for k in range(nb):
-        x0, x1 = -L / 2 + k * L / nb + 0.16, -L / 2 + (k + 1) * L / nb - 0.16
+        x0, x1 = -L / 2 + k * bw + 0.2, -L / 2 + (k + 1) * bw - 0.2
         if k in (5, 6):
-            B.door(fr, (x0 + x1) / 2, F, 2.4, 2.5, M, double=True, glazed=True, y=-0.02)
-            glazing(fr, x0, x1, F + 2.8, T - 0.3, M, step=1.4, mull="tim")
-        else: glazing(fr, x0, x1, F + 0.2, T - 0.3, M, step=1.4, transoms=(F + 2.9,), mull="tim")
-    fr.box((L + 0.4, 0.4, 0.4), (0, -0.15, T - 0.1), TIM)
+            B.door(fr, (x0 + x1) / 2, F, 2.4, 2.6, M, double=True, glazed=True, y=-0.02)
+            glazing(fr, x0, x1, F + 2.9, T - 0.2, M, step=bw, mull="char")
+        else: glazing(fr, x0, x1, F + 0.1, T - 0.2, M, step=bw / 2, transoms=(T - 1.1,), mull="char")
+    for k in range(nb + 1): fr.box((0.4, 0.4, T - F), (-L / 2 + k * bw, -0.2, (F + T) / 2), CH)
+    fr.box((L + 0.4, 0.45, 0.45), (0, -0.2, T - 0.1), CH)
     bk = Frame((0, D / 2 + 0.04, 0), PI)
-    for x in range(-20, 24, 6): win(bk, x, F + 1.1, 2.4, 1.6, M, cols=2)
-    B.door(bk, 1.0, F - 0.6, 1.2, 2.3, M)
+    for x in range(-20, 24, 6): win(bk, x, F + 1.1, 2.4, 1.6, M, cols=2, fr="char")
+    B.door(bk, 1.0, F, 1.2, 2.3, M)
     for s in (-1, 1):
         e = Frame((s * (L / 2 + 0.04), 0, 0), s * PI / 2)
-        for x in (-8, -3, 3, 8): win(e, x, F + 1.1, 2.2, 1.8, M, cols=2)
-        B.gable_wall(Frame((s * (L / 2 + 0.02), 0, 0), s * PI / 2), D, 0, T, R, BR, 0.2)
-    # The broad roof: standing seam on both slopes, deep eaves with exposed rafter tails, the ridge lantern.
-    over = 3.0; ZR = T + R
+        glazing(e, -D / 2 + 1.0, -D / 2 + 9.0, F + 0.1, T - 0.2, M, step=2.0, transoms=(T - 1.1,), mull="char")
+        for x in (3, 8): win(e, x, F + 1.1, 2.2, 1.8, M, cols=2, fr="char")
+    # The roof: a broad, nearly flat slab, deep over the glass, its two end bays kicked up a few degrees.
+    yo0, yo1, t = -D / 2 - 4.0, D / 2 + 1.5, 0.5
+    xm = L / 2 - 8.0; kick = math.radians(4.0)
+    def slab_part(x0, x1, tilt, zc):
+        cx, w, d, cy = (x0 + x1) / 2, x1 - x0, yo1 - yo0, (yo0 + yo1) / 2
+        box((w, d, t), (cx, cy, zc), CH, rot=(0, tilt, 0), bevel=0.03)
+        box((w - 0.2, d - 0.3, 0.05), (cx, cy, zc - t / 2 - 0.03), flat("soffit_dark", "#3a3c3f", 0.7, grain=0.03), rot=(0, tilt, 0))
+        slab((w - 0.1, d - 0.25, 0.7), (cx, cy, zc + t / 2 + 0.3), SN, rot=(0, tilt, 0))
+    zr = T + 0.35
+    slab_part(-xm, xm, 0.0, zr)
     for s in (-1, 1):
-        ye = s * (D / 2 + over); seamed_roof(-L / 2 - 1.5, L / 2 + 1.5, ye, 0.0, T - over * R / (D / 2), ZR, M, mat="green", snow=0.6)
-        for k in range(nb * 2 + 1):
-            x = -L / 2 - 1.2 + k * (L + 2.4) / (nb * 2)
-            box((0.2, over + 0.6, 0.28), (x, s * (D / 2 + over / 2 - 0.2), T - 0.25 - over / 2 * R / (D / 2)), TIM, rot=(-s * math.atan2(R, D / 2), 0, 0))
-        box((L + 3.2, 0.2, 0.4), (0, s * (D / 2 + over), T - over * R / (D / 2) - 0.15), TIM)
-    lw, lh = 4.0, 1.5
-    box((L * 0.6, 2 * lw, lh), (0, 0, ZR + lh / 2 - 0.3), BR)
-    for s in (-1, 1):
-        f = Frame((0, s * lw, 0), 0 if s < 0 else PI)
-        glazing(f, -L * 0.3 + 0.5, L * 0.3 - 0.5, ZR - 0.1, ZR + lh - 0.5, M, step=1.6, mull="tim")
-    B.gable_roof(Frame((0, 0, 0), PI / 2), 2 * lw, -L * 0.3 - 0.6, L * 0.3 + 0.6, ZR + lh - 0.35, lw * 0.3, 0.8, M, thick=0.25, st=0.45, ice=0)
-    stack(-L / 2 + 6, 3.0, ZR - 1.6, 3.2, M, w=1.5, d=1.8)
-    # The south deck: framing, boards, timber railings with snow, tables, parasols, the ski racks below it.
-    dy0, dd = -D / 2 - 0.2, 12.0; dz = F
-    box((L + 6, dd, 0.35), (0, dy0 - dd / 2, dz - 0.2), TIM, bevel=0.03)
-    for i in range(int(dd / 0.3)): box((L + 5.8, 0.27, 0.06), (0, dy0 - 0.15 - i * 0.3, dz + 0.0), M["deck"], bevel=0.01)
-    ry = dy0 - dd + 0.1
-    for x0, x1 in ((-L / 2 - 3, -4), (4, L / 2 + 3)):
-        n = int((x1 - x0) / 1.8)
-        for k in range(n + 1): box((0.14, 0.14, 1.05), (x0 + k * (x1 - x0) / n, ry, dz + 0.52), TIM)
-        for z in (0.5, 1.0): box((x1 - x0, 0.14, 0.14), ((x0 + x1) / 2, ry, dz + z), TIM)
-        box((x1 - x0, 0.24, 0.12), ((x0 + x1) / 2, ry, dz + 1.11), SN, bevel=0.05, seg=1, kind="snow")
-    for s in (-1, 1):
-        x = s * (L / 2 + 3)
-        for z in (0.5, 1.0): box((0.14, dd, 0.14), (x, dy0 - dd / 2, dz + z), TIM)
-        box((0.24, dd, 0.12), (x, dy0 - dd / 2, dz + 1.11), SN, bevel=0.05, seg=1, kind="snow")
-    for i in range(3): box((7.6, 0.45, 0.2), (0, ry - 0.3 - i * 0.42, dz - 0.25 - i * 0.28), ST, bevel=0.03)
-    cols = ("#8e3b32", "#e6dac3", "#36506e", "#c9a65a")
-    for r_, y in enumerate((dy0 - 3.0, dy0 - 7.5)):
-        for k, x in enumerate(range(-20, 22, 6)):
-            B.picnic((x, y, dz + 0.04), M["deck"], SN, rot=0.05 * ((k + r_) % 3 - 1))
-            if (k + r_) % 2 == 0: B.parasol((x + 2.8, y, dz + 0.04), TIM, flat("cloth" + cols[k % 4], cols[k % 4], 0.9), SN)
-    for x in (-L / 2 - 6, L / 2 + 6): B.rack((x, dy0 - 4.0, 0), TIM, SN, rot=0.0)
-    for x in (-12, 12): B.rack((x, ry - 3.2, 0), TIM, SN, rot=PI / 2)
-    B.drifts([(0, D / 2 + 1.5, L + 4, 1.8), (-L / 2 - 1.2, 0, 1.6, D), (L / 2 + 1.2, 0, 1.6, D)], M, h=0.8)
+        x0, x1 = s * xm, s * (L / 2 + 2.0); ln = abs(x1 - x0)
+        slab_part(min(x0, x1), max(x0, x1), -s * kick, zr + ln / 2 * math.tan(kick))
+    for k in range(int((L + 4) / 1.5)):  # battens on the deep soffit over the terrace
+        x = -L / 2 - 1.8 + k * 1.5
+        box((0.08, 3.8, 0.12), (x, -D / 2 - 2.0, zr - t / 2 - 0.1 + max(0, abs(x) - xm) * math.tan(kick)), M["steel2"])
+    for x in (-L / 2 - 1.2, L / 2 + 1.2, -12.0, 12.0): box((0.35, 0.35, zr - F), (x, -D / 2 - 3.4, (F + zr) / 2), CH)
+    for x in (-14.0, 10.0): box((2.0, 1.6, 1.2), (x, 4.0, zr + 0.6), M["steel2"]); B.pad((2.0, 1.6, 0.3), (x, 4.0, zr + 1.35), SN)
+    # The terrace: red brick pavers at snow level, red tables, ski racks along its edge.
+    PV = flat("pavers_red", "#8c4b3e", 0.85, grain=0.12); RT = flat("table_red", "#9b3a30", 0.6, grain=0.04)
+    ty0, ty1 = -D / 2 - 10.0, -D / 2
+    box((L + 2.0, ty1 - ty0, 0.15), (0, (ty0 + ty1) / 2, 0.07), PV)
+    for k in range(int((L + 2) / 0.6)): box((0.02, ty1 - ty0, 0.01), (-L / 2 - 1 + k * 0.6, (ty0 + ty1) / 2, 0.15), flat("joint_pv", "#6e3a30", 0.9, grain=0))
+    for r_, y in enumerate((ty1 - 2.6, ty1 - 6.2)):
+        for k, x in enumerate(range(-21, 23, 6)):
+            B.picnic((x + (1.5 if r_ else 0), y, 0.15), RT, SN, rot=0.05 * ((k + r_) % 3 - 1))
+    for x in range(-22, 24, 7): B.rack((x, ty0 - 0.8, 0), M["steel2"], SN, rot=0.0)
+    B.drifts([(0, D / 2 + 1.5, L + 4, 1.8), (-L / 2 - 1.2, 2.0, 1.6, D - 6), (L / 2 + 1.2, 2.0, 1.6, D - 6)], M, h=0.8)
     finalize("merry_go_round", 2048, ao_dist=1.5)
 
 # ---------- Aspen Highlands: the Highland Bowl ridge ----------
@@ -775,8 +781,10 @@ def bootpack():
 # ---------- Arapahoe Basin / Mary Jane: dark lap-sided lodges ----------
 def _lap_lodge(name, tint, door_hex, sign):
     """A high-alpine lodge of dark horizontal lap siding on a stone base under a gabled standing-seam roof,
-    a long deck, a sign board on the gable (A-Basin's Black Mountain Lodge and il Rifugio, the Steilhang Hut,
-    Winter Park's Lunch Rock). Sources: arapahoebasin.com dining pages via the research notes."""
+    a cross gable in the middle of the front carrying the lodge's name over the door, a long deck with timber
+    posts and mesh rails (A-Basin's Black Mountain Lodge and il Rifugio, the Steilhang Hut, Winter Park's Lunch
+    Rock). Sources: breckweddings.squarespace.com Black Mountain Lodge photos (2011: the long low front with
+    its named cross gable, the deck rails); arapahoebasin.com dining pages via the research notes."""
     new_col(name); M = mats(); B.anchor(M)
     LAP = textured("lap_" + name, "old_planks_02", 1.3, tint, 0.85, "X")
     ST, TIM, SN = M["st"], M["tim"], M["sn"]
@@ -789,10 +797,23 @@ def _lap_lodge(name, tint, door_hex, sign):
     for sx in (-1, 1):
         for sy in (-1, 1): box((0.22, 0.22, T - F), (sx * W / 2, sy * D / 2, (F + T) / 2), TIM)
     fr = Frame((0, -D / 2 - 0.02, 0))
-    for x in (-7.5, -4.5, 4.5, 7.5): win(fr, x, F + 0.6, 2.0, 2.2, M, cols=2, fr="tim")
+    for x in (-8.2, -5.6, 5.6, 8.2): win(fr, x, F + 0.6, 2.0, 2.2, M, cols=2, fr="tim")
+    # The cross gable in the middle of the front: it stands 0.8 m proud, its own roof, the name in its gable.
+    cw, cp, crise = 7.0, 0.8, 2.6; cy = -D / 2 - cp
+    box((cw, cp + 0.1, T - F), (0, -D / 2 - cp / 2, (F + T) / 2), LAP)
+    cf = Frame((0, cy - 0.02, 0))
+    B.gable_wall(Frame((0, cy, 0)), cw, 0, T, crise, LAP, cp + 1.5)
+    for s_ in (-1, 1): cf.box((0.22, 0.22, T - F), (s_ * cw / 2, 0.08, (F + T) / 2), TIM)
+    for x in (-2.4, 2.4): win(cf, x, F + 0.6, 1.4, 2.2, M, cols=1, fr="tim")
     DR = flat("door_" + name, door_hex, 0.5, grain=0)
-    fr.box((1.8, 0.1, 2.5), (0, -0.03, F + 1.25), DR); fr.box((0.9, 0.06, 0.7), (0, -0.09, F + 1.8), M["win"], kind="lit")
-    for s_ in (-1, 1): fr.box((0.16, 0.18, 2.6), (s_ * 1.0, -0.06, F + 1.3), TIM)
+    cf.box((1.8, 0.1, 2.5), (0, -0.03, F + 1.25), DR); cf.box((0.9, 0.06, 0.7), (0, -0.09, F + 1.8), M["win"], kind="lit")
+    for s_ in (-1, 1): cf.box((0.16, 0.18, 2.6), (s_ * 1.0, -0.06, F + 1.3), TIM)
+    cf.box((4.2, 0.12, 0.7), (0, -0.06, T + 0.6), M["sign"], bevel=0.03)
+    text(sign, 0.25, cf.p(0, -0.14, T + 0.6), M["cream"], rot=(PI / 2, 0, cf.a), extrude=0.01)
+    yr = -D / 2 + (R - crise) / (R / (D / 2)) + 0.4
+    for sgn in (-1, 1):
+        seamed_roof(cy - 0.8, yr, sgn * (cw / 2 + 0.6), 0.0, T - 0.6 * crise / (cw / 2), T + crise, M, mat="char", snow=0.45, axis="y")
+    box((0.3, yr - cy + 0.8, 0.16), (0, (cy - 0.8 + yr) / 2, T + crise + 0.1), M["seam"])
     bk = Frame((0, D / 2 + 0.02, 0), PI)
     for x in (-6, -2, 2, 6): win(bk, x, F + 0.8, 1.6, 1.6, M)
     for s_ in (-1, 1):
@@ -800,9 +821,6 @@ def _lap_lodge(name, tint, door_hex, sign):
         B.gable_wall(Frame((s_ * (W / 2), 0, 0), s_ * PI / 2), D, 0, T, R, LAP, 0.2)
         for x in (-3, 3): win(e, x, F + 0.8, 1.6, 1.8, M)
         win(e, 0, T + 0.6, 1.4, 1.3, M, cols=2, snow=False)
-    e = Frame((-W / 2 - 0.25, 0, 0), -PI / 2)
-    e.box((5.0, 0.12, 0.9), (0, -0.05, T + R * 0.62 + 0.55), M["sign"], bevel=0.03)
-    text(sign, 0.42, e.p(0, -0.13, T + R * 0.62 + 0.55), M["cream"], rot=(PI / 2, 0, e.a), extrude=0.01)
     over = 0.9
     for sgn in (-1, 1):
         seamed_roof(-W / 2 - over, W / 2 + over, sgn * (D / 2 + over), 0.0, T - over * R / (D / 2), T + R, M, mat="char", snow=0.55)
@@ -812,8 +830,13 @@ def _lap_lodge(name, tint, door_hex, sign):
     dd = 5.0
     box((W + 2, dd, 0.3), (0, -D / 2 - dd / 2, F - 0.15), TIM, bevel=0.03)
     for i in range(int(dd / 0.3)): box((W + 1.8, 0.27, 0.05), (0, -D / 2 - 0.15 - i * 0.3, F + 0.02), M["deck"])
-    steel_rail((-W / 2 - 1, -D / 2 - dd), (W / 2 + 1, -D / 2 - dd), F, M)
-    for x in (-W / 2 - 1, W / 2 + 1): steel_rail((x, -D / 2 - dd), (x, -D / 2), F, M)
+    MESH = glass("rail_mesh", "#9aa3a8", 0.35)
+    for (xa, ya, xb, yb) in ((-W / 2 - 1, -D / 2 - dd, W / 2 + 1, -D / 2 - dd), (-W / 2 - 1, -D / 2 - dd, -W / 2 - 1, -D / 2), (W / 2 + 1, -D / 2 - dd, W / 2 + 1, -D / 2)):
+        Lr = math.hypot(xb - xa, yb - ya); a = math.atan2(yb - ya, xb - xa); n = max(1, round(Lr / 1.8))
+        for k in range(n + 1): box((0.16, 0.16, 1.15), (xa + (xb - xa) * k / n, ya + (yb - ya) * k / n, F + 0.57), TIM)
+        box((Lr, 0.16, 0.12), ((xa + xb) / 2, (ya + yb) / 2, F + 1.12), TIM, rot=(0, 0, a))
+        box((Lr, 0.02, 0.9), ((xa + xb) / 2, (ya + yb) / 2, F + 0.6), MESH, rot=(0, 0, a), kind="glass")
+        box((Lr, 0.22, 0.1), ((xa + xb) / 2, (ya + yb) / 2, F + 1.22), SN, rot=(0, 0, a), bevel=0.04, seg=1, kind="snow")
     for i in range(4): box((0.4, 1.6, 0.2), (-W / 2 - 1.3 - i * 0.35, -D / 2 - 2.0, F - 0.2 - i * 0.33), ST, bevel=0.03)
     for x in (-6, 0, 6): B.picnic((x, -D / 2 - 2.8, F + 0.05), M["deck"], SN)
     B.rack((W / 2 + 3.0, -D / 2 - 2.0, 0), TIM, SN, rot=PI / 2)

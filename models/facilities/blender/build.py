@@ -8,7 +8,7 @@ import importlib, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 
-FAMILIES = ["lifts", "stations", "signs", "buildings", "props", "nature", "signature"]
+FAMILIES = ["lifts", "stations", "signs", "buildings", "props", "nature", "signature", "signature2"]
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 lib.OUT = ARGS[0] if ARGS else "."
 MODELS = {}

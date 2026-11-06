@@ -18,4 +18,6 @@
  {"name": "magic_carpet", "label": "魔毯（20 米一段，带透明拱廊）"},
  {"name": "chondola_cabin", "label": "混合吊椅的 8 人吊厢（铜山 American Eagle，炭灰色，白色 C 标）", "hang": true, "for": ["American Eagle"]},
  {"name": "chondola_chair", "label": "混合缆车的 6 人敞开吊椅（铜山 American Eagle，黑色座椅）", "hang": true, "for": ["American Eagle"]},
- {"name": "tower_lattice", "label": "格构钢塔（Silver Queen 吊厢，40 米，可按塔高缩放）", "top": 40.0, "rope": [3.0, 41.5], "for": ["Silver Queen"]}]
+ {"name": "tower_lattice", "label": "格构钢塔（Silver Queen 吊厢，40 米，可按塔高缩放）", "top": 40.0, "rope": [3.0, 41.5], "for": ["Silver Queen"]},
+ {"name": "chair3_detach", "label": "3 人脱挂式吊椅（软垫，阿斯彭山 Ruthie's）", "hang": true, "for": ["Ruthie's"]},
+ {"name": "chair2_riblet", "label": "Riblet 中心单杆 2 人吊椅（冬季公园 Looking Glass）", "hang": true, "for": ["Looking Glass"]}]
