@@ -2152,11 +2152,11 @@ $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxTo
 const riderLoad = loadBoarder(); // start early, it is a few MB
 async function main() {
   const [R, far, research] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT)]);
-  const load = (f, srgb) => new Promise((res) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
+  const load = (f, srgb, tries = 0) => new Promise((res, rej) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     res(t);
-  }));
+  }, undefined, (e) => (tries < 2 ? setTimeout(() => load(f, srgb, tries + 1).then(res, rej), 600) : rej(e)))); // a dropped connection is tried again
   const [snowD, snowN, rockD, branch, branchSnow, crown, crownSnow] = await Promise.all([load("snow_02_diff_1k.jpg", true), load("snow_02_nor_gl_1k.jpg"), load("aerial_rocks_02_diff_1k.jpg", true),
     load("spruce_branch.png", true), load("spruce_snow.png"), load("spruce_crown.png", true), load("spruce_crown_snow.png")]);
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
