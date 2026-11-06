@@ -77,7 +77,8 @@ const pickQuote = () => {
 
 export async function playIntro({ trip: tr = null } = {}) {
   if (navigator.webdriver) return; // not in tests
-  if (!tr) { if (sessionStorage.getItem("prerunIntro")) return; sessionStorage.setItem("prerunIntro", "1"); } // the welcome: once per visit
+  // The welcome: once per visit (per tab); ?intro in the link plays it again.
+  if (!tr && !new URLSearchParams(location.search).has("intro")) { if (sessionStorage.getItem("prerunIntro")) return; sessionStorage.setItem("prerunIntro", "1"); }
   const { codes, froms } = tr ? await flights(tr) : { codes: [], froms: [] };
   const st = document.createElement("style"); st.textContent = CSS; document.head.append(st);
   const box = document.createElement("div"); box.id = "intro";

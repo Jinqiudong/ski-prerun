@@ -7,7 +7,7 @@ import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, prese
 import { makeEntrance } from "./entrance.js?v=21";
 import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=24";
-import { playIntro } from "./intro.js?v=14";
+import { playIntro } from "./intro.js?v=15";
 import { flyTo } from "../core/transition.js?v=2";
 playIntro();
 
