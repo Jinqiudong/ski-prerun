@@ -40,6 +40,11 @@ square, black diamond, orange for parks, yellow for slow).
   entry in `../glb/<family>.json` may carry `"for"`: the research building or lift names
   (`data/facilities/<id>.json`) it stands for, so the game can pick it by name. Each docstring names the
   photos the model was checked against.
+- `gear.py` holds hand-held props for the riders (the radio), built to `assets/props/` rather than `../glb/`:
+  `Blender -b -P models/facilities/blender/build.py -- assets/props radio`. Real scale; origin at the grip,
+  not the foot; the top along Blender +Z (game +Y), the face to −Y (game +Z). `finalize(..., ground=False)`
+  leaves out the ground plane that would shade it, and the occlusion distance is hand-scale. The game parents
+  them to the rider's `Hand_R_Socket` bone. Previews in `docs/art/props/`.
 - Maker hoods (`terminal_detach_lpa`, `_omega`, `_unig`, `_dopp90`) keep the kit terminal's rope and have two
   paint regions: material `paint_hood` (the shell) and `paint_band` (band, stripe or top).
 - Each family module lists its models in `MODELS = {"name": fn}`. In a family module use `lib.COL`
