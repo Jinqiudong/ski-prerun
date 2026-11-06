@@ -501,7 +501,7 @@ export class Facilities {
   }
   stats() {
     const n = (ps) => ps.reduce((a, p) => a + (p.near || 0), 0), f = (ps) => ps.reduce((a, p) => a + (p.far || 0), 0);
-    const all = [...this.pools, this.chairs, this.bubbles, ...[...this.carrierPools.values()].map((c) => c.pool)].filter(Boolean);
+    const all = [...this.pools, this.chairs, this.bubbles, this.cabins, ...[...this.carrierPools.values()].map((c) => c.pool)].filter(Boolean);
     return { near: n(all), far: f(all), others: this.others.length, buildings: this.placed?.length || 0, visible: this.visibles.filter((v) => v.obj.visible).length };
   }
 }
