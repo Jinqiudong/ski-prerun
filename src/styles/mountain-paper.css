@@ -1,0 +1,129 @@
+    /* The mountain page in the app's paper style (the owner's mock, 2026-11-05). */
+    #title { position: fixed; top: 0; left: 0; right: 0; padding: calc(12px + env(safe-area-inset-top)) 14px 8px; display: flex; align-items: flex-start; gap: 10px; background: none !important; box-shadow: none !important; z-index: 6; }
+    #topFade { position: fixed; left: 0; right: 0; top: 0; height: calc(150px + env(safe-area-inset-top)); background: linear-gradient(#f6f1e7 55%, rgba(246,241,231,0)); pointer-events: none; z-index: 5; }
+    body.mini #topFade { display: none; }
+    .rb { width: 44px; height: 44px; flex: none; padding: 0; border-radius: 50%; border: 0; background: #fdfbf6; box-shadow: 0 4px 10px rgba(40,50,70,.15); display: grid; place-items: center; cursor: pointer; }
+    .rb img { width: 22px; height: 22px; } .rb.av img { width: 100%; height: 100%; border-radius: 50%; }
+    #title .tt { flex: 1; min-width: 0; } #title .tt i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a6a5a; }
+    #title .tt b { display: block; font: 600 28px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #title .tt small { display: block; font: 12px Oswald, sans-serif; letter-spacing: .12em; color: #6f675e; margin-top: 3px; }
+    #navBtn { float: none !important; margin: 0 !important; width: 44px !important; height: 44px !important; border: 3px solid #fdfbf6 !important; background: #e6ebee !important; overflow: hidden; }
+    #now { position: fixed; z-index: 6; top: calc(84px + env(safe-area-inset-top)); left: 14px; right: 14px; max-width: none; display: flex; align-items: center; gap: 8px; text-align: left; padding: 5px 14px; border: 0; border-radius: 999px; background: rgba(253,251,246,.95); box-shadow: 0 4px 10px rgba(40,50,70,.12); font: 14px "Noto Serif SC", serif; color: #22344d; cursor: pointer; }
+    #now img { width: 30px; height: 30px; } #now .rf { width: 17px; height: 17px; } #now .sep { width: 1px; height: 18px; background: #d9cdb9; margin: 0 2px; }
+    #now #nowTime { font-size: 12px; color: #6f675e; } #now .more { margin-left: auto; font-size: 13px; } #now .more::after { content: " ⌄"; }
+    #nowText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #timePanel { top: calc(130px + env(safe-area-inset-top)) !important; left: 14px; right: 14px !important; width: auto !important; border-radius: 18px !important; z-index: 6; }
+    #side { position: fixed; z-index: 4; right: 12px; top: calc(150px + env(safe-area-inset-top)); display: grid; gap: 10px; justify-items: center; }
+    #compassBtn { width: 48px; height: 48px; } #compassBtn img { width: 34px; height: 34px; transition: transform .1s linear; }
+    #side .zoom { width: 44px; border-radius: 22px; background: #fdfbf6; box-shadow: 0 4px 10px rgba(40,50,70,.15); overflow: hidden; }
+    #side .zoom button { display: block; width: 44px; height: 40px; border: 0; background: none; font: 24px/40px sans-serif; color: #22344d; cursor: pointer; } #side .zoom button + button { border-top: 1px solid #e6dccb; }
+    body.mini #side, body.mini #topFade { display: none !important; }
+    #bar { left: 10px !important; right: 10px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; display: block !important; padding: 2px 14px 10px; border-radius: 22px; background: rgba(250,246,238,.96); box-shadow: 0 -4px 20px rgba(40,50,70,.12); font-family: "Noto Serif SC", serif; color: #22344d; z-index: 5; }
+    #bar button { background: none !important; border: 0 !important; box-shadow: none !important; font: 13px "Noto Serif SC", serif !important; color: #22344d !important; padding: 0; cursor: pointer; }
+    #barHandle { display: grid !important; place-items: center; width: 100%; height: 16px; } #barHandle i { width: 40px; height: 4px; border-radius: 2px; background: #d6cdbf; }
+    #bar .lab { font: 15px "Noto Serif SC", serif; } #bar .lab i { font: 10px Oswald, sans-serif; font-style: normal; letter-spacing: .25em; color: #8a8278; margin-left: 6px; }
+    #bar.min > .lab { display: none; }
+    #bar .views { display: flex; gap: 4px; align-items: center; margin: 4px 0 2px; }
+    #bar .views button { flex: 1; display: grid !important; justify-items: center; gap: 1px; padding: 5px 0 !important; border-radius: 18px !important; }
+    #bar .views button img { width: 30px; height: 30px; } #bar .views button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .views button[data-view].on img { filter: brightness(0) invert(1); }
+    #bar .vsep { width: 1px; height: 40px; background: #e6dccb; flex: none; }
+    #bar #spin { flex: 1.3; grid-template-columns: auto auto; align-items: center; column-gap: 6px; } #bar #spin span { grid-column: 1 / 3; }
+    .sw { width: 36px; height: 21px; border-radius: 11px; background: #d6cdbf; position: relative; flex: none; display: inline-block; transition: background .2s; }
+    .sw::after { content: ""; position: absolute; left: 2px; top: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .2s; }
+    button.on .sw { background: #4f6a86; } button.on .sw::after { left: 17px; }
+    #bar.min .more { display: none; }
+    #bar .layers { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e6dccb; padding-top: 8px; margin-top: 6px; }
+    #bar .layers .lab { flex: none; } #bar .ly { flex: 1; display: flex !important; align-items: center; gap: 6px; background: #fdfbf6 !important; border-radius: 999px !important; padding: 4px 8px 4px 6px !important; box-shadow: 0 2px 6px rgba(40,50,70,.08) !important; font-size: 14px !important; }
+    #bar .ly img { width: 30px; height: 30px; } #bar .ly .sw { margin-left: auto; }
+    #bar button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; }
+    #timePanel input[type=range] { accent-color: #4f6a86; }
+    #counts { display: flex; justify-content: space-between; border-top: 1px solid #e6dccb; margin-top: 8px; padding-top: 7px; font-size: 13px; color: #4a453f; }
+    #counts .d { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+    #credit { bottom: calc(1px + env(safe-area-inset-bottom)) !important; left: 8px; font-size: 8px !important; z-index: 6; text-align: center; }
+    body:not(.mini) #credit { display: none; }
+    #vignette { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(8,18,40,.25) 100%); }
+    /* compass: the owner's painted one, turning with the view */
+    #compassBtn { width: 56px !important; height: 56px !important; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: 0 5px 12px rgba(40,50,70,.25); cursor: pointer; }
+    #compassBtn img { width: 56px !important; height: 56px !important; display: block; border-radius: 50%; }
+    /* the two round buttons and their pop-ups */
+.fab { position: fixed; z-index: 5; bottom: calc(16px + env(safe-area-inset-bottom)); }
+#bar.fab { left: 14px !important; right: auto !important; bottom: calc(16px + env(safe-area-inset-bottom)) !important; padding: 0 !important; background: none !important; box-shadow: none !important; display: block !important; }
+    #layerBar { right: 14px; }
+#bar .fabBtn, #layerBar .fabBtn { width: 60px; height: 60px; padding: 0 !important; border: 0 !important; border-radius: 50% !important; background: #fdfbf6 !important; box-shadow: 0 6px 16px rgba(40,50,70,.22) !important; display: grid !important; place-items: center; cursor: pointer; transition: transform .2s; }
+#bar .fabBtn img, #layerBar .fabBtn img { width: 36px; height: 36px; } #bar.open .fabBtn, #layerBar.open .fabBtn { transform: scale(.92); }
+#bar .pop, #layerBar .pop { position: absolute; left: 0; bottom: 72px; width: max-content; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transform-origin: 30px 100%; transform: scale(.6) translateY(20px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .2s; }
+    #layerBar .pop { left: auto; right: 0; align-items: flex-end; transform-origin: calc(100% - 30px) 100%; }
+#bar.open .pop, #layerBar.open .pop { transform: none; opacity: 1; pointer-events: auto; }
+#bar .pop button, #layerBar .pop button { display: flex !important; white-space: nowrap; align-items: center; gap: 8px; padding: 5px 14px 5px 6px !important; border: 0 !important; border-radius: 999px !important; background: rgba(253,251,246,.96) !important; box-shadow: 0 4px 10px rgba(40,50,70,.15) !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; cursor: pointer; }
+#bar .pop button img, #layerBar .pop button img { width: 30px; height: 30px; }
+#bar .pop button[data-view].on, #layerBar .pop button[data-view].on { background: #4f6a86 !important; color: #fdfbf6 !important; } #bar .pop button[data-view].on img, #layerBar .pop button[data-view].on img { filter: brightness(0) invert(1); }
+#bar .pop button.tg, #layerBar .pop button.tg { color: #8a8278 !important; } #bar .pop button.tg img, #layerBar .pop button.tg img { opacity: .45; }
+#bar .pop button.tg.on, #layerBar .pop button.tg.on { color: #22344d !important; box-shadow: 0 4px 10px rgba(40,50,70,.15), inset 0 0 0 2px #4f6a86 !important; } #bar .pop button.tg.on img, #layerBar .pop button.tg.on img { opacity: 1; }
+    body.mini #layerBar { display: none !important; }
+    /* the weather panel: a time slider, weather taps, and 实时 */
+    #timePanel { padding: 12px 16px 10px !important; background: rgba(253,251,246,.97) !important; box-shadow: 0 8px 20px rgba(40,50,70,.18) !important; color: #22344d; font-family: "Noto Serif SC", serif; }
+    #timePanel .th { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    #timePanel .th b { font: 600 30px "Cormorant Garamond", serif; color: #22344d; }
+    #tpLive { display: flex !important; align-items: center; gap: 6px; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; background: #fdfbf6 !important; border: 1px solid #cbbfa9 !important; border-radius: 999px !important; padding: 4px 14px 4px 8px !important; }
+    #tpLive img { width: 18px; height: 18px; } #tpLive.on { background: #22344d !important; color: #fdfbf6 !important; border-color: #22344d !important; } #tpLive.on img { filter: brightness(0) invert(1); }
+    #timePanel input[type=range] { width: 100%; margin: 4px 0 0; accent-color: #4f6a86; }
+    #timePanel .tl { position: relative; height: 16px; margin: 2px 2px 8px; } #timePanel .tl small { position: absolute; top: 0; font-size: 11px; color: #8a8278; transform: translateX(-50%); white-space: nowrap; }
+    #timePanel .tl small:first-child { left: 0; transform: none; } #timePanel .tl small:last-child { right: 0; transform: none; }
+    #timePanel .wxrow { display: flex; justify-content: space-between; border-top: 1px solid #e6dccb; padding-top: 8px; }
+    #timePanel .wxrow button { flex: 1; display: grid !important; justify-items: center; gap: 1px; background: none !important; border: 0 !important; border-radius: 14px !important; padding: 4px 0 !important; font: 12px "Noto Serif SC", serif !important; color: #6f675e !important; }
+    #timePanel .wxrow img { width: 30px; height: 30px; } #timePanel .wxrow button.on { background: #e8eef4 !important; color: #22344d !important; font-weight: 600; }
+    #now .more { display: none; } #now::after { content: "⌄"; margin-left: auto; color: #6f675e; }
+    /* the base's miniature, in the same paper look */
+    #miniTop { top: 0 !important; left: 0 !important; right: 0 !important; padding: calc(12px + env(safe-area-inset-top)) 14px 22px; align-items: flex-start !important; gap: 10px !important; background: linear-gradient(#f3ede2 65%, rgba(243,237,226,0)); z-index: 6; }
+    #miniTop .tt { flex: 1; min-width: 0; } #miniTop .tt i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a6a5a; text-transform: uppercase; }
+    #miniTop .tt b { display: block; font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #miniTop .tt small { display: block; font: 12px "Noto Serif SC", serif; color: #6f675e; margin-top: 2px; }
+    #miniTop .rb { background: #fdfbf6 !important; border: 0 !important; }
+    #plansBar { top: calc(92px + env(safe-area-inset-top)) !important; }
+    .plans span { color: #6f675e !important; text-shadow: none !important; font-family: "Noto Serif SC", serif; }
+    .plans button { border: 0 !important; box-shadow: 0 3px 8px rgba(40,50,70,.12) !important; border-radius: 999px !important; }
+    #legend { background: rgba(253,251,246,.9) !important; border-radius: 999px !important; box-shadow: none !important; }
+    #introSkip { font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif !important; color: #fdfbf6 !important; background: #22344d !important; border: 0 !important; border-radius: 999px !important; padding: 9px 18px !important; box-shadow: 0 6px 14px rgba(34,52,77,.3) !important; }
+    .liftCard { border-radius: 18px !important; box-shadow: 0 8px 20px rgba(40,50,70,.16) !important; }
+    #detail { background: rgba(253,251,246,.97) !important; color: #33302c !important; border-radius: 22px 22px 0 0 !important; }
+    #detailClose i { background: #d6cdbf !important; } #detailGo { background: #22344d !important; border-radius: 999px !important; font-family: "Cormorant Garamond", "Noto Serif SC", serif !important; font-size: 17px !important; }
+    #detailBody h2 { font: 600 22px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } #detailBody h3, #detailBody .meta, #detailBody .hint { color: #8a8278 !important; }
+    .ltag b, .ltag small { background: rgba(253,251,246,.95) !important; border-color: #d9cdb9 !important; }
+    .ltag i { background: rgba(34,52,77,.5) !important; }
+    .ltag.on b, .ltag.on small { background: #22344d !important; color: #fdfbf6 !important; border-color: #22344d !important; }
+    #spin[hidden] { display: none !important; }
+    .pi { width: 22px; height: 22px; vertical-align: -5px; margin-right: 5px; } .pin b { display: flex; align-items: center; } .pin b .pi { width: 26px; height: 26px; vertical-align: 0; }
+    /* choosing a lift and its detail, in the paper look */
+    #plansBar { top: calc(96px + env(safe-area-inset-top)) !important; gap: 6px !important; }
+    #legend { display: none !important; }
+    .plans { background: rgba(253,251,246,.95); border-radius: 999px; padding: 4px; box-shadow: 0 4px 12px rgba(40,50,70,.12); gap: 2px !important; flex-wrap: nowrap !important; }
+    .plans .lbl { font: 13px "Noto Serif SC", serif !important; color: #8a8278 !important; padding: 0 6px 0 10px; }
+    .plans button { box-shadow: none !important; background: none !important; border: 0 !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; padding: 5px 12px !important; display: flex !important; align-items: center; gap: 6px; border-radius: 999px !important; }
+    .plans button.on { background: #22344d !important; color: #fdfbf6 !important; }
+    .dt { width: 10px; height: 10px; display: inline-block; } .dt.e { background: #4fae6a; border-radius: 50%; } .dt.m { background: #3f78c8; } .dt.a { background: #2a2e36; transform: rotate(45deg) scale(.85); }
+    .plans button.on .dt.a { background: #fdfbf6; }
+    .ltag, .ltag.on { background: none !important; border: 0 !important; }
+    .ltag b { display: flex !important; align-items: center; gap: 6px; font: 600 15px "Cormorant Garamond", serif !important; padding: 4px 12px 4px 5px !important; border-radius: 999px !important; border: 0 !important; box-shadow: 0 4px 10px rgba(40,50,70,.18); }
+    .ltag b .pi { width: 24px !important; height: 24px !important; margin: 0 !important; background: #fdfbf6; border-radius: 50%; padding: 2px; }
+    /* the time and height under a tag: on its own small paper pill, so it reads on any ground */
+    .ltag small, .ltag.on small { display: block !important; margin-top: 3px; background: rgba(253,251,246,.95) !important; color: #22344d !important; border: 0 !important; border-radius: 999px !important; font: 600 12px "Noto Serif SC", serif !important; padding: 1px 9px !important; box-shadow: 0 2px 5px rgba(40,50,70,.15); }
+    .ltag i { height: 14px !important; width: 1.5px !important; background: rgba(34,52,77,.55) !important; }
+    .liftCard { border: 0 !important; border-radius: 22px !important; padding: 12px 14px !important; background: rgba(253,251,246,.97) !important; box-shadow: 0 10px 24px rgba(40,50,70,.18) !important; gap: 8px !important; }
+    .liftCard.on { box-shadow: 0 10px 24px rgba(40,50,70,.18), inset 0 0 0 2px #22344d !important; }
+    .liftCard .row1 b { font: 600 20px "Cormorant Garamond", serif !important; display: flex; align-items: center; gap: 8px; }
+    .liftCard .row1 b .pi { width: 34px !important; height: 34px !important; margin: 0 !important; background: #f3ede2; border-radius: 50%; padding: 3px; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; } .chips span { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #33302c; background: #f3ede2; border-radius: 999px; padding: 2px 10px 2px 7px; } .chips img { width: 18px; height: 18px; }
+    body.picking #credit { display: none !important; }
+    #detail { padding: 6px 18px 14px !important; }
+    #detailBody h2 { display: flex; align-items: center; gap: 10px; font-size: 26px !important; margin: 4px 0 8px !important; }
+    #detailBody h2 .pi { width: 44px !important; height: 44px !important; margin: 0 !important; background: #f3ede2; border-radius: 50%; padding: 4px; }
+    #detailBody h3 { display: flex; align-items: center; gap: 6px; font: 15px "Noto Serif SC", serif !important; color: #6f675e !important; margin: 16px 0 8px !important; }
+    #detailBody h3 img { width: 24px; height: 24px; } #detailBody h3::after { content: ""; flex: 1; height: 1px; background: #e6dccb; margin-left: 6px; }
+    #detailBody .runs { gap: 6px !important; margin-bottom: 6px !important; }
+    #detailBody .runs > span { display: inline-flex; align-items: center; gap: 5px; font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; background: #fdfbf6; border: 1px solid #e6dccb; border-radius: 999px; padding: 3px 12px 3px 9px; }
+    #detailBody .nx { display: grid !important; grid-template-columns: 34px 1fr auto; align-items: center; column-gap: 10px; background: #fdfbf6; border-radius: 14px; padding: 8px 12px; box-shadow: 0 2px 6px rgba(40,50,70,.07); margin: 0 0 8px !important; }
+    #detailBody .nx .pi { width: 34px !important; height: 34px !important; margin: 0 !important; grid-row: 1 / 3; background: #f3ede2; border-radius: 50%; padding: 3px; }
+    #detailBody .nx b { font: 600 18px "Cormorant Garamond", serif; color: #22344d; } #detailBody .nx small { grid-column: 2; font-size: 12px; color: #6f675e; }
+    #detailBody .nx .mins { grid-column: 3; grid-row: 1 / 3; font: 600 13px "Noto Serif SC", serif; color: #fdfbf6; background: #4f6a86; border-radius: 999px; padding: 3px 11px; white-space: nowrap; }
+    #detailBody .hint { color: #8a8278 !important; }
+  

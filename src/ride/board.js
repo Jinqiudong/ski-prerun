@@ -1,5 +1,5 @@
 // Snowboard physics on the real slope, the track the board leaves in the snow, and the spray it kicks up.
-// (Rider A, the model, and its poses are in boarder.js.)
+// (Rider A, the model, and its poses are in src/rider/rider-a.js.)
 import * as THREE from "three";
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);

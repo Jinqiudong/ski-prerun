@@ -9,16 +9,12 @@ export const ANIMALS = {
   copper: "pika", winterpark: "moose", steamboat: "elk", abasin: "sheep", eldora: "fox",
   snowmass: "marmot", aspenmountain: "bear", highlands: "ptarmigan", buttermilk: "hare",
 };
-// The owner's painted animals (assets/animals, cut from their wildlife sheet): which way each faces in its
-// picture, and how tall it stands (scene units; a tile is 12).
-const PAINTED = {
-  moose: [-1, 2.5], elk: [-1, 2.5], sheep: [-1, 1.8], fox: [-1, 1.25], pika: [1, 1.0], marmot: [1, 1.0],
-  hare: [-1, 1.0], ptarmigan: [-1, 0.9], porcupine: [-1, 0.95], bear: [-1, 1.9],
-};
-const loader = new THREE.TextureLoader(), gltf = new GLTFLoader();
+// How tall each animal stands (scene units; a tile is 12).
+const TALL = { moose: 2.5, elk: 2.5, sheep: 1.8, fox: 1.25, pika: 1.0, marmot: 1.0, hare: 1.0, ptarmigan: 0.9, bear: 1.9 };
+const gltf = new GLTFLoader();
 // A 3D animal (assets/animals/3d, from tools/build_animals.py: rigged, with a walk cycle), standing `tall`.
 export function animal3d(kind) {
-  const root = new THREE.Group(), tall = PAINTED[kind][1];
+  const root = new THREE.Group(), tall = TALL[kind];
   root.userData = { model: 1, mixer: null, last: 0 };
   gltf.load(`assets/animals/3d/${kind}.glb?v=1`, (g) => {
     const o = g.scene, bb = new THREE.Box3().setFromObject(o);
@@ -29,18 +25,6 @@ export function animal3d(kind) {
   });
   return root;
 }
-// A painted animal as a little standee that always faces you, its feet on the ground.
-export function animalSprite(kind) {
-  const [face, tall] = PAINTED[kind];
-  const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.08, depthWrite: true });
-  const sp = new THREE.Sprite(mat); sp.center.set(0.5, 0.06);
-  loader.load(`assets/animals/${kind}.png?v=1`, (tex) => { tex.colorSpace = THREE.SRGBColorSpace; mat.map = tex; mat.needsUpdate = true;
-    sp.userData.aspect = tex.image.width / tex.image.height; });
-  sp.userData = { painted: 1, face, tall, aspect: 1, hop: kind === "hare" || kind === "pika" || kind === "marmot", dir: 1 };
-  sp.scale.set(tall, tall, 1);
-  return sp;
-}
-
 // Layers under the snow, as depths below the surface (top) or heights (flat base): [depth, colour].
 const BANDS = [[0, 0xf7f8fa], [0.28, 0xf7f8fa], [0.32, 0xa68564], [1.05, 0x8d6e52], [1.09, 0xa3a19c], [2.5, 0x8f8b84], [2.54, 0xb3aba0]];
 // Walls from the terrain's edge down to a flat foot at `foot`, banded by depth below the ground.
@@ -148,31 +132,12 @@ export function animal(kind) {
 }
 
 // Walk an animal round a loop on its tile: a gentle wandering circle, following the ground.
-const _v = new THREE.Vector3(), _w = new THREE.Vector3();
-export function walk(a, h, t, seed, s, cam) {
+export function walk(a, h, t, seed, s) {
   const r = s * 0.28, sp = 0.18, u = t * sp + seed;
   const x = Math.cos(u) * r + Math.sin(u * 2.3) * r * 0.25, z = Math.sin(u) * r * 0.8 + Math.cos(u * 1.7) * r * 0.2;
   const x2 = Math.cos(u + 0.01) * r + Math.sin((u + 0.01) * 2.3) * r * 0.25, z2 = Math.sin(u + 0.01) * r * 0.8 + Math.cos((u + 0.01) * 1.7) * r * 0.2;
-  if (a.userData.model) { // walk the loop, facing the way it goes, legs in step with its pace
-    const U = a.userData, dt = U.last ? Math.min(0.1, t - U.last) : 0; U.last = t;
-    a.position.set(x, h(x, z), z); a.rotation.y = Math.atan2(x2 - x, z2 - z);
-    U.mixer?.update(dt * 1.1);
-    return;
-  }
-  if (a.userData.painted) { // a standee: a step's bob and sway, turned to the way it's going on screen
-    const U = a.userData, ph = t * 5 + seed * 3;
-    a.position.set(x, h(x, z) + (U.hop ? Math.abs(Math.sin(ph * 0.8)) * 0.3 : Math.abs(Math.sin(ph)) * 0.05), z);
-    if (cam && a.parent) {
-      a.parent.localToWorld(_v.set(x, 0, z)).project(cam); a.parent.localToWorld(_w.set(x2, 0, z2)).project(cam);
-      const d = Math.sign(_w.x - _v.x); if (d) U.dir += (d - U.dir) * 0.08; // flip over gently, not in one frame
-    }
-    a.scale.set(U.tall * U.aspect * U.dir * U.face, U.tall * (1 + (U.hop ? 0 : Math.sin(ph * 2) * 0.015)), 1);
-    a.material.rotation = U.hop ? 0 : Math.sin(ph) * 0.03;
-    return;
-  }
-  const { body, legs, head, hop } = a.userData, ph = t * 7;
-  a.position.set(x, h(x, z) + (hop ? Math.abs(Math.sin(ph * 0.6)) * 0.25 : 0), z);
-  a.rotation.y = Math.atan2(x2 - x, z2 - z);
-  legs.forEach((l, i) => (l.rotation.x = hop ? Math.sin(ph * 0.6) * 0.5 : Math.sin(ph + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.45));
-  body.position.y = hop ? 0 : Math.abs(Math.sin(ph)) * 0.04; head.rotation.y = Math.sin(t * 0.7 + seed) * 0.3;
+  // Walk the loop, facing the way it goes, legs in step with its pace.
+  const U = a.userData, dt = U.last ? Math.min(0.1, t - U.last) : 0; U.last = t;
+  a.position.set(x, h(x, z), z); a.rotation.y = Math.atan2(x2 - x, z2 - z);
+  U.mixer?.update(dt * 1.1);
 }

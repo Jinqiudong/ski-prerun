@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc
+*.blend1
+.claude/
+# scratch output of tools
+vista_*.png

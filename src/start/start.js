@@ -2,11 +2,11 @@
 // jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, PART_ZH, OUTFITS } from "./boarder.js?v=15";
-import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "./character.js?v=8";
+import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
+import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=8";
 import { makeEntrance } from "./entrance.js?v=21";
-import { daysOf, openBookPage, paintWith, locateIn } from "./roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "./i18n.js?v=22";
+import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=22";
 import { playIntro } from "./intro.js?v=14";
 playIntro();
 
@@ -321,14 +321,14 @@ async function openRecords() {
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
 async function openBook(r) {
-  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("./world.js?v=5"), import("./mapview.js?v=7")]);
+  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=7")]);
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
   openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });
 }
 // The journal map for one resort: everything skied there in ink.
 async function openJournal(r) {
-  const [{ Terrain, treeMaskFn }, { TrailMap }, { SkiLog }] = await Promise.all([import("./world.js?v=5"), import("./mapview.js?v=7"), import("./skilog.js?v=2")]);
+  const [{ Terrain, treeMaskFn }, { TrailMap }, { SkiLog }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=7"), import("../core/skilog.js?v=2")]);
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village")), log = new SkiLog(r.id, R);
   const skied = log.stretches(), track = logOf()[r.id]?.lastTrack || [], s = log.stats();

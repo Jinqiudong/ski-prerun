@@ -4,9 +4,12 @@ Everything the game shows that is modelled, apart from the terrain. Facilities a
 (three.js, metres, no build step) so one model can take each lift's real seats, bubble and paint from
 OpenStreetMap. Characters will move here as `models/characters/` (Blender sources stay off Git).
 
-- `facilities/` — lifts, stations, signs, buildings. Open `facilities/index.html` for the catalogue:
-  two looks under review (A miniature, B ink and wash) and set views.
-  - `kit.js` materials by role, the looks, helpers · `lifts.js` · `signs.js` · `buildings.js` · `viewer.js`
+- `facilities/` — lifts, stations, signs, buildings, props.
+  - `blender/` — the Blender build (`build.py`, the kit `lib.py`, one module per family) and its
+    conventions in `blender/README.md`; `blender/tex/` the CC0 textures it bakes from.
+  - `glb/` — the built models and the per-family lists the catalogue reads.
+  - `index.html` + `catalog.js` — the catalogue: every model on a snowy slope in game light, by family,
+    with deep, light or no snow.
 
 ## Facility inventory
 

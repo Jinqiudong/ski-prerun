@@ -12,9 +12,7 @@ const vn = (x, z) => { const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi
   const a = h(xi, zi), b = h(xi + 1, zi), c = h(xi, zi + 1), d = h(xi + 1, zi + 1), u = sm(xf), v = sm(zf); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
 const rolls = (x, z) => (vn(x * 0.18, z * 0.12) - 0.5) * 0.5 + (vn(x * 0.5 + 9, z * 0.4) - 0.5) * 0.12;
 export const groundAt = (x, z) => slope(z) + rolls(x, z) * Math.min(1, Math.hypot(x, z) / 6);
-export const groundY = (z, x = 0) => groundAt(x, z);
 const FAR = -40;
-export let TURN = +(new URLSearchParams(location.search).get("turn") ?? 0); // the model's board axis against the path
 
 // The slope's edges and far end fade out (an alpha map: white solid, black clear).
 function fadeTex() {

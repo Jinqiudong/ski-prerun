@@ -4,7 +4,7 @@ modifier, smoothed, lightly lumped like fur, painted in vertex colours by body p
 limb (weights by nearest bone), walked in a 1 s loop, and saved as glTF.
 
 usage: /Applications/Blender.app/Contents/MacOS/Blender -b -P tools/build_animals.py -- [names…]
-       → assets/animals/3d/<name>.glb   (Blender faces -Y: glTF +Z, the way diorama.js walks them)
+       → assets/animals/3d/<name>.glb   (Blender faces -Y: glTF +Z, the way src/start/resort-tiles.js walks them)
 """
 import bpy, bmesh, math, sys, os
 from mathutils import Vector

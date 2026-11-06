@@ -80,7 +80,7 @@ export function dressRider(scene, base, colors = {}) {
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 
-// root sits at the board's base with local +z the direction of travel, the way rider.js's physics moves it:
+// root sits at the board's base with local +z the direction of travel, the way board.js's physics moves it:
 //   root → yaw (board skidding across) → lean (board on its edge, rider inclined into the turn) → model
 export function boarderModel() {
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group();
@@ -161,7 +161,7 @@ function turn(bone, frame, axis, angle) {
 }
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
-// Pose from the physics state (rider.js's Rider). The whole rider and board incline into the turn by the
+// Pose from the physics state (board.js's Rider). The whole rider and board incline into the turn by the
 // angle that balances it, so the board rides its inside edge: the toe edge when the turn's inside is the
 // side the toes point to, the heel edge otherwise. On top of that, as coaches teach it: on the toe side
 // the upper body stays stacked upright over the toes; on the heel side the rider sinks lower (knee bend)

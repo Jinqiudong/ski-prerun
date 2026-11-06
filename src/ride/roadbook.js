@@ -2,7 +2,7 @@
 // you can follow it. The base you set out from, each lift, at each top the ways you could have gone and the
 // one you took, the runs in order, where you came out. Steps a few hours apart start a new day.
 // Drawn as a page of the journal: a map of the day's way at the top, then the steps as a path with forks.
-import { t, EN_ON } from "./i18n.js?v=22";
+import { t, EN_ON } from "../core/i18n.js?v=22";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);

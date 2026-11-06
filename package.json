@@ -1,0 +1,13 @@
+{
+  "name": "ski-prerun",
+  "private": true,
+  "description": "雪场预滑 · Ski Pre-Run — ride real Colorado resorts the night before you go",
+  "type": "module",
+  "scripts": {
+    "serve": "python3 -m http.server 8766",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node tools/check.mjs",
+    "models": "/Applications/Blender.app/Contents/MacOS/Blender -b -P models/facilities/blender/build.py -- models/facilities/glb"
+  },
+  "engines": { "node": ">=20" }
+}

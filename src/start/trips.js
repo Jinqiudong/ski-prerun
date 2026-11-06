@@ -3,8 +3,8 @@
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide. Kept on this phone; shared as a link that carries
 // the whole trip, so a friend opening it sees the same plan and can keep it.
-import { t, EN_ON, myAvatar } from "./i18n.js?v=22";
-import { daysOf } from "./roadbook.js?v=12";
+import { t, EN_ON, myAvatar } from "../core/i18n.js?v=22";
+import { daysOf } from "../ride/roadbook.js?v=12";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };

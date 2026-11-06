@@ -5,7 +5,7 @@
     /Applications/Blender.app/Contents/MacOS/Blender -b -P models/facilities/blender/build.py -- models/facilities/glb [model ...]
 
 Then add the model to its family's list `../glb/<family>.json` (`[{"name", "label", "hang"?}]`, label in
-Chinese) and look at it in `../hq.html` (button per family; ‹ › steps through the models; the snow
+Chinese) and look at it in `../index.html` (button per family; ‹ › steps through the models; the snow
 buttons switch between deep, light and no snow).
 
 ## Look: semi-realistic
@@ -28,7 +28,7 @@ square, black diamond, orange for parks, yellow for slow).
   - `snow`: any part with the `snow()` material, or made by `blob()` / `slab()`. Kept as its own mesh,
     occlusion in vertex colours, so the game can thin it or take it away. Put snow on everything that
     would hold it: roofs (`slab`), rails, sills, tops of signs and tables, drifts against walls (`blob`).
-  - `glass` (transparent), `lit` (windows: dark glass with a lit room behind, see `hq.js`), `lamp`
+  - `glass` (transparent), `lit` (windows: dark glass with a lit room behind, see `catalog.js`), `lamp`
     (glows), `flat` (lettering), `paint` (a part the game recolours per resort: lift paint, cabin colour).
     These are exported as their own meshes, named `<model>_<kind>`.
 - Helpers in `lib.py`: `box`, `cyl`, `blob`, `slab`, `tri`, `curve_pipe`, `text`; materials `textured`,

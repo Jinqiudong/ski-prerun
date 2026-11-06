@@ -1,5 +1,5 @@
 // Run names carved into the snow along a lift: seen only as the chair passes over them, like reading the
-// runs below. Used by the ride (look.js).
+// runs below. Used by the ride (ride.js).
 import * as THREE from "three";
 import { LEVEL } from "./world.js?v=5";
 

@@ -1,4 +1,4 @@
-// The resorts as little dioramas (diorama.js) standing on a snowy watercolour map of central Colorado
+// The resorts as little dioramas (resort-tiles.js) standing on a snowy watercolour map of central Colorado
 // (tools/bake_map_snow.py): each one a square
 // of the resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, set
 // where it is (Aspen's four, too close together, sit as a two-by-two in their valley); each framed with the
@@ -8,8 +8,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "./i18n.js?v=22";
-import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./diorama.js?v=3";
+import { EN_ON } from "../core/i18n.js?v=22";
+import { ANIMALS, strataWalls, heightAt, pines, animal3d, walk } from "./resort-tiles.js?v=3";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
@@ -268,7 +268,7 @@ export class Collection {
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;
       if (!on) x.group.rotation.y += (0 - x.group.rotation.y) * 0.1;
     }
-    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S, this.camera);
+    for (const w of this.walkers || []) walk(w.a, w.h, t, w.seed, S);
     this.renderer.render(this.scene, this.camera);
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.

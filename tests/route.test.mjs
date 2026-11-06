@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildGraph, planRoute, nodesNear, LEVELS } from "../route.js";
+import { buildGraph, planRoute, nodesNear, LEVELS } from "../src/core/route.js";
 
 const R = JSON.parse(readFileSync(new URL("../data/copper.json", import.meta.url)));
 const [gw, gh] = R.grid, [x0, z0, x1, z1] = R.bounds;
