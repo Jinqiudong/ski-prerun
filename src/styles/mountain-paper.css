@@ -41,7 +41,8 @@
     #counts .d { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
     #credit { bottom: calc(1px + env(safe-area-inset-bottom)) !important; left: 8px; font-size: 8px !important; z-index: 6; text-align: center; }
     body:not(.mini) #credit { display: none; }
-    #vignette { background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(8,18,40,.25) 100%); }
+    #vignette { display: none; } /* the mountain fades into the paper on its own (src/mountain/aerial.js) */
+    html, body { background: #f6f1e7; }
     /* compass: the owner's painted one, turning with the view */
     #compassBtn { width: 56px !important; height: 56px !important; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: 0 5px 12px rgba(40,50,70,.25); cursor: pointer; }
     #compassBtn img { width: 56px !important; height: 56px !important; display: block; border-radius: 50%; }
@@ -74,7 +75,7 @@
     #timePanel .wxrow img { width: 30px; height: 30px; } #timePanel .wxrow button.on { background: #e8eef4 !important; color: #22344d !important; font-weight: 600; }
     #now .more { display: none; } #now::after { content: "⌄"; margin-left: auto; color: #6f675e; }
     /* the base's miniature, in the same paper look */
-    #miniTop { top: 0 !important; left: 0 !important; right: 0 !important; padding: calc(12px + env(safe-area-inset-top)) 14px 22px; align-items: flex-start !important; gap: 10px !important; background: linear-gradient(#f3ede2 65%, rgba(243,237,226,0)); z-index: 6; }
+    #miniTop { top: 0 !important; left: 0 !important; right: 0 !important; padding: calc(12px + env(safe-area-inset-top)) 14px 22px; align-items: flex-start !important; gap: 10px !important; background: linear-gradient(#f6f1e7 65%, rgba(246,241,231,0)); z-index: 6; }
     #miniTop .tt { flex: 1; min-width: 0; } #miniTop .tt i { display: block; font: 500 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a6a5a; text-transform: uppercase; }
     #miniTop .tt b { display: block; font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #miniTop .tt small { display: block; font: 12px "Noto Serif SC", serif; color: #6f675e; margin-top: 2px; }
@@ -100,7 +101,7 @@
     .plans .lbl { font: 13px "Noto Serif SC", serif !important; color: #8a8278 !important; padding: 0 6px 0 10px; }
     .plans button { box-shadow: none !important; background: none !important; border: 0 !important; font: 14px "Noto Serif SC", serif !important; color: #22344d !important; padding: 5px 12px !important; display: flex !important; align-items: center; gap: 6px; border-radius: 999px !important; }
     .plans button.on { background: #22344d !important; color: #fdfbf6 !important; }
-    .dt { width: 10px; height: 10px; display: inline-block; } .dt.e { background: #4fae6a; border-radius: 50%; } .dt.m { background: #3f78c8; } .dt.a { background: #2a2e36; transform: rotate(45deg) scale(.85); }
+    .dt { width: 10px; height: 10px; display: inline-block; } .dt.e { background: #2e8b4f; border-radius: 50%; } .dt.m { background: #2a5db0; } .dt.a { background: #1c1f25; transform: rotate(45deg) scale(.85); }
     .plans button.on .dt.a { background: #fdfbf6; }
     .ltag, .ltag.on { background: none !important; border: 0 !important; }
     .ltag b { display: flex !important; align-items: center; gap: 6px; font: 600 15px "Cormorant Garamond", serif !important; padding: 4px 12px 4px 5px !important; border-radius: 999px !important; border: 0 !important; box-shadow: 0 4px 10px rgba(40,50,70,.18); }

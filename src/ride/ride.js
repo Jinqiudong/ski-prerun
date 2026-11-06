@@ -9,7 +9,7 @@ import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=14";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick } from "../rider/rider-a.js?v=16";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
-import { Diorama } from "../mountain/diorama.js?v=20";
+import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=3";
@@ -682,6 +682,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const bases = R.places.filter((p) => p.kind === "village");
   const graph = buildGraph(R, (x, z) => T.heightAt(x, z));
   const fromTop = [graph.liftNodes.get(lift).top];
+  aerialTexture(RESORT).catch(() => {}); // the top's picture, fetched while the chair climbs
 
   // A plan: the legs from this top; the downhill part (skied now, up to the first lift) as one path.
   function makePlan(legs, extra) {
@@ -855,6 +856,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function startHike() {
     const hp = hike && hikePath(); if (!hp) return;
     hk = { ...hp, d: 0, dist: [0], flags: prayerFlags(...hp.summit) };
+    aerial?.dispose(true); aerial = null; // the top's view from the air is done with: its memory back for the way down
     for (let i = 1; i < hp.pts.length; i++) hk.dist.push(hk.dist[i - 1] + Math.hypot(hp.pts[i][0] - hp.pts[i - 1][0], hp.pts[i][1] - hp.pts[i - 1][1]));
     world.add(hk.flags);
     addStep(RESORT, { k: "hike", name: hike.name, mins: hike.mins, gain: hike.gain || 0, gear: HIKE_GEAR });
@@ -915,6 +917,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   function startSki(at = null) {
     const P = chosen, path = P.path;
+    aerial?.dispose(true); aerial = null; // the top's view from the air is done with: its memory back for the way down
     camera.fov = 66; camera.updateProjectionMatrix(); // a wider view on the snow
     setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now
     if (guide) guide.visible = true;
@@ -1677,7 +1680,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     el.className = `rtag ${cls}`; el.innerHTML = html;
     if (onClick) el.onclick = onClick;
     tagBox.append(el);
-    const t = { el, cls: cls || "run", pos: new THREE.Vector3(x, dio.Y(x, z) + h * 4, z) };
+    const t = { el, cls: cls || "run", pos: new THREE.Vector3(x, aerial ? aerial.Y(x, z) + h * 4 : 0, z) };
     liveTags.push(t);
     return t;
   };
@@ -1685,7 +1688,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // Tags sit above their spot, kept on screen, and nudged up out of each other's way (earlier tags win).
   const RANK = { me: -1, dest: 0, on: 0, via: 1, pin: 2, leg: 3 };
   function placeTags() {
-    const camera = dio.camera;
+    const camera = aerial.camera;
     liveTags.sort((a, b) => (RANK[a.cls] ?? 2) - (RANK[b.cls] ?? 2));
     const placed = [];
     for (const t of liveTags) {
@@ -1764,50 +1767,46 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       L.sort((a, b) => xs.get(a) - xs.get(b));
     }
     scene.add(marks);
-    // The choosing happens on a miniature, like the one the day started on: the block covering this top
-    // and everywhere you can go from it, seen from the summit's side.
+    // The choosing happens from the air, as on the resort page: the area around this top and everywhere you
+    // can go from it, looked down on steeply from the summit's side, fading into the paper past it.
     const all = [[g1.x, g1.z], ...[...dests, ...runs].flatMap((P) => [...P.path.filter((_, i) => i % 6 === 0), P.end])];
     const [x0, x1, z0, z1] = boxOf(all.map((p) => p[0]), all.map((p) => p[1]), 300);
     const inside = ([x, z]) => x > x0 && x < x1 && z > z0 && z < z1;
-    dio ||= new Diorama(renderer);
-    dio.build({ T, R, mask: ctx.mask, graph, lifts: R.lifts.filter((l) => bigLift(l) && l.pts.some(inside)), points: all, maxHalf: 2200, runWidth: 46,
-      lodges: bases.filter((b) => inside([b.x, b.z])), title: `${lift.name} 山顶` });
-    addEventListener("resize", () => dio.resize());
-    const c = dio.box;
-    dio.size = dio.sizeTo = dio.whole * 1.12; // the whole block, corners included
-    // Centre on the middle of the terrain's height, not the plinth.
-    dio.focus.y = dio.focusTo.y = all.reduce((a, [x, z]) => a + dio.Y(x, z), 0) / all.length;
+    if (!aerial) { aerial = new Aerial(renderer); addEventListener("resize", () => aerial?.resize()); }
+    aerial.build({ T, R, id: RESORT, graph, lifts: R.lifts.filter((l) => bigLift(l) && l.pts.some(inside)), points: all, lodges: bases.filter((b) => inside([b.x, b.z])) });
+    window.__aerial = aerial; // test hook
+    const c = aerial.box;
+    aerial.size = aerial.sizeTo = aerial.whole * 1.12; // the whole area, corners included
     spin = spin0 = ((((Math.atan2(g1.z - c.cz, g1.x - c.cx) + Math.PI / 4) / (Math.PI * 2)) % 1) + 1) % 1;
-    // The summit: a flag where you stand.
+    // The summit: a small flag where you stand.
     const flag = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 120), new THREE.MeshStandardMaterial({ color: 0x333a44 }));
-    pole.position.y = 60;
-    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(70, 42), new THREE.MeshStandardMaterial({ color: 0xf2b632, side: THREE.DoubleSide }));
-    cloth.position.set(35, 99, 0);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 70), new THREE.MeshLambertMaterial({ color: 0x4a4f57 }));
+    pole.position.y = 35;
+    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshLambertMaterial({ color: 0xc98f45, side: THREE.DoubleSide }));
+    cloth.position.set(20, 57, 0);
     flag.add(pole, cloth);
-    flag.position.set(g1.x, dio.Y(g1.x, g1.z), g1.z);
-    dio.root.add(flag);
-    // You are here: a ring on the snow around the flag, pulsing (and a tag above it).
-    here = new THREE.Mesh(new THREE.RingGeometry(46, 66, 40), new THREE.MeshBasicMaterial({ color: 0xe8453c, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide }));
+    flag.position.set(g1.x, aerial.Y(g1.x, g1.z), g1.z);
+    aerial.root.add(flag);
+    // You are here: a ring on the snow around the flag, pulsing softly (and a tag above it).
+    here = new THREE.Mesh(new THREE.RingGeometry(34, 42, 48), new THREE.MeshBasicMaterial({ color: 0xb4553f, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
     here.rotation.x = -Math.PI / 2;
-    here.position.set(g1.x, dio.Y(g1.x, g1.z) + 4, g1.z);
+    here.position.set(g1.x, aerial.Y(g1.x, g1.z) + 4, g1.z);
     here.renderOrder = 3;
-    dio.root.add(here);
-    dio.blur = 3.2; dio.resize(); // a stronger tilt-shift than the base view: the far edges go soft
+    aerial.root.add(here);
     $("pickTabs").innerHTML = `<button data-m="dest">去哪儿 · ${dests.length}</button><button data-m="runs">选一条雪道 · ${runs.length}</button>${hike ? `<button data-m="hike">🥾 徒步</button>` : ""}`;
     for (const b of $("pickTabs").children) b.onclick = () => setMode(b.dataset.m);
     setMode(mode, [...dests, ...runs].find((P) => P.key === wantKey));
   }
   const list = () => (mode === "dest" ? dests : runs);
   const views = {};
-  let dio = null, here = null, spin = 0, spin0 = 0, pdrag = null;
+  let aerial = null, here = null, spin = 0, spin0 = 0, pdrag = null;
   renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "pick") pdrag = { x: e.clientX, s: spin }; });
   addEventListener("pointermove", (e) => { if (pdrag) spin = pdrag.s - (e.clientX - pdrag.x) / 600; });
   addEventListener("pointerup", () => (pdrag = null));
   // The miniature fills the part of the screen between the top panel and the cards.
-  const dioFrame = () => {
+  const aerialFrame = () => {
     const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
-    dio.orbit(spin, Math.max(0.35, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, 0, 58); // steep: over the summit, down the slopes
+    aerial.orbit(spin, Math.max(0.35, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, 0); // steep: over the summit, down the slopes
   };
   // Zoom the miniature onto a plan: centred on it and close enough that it just fills the space between
   // the top panel and the cards. The rest of the block runs on past the screen's softened edges.
@@ -1817,39 +1816,39 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const list = l.type === "run" ? l.run.pts.slice(l.from, l.to + 1) : l.type === "lift" ? l.lift.pts : [];
       list.forEach((p, i) => { if (i % 3 === 0 || i === list.length - 1) flat.push(p); });
     }
-    const pts = flat.map(([x, z]) => new THREE.Vector3(x, dio.Y(x, z), z));
+    const pts = flat.map(([x, z]) => new THREE.Vector3(x, aerial.Y(x, z), z));
     const lo = pts.reduce((a, p) => a.min(p), pts[0].clone()), hi = pts.reduce((a, p) => a.max(p), pts[0].clone());
-    const saved = { size: dio.size, focus: dio.focus.clone() };
-    dio.focus.lerpVectors(lo, hi, 0.5);
-    dio.size = dio.whole;
+    const saved = { size: aerial.size, focus: aerial.focus.clone() };
+    aerial.focus.lerpVectors(lo, hi, 0.5);
+    aerial.size = aerial.whole;
     const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
     const roomY = Math.max(0.35, 1 - (topPx + botPx) / innerHeight) * 2 * 0.8, roomX = 2 * 0.82; // a margin, so the ends stay clear of the panels
-    const at = (p) => v.copy(p).project(dio.camera).clone();
+    const at = (p) => v.copy(p).project(aerial.camera).clone();
     for (let k = 0; k < 4; k++) { // the projected size goes about as 1 / distance: a few rounds settle it
-      dioFrame();
+      aerialFrame();
       let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
-      for (const p of pts) { v.copy(p).project(dio.camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
+      for (const p of pts) { v.copy(p).project(aerial.camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
       // Perspective pushes the plan off centre: slide the focus over the snow until the plan's middle
       // sits where the focus does (the middle of the space between the panel and the cards).
-      const c = at(dio.focus), right = new THREE.Vector3().setFromMatrixColumn(dio.camera.matrixWorld, 0).setY(0).normalize();
-      const up = new THREE.Vector3(-right.z, 0, right.x), dx = at(dio.focus.clone().addScaledVector(right, 100)), dy = at(dio.focus.clone().addScaledVector(up, 100));
+      const c = at(aerial.focus), right = new THREE.Vector3().setFromMatrixColumn(aerial.camera.matrixWorld, 0).setY(0).normalize();
+      const up = new THREE.Vector3(-right.z, 0, right.x), dx = at(aerial.focus.clone().addScaledVector(right, 100)), dy = at(aerial.focus.clone().addScaledVector(up, 100));
       if (Math.abs(dy.y - c.y) < 1e-4) dy.y += 1e-4;
-      dio.focus.addScaledVector(right, (((x0 + x1) / 2 - c.x) / (dx.x - c.x || 1e-4)) * 100).addScaledVector(up, (((y0 + y1) / 2 - c.y) / (dy.y - c.y)) * 100);
-      dio.size = clamp(dio.size * Math.max((x1 - x0) / roomX, (y1 - y0) / roomY), dio.whole * 0.18, dio.whole * 1.12);
+      aerial.focus.addScaledVector(right, (((x0 + x1) / 2 - c.x) / (dx.x - c.x || 1e-4)) * 100).addScaledVector(up, (((y0 + y1) / 2 - c.y) / (dy.y - c.y)) * 100);
+      aerial.size = clamp(aerial.size * Math.max((x1 - x0) / roomX, (y1 - y0) / roomY), aerial.whole * 0.18, aerial.whole * 1.12);
     }
-    dio.focusTo.copy(dio.focus); dio.sizeTo = dio.size;
-    dio.size = saved.size; dio.focus.copy(saved.focus);
+    aerial.focusTo.copy(aerial.focus); aerial.sizeTo = aerial.size;
+    aerial.size = saved.size; aerial.focus.copy(saved.focus);
   }
   let lastT = 0;
   st.render = (t) => {
     if (st.phase !== "pick") return false;
     const glide = 1 - Math.exp(-Math.min(0.1, t - lastT || 0) * 4); lastT = t;
-    dio.focus.lerp(dio.focusTo, glide);
-    dio.size += (dio.sizeTo - dio.size) * glide;
-    here.scale.setScalar(1 + 0.25 * Math.sin(t * 3)); // you are here: a slow pulse
-    dioFrame();
+    aerial.focus.lerp(aerial.focusTo, glide);
+    aerial.size += (aerial.sizeTo - aerial.size) * glide;
+    here.scale.setScalar(1 + 0.15 * Math.sin(t * 3)); // you are here: a slow pulse
+    aerialFrame();
     placeTags();
-    dio.render(t);
+    aerial.render();
     return true;
   };
   function setMode(m, first) {
@@ -1923,10 +1922,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const order = new Map(), others = new Set();
     P.legs.forEach((l, i) => l.type === "run" && !order.has(l.run) && order.set(l.run, order.size));
     for (const o of list()) for (const l of o.legs) if (l.type === "run") others.add(l.run);
-    if (dio) {
-      dio.light3((run) => (order.has(run) ? 1 : others.has(run) ? 0.22 : 0), (run) => (order.get(run) ?? 0) * 0.35);
+    if (aerial) {
+      aerial.light3((run) => (order.has(run) ? 1 : others.has(run) ? 0.22 : 0), (run) => (order.get(run) ?? 0) * 0.35);
       const via = P.legs.find((l) => l.type === "lift")?.lift || (P.kind === "lift" ? P.lift : null);
-      dio.focusLift(via);
+      aerial.focusLift(via);
       aimAt(P);
     }
     ctx.addRunsNear((pts) => P.legs.some((l) => l.type === "run" && l.run.pts === pts));
@@ -2189,7 +2188,7 @@ async function main() {
   addEventListener("pagehide", keep);
   const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
-  // Sound: the board, the air, the lift and music (src/audio). It waits for the first tap on a phone.
+  // Sound: the board, the aerial, the lift and music (src/audio). It waits for the first tap on a phone.
   const snd = rideSound();
   snd?.ready.then(() => { const c = creditLine(snd.music.tracks()); if (c) $("credit").append(c); });
   const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair, snd });
