@@ -4,11 +4,13 @@
 // Phones only let sound start from a tap, so the context is resumed on the first touch, click or key.
 // On / off and the volumes are kept on this phone (localStorage "prerunSound").
 
-import { impulse } from "./buffers.js?v=1";
+import { impulse } from "./buffers.js?v=2";
 
 const KEY = "prerunSound";
-const DEFAULTS = { on: true, music: 0.55, sfx: 0.9 };
-const load = () => { try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { return { ...DEFAULTS }; } };
+// Music sits well under the snow and wind; the whole mix is gentle for a phone's speaker. v: the mix these
+// levels belong to; levels saved under an older mix are dropped (on/off is kept).
+const DEFAULTS = { on: true, music: 0.16, sfx: 0.7, v: 2 };
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s.v === DEFAULTS.v ? { ...DEFAULTS, ...s } : { ...DEFAULTS, on: s.on ?? true }; } catch { return { ...DEFAULTS }; } };
 export const settings = load();
 
 let A = null, mix = null;
@@ -62,7 +64,7 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } c
 function apply(glide = 0.15) {
   if (!mix) return;
   const t = A.currentTime, on = settings.on ? 1 : 0;
-  mix.master.gain.setTargetAtTime(on, t, glide || 0.001);
+  mix.master.gain.setTargetAtTime(0.8 * on, t, glide || 0.001);
   mix.music.level.gain.setTargetAtTime(settings.music, t, glide || 0.001);
   mix.sfx.level.gain.setTargetAtTime(settings.sfx, t, glide || 0.001);
   mix.ambience.level.gain.setTargetAtTime(settings.sfx * 0.85, t, glide || 0.001);

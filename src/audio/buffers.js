@@ -66,50 +66,40 @@ function wobble(r, n, sr, rate, lo, hi) {
   return out;
 }
 
-// The board running on snow: pink noise whose loudness breathes unevenly, many times a second (snow is
-// never one surface: crystals, ridges of corduroy, patches packed harder), and with tiny ticks of
-// crystals breaking. Played faster with speed, the texture speeds up and brightens.
+// The board pressing through snow: pink noise, its fizz taken off, whose loudness breathes smoothly
+// (snow is never one surface: softer and firmer patches, the board's flex). No clicks, no ticks: on a
+// phone's speaker any sharp grain reads as crackle. Played faster with speed, it breathes faster.
 export function snowTexture(sr, secs = 3, seed = 11) {
-  const r = rng(seed), fade = Math.floor(sr * 0.08), n = Math.floor(sr * secs) + fade;
-  const x = pink(sr, n / sr, seed), slow = wobble(r, n, sr, 3, 0.65, 1.15), fast = wobble(r, n, sr, 22, 0.55, 1.25);
-  for (let i = 0; i < n; i++) x[i] *= slow[i] * fast[i];
-  for (let k = 0; k < secs * 160; k++) { // crystal ticks
-    const at = Math.floor(r() * (n - 200)), len = 20 + Math.floor(r() * 90), amp = 0.4 + r() * 1.2;
-    for (let i = 0; i < len; i++) x[at + i] += (r() * 2 - 1) * amp * 0.12 * (1 - i / len) ** 2;
-  }
+  const r = rng(seed), fade = Math.floor(sr * 0.25), n = Math.floor(sr * secs) + fade;
+  const x = biquad(pink(sr, n / sr, seed), sr, "lowpass", 5000, 0.5), slow = wobble(r, n, sr, 1.5, 0.75, 1.15), mid = wobble(r, n, sr, 6, 0.86, 1.12);
+  for (let i = 0; i < n; i++) x[i] *= slow[i] * mid[i];
   return toRms(seamless(x, fade), 0.22);
 }
 
-// A skid: the board's edge scraping sideways through the snow. Dense grains of filtered noise, each its own
-// pitch and loudness, a few loud ones (the grit), over a rough bed; it chatters a little, as an edge does.
-export function scrapeTexture(sr, secs = 3, seed = 23) {
-  const r = rng(seed), fade = Math.floor(sr * 0.08), n = Math.floor(sr * secs) + fade, x = new Float32Array(n);
-  const bed = pink(sr, n / sr, seed + 1), chat = wobble(r, n, sr, 34, 0.35, 1.2);
-  for (let i = 0; i < n; i++) x[i] = bed[i] * 0.5 * chat[i];
-  const grain = new Float32Array(Math.floor(sr * 0.02));
-  for (let k = 0; k < secs * 700; k++) {
-    const len = Math.floor(sr * (0.002 + r() * 0.012)), at = Math.floor(r() * (n - len - 1));
-    const g = grain.subarray(0, len); for (let i = 0; i < len; i++) g[i] = r() * 2 - 1;
-    biquad(g, sr, "bandpass", 500 + r() * 3200, 1.2 + r() * 2);
-    const amp = (r() < 0.06 ? 1.7 : 0.6) * (0.3 + r()) * 3;
-    for (let i = 0; i < len; i++) x[at + i] += g[i] * amp * Math.sin((Math.PI * i) / len);
-  }
+// A skid or a slash: the board's edge pushed sideways through soft snow, shedding it in a spray. Deep and
+// smooth: darker pink noise with a heavy, slow-swelling body under it and soft surges as snow is thrown
+// off (a few a second); nothing gritty.
+export function sprayTexture(sr, secs = 3, seed = 23) {
+  const r = rng(seed), fade = Math.floor(sr * 0.25), n = Math.floor(sr * secs) + fade;
+  const x = biquad(pink(sr, n / sr, seed + 1), sr, "lowpass", 3200, 0.5), body = biquad(brown(sr, n / sr, seed + 2), sr, "lowpass", 600, 0.6);
+  const surge = wobble(r, n, sr, 4.5, 0.6, 1.25), slow = wobble(r, n, sr, 1.2, 0.8, 1.15);
+  for (let i = 0; i < n; i++) x[i] = (x[i] + body[i] * 0.5) * surge[i] * slow[i];
   return toRms(seamless(x, fade), 0.22);
 }
 
 // One crunch of a boot or the free foot pushing: a short packed squeak-crunch, its grains bunched at
 // the start and thinning out. variant picks one of a few.
 export function crunch(sr, variant = 0) {
-  const r = rng(101 + variant * 7), n = Math.floor(sr * (0.16 + r() * 0.08)), x = new Float32Array(n);
-  for (let k = 0; k < 140; k++) {
-    const at = Math.floor(n * r() ** 2.2), len = Math.floor(sr * (0.001 + r() * 0.006));
-    const f = 700 + r() * 2600, amp = (1 - at / n) * (0.4 + r());
-    for (let i = 0; i < len && at + i < n; i++) x[at + i] += Math.sin((2 * Math.PI * f * i) / sr + r() * 0.3) * amp * (1 - i / len);
+  const r = rng(101 + variant * 7), n = Math.floor(sr * (0.2 + r() * 0.08)), x = new Float32Array(n);
+  for (let k = 0; k < 50; k++) { // soft packed grains, low and rounded
+    const at = Math.floor(n * 0.7 * r() ** 1.6), len = Math.floor(sr * (0.004 + r() * 0.01));
+    const f = 350 + r() * 1100, amp = (1 - at / n) * (0.3 + r() * 0.5);
+    for (let i = 0; i < len && at + i < n; i++) x[at + i] += Math.sin((2 * Math.PI * f * i) / sr) * amp * Math.sin((Math.PI * i) / len);
   }
   const body = pink(sr, n / sr, 300 + variant);
-  biquad(body, sr, "lowpass", 900);
-  for (let i = 0; i < n; i++) x[i] += body[i] * 2.2 * Math.exp((-i / sr) * 22);
-  for (let i = 0; i < 40; i++) x[i] *= i / 40;
+  biquad(body, sr, "lowpass", 700);
+  for (let i = 0; i < n; i++) { const t = i / sr; x[i] += body[i] * 3 * Math.min(1, t / 0.015) * Math.exp(-t * 14); }
+  biquad(x, sr, "lowpass", 2400, 0.5);
   return normalize(x, 0.8);
 }
 
