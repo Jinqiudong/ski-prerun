@@ -1,0 +1,553 @@
+{
+  "resort": "snowmass",
+  "name": "Snowmass",
+  "origin": {
+    "lat": 39.18595,
+    "lon": -106.94945
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/snowmass.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "Lynn Britt Cabin and The Cabin (Coney Express top) are not in OSM and were not placed."
+  ],
+  "lifts": {
+    "17117822": {
+      "name": "Alpine Springs",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1993,
+      "terminal": "Poma",
+      "color": {
+        "terminal": "#5a6067"
+      },
+      "color_verified": true,
+      "note": "One of four nearly identical Poma HSQs at Snowmass; skiresort.info lists a planned six-pack (2027).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/alpine-springs-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17118605": {
+      "name": "Assay Hill",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2006,
+      "terminal": "Poma Alpha",
+      "color": {
+        "terminal": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/assay-hill-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17117775": {
+      "name": "Big Burn",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2020,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#a9aeb3",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Chairs can take bubbles later.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/big-burn-snowmass-co-2/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17117578": {
+      "name": "Campground",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2003,
+      "color": {
+        "terminal": "#a9aeb3"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/campground-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "233059992": {
+      "name": "Cirque T-Bar",
+      "type": "tbar",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Leitner",
+      "year": 2025,
+      "color": {
+        "terminal": "#a9aeb3",
+        "operator_hut": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Rebuilt 2025 on the old line; very high (Skytrac-style angled towers in photos).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/cirque-snowmass-co-2/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "1211520822": {
+      "name": "Coney Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2024,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#4a3d36",
+        "chair": "#5a5f66",
+        "chair_headrest_accent": "#c0392b"
+      },
+      "color_verified": true,
+      "note": "New alignment from Snowmass Village to The Cabin with an LPA mid-station; a third of the chairs have red headrests.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/coney-express-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17117918": {
+      "name": "Elk Camp",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2025,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#3a3d40",
+        "chair": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Replaced the 1995 Poma quad in 2025.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/elk-camp-snowmass-co-2/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17118232": {
+      "name": "Elk Camp Gondola",
+      "type": "gondola",
+      "seats": 8,
+      "bubble": true,
+      "manufacturer": "Leitner-Poma",
+      "year": 2006,
+      "cabin_model": "CWA Omega III 8 LWI",
+      "color": {
+        "cabin": "#222428",
+        "cabin_logo": "#ffffff"
+      },
+      "color_verified": true,
+      "note": "Black cabins with 'Snowmass' lettering; top beside Elk Camp restaurant and Two Creeks top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/elk-camp-gondola-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "556749646": {
+      "name": "High Alpine",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2015,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#5d7286"
+      },
+      "color_verified": true,
+      "note": "Slate-blue LPA hood with wood-panelled operator house; bottom by High Alpine restaurant.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/high-alpine-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "135480768": {
+      "name": "Meadows",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2007,
+      "terminal": "Poma Alpha",
+      "color": {
+        "terminal": "#7a7f84"
+      },
+      "color_verified": true,
+      "note": "Reused towers and chairs from the old Fanny Hill HSQ.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/meadows-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "1210150815": {
+      "name": "Pines Lower",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Private homeowners' lift for a few houses; not part of the public ski area.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/pines-lower-snowmass-co/"
+      ]
+    },
+    "1210150814": {
+      "name": "Pines Upper",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Private homeowners' lift; five towers.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/pines-upper-snowmass-co/"
+      ]
+    },
+    "233059990": {
+      "name": "Sam's Knob",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1993,
+      "terminal": "Poma Competition",
+      "color": {
+        "terminal": "#5a6067"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sams-knob-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "258700714": {
+      "name": "Scooper",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2000,
+      "color": {},
+      "color_verified": false,
+      "note": "Rarely runs; skiresort.info calls it a J-bar, photos show platters.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/scooper-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17118727": {
+      "name": "Sheer Bliss",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2008,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#5a6067"
+      },
+      "color_verified": true,
+      "note": "Up 4 Pizza at its top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sheer-bliss-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "135480769": {
+      "name": "Sky Cab",
+      "type": "gondola",
+      "seats": null,
+      "bubble": true,
+      "manufacturer": "Leitner-Poma",
+      "year": 2005,
+      "cabin_model": "Sigma Diamond",
+      "color": {
+        "cabin_groups": [
+          "#f2c21b",
+          "#2f6fb5",
+          "#2e9a6a"
+        ]
+      },
+      "color_verified": true,
+      "note": "Pulse gondola, four groups of three cabins, each group a different colour (yellow, blue, green seen; fourth not confirmed). OSM says 6 seats, skiresort.info says 8.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/sky-cab-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "135480770": {
+      "name": "Two Creeks",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1995,
+      "terminal": "Poma Competition",
+      "color": {
+        "terminal": "#5a6067",
+        "terminal_under": "#a03030"
+      },
+      "color_verified": true,
+      "note": "Almost 10,000 ft long; tops out by the Elk Camp Gondola top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/two-creeks-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    },
+    "17117920": {
+      "name": "Village Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2005,
+      "color": {
+        "terminal": "#4a5550"
+      },
+      "color_verified": true,
+      "note": "From Base Village to Sam's Knob with a mid-unload half station.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/village-express-snowmass-co/",
+        "https://www.skiresort.info/ski-resort/snowmass/ski-lifts/"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "Elk Camp",
+      "kind": "restaurant",
+      "x": 1211.8,
+      "z": -168.7,
+      "style": "Modern restaurant at the Elk Camp Gondola top: boxy volumes in ochre-tan render and dark timber with flat and low-pitched roofs, deck for 150.",
+      "model": "restaurant",
+      "osm": "n10625162546",
+      "place_check": {
+        "place": "Elk camp",
+        "distance_m": 0.0
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625162546",
+        "https://liftblog.com/elk-camp-gondola-snowmass-co/",
+        "https://www.gosnowmass.com/venues/elk-camp-restaurant/"
+      ]
+    },
+    {
+      "name": "Sam's",
+      "kind": "restaurant",
+      "x": -2039.1,
+      "z": -178.4,
+      "style": "Rifugio-style restaurant on Sam's Knob (rebuilt 2019): steep gable with exposed dark timber trusses and a glazed gable end, dark board and metal cladding, stone base.",
+      "model": "restaurant",
+      "osm": "n10625153619",
+      "place_check": {
+        "place": "Sam's",
+        "distance_m": 0.0
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625153619",
+        "https://www.aspensnowmass.com/visit/dining/snowmass/sams",
+        "https://www.postindependent.com/news/skico-to-replace-sams-knob-restaurant-for-9-million/"
+      ]
+    },
+    {
+      "name": "High Alpine",
+      "kind": "restaurant",
+      "x": -343.5,
+      "z": 496.5,
+      "style": "Large two-to-three-storey timber lodge with several gables set in the trees near the Alpine Springs top; shares the building with the Alpin Room.",
+      "model": "restaurant",
+      "osm": "n10625147973",
+      "place_check": {
+        "place": "High Alpine",
+        "distance_m": 0.0
+      },
+      "note": "Read from one aerial photo.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625147973",
+        "https://www.aspensnowmass.com/visit/dining/snowmass/high-alpine"
+      ]
+    },
+    {
+      "name": "Up4pizza",
+      "kind": "restaurant",
+      "x": -1762.7,
+      "z": 1766.4,
+      "style": "Pizza spot at the top of Sheer Bliss.",
+      "model": "warming_hut",
+      "osm": "n10625168713",
+      "place_check": {
+        "place": "Up4pizza",
+        "distance_m": 0.0
+      },
+      "note": "Look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625168713",
+        "https://www.aspensnowmass.com/visit/dining/snowmass/up4pizza"
+      ]
+    },
+    {
+      "name": "Ullrhof",
+      "kind": "restaurant",
+      "x": -1209.0,
+      "z": -371.1,
+      "style": "Mid-mountain restaurant near the Big Burn bottom.",
+      "model": "restaurant",
+      "osm": "n10625182496",
+      "place_check": {
+        "place": "Ullrhof",
+        "distance_m": 0.1
+      },
+      "note": "Look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625182496",
+        "https://www.aspensnowmass.com/visit/dining/snowmass/ullrhof"
+      ]
+    },
+    {
+      "name": "Two Creeks Cafe",
+      "kind": "restaurant",
+      "x": 2491.7,
+      "z": -2990.1,
+      "style": "Cafe at the Two Creeks base.",
+      "model": "warming_hut",
+      "osm": "n10625169185",
+      "place_check": {
+        "place": "Two Creeks",
+        "distance_m": 32.9
+      },
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625169185",
+        "https://www.aspensnowmass.com/visit/dining/snowmass/two-creeks"
+      ]
+    },
+    {
+      "name": "Ski patrol (Big Burn top)",
+      "kind": "patrol",
+      "x": -257.5,
+      "z": 1775.9,
+      "style": "Patrol hut near the High Alpine top.",
+      "model": "firstaid",
+      "osm": "n10625146190",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/10625146190"
+      ]
+    },
+    {
+      "name": "Snowmass Base Village",
+      "kind": "village_block",
+      "x": -40.6,
+      "z": -2476.0,
+      "style": "New base village of multi-storey hotels and condos around the Village Express, Sky Cab and Elk Camp Gondola.",
+      "model": null,
+      "place_check": {
+        "place": "Snowmass Base Village",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/village-express-snowmass-co/"
+      ]
+    },
+    {
+      "name": "Snowmass Mall",
+      "kind": "village_block",
+      "x": -403.4,
+      "z": -2341.8,
+      "footprint_m": {
+        "length": 104.3,
+        "width": 56.9,
+        "heading_deg": 29.9
+      },
+      "style": "Older pedestrian mall (104 x 56 m) where the Sky Cab tops out.",
+      "model": null,
+      "osm": "w232815861",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/232815861",
+        "https://liftblog.com/sky-cab-snowmass-co/"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Sky Cab colour groups",
+      "description": "Little pulse gondola from Base Village to the Mall: groups of yellow, blue and green Sigma Diamond cabins.",
+      "kit": "partial",
+      "kit_note": "gondola6 exists; per-group cabin paint and pulse spacing.",
+      "refs": [
+        "135480769"
+      ]
+    },
+    {
+      "name": "Elk Camp Gondola",
+      "description": "Black 8-seat Omega III cabins over the aspens.",
+      "kit": "yes",
+      "kit_note": "gondola + gondola_station, black paint.",
+      "refs": [
+        "17118232"
+      ]
+    },
+    {
+      "name": "Big Burn",
+      "description": "Wide-open old burn above treeline served by the Big Burn six-pack.",
+      "kit": "yes",
+      "kit_note": "chair6 + terminal_detach.",
+      "refs": [
+        "17117775"
+      ]
+    },
+    {
+      "name": "Sam's on Sam's Knob",
+      "description": "Timber-truss gable restaurant on the knob at the top of Village Express.",
+      "kit": "no",
+      "kit_note": "Needs its own model.",
+      "refs": []
+    }
+  ]
+}

@@ -1,0 +1,647 @@
+{
+  "resort": "steamboat",
+  "name": "Steamboat",
+  "origin": {
+    "lat": 40.45595,
+    "lon": -106.7701
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/steamboat.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "The Wildhorse Gondola (Leitner-Poma pulse, 2009) is not in the baked data."
+  ],
+  "lifts": {
+    "51722278": {
+      "name": "Bar UE",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1977,
+      "color": {
+        "terminal": "#2b2d30",
+        "chair": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/bar-ue-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "17138114": {
+      "name": "Bashor",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1974,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Oldest Steamboat lift; terrain park and race training.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/bashor-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "144863541": {
+      "name": "Buckaroo",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet at the base. Not confirmed by a lift database.",
+      "verified": false,
+      "sources": []
+    },
+    "17136815": {
+      "name": "Burgess Creek",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2004,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#6f7a6f"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/burgess-creek-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722270": {
+      "name": "Christie Peak Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2007,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#8e2b2b",
+        "terminal_stripe": "#f2f2f2"
+      },
+      "color_verified": true,
+      "note": "Maroon Omega hood with white stripes; mid-unload; lower line realigned in 2022 for Wild Blue.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/christie-peak-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722277": {
+      "name": "Elkhead Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2016,
+      "terminal": "Doppelmayr Uni-G",
+      "color": {
+        "terminal": "#23366e",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/elkhead-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722279": {
+      "name": "Four Points",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1992,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Doppelmayr chairs added 2012; tops out at Four Points Lodge.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/four-points-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "1125350036": {
+      "name": "Greenhorn Ranch Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2022,
+      "color": {
+        "terminal": "#23366e",
+        "terminal_band": "#f2f2f2"
+      },
+      "color_verified": true,
+      "note": "Beginner lift at Greenhorn Ranch with auto-locking bars.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/greenhorn-ranch-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "1571126936": {
+      "name": "Lift",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Unnamed carpet at Greenhorn Ranch in OSM.",
+      "verified": false,
+      "sources": []
+    },
+    "902033306": {
+      "name": "Mahogany Ridge Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2023,
+      "terminal": "LPA",
+      "color": {
+        "chair": "#5a5f66",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Expert expansion lift; first LPA quad chairs at Steamboat.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/mahogany-ridge-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722274": {
+      "name": "Morningside Lift",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Garaventa CTEC",
+      "year": 1996,
+      "color": {
+        "terminal": "#7a7f84"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/morningside-park-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722357": {
+      "name": "Pony Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Garaventa CTEC",
+      "year": 1998,
+      "terminal": "CTEC Stealth",
+      "color": {
+        "terminal_roof": "#8e2b2b",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Serves Pioneer Ridge.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/pony-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "51722275": {
+      "name": "South Peak",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1984,
+      "color": {
+        "terminal": "#3a3d40"
+      },
+      "color_verified": true,
+      "note": "Chairs have no safety bars.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/south-peak-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "17138113": {
+      "name": "Steamboat Gondola",
+      "type": "gondola",
+      "seats": 8,
+      "bubble": true,
+      "manufacturer": "Doppelmayr",
+      "year": 2019,
+      "cabin_model": "CWA Omega IV 8 LWI",
+      "color": {
+        "cabin": "#23366e",
+        "terminal_roof": "#3a6fb0"
+      },
+      "color_verified": true,
+      "note": "Rebuilt 2017-2019 from the Silver Bullet; 137 navy cabins (one white wedding cabin), leather seats; top terminal inside Thunderhead Lodge. Bottom terminal moved uphill in 2021.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/gondola-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "17137132": {
+      "name": "Storm Peak Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 1992,
+      "terminal": "Doppelmayr Uni",
+      "color": {
+        "terminal": "#d5d8db",
+        "terminal_roof": "#a03030"
+      },
+      "color_verified": true,
+      "note": "Former bubble chair (bubbles removed).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/storm-peak-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "17139208": {
+      "name": "Sundown Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 1992,
+      "color": {
+        "terminal": "#c9ccd0",
+        "terminal_roof": "#a03030"
+      },
+      "color_verified": true,
+      "note": "Former bubble chair.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sundown-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "144863542": {
+      "name": "Sunshine Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2006,
+      "color": {
+        "terminal": "#7a7f84",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Relocated from The Canyons (Tombstone Express, 1997).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sunshine-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "17136817": {
+      "name": "Thunderhead Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 1997,
+      "terminal": "Doppelmayr Spacejet",
+      "color": {
+        "terminal": "#c9ccd0",
+        "terminal_roof": "#a03030"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/thunderhead-express-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "1571126934": {
+      "name": "Two Whoops 1",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet at Greenhorn Ranch.",
+      "verified": false,
+      "sources": []
+    },
+    "1571126935": {
+      "name": "Two Whoops 2",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet at Greenhorn Ranch.",
+      "verified": false,
+      "sources": []
+    },
+    "1519954196": {
+      "name": "Wild Blue Gondola I",
+      "type": "gondola",
+      "seats": 10,
+      "bubble": true,
+      "manufacturer": "Doppelmayr",
+      "year": 2022,
+      "terminal": "Doppelmayr D-Line",
+      "cabin_model": "CWA Omega V 10",
+      "color": {
+        "cabin": "#1f2f63",
+        "cabin_logo": "#ffffff",
+        "tower": "#9aa0a6",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Base to the Greenhorn Ranch angle station; navy cabins with the white Steamboat logo.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/wild-blue-gondola-i-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "1208385225": {
+      "name": "Wild Blue Gondola II",
+      "type": "gondola",
+      "seats": 10,
+      "bubble": true,
+      "manufacturer": "Doppelmayr",
+      "year": 2023,
+      "terminal": "Doppelmayr D-Line",
+      "cabin_model": "CWA Omega V 10",
+      "color": {
+        "cabin": "#1f2f63",
+        "cabin_logo": "#ffffff",
+        "tower": "#9aa0a6",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Greenhorn Ranch to Sunshine Peak; 103 cabins on the top section, very high spans, crosses three lifts.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/wild-blue-gondola-ii-steamboat-co/",
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Steamboat_Ski_Resort"
+      ]
+    },
+    "1571126933": {
+      "name": "Wrangler",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": 2022,
+      "color": {},
+      "color_verified": false,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/steamboat/ski-lifts/"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "Thunderhead Lodge",
+      "kind": "restaurant",
+      "x": -309.5,
+      "z": 269.3,
+      "style": "Large mid-mountain lodge at the Steamboat Gondola top; the gondola terminal is built into it and its exit has a timber gabled roof matching the lodge entrance.",
+      "model": "restaurant",
+      "osm": "n2581998859",
+      "place_check": {
+        "place": "Thunderhead Lodge",
+        "distance_m": 0.1
+      },
+      "note": "Overall massing and cladding not confirmed from a photo.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/2581998859",
+        "https://www.sothebysrealty.com/steamboatsir/blog/2019/11/17/whats-new-steamboat-ski-resort-20202/",
+        "https://liftblog.com/gondola-steamboat-co/"
+      ]
+    },
+    {
+      "name": "Four Points Lodge",
+      "kind": "restaurant",
+      "x": 1090.1,
+      "z": 40.0,
+      "footprint_m": {
+        "length": 32.3,
+        "width": 29.0,
+        "heading_deg": 10.9
+      },
+      "storeys": 2,
+      "style": "Two-storey timber-framed cabin with a gabled roof (OSM tags), 32 x 29 m, beside the Four Points top.",
+      "model": "restaurant",
+      "osm": "w1234661494",
+      "place_check": {
+        "place": "Four Points Lodge",
+        "distance_m": 2.0
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/1234661494",
+        "https://liftblog.com/four-points-steamboat-co/"
+      ]
+    },
+    {
+      "name": "Rendezvous Saddle Lodge",
+      "kind": "restaurant",
+      "x": 897.8,
+      "z": 1963.9,
+      "style": "Mid-mountain lodge on the saddle near the South Peak top.",
+      "model": "restaurant",
+      "osm": "n660130698",
+      "place_check": {
+        "place": "Rendezvous Saddle Lodge",
+        "distance_m": 0.0
+      },
+      "note": "Look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/660130698"
+      ]
+    },
+    {
+      "name": "The Range Food & Drink Hall",
+      "kind": "base_lodge",
+      "x": -2923.5,
+      "z": -123.8,
+      "footprint_m": {
+        "length": 51.9,
+        "width": 15.5,
+        "heading_deg": 9.5
+      },
+      "storeys": 2,
+      "style": "Two-storey food hall at the base (51 x 15 m).",
+      "model": "base_lodge",
+      "osm": "w1447994460",
+      "place_check": {
+        "place": "The Range Food & Drink Hall",
+        "distance_m": 9.0
+      },
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/1447994460"
+      ]
+    },
+    {
+      "name": "Gondola Square / Steamboat Base",
+      "kind": "village_block",
+      "x": -2817.3,
+      "z": -124.2,
+      "style": "Base village of tan and stone multi-storey buildings around the gondola plaza; One Steamboat Place (5 storeys), Gravity Haus, the Sheraton.",
+      "model": null,
+      "place_check": {
+        "place": "Steamboat Base (Gondola Square)",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/gondola-steamboat-co/"
+      ]
+    },
+    {
+      "name": "T Bar",
+      "kind": "warming_hut",
+      "x": -2649.2,
+      "z": -424.3,
+      "footprint_m": {
+        "length": 25.0,
+        "width": 12.1,
+        "heading_deg": 80.6
+      },
+      "style": "Small bar (25 x 12 m) near the Christie Peak base.",
+      "model": "warming_hut",
+      "osm": "w669189353",
+      "place_check": {
+        "place": "T Bar",
+        "distance_m": 1.4
+      },
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/669189353"
+      ]
+    },
+    {
+      "name": "Greenhorn Ranch",
+      "kind": "gondola_station",
+      "x": -1514.6,
+      "z": -689.6,
+      "style": "Learning centre at the Wild Blue Gondola angle station (opened 2022/23) with carpets and Greenhorn Ranch Express.",
+      "model": "gondola_station",
+      "position_note": "Placed at the Wild Blue I/II junction from data/steamboat.json; the lodge footprint is not in OSM.",
+      "verified": false,
+      "sources": [
+        "https://www.coloradoski.com/blog/steamboat-moving-full-steam-ahead-resort-transformation",
+        "https://liftblog.com/wild-blue-gondola-i-steamboat-co/"
+      ]
+    },
+    {
+      "name": "Storm Peak Research Laboratory",
+      "kind": "patrol",
+      "x": 2166.4,
+      "z": 90.6,
+      "style": "Small one-storey research station near the Morningside top.",
+      "model": null,
+      "osm": "n2490140983",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/2490140983",
+        "https://www.dri.edu/stormpeak"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Wild Blue Gondola",
+      "description": "Navy 10-seat Omega V cabins with the white Steamboat logo on grey towers with red bases, base to Sunshine Peak via Greenhorn Ranch.",
+      "kit": "partial",
+      "kit_note": "gondola10 exists; needs navy livery, red tower bases and a D-Line angle station.",
+      "refs": [
+        "1519954196",
+        "1208385225"
+      ]
+    },
+    {
+      "name": "Steamboat Gondola to Thunderhead",
+      "description": "Navy 8-seat Omega IV cabins arriving inside Thunderhead Lodge.",
+      "kit": "partial",
+      "kit_note": "gondola + gondola_station exist; needs navy paint and Thunderhead Lodge.",
+      "refs": [
+        "17138113"
+      ]
+    },
+    {
+      "name": "Christie Peak maroon Omega",
+      "description": "Maroon hood with white stripes over the base area.",
+      "kit": "partial",
+      "kit_note": "terminal_detach with maroon paint.",
+      "refs": [
+        "51722270"
+      ]
+    },
+    {
+      "name": "Red tower bases",
+      "description": "Newer lifts stand on grey towers with red-painted bases.",
+      "kit": "partial",
+      "kit_note": "tower_base paint.",
+      "refs": [
+        "902033306",
+        "51722357",
+        "144863542"
+      ]
+    }
+  ]
+}
