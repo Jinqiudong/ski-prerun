@@ -198,9 +198,10 @@ def join(objs, name):
 
 SUN_DIR = Vector((-0.55, -0.55, 0.62)).normalized()  # towards the sun: the game's sun, in Blender axes
 
-def finalize(name, size=2048, ao_dist=1.5, samples=48):
+def finalize(name, size=2048, ao_dist=1.5, samples=48, ground=True):
     """Join the bakeable parts, unwrap, bake their colour, occlusion and surface normals into one atlas,
-    and export. Light comes from the game; the atlas carries the materials and the soft contact shade."""
+    and export. Light comes from the game; the atlas carries the materials and the soft contact shade.
+    ground=False: no ground plane under z = 0 for the occlusion (hand-held things whose origin is mid-air)."""
     sc = bpy.context.scene; sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = samples
     sc.world = sc.world or bpy.data.worlds.new("w")
     groups = {}
@@ -209,7 +210,7 @@ def finalize(name, size=2048, ao_dist=1.5, samples=48):
         if k == "bake" and o.data.materials[0].name.startswith("snow"): k = "snow"
         groups.setdefault(k, []).append(o)
     body = join(groups["bake"], name)
-    bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, 0)); ground = bpy.context.active_object
+    if ground: bpy.ops.mesh.primitive_plane_add(size=400, location=(0, 0, 0)); ground = bpy.context.active_object
     for k, objs in groups.items():
         if k not in ("bake", "snow"):
             for o in objs: o.hide_render = True
@@ -243,7 +244,7 @@ def finalize(name, size=2048, ao_dist=1.5, samples=48):
     body.data.materials.clear(); body.data.materials.append(m)
     keep = [body]
     if "snow" in groups: keep.append(snow_ao(join(groups["snow"], f"{name}_snow"), ao_dist))
-    bpy.data.objects.remove(ground)
+    if ground: bpy.data.objects.remove(ground)
     for k, objs in groups.items():
         if k in ("bake", "snow"): continue
         o = join(objs, f"{name}_{k}"); o.hide_render = False; keep.append(o)
