@@ -2,6 +2,13 @@
 
 Work that waits on something else. Newest first.
 
+## Painted mini map (approved 2026-11-05, build after shared trips)
+- Small: a round corner map over the resort's watercolour (`assets/wc/<id>.jpg`), around where you are, "已滑 N%" under it. Smaller than today's square map.
+- Open: the whole watercolour as a sheet that pinches and pans; difficulty progress (green/blue/black/double); friends; everything the big map does now (tap anywhere to start there, tap a run for its name and level).
+- Runs from `data/vista/<id>.json` (`tools/bake_vista_lines.mjs`, bake all nine resorts). Skied runs: clean, smooth coloured ink lines with a thin paper casing — not wobbly. Not skied: a faint pencil dash.
+- People: each shows the avatar they chose (`myAvatar()` / trip member look), not a generic icon. When avatars overlap they gather into one stacked bubble (faces fanned, "+2"); tap it to fan them out or list them; zooming in separates them. Me always on top, ringed in red.
+- Friends: "去找他" flies over the mountain to land beside them; "跟随" follows.
+
 ## Waiting on the character models (owner + character AI)
 - **Riding clips for the templates** so the ride can use the four friends instead of Rider A: chairlift sit (alone and side by side), look left/right on the chair, unload, skate, carve left/right, skid stop heel/toe, tuck, fall and get up, small air, the signature tricks.
 - **Walkie-talkie:** a pose with the radio raised to the mouth while riding (push-to-talk when friends are far apart), and the radio in the hand or on the jacket chest strap otherwise. The radio prop itself is a facilities/props model (Blender family `props`): a small handheld with antenna, PTT button, belt clip.
