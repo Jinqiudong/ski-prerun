@@ -11,8 +11,10 @@ import io, json, math, subprocess
 from PIL import Image
 
 LAT0, LON0, KX, KZ = 39.75, -105.95, 85.3, 111
-S, N, W, E = 38.98, 40.72, -107.4, -104.78
-GW = 560  # grid columns; rows follow the aspect
+# Wide enough that the start page's map fills a portrait phone at its home view (seen from the east, so
+# west is the top of the screen and east the bottom), with room for its edges to fade.
+S, N, W, E = 38.0, 41.5, -110.0, -103.2
+GW = 1450  # grid columns (~0.4 km each); rows follow the aspect
 GH = round(GW * (N - S) * KZ / ((E - W) * KX))
 Z = 10
 km = lambda lat, lon: [round((lon - LON0) * KX, 2), round(-(lat - LAT0) * KZ, 2)]
@@ -47,8 +49,8 @@ print(f"terrain {GW}x{GH}, {lo:.0f}-{hi:.0f} m, {len(cache)} tiles")
 # OSM: interstates and highways, the big rivers, the reservoirs.
 q = f"""[out:json][timeout:120];(
 way[highway~"^(motorway|trunk|primary)$"]({S},{W},{N},{E});
-way[waterway=river][name~"Colorado River|Roaring Fork|Blue River|Eagle River|Yampa|South Platte|Fraser|Clear Creek|Arkansas|Crystal River|Frying Pan|Fryingpan|Williams Fork|Boulder Creek"]({S},{W},{N},{E});
-way[natural=water][name~"Dillon|Granby|Grand Lake|Green Mountain|Williams Fork|Ruedi|Shadow Mountain|Wolford|Stagecoach|Turquoise|Twin Lakes|Chatfield|Cherry Creek|Standley|Gross|Carter|Horsetooth|Lake Estes|Barker"]({S},{W},{N},{E});
+way[waterway=river][name~"Colorado River|Roaring Fork|Blue River|Eagle River|Yampa|South Platte|Fraser|Clear Creek|Arkansas|Crystal River|Frying Pan|Fryingpan|Williams Fork|Boulder Creek|Gunnison|White River|Cache la Poudre|North Platte|Green River|Big Thompson|Taylor River|Uncompahgre|Little Snake|Laramie River"]({S},{W},{N},{E});
+way[natural=water][name~"Dillon|Granby|Grand Lake|Green Mountain|Williams Fork|Ruedi|Shadow Mountain|Wolford|Stagecoach|Turquoise|Twin Lakes|Chatfield|Cherry Creek|Standley|Gross|Carter|Horsetooth|Lake Estes|Barker|Blue Mesa|Taylor Park|Elkhead|Steamboat Lake|Eleven Mile|Antero|Spinney|Rifle Gap|Vega|Flaming Gorge|Starvation|Strontia|Boyd Lake|Carter Lake|Lake Loveland"]({S},{W},{N},{E});
 );out geom;"""
 raw = subprocess.run(["curl", "-s", "-f", "-m", "180", "-A", "ski-prerun", "--data-urlencode", f"data={q}", "https://overpass-api.de/api/interpreter"], capture_output=True, check=True).stdout
 els = json.loads(raw)["elements"]
