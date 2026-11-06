@@ -110,17 +110,6 @@
     .cmark.drive { font: italic 600 12px "Cormorant Garamond", "Noto Serif SC", serif; color: #8a3b34; text-shadow: 0 0 3px #f6f1e7, 0 0 3px #f6f1e7, 0 0 2px #f6f1e7; }
     .cmark.city { font: 500 10px Oswald, sans-serif; letter-spacing: .25em; color: #b6463b; transform-origin: 0 0; }
     #records { background: #f6efe3; color: #3d3a36; overflow-y: auto; padding: env(safe-area-inset-top) 14px 110px; font-family: "Noto Serif SC", serif; }
-    #recSec { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; font: 18px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; } #recSec::after { content: ""; flex: 1; height: 1px; background: #d9cdb9; }
-    #recList { padding: 0 0 24px; display: grid; gap: 10px; }
-    .rec { display: grid; grid-template-columns: 76px 1fr; column-gap: 12px; row-gap: 5px; padding: 10px; background: #fdfbf6; box-shadow: 0 6px 14px rgba(90,70,40,.12); }
-    .rec .thumb { grid-row: 1 / span 4; background: center/cover; min-height: 76px; }
-    .rec .row1 { display: flex; justify-content: space-between; align-items: baseline; } .rec b { font: 600 19px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; } .rec small { color: #8a8278; font-size: 12px; }
-    .rec .bar { height: 6px; border-radius: 3px; background: #e6dccb; overflow: hidden; } .rec .bar i { display: block; height: 100%; background: #22344d; }
-    .rec .recBtns { display: flex; gap: 8px; flex-wrap: wrap; } .rec .recBtns:empty { display: none; }
-    .rec button { font: 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #22344d; background: #fdfbf6; border: 1px solid #cbbfa9; border-radius: 999px; padding: 4px 12px; cursor: pointer; justify-self: start; }
-    #jMap { position: fixed; inset: 0; bottom: 0; z-index: 15; background: #e9edf2; } #jMap canvas { width: 100%; height: 100%; display: block; touch-action: none; }
-    #jMap .bar { position: absolute; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 14px; background: rgba(255,248,234,.95); color: #3b2a1a; box-shadow: 0 0 0 2px #8a5a35; font-size: 14px; }
-    #jMap .bar b { flex: 1; } #jMap .bar button { font: inherit; color: #3b2a1a; background: #fff; border: 2px solid #8a5a35; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
     /* Trips: a quiet watercolour page (trips.js styles its insides). */
     #trips { position: fixed; inset: 0; bottom: 0; z-index: 5; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(22px + env(safe-area-inset-top)) 18px 120px; background-color: #f6f1e7;
       background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .3  0 0 0 .07 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>"); }

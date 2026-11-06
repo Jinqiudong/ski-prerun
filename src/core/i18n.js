@@ -111,10 +111,10 @@ const EN = {
   "还没有记忆。去预滑或者去滑一趟，就会在这里留下一张卡。": "No memories yet. Pre-run or ski a trip and a card lands here.",
   "预滑": "Pre-run", "每个雪场": "Each resort",
   "雪季": "season", "趟行程": "trips", "天": "days", "座山": "mountains", "条雪道": "runs", "一个人的雪季": "A season on my own", "冲洗中…": "Developing…",
-  "第 {n} 天": "Day {n}", "还没定雪场的那天": "No mountain picked that day", "手里是前一天的 {x}": "Holding up yesterday's {x}", "手里是前一天的雪山": "Holding up yesterday's snow",
-  "开板第一天": "First day on snow", "「{x}」的第一天": "Day one of “{x}”", "一个人的预滑": "A pre-run on my own", "这个雪季没有记录。": "Nothing from this season.",
+  "第 {n} 天": "Day {n}", "还没定雪场的那天": "No mountain that day",
+  "开板第一天": "First day on snow", "一个人的预滑": "A pre-run on my own", "这个雪季没有记录。": "Nothing from this season.",
   "这个雪季还没开板。去预滑一趟，或者和朋友去滑，每天都会在这里留一张合照。": "No days on snow this season yet. Pre-run one, or ski with friends: every day leaves a group photo here.",
-  "存到手机": "Save", "合上": "Close",
+  "存到手机": "Save", "全部": "All", "合上": "Close",
 };
 export function t(zh, vars) {
   let s = EN_ON ? EN[zh] ?? zh : zh;
