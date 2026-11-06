@@ -68,6 +68,29 @@ export class Collection {
     canvas.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" && !this.down) this.hover = this.under(e); });
     canvas.addEventListener("pointerleave", () => (this.hover = null));
     canvas.addEventListener("pointerup", (e) => { const d = this.down; this.down = null; if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) this.tap(e); });
+    // Tilt the phone and the map turns with it, a little, as if you were holding the sheet. The way you
+    // hold it is the middle; that middle follows you slowly, so it never drifts off.
+    this.tilt = { want: { az: 0, pol: 0 }, now: { az: 0, pol: 0 }, on: { az: 0, pol: 0 }, mid: null, at: 0 };
+    addEventListener("deviceorientation", (e) => {
+      if (e.beta == null) return;
+      const T = this.tilt, now = performance.now(), dt = Math.min(1, (now - (T.at || now)) / 1000); T.at = now;
+      if (!T.mid) T.mid = { b: e.beta, g: e.gamma };
+      const k = 1 - Math.exp(-dt / 8); T.mid.b += (e.beta - T.mid.b) * k; T.mid.g += (e.gamma - T.mid.g) * k;
+      const R = Math.PI / 180, c = (v, m) => Math.max(-m, Math.min(m, v));
+      T.want = { az: c(-(e.gamma - T.mid.g) * R * 1.4, 0.45), pol: c(-(e.beta - T.mid.b) * R * 0.9, 0.22) };
+    });
+    const ask = () => { const E = globalThis.DeviceOrientationEvent; if (typeof E?.requestPermission === "function") E.requestPermission().catch(() => {}); };
+    for (const ev of ["touchend", "click"]) addEventListener(ev, ask, { once: true, capture: true });
+  }
+
+  // Turn the camera about the target by the tilt: first take back last frame's turn, so the controls only
+  // ever see the view you set by hand.
+  tiltCamera(sign) {
+    const T = this.tilt, o = sign > 0 ? T.on : { az: -T.on.az, pol: -T.on.pol };
+    if (!o.az && !o.pol) return;
+    const c = this.controls, off = this.camera.position.clone().sub(c.target), sp = new THREE.Spherical().setFromVector3(off);
+    sp.theta += o.az; sp.phi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, sp.phi + o.pol));
+    this.camera.position.copy(c.target).add(off.setFromSpherical(sp)); this.camera.lookAt(c.target);
   }
 
   // list: [{ id, name, lat, lon }]; stats: { id: { share } }.
@@ -205,6 +228,7 @@ export class Collection {
   // Look at target from dist: polar angle from straight down, azimuth round from the south.
   view(target, dist, polar, az, glide = true) {
     const off = new THREE.Vector3(Math.sin(polar) * Math.sin(az), Math.cos(polar), Math.sin(polar) * Math.cos(az)).multiplyScalar(dist);
+    if (this.tilt) this.tilt.on = { az: 0, pol: 0 }; // the camera is set afresh: no tilt in it to take back
     if (!glide) { this.controls.target.copy(target); this.camera.position.copy(target).add(off); this.controls.update(); return; }
     this.fly = { t0: performance.now(), fromT: this.controls.target.clone(), fromP: this.camera.position.clone(), toT: target.clone(), toP: target.clone().add(off) };
   }
@@ -254,12 +278,15 @@ export class Collection {
 
   frame(t) {
     if (!this.home) return;
+    this.tiltCamera(-1);
     if (this.fly) {
       const u = Math.min(1, (performance.now() - this.fly.t0) / 1300), e = u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2;
       this.controls.target.lerpVectors(this.fly.fromT, this.fly.toT, e); this.camera.position.lerpVectors(this.fly.fromP, this.fly.toP, e);
       if (u >= 1) this.fly = null;
     }
     this.controls.update();
+    const T = this.tilt; for (const k of ["az", "pol"]) T.now[k] += (T.want[k] - T.now[k]) * 0.08;
+    T.on = { ...T.now }; this.tiltCamera(1);
     // The picked tile lifts off the map and grows, turning slowly, so its relief reads; the rest stay put.
     for (const x of this.tiles) {
       const on = x === this.picked, hov = x === this.hover && !on, up = on ? 5 + Math.sin(t * 1.6) * 0.25 : hov ? 1.5 : 0, sc = on ? 1.7 : hov ? 1.15 : 1;
