@@ -7,7 +7,7 @@ import { dirname, join, normalize, relative } from "node:path";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
 const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
-const PAGES = ["index.html", "start.html", "look.html", "mountain/index.html", "models/facilities/index.html"].map((p) => join(ROOT, p));
+const PAGES = ["index.html", "start.html", "look.html", "sound.html", "mountain/index.html", "models/facilities/index.html"].map((p) => join(ROOT, p));
 const files = [...walk(join(ROOT, "src")), ...walk(join(ROOT, "models/facilities")).filter((f) => /\.(js|html)$/.test(f)), ...PAGES, join(ROOT, "tests/route.test.mjs")];
 const bad = [];
 for (const f of files) {

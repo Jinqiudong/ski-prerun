@@ -11,6 +11,7 @@ computed from seeds in `buffers.js`. Music files can be added later through the 
 | `ambience.js` | Wind (speed plus gusts, cut by the bubble), the mountain bed, the lift's hum, tower passes, and station machinery. |
 | `music.js` | `Music`: the manifest player. It crossfades by mood and has `play(id, atSeconds)`, `current()` and `follow()`. It also writes the generated tracks. |
 | `index.js` | `RideSound`, with one call per frame for each phase: `lift()`, `top()`, `ski()` and `hike()`. Also `rideSound()` (the page's single instance) and the exports `play`, `current`, `follow` and `duck`. |
+| `lab.js` | The sound lab (`sound.html`). Every synth sound is played live with sliders for its parameters, next to real CC0 recordings and music candidates. Each row has a pick box; the picks are kept in localStorage `prerunSoundLab` and listed at the bottom to copy. |
 | `panel.js` | The sound drawer in the ride's menu, plus the credit line. |
 
 ## How the physics drive the snow
@@ -37,3 +38,6 @@ Passing a tower plays a sheave train: the rope's rumble swells, then a rhythmic 
 
 ## Listening
 Render offline to WAV with an OfflineAudioContext. `makeMixer(ctx)` plus `new RideSound(ctx, mix, { timer: false })` build the same graph. Call `ski()`/`lift()` with explicit `t`, then `music.pump(seconds)` and `startRendering()`.
+
+## The sound lab
+`sound.html` is where the owner listens and chooses. The real recordings are in `assets/audio/lab/`, and `manifest.json` gives each one's author, CC0 licence, source page and excerpt. They are made by `tools/lab_audio.mjs` from the list in `tools/lab_audio.json`, using Freesound's preview mp3s and OpenGameArt files and macOS `afconvert`. Each is trimmed, faded, normalised and encoded as mono AAC at 96 kbps. All of them together stay under 8 MB, which a test checks.
