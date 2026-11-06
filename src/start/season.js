@@ -3,7 +3,7 @@
 // (the roadbook: when, where, which runs). One day becomes one group photo on the memory tab. No DOM and
 // no three.js here, so it is tested in node (tests/season.test.mjs).
 
-import { AVATARS } from "../core/i18n.js?v=26";
+import { AVATARS } from "../core/i18n.js?v=27";
 
 // Friends' faces go round the owner's painted animals (as on the trip page).
 export const CREW = ["av_rider", "av_fox", "av_hare", "av_marmot", "av_elk", "av_bear", "av_girl"];

@@ -4,7 +4,7 @@
 // the season's trips, days, mountains and runs and the friends on them sit above the deck. Each photo is
 // drawn once and kept in IndexedDB, and only the cards at the front of the deck are drawn. Tap the front
 // card to see it large and share or save it.
-import { t, EN_ON, myAvatar } from "../core/i18n.js?v=26";
+import { t, EN_ON, myAvatar } from "../core/i18n.js?v=27";
 import { memberId } from "./shared-trip.js?v=1";
 import { myRiderLook } from "../core/look.js?v=1";
 import { buildSeasons, summary, seasonOf, seasonName, seasonShort, photoKey, ymd } from "./season.js?v=1";
@@ -80,7 +80,7 @@ async function idb(mode, fn) {
 }
 // One photo at a time: the drawing is quick, but a phone shouldn't do several at once while you swipe.
 let line = Promise.resolve();
-const draw = (d) => { const p = line.then(async () => (await import("./photo.js?v=2")).renderPhoto({ resort: d.resort, date: d.date, people: d.people })); line = p.catch(() => {}); return p; };
+const draw = (d) => { const p = line.then(async () => (await import("./photo.js?v=3")).renderPhoto({ resort: d.resort, date: d.date, people: d.people })); line = p.catch(() => {}); return p; };
 const pending = new Map();
 const photoURL = (d) => { const k = photoKey(d, PHOTO_V); if (!pending.has(k)) pending.set(k, fetchPhoto(d, k).finally(() => pending.delete(k))); return pending.get(k); };
 async function fetchPhoto(d, k) {

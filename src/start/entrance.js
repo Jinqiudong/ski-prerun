@@ -30,24 +30,26 @@ function flakeTex() {
   g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c);
 }
 
-// What each friend does on the way down: clips in a row, each ridden along the line its own board implies
-// (character.js trace), the whole line turned to come at you out of the mountains and end at your feet.
+// What each friend does on the way down: one whole clip by the character AI (Entrance_A ... D, 30 fps), ridden
+// along the line its own board implies (character.js trace), turned to come at you out of the mountains and
+// end at your feet. Frames are the clip's (rider_templates.json, HANDOFF): air is [take-off, landing], the
+// board off the snow (C pops on the slope; D leaves a kicker's lip at the take-off); end is where the skid
+// stop may begin (after the move, so it never cuts into it).
 const ROUTES = {
-  A: { segs: [["Anim_Carve_Ref", 2, 5.5]] },                                   // long euro carves
-  B: { segs: [["Anim_Chill_Cruise", 1, 6.5], ["Anim_Carve_Spin_Toe", 1, 6]] },  // ride in, then the carved spin
-  C: { segs: [["Anim_Carve_S", 2, 5.5]] },                                     // S turns down the fall line
-  D: { segs: [["Anim_Chill_Cruise", 2, 7], ["Anim_Method_Air", 1, 7]], kicker: { at: 0.12, h: 0.7, peak: 0.9 } }, // a kicker, a Method
+  A: { clip: "Entrance_A", v: 5.5 },                                                     // two euro carves
+  B: { clip: "Entrance_B", v: 6.5, spin: [125, 242], end: 242 },                         // carves, lower each time, into the carved spin
+  C: { clip: "Entrance_C", v: 5.5, air: [233, 276], end: 281 },                          // S turns, then a pop (230), peak 259
+  D: { clip: "Entrance_D", v: 7, air: [207, 240], end: 245, kicker: { at: 207 / 250, peak: 0.6 } }, // the run-in, a kicker (lip 207), a Method (peak 220)
 };
+const STOP = 30; // the skid stop, in line frames
 const LONG = 30; // the longest way in (m): longer lines are drawn in to this
 const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
 function lineOf(char, r) {
-  const pts = [], hd = [], segAt = []; let ox = 0, oz = 0, oh = 0;
-  for (const [clip, reps, v] of r.segs) {
-    const T = char.trace(clip, reps, v); if (!T) continue;
-    segAt.push({ clip, i0: pts.length, n: T.pts.length, once: reps === 1 && clip === "Anim_Method_Air" });
-    for (let i = 0; i < T.pts.length; i++) { const [x, z] = rotY(T.pts[i][0], T.pts[i][1], oh); pts.push([ox + x, oz + z]); hd.push(oh + T.hd[i]); }
-    [ox, oz] = pts[pts.length - 1]; oh = hd[hd.length - 1];
-  }
+  const T = char.trace(r.clip, 1, r.v); if (!T) return null;
+  const pts = T.pts.slice(), hd = T.hd.slice(), n = pts.length;
+  // run on past the clip's end, if its move runs late, so the stop comes after it (straight on, the clip held)
+  const tail = Math.max(0, (r.end ?? 0) + STOP - (n - 1)), [lx, lz] = pts[n - 1], lh = hd[n - 1], st = r.v / T.fps;
+  for (let i = 1; i <= tail; i++) { pts.push([lx + Math.cos(lh) * st * i, lz - Math.sin(lh) * st * i]); hd.push(lh); }
   // end at the origin; the start out toward the mountains (-z), a little to one side
   const [ex, ez] = pts[pts.length - 1], [sx, sz] = [pts[0][0] - ex, pts[0][1] - ez], L = Math.hypot(sx, sz), k = Math.min(1, LONG / L);
   // Turned so its last stretch comes straight at you (then the skid stop is a quarter turn and ends facing
@@ -57,15 +59,16 @@ function lineOf(char, r) {
   if (rotY(sx, sz, alpha)[1] * k > -LONG * 0.5) alpha = ang(-0.12, -1) - ang(sx, sz);
   const P = pts.map(([x, z]) => rotY((x - ex) * k, (z - ez) * k, alpha));
   let H = hd.map((h) => h + alpha);
+  const by = T.by.map((y) => y * char.root.scale.x), out = { pts: P, hd: H, by, n, fps: T.fps };
   // keep it in view: a line wandering out past the sides is drawn in sideways (and its headings follow)
   const wide = Math.max(...P.map(([x, z]) => Math.abs(x) / (0.5 + 0.22 * Math.abs(z))));
   if (wide > 1) {
     const D = P.map(([x, z]) => [x / wide, z]);
     H = H.map((h, i) => { const a = D[Math.max(0, i - 1)], b = D[Math.min(D.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], q = P[Math.max(0, i - 1)], w = P[Math.min(P.length - 1, i + 1)];
       return Math.hypot(dx, dz) > 1e-4 ? h + (Math.atan2(-dz, dx) - Math.atan2(-(w[1] - q[1]), w[0] - q[0])) : h; });
-    return { pts: D, hd: H, segAt, fps: 30 };
+    return { ...out, pts: D, hd: H };
   }
-  return { pts: P, hd: H, segAt, fps: 30 };
+  return out;
 }
 
 export function makeEntrance(scene) {
@@ -149,57 +152,83 @@ export function makeEntrance(scene) {
     tPos.set([x - cx, y + 0.02, z - cz, x + cx, y + 0.02, z + cz], o);
     n++; tGeo.setDrawRange(0, Math.max(0, (n - 1) * 6)); tGeo.attributes.position.needsUpdate = true;
   };
-  const cache = new Map();
+  // the camera's lens: 30° at rest; a cut changes it at once
+  const lens = (camera, v) => { if (Math.abs(camera.fov - v) > 0.01) { camera.fov = v; camera.updateProjectionMatrix(); } };
+  const cache = new Map(), ray = new THREE.Raycaster(), DOWN = new THREE.Vector3(0, -1, 0);
+  const at = (line, i) => line.pts[Math.max(0, Math.min(line.pts.length - 1, i))];
+  // the way the line goes round frame i (its chord over a second: in a carve the board's heading swings off it)
+  const dirAt = (line, i) => { const a = at(line, i - 15), b = at(line, i + 15); return new THREE.Vector3(b[0] - a[0], 0, b[1] - a[1]).normalize(); };
   const E = {
     group,
     start(k, char, mover) {
       const r = ROUTES[k]; if (!r) return false;
       const key = char.root.uuid + k + char.root.scale.x; if (!cache.has(key)) cache.set(key, lineOf(char, r));
-      const line = cache.get(key);
-      n = 0; tGeo.setDrawRange(0, 0); kick.visible = false;
-      let air = null;
-      if (r.kicker) { // the takeoff: a little way into the Method; the kicker sits just before it, along the line
-        const sg = line.segAt.find((s) => s.clip === "Anim_Method_Air"), i0 = sg.i0 + Math.round(sg.n * r.kicker.at), i1 = sg.i0 + Math.round(sg.n * 0.78);
-        const [x, z] = line.pts[i0], h = line.hd[i0], back = KL / 2 - 0.15, kx = x - Math.cos(h) * back, kz = z + Math.sin(h) * back;
-        kick.position.set(kx, groundAt(kx, kz), kz); kick.rotation.y = h; kick.visible = true;
-        air = { i0, i1, ...r.kicker };
+      const line = cache.get(key); if (!line) return false;
+      n = 0; tGeo.setDrawRange(0, 0); kick.visible = false; kick.material.opacity = 1;
+      let air = r.air ? { i0: r.air[0], i1: r.air[1], peak: 0, y0: 0, ramp: null } : null;
+      if (r.kicker) { // the kicker's lip where the board leaves the snow; the board rides up its face to there
+        const i0 = Math.round((line.n - 1) * r.kicker.at), [x, z] = line.pts[i0], h = line.hd[i0], back = KL / 2 - 0.15, kx = x - Math.cos(h) * back, kz = z + Math.sin(h) * back;
+        kick.position.set(kx, groundAt(kx, kz), kz); kick.rotation.y = h; kick.visible = true; kick.updateMatrixWorld(true);
+        // the face's height under each frame on the way up (read off the kicker itself), and the clip's own
+        // lift of the board taken out there, so the board sits on the face
+        const surf = (i) => { const [px, pz] = at(line, i); ray.set(new THREE.Vector3(px, 5, pz), DOWN); return ray.intersectObject(kick)[0]?.point.y ?? null; };
+        const ramp = new Map(); let i = i0, ref = 0;
+        for (; i > i0 - 60; i--) { const y = surf(i); if (y === null || y <= groundAt(...at(line, i)) + 0.01) break; ramp.set(i, y); }
+        ref = line.by[i + 1] ?? 0;
+        for (const [j, y] of ramp) ramp.set(j, y - Math.max(0, line.by[j] - ref));
+        air = { ...air, i0, peak: r.kicker.peak, y0: ramp.get(i0) ?? groundAt(x, z), ramp }; E.kicker = { lip: i0, ramp: [...ramp.keys()].sort((a, b) => a - b) }; // (for tests)
       }
-      run = { line, char, mover, t: 0, seg: -1, air, done: 0, k, cam: null, look: null };
+      char.play(r.clip, { once: true, fade: 0.3 });
+      run = { line, char, mover, t: 0, air, r, done: 0, k, cam: null, look: null, shot: null };
       return true;
     },
     get running() { return !!run && !run.done; },
-    // The camera during an entrance, shot by shot (see SHOTS); eases back to the resting view (rest: the
-    // camera's position and target there) as the rider pulls up. Returns false when it isn't driving.
+    get now() { return run?.now ? { ...run.now, F: run.line.pts.length - 1 } : null; }, // (for tests)
+    // The camera during an entrance, shot by shot, on the clip's frames: the take-off from behind (D and C
+    // from low behind, against the sky and the sun), the landing from in front, B's spin from a still camera
+    // so it reads; eases back to the resting view (rest: the camera's position and target there) through
+    // the stop. A cut jumps; a follow shot glides. Returns false when it isn't driving.
     shoot(camera, dt, rest) {
-      if (!run || !run.now) { setSky(0); return false; }
-      const { x, y, z, h, u, i, flying } = run.now, P = new THREE.Vector3(x, y, z);
+      if (!run || !run.now) { setSky(0); lens(camera, 30); return false; }
+      const { x, y, z, h, i, f } = run.now, P = new THREE.Vector3(x, y, z), line = run.line, r = run.r;
       // the travel direction, smoothed (a carve's swing or a spin shouldn't swing the camera through the rider)
       const Fr = new THREE.Vector3(Math.cos(h), 0, -Math.sin(h)), F = (run.F ||= Fr.clone()).lerp(Fr, 1 - Math.exp(-dt * 1.2)).normalize();
       const S = (run.S ||= new THREE.Vector3(F.z, 0, -F.x).multiplyScalar(F.x > 0 ? -1 : 1)); // one side for the whole shot, toward the viewer
       const up = (v) => new THREE.Vector3(0, v, 0);
-      let pos, at, wide = 1, snap = 6;
-      const key = run.k, air = run.air;
+      // aim at the hips, not the board: in a laid-out carve or a spin the body is well off the board's line
+      const Hp = run.char.bones.Hips.getWorldPosition(new THREE.Vector3()), aim = (v) => Hp.clone().add(up(v - 0.75)), G = (p) => new THREE.Vector3(p[0], groundAt(p[0], p[1]), p[1]);
+      // a still camera, set up once when its shot begins (from the line's own direction there, not the smoothed one)
+      const still = (id, mk) => (run.still?.id === id ? run.still.pos : (run.still = { id, pos: mk() }).pos);
+      let shot, pos, lookAt, wide = 1, snap = 6;
+      let fov = 30;
+      const key = run.k, air = run.air, chase = () => { pos = P.clone().addScaledVector(F, -8).add(up(2.5)); lookAt = P.clone().addScaledVector(F, 3).add(up(0.5)); snap = 9; };
+      // in front of where they land, low, looking back up the line at them
+      const front = (j, far = 5.5) => { const d = dirAt(line, j), s = new THREE.Vector3(d.z, 0, -d.x).multiplyScalar(d.x > 0 ? -1 : 1); return G(at(line, j + 6)).addScaledVector(d, far).addScaledVector(s, 1.4).add(up(0.7)); };
+      // low behind the take-off, a little to the side, looking up past them at the sky
+      const lowBack = (j, back, side) => { const d = dirAt(line, j), s = new THREE.Vector3(d.z, 0, -d.x).multiplyScalar(d.x > 0 ? -1 : 1); return G(at(line, j)).addScaledVector(d, -back).addScaledVector(s, side).add(up(0.25)); };
       if (key === "A") {
-        if (u < 0.3) { pos = new THREE.Vector3(1.6, 0.55, 4.5); at = P.clone().add(up(0.8)); wide = 0.4; }
-        else { pos = P.clone().addScaledVector(S, 6.5).addScaledVector(F, -1.5).add(up(0.9)); at = P.clone().add(up(0.7)); snap = 9; }
+        if (f < line.n * 0.3) { shot = "a0"; pos = new THREE.Vector3(1.6, 0.55, 4.5); lookAt = aim(0.8); wide = 0.4; }
+        else { shot = "a1"; pos = P.clone().addScaledVector(S, 6.5).addScaledVector(F, -1.5).add(up(0.9)); lookAt = aim(0.7); snap = 9; }
       } else if (key === "B") {
-        if (u < 0.5) { pos = P.clone().addScaledVector(F, -8).add(up(2.8)); at = P.clone().addScaledVector(F, 2).add(up(0.4)); snap = 9; }
-        else { const a = (run.orbit ??= Math.atan2(S.x, S.z)) + (u - 0.5) * 5.5; pos = P.clone().add(new THREE.Vector3(Math.sin(a) * 5.2, 1.5, Math.cos(a) * 5.2)); at = P.clone().add(up(0.7)); }
-      } else if (key === "C") {
-        if (u < 0.55) { pos = P.clone().addScaledVector(F, -7).add(up(3.2)); at = P.clone().addScaledVector(F, 3); }
-        else { pos = P.clone().addScaledVector(F, 7).addScaledVector(S, 1.2).add(up(0.5)); at = P.clone().add(up(0.8)); }
-      } else if (key === "D" && air) {
-        if (i < air.i0) { pos = P.clone().addScaledVector(F, -8).add(up(2.2)); at = P.clone().addScaledVector(F, 4).add(up(0.6)); snap = 9; }
-        else if (i < air.i1 + 8) { // from beside the lip, looking up: the rider against the sky and the sun
-          run.lip ??= kick.position.clone().addScaledVector(F, 0.5).addScaledVector(S, 4.8).add(up(0.3)); pos = run.lip; at = P.clone().add(up(0.5)); snap = 9; }
-        else { pos = P.clone().addScaledVector(F, 7).add(up(1)); at = P.clone().add(up(0.8)); }
-      } else { pos = rest.pos.clone(); at = rest.at.clone(); wide = 0; }
-      // the last stretch: back to the resting view
-      const b = Math.min(1, Math.max(0, (u - 0.86) / 0.14)), e = b * b * (3 - 2 * b);
-      pos.lerp(rest.pos, e); at.lerp(rest.at, e); wide *= 1 - e;
-      const k = 1 - Math.exp(-dt * snap);
+        const [s0, s1] = r.spin, mid = Math.round((s0 + s1) / 2);
+        if (i < s0 - 12) { shot = "b0"; chase(); }
+        else if (i >= s1 - 8) { shot = "b2"; pos = still("b2", () => front(s1 - 8, 8)); lookAt = aim(0.7); } // out of it, toward you
+        else { // still, beside where the spin is at its middle and a little ahead, high enough to see the board turn round
+          shot = "b1"; pos = still("b1", () => { const d = dirAt(line, mid), s = new THREE.Vector3(d.z, 0, -d.x).multiplyScalar(d.x > 0 ? -1 : 1); return G(at(line, mid)).addScaledVector(s, 7).addScaledVector(d, 2.5).add(up(2)); });
+          lookAt = aim(0.6); }
+      } else if ((key === "C" || key === "D") && air) {
+        const lip = air.i0, land = air.i1, low = lip - (key === "D" ? 8 : 6), peakEnd = key === "D" ? 222 : 261;
+        if (i < low) { shot = "c0"; chase(); }
+        else if (i < peakEnd) { // a wider lens, so the sky (and the sun) are round them as they go up
+          shot = "up"; pos = still("up", () => lowBack(lip, key === "D" ? 5.5 : 6.5, 1)); lookAt = aim(run.now.flying ? 1.2 : 0.9); fov = 42; }
+        else { shot = "land"; pos = still("land", () => front(land)); lookAt = aim(0.7); }
+      } else { pos = rest.pos.clone(); lookAt = rest.at.clone(); wide = 0; }
+      // the stop: back to the resting view
+      const F0 = line.pts.length - 1 - STOP - 6, b = Math.min(1, Math.max(0, (f - F0) / (STOP + 6))), e = b * b * (3 - 2 * b);
+      pos.lerp(rest.pos, e); lookAt.lerp(rest.at, e * e); // the aim stays on them a little longer wide *= 1 - e; lens(camera, fov + (30 - fov) * e);
       if (!run.cam) { run.cam = camera.position.clone(); run.look = rest.at.clone(); }
-      run.cam.lerp(pos, k); run.look.lerp(at, 1 - Math.exp(-dt * 12)); // aim quicker than the camera moves, so the rider stays in frame
+      if (shot !== run.shot) { const cut = run.shot && run.still?.id === shot; run.shot = shot; if (cut) { run.cam.copy(pos); run.look.copy(lookAt); } }
+      run.cam.lerp(pos, 1 - Math.exp(-dt * snap)); run.look.lerp(lookAt, 1 - Math.exp(-dt * 12)); // aim quicker than the camera moves, so the rider stays in frame
       camera.position.copy(run.cam); camera.lookAt(run.look);
       setSky(wide);
       return true;
@@ -213,19 +242,18 @@ export function makeEntrance(scene) {
       if (run.done) { run = null; setSky(0); return false; }
       // The last stretch is a skid stop: the board swings across the line (the rider ends facing you), the
       // slide slows over about two seconds, and they rise out of the move into standing.
-      const F = line.pts.length - 1, STOP = 30, fNow = run.t * line.fps, left = F - fNow;
+      const F = line.pts.length - 1, fNow = run.t * line.fps, left = F - fNow;
       run.t += dt * (left > STOP ? 1 : Math.max(0.08, left / STOP));
-      const f = run.t * line.fps, i = Math.min(line.pts.length - 1, Math.floor(f)), j = Math.min(line.pts.length - 1, i + 1), u = f - Math.floor(f);
-      const s = line.segAt.findLastIndex((sg) => i >= sg.i0);
-      if (s !== run.seg && !run.stopping) { run.seg = s; const sg = line.segAt[s]; char.play(sg.clip, sg.once ? { once: true } : {}); }
+      const f = Math.min(F, run.t * line.fps), i = Math.min(F, Math.floor(f)), j = Math.min(F, i + 1), u = f - Math.floor(f);
       const x = line.pts[i][0] + (line.pts[j][0] - line.pts[i][0]) * u, z = line.pts[i][1] + (line.pts[j][1] - line.pts[i][1]) * u, h = line.hd[i] + (line.hd[j] - line.hd[i]) * u;
       let y = groundAt(x, z), flying = false;
-      if (air && i >= air.i0 - 6 && i < air.i0) y += air.h * (i - air.i0 + 6 + u) / 6; // up the kicker
-      if (air && i >= air.i0 && i < air.i1) { const q = (i - air.i0 + u) / (air.i1 - air.i0); y += air.h * (1 - q) + air.peak * 4 * q * (1 - q); flying = true; }
+      if (air?.ramp?.has(i)) { const a = air.ramp.get(i), b = air.ramp.get(j) ?? a; y = a + (b - a) * u; } // up the kicker's face
+      if (air && f >= air.i0 && f < air.i1) { // off the lip (or the snow) to the landing; the clip lifts the board itself
+        const q = (f - air.i0) / (air.i1 - air.i0); if (air.ramp) y = air.y0 * (1 - q) + y * q + air.peak * 4 * q * (1 - q); flying = true; }
       const stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(h / (2 * Math.PI)) * 2 * Math.PI;
       if (stopW > 0 && !run.stopping) { run.stopping = true; char.play("Stand_Idle", { fade: 1.2 }); }
       mover.position.set(x, y, z); mover.rotation.y = h + (end - h) * sw;
-      run.now = { x, y, z, h, u: f / F, i, flying };
+      run.now = { x, y, z, h, u: f / F, i, f, flying };
       if (!flying) {
         lay(x, y, z, h);
         // spray: off the outside of the turn, more the sharper it turns; a sheet of it while stopping
@@ -235,7 +263,7 @@ export function makeEntrance(scene) {
         if (n > 0) emit(x, y + 0.05, z, (stopW > 0 ? fx * 4 : ox * 2.4) + fx * 1.5, 2.2, (stopW > 0 ? fz * 4 : oz * 2.4) + fz * 1.5, n);
         if (run.wasFlying) { emit(x, y, z, 0, 2.5, 0, 40); run.wasFlying = false; } // landing
       } else run.wasFlying = true;
-      if (air) kick.material.opacity = Math.min(1, Math.max(0, 1 - (i - air.i1) / 20));
+      if (air?.ramp) kick.material.opacity = Math.min(1, Math.max(0, 1 - (i - air.i1) / 20));
       if (f >= F - 0.05) run.done = true;
       return false;
     },

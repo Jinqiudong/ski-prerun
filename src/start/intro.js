@@ -2,7 +2,7 @@
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. With a trip near (on now, coming up, or just over), the opening is
 // about that trip instead: its crew's little planes on their way to Denver (see tripIntro).
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=26";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=27";
 import { pickTrip, progress, resortsOf, resortOn, crewOf, spread, bearing, ymd, between, LOOK_BACK } from "./trip-intro.js?v=1";
 
 const CSS = `
