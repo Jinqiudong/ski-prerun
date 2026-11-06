@@ -1,0 +1,694 @@
+{
+  "resort": "winterpark",
+  "name": "Winter Park",
+  "origin": {
+    "lat": 39.87125,
+    "lon": -105.7826
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/winterpark.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [],
+  "lifts": {
+    "17058716": {
+      "name": "Arrow",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1979,
+      "color": {
+        "terminal": "#3a3d40"
+      },
+      "color_verified": true,
+      "note": "Also serves the summer alpine slide.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/arrow-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17057858": {
+      "name": "Challenger",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1974,
+      "color": {
+        "terminal": "#5a5f66",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Mary Jane double.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/challenger-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258676845": {
+      "name": "Comet",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": 2019,
+      "color": {},
+      "color_verified": false,
+      "note": "Beginner carpet at the Winter Park base.",
+      "verified": true,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "86248729": {
+      "name": "Discovery",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1984,
+      "color": {
+        "terminal": "#3a3d40",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Yan bottom station with Heron-Poma chairs; Discovery Park learning area.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/discovery-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "31998987": {
+      "name": "Eagle Wind",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 2006,
+      "color": {
+        "terminal": "#2b2d30",
+        "chair": "#b8332f"
+      },
+      "color_verified": false,
+      "note": "Relocated from Outrigger (1978-2003). Red chairs in photos.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/eagle-wind-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258676847": {
+      "name": "Endeavor",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1993,
+      "terminal": "Poma Alpha",
+      "color": {
+        "terminal": "#9a8f74"
+      },
+      "color_verified": true,
+      "note": "Wikipedia spells it Endeavour. Khaki Alpha top station.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/endeavor-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17058553": {
+      "name": "Explorer Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1999,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#3f6b4f",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Formerly Eskimo Express (1999-2020). Green Omega hood like Gemini and Olympia.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/eskimo-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258679869": {
+      "name": "Galloping Goose",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1974,
+      "color": {
+        "terminal": "#3a3d40",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/galloping-goose-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258676524": {
+      "name": "Gemini Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1993,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#3f6b4f",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Return station in the Village at Winter Park.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/gemini-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "30613495": {
+      "name": "High Lonesome Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1991,
+      "color": {
+        "terminal": "#4f5961",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/high-lonesome-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17057709": {
+      "name": "Iron Horse",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1974,
+      "color": {
+        "terminal": "#3a3d40",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "One of four parallel Mary Jane lifts.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/iron-horse-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258679222": {
+      "name": "Lariat",
+      "type": "rope_tow",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2002,
+      "color": {},
+      "color_verified": false,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17058701": {
+      "name": "Looking Glass",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Riblet",
+      "year": 1966,
+      "color": {
+        "terminal": "#2b2d30",
+        "chair": "#5a5f66",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "Last Riblet at Winter Park: centre-pole chairs, Riblet towers.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/looking-glass-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258676846": {
+      "name": "Meteor",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": 2019,
+      "color": {},
+      "color_verified": false,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17058979": {
+      "name": "Olympia Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1996,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#3f6b4f",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/olympia-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "31998986": {
+      "name": "Panoramic Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2007,
+      "color": {
+        "terminal": "#5b6066",
+        "chair": "#5b6066"
+      },
+      "color_verified": true,
+      "note": "Above treeline into Parsenn Bowl; wide-gauge towers.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/panoramic-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "258679727": {
+      "name": "Pony Express",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1974,
+      "color": {
+        "terminal": "#3a3d40",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/pony-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17058732": {
+      "name": "Prospector Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1994,
+      "color": {
+        "terminal": "#b7b09c",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/prospector-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "1160222337": {
+      "name": "Spirit",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 2004,
+      "color": {
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "OSM tags it t-bar; Wikipedia and liftblog photos show a platter.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/spirit-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "30613408": {
+      "name": "Sunnyside Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2019,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#8a7d6b",
+        "chair": "#9aa0a6"
+      },
+      "color_verified": true,
+      "note": "Replaced a CTEC triple; tops out beside Lunch Rock.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sunnyside-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "17055751": {
+      "name": "Super Gauge Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2005,
+      "terminal": "Poma Omega (tri-leg)",
+      "color": {
+        "terminal": "#5b6066"
+      },
+      "color_verified": true,
+      "note": "Main lift out of the Mary Jane base.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/super-gauge-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "31145982": {
+      "name": "The Gondola",
+      "type": "gondola",
+      "seats": 10,
+      "bubble": true,
+      "manufacturer": "Leitner-Poma",
+      "year": 2018,
+      "terminal": "LPA",
+      "cabin_model": "Sigma Diamond 10",
+      "color": {
+        "cabin": "#c9ccd0",
+        "cabin_band": "#7a1f2b",
+        "terminal": "#c3c7cb"
+      },
+      "color_verified": true,
+      "note": "Base to Sunspot; 75 cabins + 2 spares, silver with a maroon 'Winter Park' band. Up to six cabins load at once.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/the-gondola-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "1214436867": {
+      "name": "Tubing",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet for the tubing hill near the Vintage lot. Not confirmed by a lift database.",
+      "verified": false,
+      "sources": []
+    },
+    "72608831": {
+      "name": "Village Cabriolet",
+      "type": "cabriolet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2008,
+      "color": {
+        "cabin": "#c41e2e",
+        "cabin_logo": "#ffffff",
+        "terminal": "#9aa0a6"
+      },
+      "color_verified": true,
+      "note": "Open-top standing cabins (red with a white 'The Village' logo) from the Vintage parking lot to the Village; serves no terrain. OSM tags it gondola with 8 seats; capacity not confirmed.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/village-cabriolet-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    "31145997": {
+      "name": "Wild Spur Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2023,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#b3a58a",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Replaced Pioneer Express; mid-load station a third of the way up with automatic gates.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/wild-spur-express-winter-park-co/",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "The Lodge at Sunspot",
+      "kind": "restaurant",
+      "x": 562.5,
+      "z": -403.2,
+      "style": "Big rustic summit lodge at 10,700 ft: honey log and heavy-timber gables, stacked-stone walls and a stone chimney tower with a cupola, steep snowy roofs, log-railed deck; a short walk from the Gondola top.",
+      "model": "restaurant",
+      "osm": "n358617809",
+      "place_check": {
+        "place": "Sunspot",
+        "distance_m": 0.1
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/node/358617809",
+        "https://www.winterparkresort.com/en/things-to-do/dining/the-lodge-at-sunspot"
+      ]
+    },
+    {
+      "name": "Lunch Rock",
+      "kind": "restaurant",
+      "x": 797.6,
+      "z": 1470.2,
+      "footprint_m": {
+        "length": 40.0,
+        "width": 36.1,
+        "heading_deg": 90.0
+      },
+      "style": "16,000 sq ft restaurant at the top of Mary Jane (deck about 11,200 ft) beside the Sunnyside Express top: dark-stained board cladding over a stacked-stone base, low-pitched roof, big deck.",
+      "model": "restaurant",
+      "osm": "w785666504",
+      "place_check": {
+        "place": "Lunch Rock",
+        "distance_m": 2.3
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/785666504",
+        "https://www.winterparkresort.com/things-to-do/dining/lunch-rock",
+        "https://liftblog.com/sunnyside-express-winter-park-co/"
+      ]
+    },
+    {
+      "name": "Snoasis",
+      "kind": "restaurant",
+      "x": 513.2,
+      "z": -1603.5,
+      "footprint_m": {
+        "length": 44.1,
+        "width": 37.8,
+        "heading_deg": 178.2
+      },
+      "style": "Mid-mountain lodge with white walls and a tall timber-mullioned glass front under a deep shed roof, picnic tables outside.",
+      "model": "restaurant",
+      "osm": "w85932018",
+      "place_check": {
+        "place": "Snoasis",
+        "distance_m": 3.2
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/85932018",
+        "https://www.winterparkresort.com/things-to-do/dining/snoasis"
+      ]
+    },
+    {
+      "name": "Balcony House",
+      "kind": "base_lodge",
+      "x": 1683.1,
+      "z": -1701.4,
+      "footprint_m": {
+        "length": 78.6,
+        "width": 50.2,
+        "heading_deg": 28.0
+      },
+      "style": "Large building at the Winter Park base (78 x 50 m). Wikipedia names a 1955 Googie-style Balcony House on Colorado's Most Endangered Places list.",
+      "model": "base_lodge",
+      "osm": "w207435264",
+      "note": "Look not confirmed from a photo; check before modelling.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/207435264",
+        "https://en.wikipedia.org/wiki/Winter_Park_Resort"
+      ]
+    },
+    {
+      "name": "Mary Jane Base Complex",
+      "kind": "base_lodge",
+      "x": 1847.2,
+      "z": -444.7,
+      "footprint_m": {
+        "length": 74.9,
+        "width": 41.7,
+        "heading_deg": 127.7
+      },
+      "style": "Mary Jane base building (74 x 41 m) with Mary Jane Cafe, Clubcar and Pepperonis.",
+      "model": "base_lodge",
+      "osm": "w86143564",
+      "place_check": {
+        "place": "Mary Jane Base",
+        "distance_m": 79.6
+      },
+      "note": "Exterior look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/86143564"
+      ]
+    },
+    {
+      "name": "Zephyr Mountain Lodge",
+      "kind": "village_block",
+      "x": 1744.8,
+      "z": -1615.2,
+      "footprint_m": {
+        "length": 107.2,
+        "width": 55.1,
+        "heading_deg": 80.1
+      },
+      "style": "Large hotel block (107 x 55 m) beside the Gondola base in the Village at Winter Park.",
+      "model": null,
+      "osm": "w72608833",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/72608833"
+      ]
+    },
+    {
+      "name": "The Gondola base station",
+      "kind": "gondola_station",
+      "x": 1662.4,
+      "z": -1615.5,
+      "footprint_m": {
+        "length": 27.4,
+        "width": 8.7,
+        "heading_deg": 127.9
+      },
+      "style": "Long silver LPA gondola terminal at the Village.",
+      "model": "gondola_station",
+      "osm": "w231269976",
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/231269976",
+        "https://liftblog.com/the-gondola-winter-park-co/"
+      ]
+    },
+    {
+      "name": "The Gondola top station",
+      "kind": "gondola_station",
+      "x": 637.9,
+      "z": -370.8,
+      "footprint_m": {
+        "length": 26.7,
+        "width": 8.2,
+        "heading_deg": 129.2
+      },
+      "style": "Silver LPA terminal on a paved plaza at Sunspot, cabin maintenance building at tower 18.",
+      "model": "gondola_station",
+      "osm": "w1484959047",
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/1484959047",
+        "https://liftblog.com/the-gondola-winter-park-co/"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Village Cabriolet",
+      "description": "Red open-top standing cabins shuttling over the parking lots into the Village.",
+      "kit": "partial",
+      "kit_note": "cabriolet model exists; paint it red with the white 'The Village' logo and give it the grey LPA stations.",
+      "refs": [
+        "72608831"
+      ]
+    },
+    {
+      "name": "The Gondola to Sunspot",
+      "description": "Silver 10-passenger Sigma Diamond cabins with a maroon band, ending at the log-and-stone Sunspot lodge.",
+      "kit": "partial",
+      "kit_note": "gondola10 and gondola_station exist; needs the silver/maroon livery and Sunspot (see gap list).",
+      "refs": [
+        "31145982"
+      ]
+    },
+    {
+      "name": "Green Poma Omega hoods",
+      "description": "Gemini, Olympia and Explorer share Winter Park's pine-green Omega terminals.",
+      "kit": "partial",
+      "kit_note": "terminal_detach with green paint.",
+      "refs": [
+        "258676524",
+        "17058979",
+        "17058553"
+      ]
+    },
+    {
+      "name": "Mary Jane's parallel Heron-Poma doubles",
+      "description": "Iron Horse, Pony Express, Galloping Goose and Challenger run side by side up Mary Jane.",
+      "kit": "yes",
+      "kit_note": "chair2 + terminal_fixed.",
+      "refs": [
+        "17057709",
+        "258679727",
+        "258679869",
+        "17057858"
+      ]
+    },
+    {
+      "name": "Lunch Rock",
+      "description": "Dark timber and stone restaurant at the top of Mary Jane.",
+      "kit": "no",
+      "kit_note": "Needs its own model.",
+      "refs": []
+    }
+  ]
+}

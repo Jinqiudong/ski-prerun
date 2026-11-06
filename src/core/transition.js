@@ -7,7 +7,7 @@
 // Tap to skip. Shorter once you've seen one (a count per transition, kept on this phone). prefers-reduced-motion
 // gets a plain fade. None under navigator.webdriver (the headless tests) unless the page has ?transition=force.
 // Pure DOM, CSS and a 2D canvas: no three.js, so it can start before the page's heavy modules arrive.
-import { EN_ON } from "./i18n.js?v=24";
+import { EN_ON } from "./i18n.js?v=25";
 
 // ---- The words. The owner adds lines here: a fixed pool, one picked at random; "when" limits a line to
 // when it is true ("bubble": only on a chair with a bubble). English for everything.

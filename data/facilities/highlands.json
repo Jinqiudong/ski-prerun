@@ -1,0 +1,241 @@
+{
+  "resort": "highlands",
+  "name": "Aspen Highlands",
+  "origin": {
+    "lat": 39.1539,
+    "lon": -106.8643
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/highlands.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "Five Trees and the unnamed rope tow fall inside both the Highlands and Buttermilk boxes."
+  ],
+  "lifts": {
+    "17117676": {
+      "name": "Cloud Nine",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1999,
+      "color": {
+        "terminal": "#2f4a3c",
+        "tower_base": "#2f7f73",
+        "chair": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "Newest and shortest detachable at Highlands.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/cloud-nine-aspen-highlands-co/",
+        "https://www.skiresort.info/ski-resort/aspen-highlands/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    "151179408": {
+      "name": "Deep Temerity",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2005,
+      "color": {
+        "terminal": "#5a6067",
+        "tower_base": "#2f7f73"
+      },
+      "color_verified": true,
+      "note": "Out of the bottom of Highland Bowl; LPA Alpha drive, Poma Z return.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/deep-temerity-aspen-highlands-co/",
+        "https://www.skiresort.info/ski-resort/aspen-highlands/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    "17118210": {
+      "name": "Exhibition",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1994,
+      "color": {
+        "terminal": "#2f4a3c",
+        "tower_base": "#2f7f73"
+      },
+      "color_verified": true,
+      "note": "Base lift from Highlands Village; replaced two doubles in series.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/exhibition-aspen-highlands-co/",
+        "https://www.skiresort.info/ski-resort/aspen-highlands/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    "1212154522": {
+      "name": "Five Trees",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Private lift for the Five Trees homes between Highlands and Buttermilk; not open to the public.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/five-trees-aspen-highlands-co/"
+      ]
+    },
+    "1211521065": {
+      "name": "Lift",
+      "type": "rope_tow",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Unnamed rope tow in OSM between Highlands and Buttermilk; appears in both resorts' data. Not identified.",
+      "verified": false,
+      "sources": []
+    },
+    "17117678": {
+      "name": "Loge Peak",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1994,
+      "color": {
+        "terminal": "#2f4a3c",
+        "tower_base": "#2f7f73"
+      },
+      "color_verified": true,
+      "note": "To the top of the lift-served mountain and the Highland Bowl hike; replaced a Riblet double.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/loge-peak-aspen-highlands-co/",
+        "https://www.skiresort.info/ski-resort/aspen-highlands/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    "151179418": {
+      "name": "Thunderbowl",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1998,
+      "terminal": "Poma Alpha",
+      "color": {
+        "terminal": "#8e2b2b"
+      },
+      "color_verified": false,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/thunderbowl-aspen-highlands-co/",
+        "https://www.skiresort.info/ski-resort/aspen-highlands/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "Merry-Go-Round",
+      "kind": "restaurant",
+      "x": -135.8,
+      "z": -626.4,
+      "footprint_m": {
+        "length": 49.0,
+        "width": 34.3,
+        "heading_deg": 12.0
+      },
+      "style": "Long, low single-storey mid-mountain restaurant (49 x 34 m, 435 seats) with a broad shallow-pitched roof, glass frontage and a big south-facing deck; the hub where the main lifts meet.",
+      "model": "restaurant",
+      "osm": "w151179417",
+      "place_check": {
+        "place": "Merry-Go-Round",
+        "distance_m": 5.8
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/151179417",
+        "https://www.aspensnowmass.com/visit/dining/aspen-highlands/merry-go-round",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    {
+      "name": "Cloud Nine Alpine Bistro",
+      "kind": "restaurant",
+      "x": -526.7,
+      "z": 275.6,
+      "footprint_m": {
+        "length": 20.5,
+        "width": 16.5,
+        "heading_deg": 127.2
+      },
+      "style": "Small wooden chalet (20 x 16 m), a former patrol hut, with a red roof and a packed deck facing the Maroon Bells.",
+      "model": "warming_hut",
+      "osm": "w151179407",
+      "place_check": {
+        "place": "Cloud Nine Alpine Bistro",
+        "distance_m": 2.4
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/151179407",
+        "https://www.aspensnowmass.com/visit/dining/aspen-highlands/cloud-nine-alpine-bistro",
+        "https://en.wikipedia.org/wiki/Aspen_Highlands"
+      ]
+    },
+    {
+      "name": "Highlands Village",
+      "kind": "village_block",
+      "x": 716.4,
+      "z": -2999.7,
+      "style": "Base village of four-to-five-storey red-brown timber and stone lodges around the Exhibition bottom.",
+      "model": null,
+      "place_check": {
+        "place": "Highlands Village",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/exhibition-aspen-highlands-co/",
+        "https://liftblog.com/thunderbowl-aspen-highlands-co/"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Highland Bowl ridge",
+      "description": "The hike-to bowl above Loge Peak: a narrow, treeless ridge with a bootpack and prayer flags to Highland Peak (12,392 ft); patrol memorial near the Loge Peak top. Mostly east-facing, up to 48 degrees.",
+      "kit": "no",
+      "kit_note": "The ridge is outside the baked lifts/runs; needs a bootpack line, prayer flags and the summit. Position not in our data.",
+      "refs": [
+        "17117678"
+      ]
+    },
+    {
+      "name": "Cloud Nine",
+      "description": "Tiny red-roofed bistro hut with a famously crowded deck.",
+      "kit": "partial",
+      "kit_note": "warming_hut with a red roof.",
+      "refs": []
+    },
+    {
+      "name": "Teal tower bases",
+      "description": "Highlands towers stand on teal-green painted bases.",
+      "kit": "partial",
+      "kit_note": "tower_base paint.",
+      "refs": [
+        "17117676",
+        "151179408",
+        "17118210",
+        "17117678"
+      ]
+    }
+  ]
+}

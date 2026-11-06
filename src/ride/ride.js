@@ -16,11 +16,11 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=24";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=25";
 import { navRow } from "../core/nav.js?v=9";
 import { rideSound } from "../audio/index.js?v=3";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=3";
-import { dropIn } from "../core/transition.js?v=1";
+import { dropIn } from "../core/transition.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;

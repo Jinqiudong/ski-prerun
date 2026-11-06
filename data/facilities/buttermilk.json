@@ -1,0 +1,227 @@
+{
+  "resort": "buttermilk",
+  "name": "Buttermilk",
+  "origin": {
+    "lat": 39.1928,
+    "lon": -106.87
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/buttermilk.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "Five Trees and the unnamed rope tow fall inside both the Highlands and Buttermilk boxes."
+  ],
+  "lifts": {
+    "1212154522": {
+      "name": "Five Trees",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Private lift for the Five Trees homes between Highlands and Buttermilk; not open to the public.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/five-trees-aspen-highlands-co/"
+      ]
+    },
+    "258702586": {
+      "name": "Lift",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Unnamed carpet at the base.",
+      "verified": false,
+      "sources": []
+    },
+    "1211521065": {
+      "name": "Lift",
+      "type": "rope_tow",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Unnamed rope tow in OSM between Highlands and Buttermilk; appears in both resorts' data. Not identified.",
+      "verified": false,
+      "sources": []
+    },
+    "40233630": {
+      "name": "Panda Peak",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "Beginner double at the base; OSM has no seat count.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/panda-peak-buttermilk-co/",
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/"
+      ]
+    },
+    "40233623": {
+      "name": "Ski School Lift",
+      "type": "rope_tow",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "OSM drag_lift; skiresort.info lists a 'Ski School Tow' baby lift.",
+      "verified": false,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/"
+      ]
+    },
+    "99948692": {
+      "name": "Ski School Magic Carpet",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "People mover at the base.",
+      "verified": false,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/"
+      ]
+    },
+    "99948700": {
+      "name": "Summit Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1993,
+      "color": {
+        "terminal": "#4a4f55"
+      },
+      "color_verified": true,
+      "note": "Main lift to the Cliffhouse at the top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/summit-express-buttermilk-co/",
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/"
+      ]
+    },
+    "99948694": {
+      "name": "Tiehack Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2011,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#b9bdc1",
+        "lettering_band": "#2d5b8c",
+        "tower_base": "#c0282d"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/tiehack-express-buttermilk-co/",
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Buttermilk_(ski_area)"
+      ]
+    },
+    "99948697": {
+      "name": "West Buttermilk Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2004,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#a9aeb3"
+      },
+      "color_verified": true,
+      "note": "Beginner terrain on the west side; has a mid-station.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/west-buttermilk-express-buttermilk-co/",
+        "https://www.skiresort.info/ski-resort/buttermilk-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Buttermilk_(ski_area)"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "Cliffhouse",
+      "kind": "restaurant",
+      "x": -477.7,
+      "z": 1126.9,
+      "style": "Cabin-style restaurant at the top of Summit Express: dark green board-and-batten walls, white trim, red door and red sign, gabled roof, Pyramid Peak view.",
+      "model": "warming_hut",
+      "position_note": "OSM has no Cliffhouse feature; placed at the Summit Express top from data/buttermilk.json.",
+      "verified": true,
+      "sources": [
+        "https://www.aspensnowmass.com/visit/dining/buttermilk/cliffhouse-restaurant"
+      ]
+    },
+    {
+      "name": "Buttermilk Mountain Lodge (formerly Bumps)",
+      "kind": "base_lodge",
+      "x": 845.9,
+      "z": -1393.6,
+      "style": "Base lodge renovated and renamed in 2022/23: tall glass walls and a timber-beam ceiling inside; a new guest services building beside it.",
+      "model": "base_lodge",
+      "place_check": {
+        "place": "Buttermilk Base",
+        "distance_m": 0.0
+      },
+      "position_note": "At the baked 'Buttermilk Base' place (Summit Express bottom); footprint not in OSM.",
+      "verified": false,
+      "sources": [
+        "https://www.aspensnowmass.com/visit/dining/buttermilk/bumps-restaurant",
+        "https://unofficialnetworks.com/2022/09/02/buttermilk-redeveloping-base-area/"
+      ]
+    },
+    {
+      "name": "Tiehack base",
+      "kind": "base_lodge",
+      "x": 1329.9,
+      "z": 170.6,
+      "style": "Smaller base at the bottom of Tiehack Express.",
+      "model": null,
+      "place_check": {
+        "place": "Tiehack",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": []
+    }
+  ],
+  "signature": [
+    {
+      "name": "Cliffhouse",
+      "description": "Green cabin with a red door at the summit, facing Pyramid Peak.",
+      "kit": "partial",
+      "kit_note": "warming_hut painted green with a red door.",
+      "refs": []
+    },
+    {
+      "name": "X Games venue",
+      "description": "Buttermilk hosts the Winter X Games: superpipe and slopestyle course on the front side.",
+      "kit": "no",
+      "kit_note": "Seasonal; park features (kicker, rails, pipe) are P2 in the kit. Position not in our data.",
+      "refs": []
+    }
+  ]
+}

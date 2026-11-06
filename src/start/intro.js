@@ -2,7 +2,7 @@
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. With a trip near (on now, coming up, or just over), the opening is
 // about that trip instead: its crew's little planes on their way to Denver (see tripIntro).
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=24";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=25";
 import { pickTrip, progress, resortsOf, resortOn, crewOf, spread, bearing, ymd, between, LOOK_BACK } from "./trip-intro.js?v=1";
 
 const CSS = `
@@ -99,7 +99,7 @@ const pickQuote = () => {
 };
 
 // ---- Playing it
-// ?intro=force plays it anyway: in the headless tests, and again in the same visit.
+// ?intro=force plays it under navigator.webdriver too (the headless tests); any ?intro plays it again in the same visit.
 const FORCE = () => new URLSearchParams(location.search).get("intro") === "force";
 const firstThisVisit = () => { try { if (sessionStorage.getItem("prerunIntro")) return false; sessionStorage.setItem("prerunIntro", "1"); } catch { /* storage off: play it */ } return true; };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -114,7 +114,7 @@ const SND = `<button class="snd" aria-label="${t("声音")}"><svg viewBox="0 0 2
 export async function playIntro(hooks = {}) {
   const force = FORCE();
   if (navigator.webdriver && !force) return; // not in tests
-  if (!firstThisVisit() && !force) return; // once per visit
+  if (!firstThisVisit() && !new URLSearchParams(location.search).has("intro")) return; // once per visit (per tab); ?intro in the link plays it again
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const st = document.createElement("style"); st.textContent = CSS; document.head.append(st);
   const box = document.createElement("div"); box.id = "intro"; document.body.append(box); // the frost first, while the trip is looked up
@@ -178,7 +178,7 @@ function stage(box, st, mood, still) {
 //   during  "day 2 · Copper today", the planes parked at Denver, a tap straight to the mountain
 //   after   the week after: the planes fly home over the whole way, a tap to the Memory tab
 async function tripData(P) {
-  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=28"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
+  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=29"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
   const tr = P.trip, today = ymd(new Date()), byId = Object.fromEntries((Array.isArray(resorts) ? resorts : []).map((r) => [r.id, r]));
   const crew = crewOf(tr, { mine: myAvatar(), avatars: AVATARS }).slice(0, 6);
   if (!crew.length) crew.push({ name: "", from: "", face: myAvatar(), me: true, note: "" });
