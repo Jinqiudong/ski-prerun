@@ -52,7 +52,7 @@ export class Collection {
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
     // The painted map the tiles stand on (it takes their shadows too).
     const mw = (MAP.E - MAP.W) * 85.3 * KM, mh = (MAP.N - MAP.S) * 111 * KM;
-    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=5", (x) => (x.colorSpace = THREE.SRGBColorSpace));
+    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=6", (x) => (x.colorSpace = THREE.SRGBColorSpace));
     tex.anisotropy = 8;
     // Its own border fades into the snow it lies on, over ~40 km, so the sheet has no edge anywhere.
     const fade = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256), kw = mw / KM, kh = mh / KM;
