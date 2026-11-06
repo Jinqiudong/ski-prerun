@@ -230,6 +230,7 @@ export class Facilities {
         const C = this.carrierPool(spec.carrier);
         o.pool = C; o.gap = spec.cabin ? 55 : surface ? 25 : 33; o.speed = spec.detachable ? 5 : surface ? 3 : 2.3;
         o.color = new THREE.Color(spec.cabin ? GRAPHITE : spec.color);
+        if (spec.chondola) { o.pool2 = this.carrierPool("gondola"); o.color2 = new THREE.Color(GRAPHITE); } // a cabin every fifth carrier
       }
       this.lastRefresh.set(1e9, 0, 0);
     }).catch(() => {});
@@ -252,7 +253,7 @@ export class Facilities {
     for (const cp of this.carrierPools.values()) cp.n = 0;
     for (const o of this.others) {
       if (!o.pool?.pool || c.x < o.box[0] - R || c.x > o.box[1] + R || c.z < o.box[2] - R || c.z > o.box[3] + R) continue;
-      const n = Math.floor(o.total / o.gap), cp = o.pool;
+      const n = Math.floor(o.total / o.gap);
       for (const [path, back] of [[o.up, false], [o.down, true]]) {
         if (path.length < 2) continue;
         for (let i = 0; i < n; i++) {
@@ -261,8 +262,9 @@ export class Facilities {
           if (!a || !b) continue;
           const x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, z = a.z + (b.z - a.z) * f;
           if ((x - c.x) ** 2 + (z - c.z) ** 2 > 1300 * 1300) continue;
+          const cabin = o.pool2?.pool && i % 5 === 4, cp = cabin ? o.pool2 : o.pool;
           const it = cp.items[cp.n] ||= { m: new THREE.Matrix4(), color: o.color };
-          cp.n++; it.color = o.color;
+          cp.n++; it.color = cabin ? o.color2 : o.color;
           it.m.compose(_v.set(x, y, z), _q.setFromAxisAngle(Y, Math.atan2(b.x - a.x, b.z - a.z)), _s.set(1, 1, 1));
         }
       }
@@ -308,7 +310,7 @@ export class Facilities {
     // Run signs at the top of every named run.
     jobs.push(this.runSigns());
     jobs.push(this.snowGuns(villages));
-    kit("sign_junction").catch(() => {}); // ready for the way down
+    kit("sign_junction").then((k) => (cache.junction = k)).catch(() => {}); // ready for the way down
     await Promise.allSettled(jobs);
     this.lastRefresh.set(1e9, 0, 0);
   }
@@ -408,7 +410,7 @@ export class Facilities {
     if (!k) { kit("sign_junction").then((kk) => (cache.junction = kk)).catch(() => {}); return fallback(); }
     const g = new THREE.Group(), face = junctionFaceMat(options, this.renderer);
     for (const p of Object.values(k.parts)) { const m = new THREE.Mesh(p.geometry, p.kind === "paint" ? face : p.material); m.castShadow = p.kind !== "paint"; g.add(m); }
-    g.scale.setScalar(1.6);
+    g.scale.setScalar(1.6); g.userData.junction = true;
     g.position.set(x, this.T.heightAt(x, z) - 0.15, z); g.rotation.y = yaw;
     return g;
   }

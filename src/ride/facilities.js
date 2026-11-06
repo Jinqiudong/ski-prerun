@@ -58,15 +58,15 @@ export function liftSpec(lift, research, known) {
   return {
     carrier, cabin: isCabin, surface, seats, detachable,
     bubble: /bubble/.test(carrier || ""), bottom: term[0], top: term[1],
-    gauge: TERMINAL[term[0]].gauge, ...colours(r, known), researched: !!r.type, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
+    gauge: TERMINAL[term[0]].gauge, ...colours(r, known), researched: !!r.type, chondola: type === "chondola" || lift.kind === "mixed_lift" && !!r.cabin_model, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
   };
 }
 
 // Paint per part: the chairs, the terminal hood, the towers (else the hood's colour), the bubble.
 function colours(r, known) {
   const c = typeof r.color === "string" ? { chair: r.color } : r.color || r.colour || {};
-  const chair = c.chair || c.cabin || CHARCOAL, terminal = c.terminal || chair;
-  return { color: chair, terminalColor: terminal, towerColor: c.tower || (c.terminal ? terminal : chair), bubbleColor: c.bubble || known?.bubbleColor || null };
+  const chair = c.chair || CHARCOAL, terminal = c.terminal || CHARCOAL; // cabins keep the kit's graphite
+  return { color: chair, terminalColor: terminal, towerColor: c.tower || terminal, bubbleColor: c.bubble || known?.bubbleColor || null };
 }
 
 // Terminals in the game's frame (+z the way up, +x the up rope's side). `bull`: the local z of the
@@ -354,24 +354,21 @@ export function runFaceAtlas(runs, renderer) {
 // A junction post's three arrow boards (left board middle, right boards top and bottom), one way each:
 // arrow, difficulty, name; the route's board in gold.
 export function junctionFaceMat(options, renderer) {
-  const c = document.createElement("canvas"); c.width = 1536; c.height = 256; const g = c.getContext("2d");
-  // Board slots in the atlas: u 0..⅓ the top (points right), ⅓..⅔ the middle (points left), ⅔..1 the bottom (right).
+  // Three boards in the atlas (each 1 × 0.22 m): u 0..⅓ the top board (points right), ⅓..⅔ the middle
+  // (points left), ⅔..1 the bottom (points right). Left-going ways on the left board.
+  const W = 512, H = 116, c = document.createElement("canvas"); c.width = W * 3; c.height = H; const g = c.getContext("2d");
   const lefts = options.filter((o) => o.bearing > 0.18), rest = options.filter((o) => !(o.bearing > 0.18));
   const slots = [rest[0] || null, lefts[0] || null, rest[1] || lefts[1] || null];
   const arrow = (b) => (b > 0.5 ? "←" : b < -0.5 ? "→" : b > 0.18 ? "↖" : b < -0.18 ? "↗" : "↑");
   slots.forEach((o, k) => {
-    const x = k * 512, flip = k === 1; // the left board reads from its point
-    g.fillStyle = o ? (o.route ? "#f2b632" : "#f1ead8") : "#cfc6b2"; g.fillRect(x, 0, 512, 256);
+    const x = k * W, left = k === 1; // the left board's point is at the cell's left, the others' at the right
+    g.fillStyle = o ? (o.route ? "#f2b632" : "#f1ead8") : "#e6dcc6"; g.fillRect(x, 0, W, H);
     if (!o) return;
-    g.save(); if (flip) { g.translate(x + 512, 0); g.scale(-1, 1); g.translate(-x, 0); }
-    g.restore();
-    const ax = flip ? x + 440 : x + 70; // arrow by the board's point
-    g.fillStyle = "#1a1f24"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "800 130px -apple-system, sans-serif";
-    g.fillText(arrow(o.bearing), flip ? x + 450 : x + 440, 132);
-    diffMark(g, o.run.level, flip ? x + 360 : x + 75, 128, 42);
-    g.textAlign = "left"; fit(g, o.run.name.toUpperCase(), 250, 84, 800);
-    g.fillText(o.run.name.toUpperCase(), flip ? x + 50 : x + 130, 132);
-    void ax;
+    g.fillStyle = "#1a1f24"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = "800 92px -apple-system, sans-serif";
+    g.fillText(arrow(o.bearing), left ? x + 52 : x + W - 52, H / 2 + 4);
+    diffMark(g, o.run.level, left ? x + 128 : x + 44, H / 2, 30);
+    g.textAlign = "left"; fit(g, o.run.name.toUpperCase(), left ? 330 : 350, 78, 800, '"Arial Narrow", "Helvetica Neue", sans-serif');
+    g.fillText(o.run.name.toUpperCase(), left ? x + 168 : x + 84, H / 2 + 3);
   });
   return new THREE.MeshStandardMaterial({ map: canvasTex(c, renderer), roughness: 0.6 });
 }
