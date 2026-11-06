@@ -41,7 +41,7 @@ scene.add(sun, sun.target);
 
 // Snow underfoot: gentle rolls, a faint grain.
 const ground = new THREE.PlaneGeometry(1600, 700, 320, 140); ground.rotateX(-Math.PI / 2);
-const P = ground.attributes.position, hgt = (x, z) => { const r = Math.hypot(x, z); return r < 26 || x > 140 ? 0 : (Math.sin(x * 0.07) * Math.cos(z * 0.05) * 1.2 + Math.max(0, -z - 30) * 0.12) * Math.min(1, (r - 26) / 20); };
+const P = ground.attributes.position, hgt = (x, z) => { const r = Math.hypot(x, z); return r < 26 || x > 140 ? 0 : Math.min(1, (140 - x) / 60) * (Math.sin(x * 0.07) * Math.cos(z * 0.05) * 1.2 + Math.max(0, -z - 30) * 0.12) * Math.min(1, (r - 26) / 20); };
 for (let i = 0; i < P.count; i++) P.setY(i, hgt(P.getX(i), P.getZ(i)));
 ground.computeVertexNormals();
 const nor = new THREE.TextureLoader().load("../../assets/tex/snow_02_nor_gl_1k.jpg"); nor.wrapS = nor.wrapT = THREE.RepeatWrapping; nor.repeat.set(90, 90);

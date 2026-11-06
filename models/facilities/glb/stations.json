@@ -1,1 +1,4 @@
-[]
+[{"name": "terminal_detach", "label": "脱挂式站台（底站）", "rope": [3.0, 4.45]},
+ {"name": "terminal_detach_top", "label": "脱挂式站台（顶站）", "rope": [3.0, 5.35]},
+ {"name": "terminal_fixed", "label": "固定抱索站台", "rope": [2.3, 4.0]},
+ {"name": "gondola_station", "label": "吊厢站房", "rope": [3.0, 4.25]}]

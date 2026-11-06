@@ -190,7 +190,10 @@ def select_only(objs):
     bpy.context.view_layer.objects.active = objs[0]
 
 def join(objs, name):
-    select_only(objs); bpy.ops.object.convert(target="MESH"); bpy.ops.object.join()
+    # Bake every part's transform into its mesh first: textures are projected in the joined object's
+    # space, which would otherwise be the first part's (a scaled box stretches every texture).
+    select_only(objs); bpy.ops.object.convert(target="MESH")
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True); bpy.ops.object.join()
     o = bpy.context.view_layer.objects.active; o.name = name; return o
 
 SUN_DIR = Vector((-0.55, -0.55, 0.62)).normalized()  # towards the sun: the game's sun, in Blender axes

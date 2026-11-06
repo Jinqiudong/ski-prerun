@@ -1,1 +1,8 @@
-[]
+[{"name": "sign_run", "label": "雪道路牌"},
+ {"name": "sign_junction", "label": "岔路指示牌"},
+ {"name": "sign_lift", "label": "缆车提示牌"},
+ {"name": "sign_slow", "label": "减速横幅"},
+ {"name": "trail_map_board", "label": "雪道地图牌"},
+ {"name": "rope_line", "label": "关闭绳线"},
+ {"name": "boundary_marker", "label": "边界标"},
+ {"name": "hazard_cross", "label": "危险交叉杆"}]
