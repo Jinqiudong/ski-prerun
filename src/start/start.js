@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
 import { CFG, PART_LABEL, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=9";
-import { makeEntrance } from "./entrance.js?v=22";
+import { makeEntrance } from "./entrance.js?v=23";
 import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=27";
 import { playIntro } from "./intro.js?v=16";
@@ -114,10 +114,11 @@ async function show(r, pose) {
   const changed = rider !== c || shownChar?.board !== ch.board || shownChar?.fav !== ch.fav || shownChar !== ch && !editing;
   if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); }
   c.set(ch); shownChar = ch;
-  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); turntable.rotation.y = 0; if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
-  else if (pose === "enter" || changed) enter();
+  // the stance before the entrance starts: it rides goofy's line mirrored (entrance.js)
   holder.scale.x = stanceOf(r) === "goofy" ? -1 : 1;
   holder.position.y = 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
+  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); turntable.rotation.y = 0; if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
+  else if (pose === "enter" || changed) enter();
   $("status").hidden = true;
   $("who").textContent = r.name;
 }

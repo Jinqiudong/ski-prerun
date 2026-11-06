@@ -44,9 +44,12 @@ const ROUTES = {
 const STOP = 30; // the skid stop, in line frames
 const LONG = 30; // the longest way in (m): longer lines are drawn in to this
 const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
-function lineOf(char, r) {
+// Goofy (mirror < 0: the rider is drawn mirrored, so the board's nose points the other way): the line is
+// mirrored sideways, so a carve still turns toward the toe edge, and the rider is turned half round on it
+// (step), so the nose leads.
+function lineOf(char, r, mirror = 1) {
   const T = char.trace(r.clip, 1, r.v); if (!T) return null;
-  const pts = T.pts.slice(), hd = T.hd.slice(), n = pts.length;
+  const pts = T.pts.map(([x, z]) => [x, z * mirror]), hd = T.hd.map((h) => h * mirror), n = pts.length;
   // run on past the clip's end, if its move runs late, so the stop comes after it (straight on, the clip held)
   const tail = Math.max(0, (r.end ?? 0) + STOP - (n - 1)), [lx, lz] = pts[n - 1], lh = hd[n - 1], st = r.v / T.fps;
   for (let i = 1; i <= tail; i++) { pts.push([lx + Math.cos(lh) * st * i, lz - Math.sin(lh) * st * i]); hd.push(lh); }
@@ -162,7 +165,9 @@ export function makeEntrance(scene) {
     group,
     start(k, char, mover) {
       const r = ROUTES[k]; if (!r) return false;
-      const key = char.root.uuid + k + char.root.scale.x; if (!cache.has(key)) cache.set(key, lineOf(char, r));
+      // regular or goofy: whether the rider is drawn mirrored (start.js sets it before this)
+      char.root.updateWorldMatrix(true, false); const mirror = char.root.matrixWorld.determinant() < 0 ? -1 : 1;
+      const key = char.root.uuid + k + char.root.scale.x + mirror; if (!cache.has(key)) cache.set(key, lineOf(char, r, mirror));
       const line = cache.get(key); if (!line) return false;
       n = 0; tGeo.setDrawRange(0, 0); kick.visible = false; kick.material.opacity = 1;
       let air = r.air ? { i0: r.air[0], i1: r.air[1], peak: 0, y0: 0, ramp: null } : null;
@@ -179,7 +184,7 @@ export function makeEntrance(scene) {
         air = { ...air, i0, peak: r.kicker.peak, y0: ramp.get(i0) ?? groundAt(x, z), ramp }; E.kicker = { lip: i0, ramp: [...ramp.keys()].sort((a, b) => a - b) }; // (for tests)
       }
       char.play(r.clip, { once: true, fade: 0.3 });
-      run = { line, char, mover, t: 0, air, r, done: 0, k, cam: null, look: null, shot: null };
+      run = { line, char, mover, t: 0, air, r, done: 0, k, cam: null, look: null, shot: null, flip: mirror < 0 ? Math.PI : 0 };
       return true;
     },
     get running() { return !!run && !run.done; },
@@ -250,9 +255,10 @@ export function makeEntrance(scene) {
       if (air?.ramp?.has(i)) { const a = air.ramp.get(i), b = air.ramp.get(j) ?? a; y = a + (b - a) * u; } // up the kicker's face
       if (air && f >= air.i0 && f < air.i1) { // off the lip (or the snow) to the landing; the clip lifts the board itself
         const q = (f - air.i0) / (air.i1 - air.i0); if (air.ramp) y = air.y0 * (1 - q) + y * q + air.peak * 4 * q * (1 - q); flying = true; }
-      const stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(h / (2 * Math.PI)) * 2 * Math.PI;
+      // the rider's yaw on the line: the board's nose along it (turned half round for goofy, see lineOf); the stop ends facing you
+      const yaw = h + run.flip, stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(yaw / (2 * Math.PI)) * 2 * Math.PI;
       if (stopW > 0 && !run.stopping) { run.stopping = true; char.play("Stand_Idle", { fade: 1.2 }); }
-      mover.position.set(x, y, z); mover.rotation.y = h + (end - h) * sw;
+      mover.position.set(x, y, z); mover.rotation.y = yaw + (end - yaw) * sw;
       run.now = { x, y, z, h, u: f / F, i, f, flying };
       if (!flying) {
         lay(x, y, z, h);
