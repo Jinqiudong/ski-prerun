@@ -48,7 +48,7 @@ const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true }, "American Eagl
 // Elsewhere the seats and bubbles come from OpenStreetMap (aerialway:occupancy, aerialway:bubble); a
 // gondola is drawn as a closed cabin with glass all round.
 const TOWER_EVERY = 85, ROPE_H = 11.5, STATION_H = 3.5, SPEED = 5;
-let CHAIR_GAP = 33, HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false;
+let CHAIR_GAP = 33, CHAIR_STEP = 33, HALF_GAUGE = 3.3, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false;
 function setLiftKind(lift) {
   CABIN = lift.kind === "gondola" || lift.kind === "cable_car";
   const k = (RESORT === "copper" && LIFT_KIND[lift.name]) || { seats: Math.min(8, Math.max(2, lift.seats || 4)), bubble: !!lift.bubble };
@@ -880,7 +880,9 @@ function build(ctx) {
   const parts = ctx.chair;
   const chairMetal = metalMat;
   const padMat = new THREE.MeshStandardMaterial({ color: 0x1f2c47, roughness: 0.55 });
-  const n = Math.floor(line.total / CHAIR_GAP);
+  // Chairs evenly round the loop with ours as one of them: the gap is shrunk a touch so the last
+  // chair ahead never lands on ours.
+  const n = Math.max(1, Math.floor(line.total / CHAIR_GAP)); CHAIR_STEP = line.total / (n + 1);
   chairsUp = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsUp = new THREE.InstancedMesh(parts.pad, padMat, n);
   chairsDown = new THREE.InstancedMesh(parts.metal, chairMetal, n); padsDown = new THREE.InstancedMesh(parts.pad, padMat, n);
   // Copper's signature blue bubbles: tinted, glossy, see-through.
@@ -2511,13 +2513,13 @@ async function main() {
     myChair.rotation.set(0, yaw, 0);
     // The other chairs keep their spacing from ours; the down line runs the other way.
     for (let i = 0; i < chairsUp.count; i++) {
-      const s = (d + (i + 1) * CHAIR_GAP) % line.total;
+      const s = (d + (i + 1) * CHAIR_STEP) % line.total;
       along(line.up, s, p); along(line.up, s + 4, q);
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
       chairsUp.setMatrixAt(i, m.compose(p, rot, one)); padsUp.setMatrixAt(i, m);
       // Riders going up keep some bubbles down, some up; empty chairs come down with them closed.
       bm2.copy(m).multiply((i * 7) % 5 < 3 && !CABIN ? bOpen : bShut); bubblesUp.setMatrixAt(i, bm2); rimsUp.setMatrixAt(i, bm2);
-      const s2 = (line.total - d + i * CHAIR_GAP + CHAIR_GAP / 2) % line.total;
+      const s2 = (line.total - d + i * CHAIR_STEP + CHAIR_STEP / 2) % line.total;
       along(line.down, s2, p); along(line.down, s2 + 4, q);
       rot.setFromAxisAngle(Y, Math.atan2(q.x - p.x, q.z - p.z));
       chairsDown.setMatrixAt(i, m.compose(p, rot, one)); padsDown.setMatrixAt(i, m);

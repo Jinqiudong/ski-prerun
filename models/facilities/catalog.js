@@ -16,7 +16,7 @@ const SCENES = {
 const q = new URLSearchParams(location.search);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 document.body.prepend(renderer.domElement);
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdfe8f1); scene.fog = new THREE.Fog(0xdfe8f1, 80, 330);
@@ -36,7 +36,7 @@ ring.position.y = 40; scene.add(ring);
 
 scene.add(new THREE.HemisphereLight(0xdfeaff, 0xcfc6b6, 1.0));
 const sun = new THREE.DirectionalLight(0xfff0d8, 2.8); sun.position.copy(SUN).multiplyScalar(80); sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, far: 220 }); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, far: 220 }); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.04;
 scene.add(sun, sun.target);
 
 // Snow underfoot: gentle rolls, a faint grain.
@@ -109,23 +109,36 @@ for (const [x, z, s] of [[-12, -6, 1.1], [13, -9, 1.2], [-30, -2, 0.9], [20, 4, 
 
 // The catalogue: each family in a row of its own off to the east, carriers hung from a rope.
 const FAMILIES = [["lifts", "缆车"], ["stations", "站台"], ["signs", "路牌"], ["buildings", "建筑"], ["props", "道具"]];
-const rows = {};
-await Promise.all(FAMILIES.map(async ([f], fi) => {
-  const list = await (await fetch(`glb/${f}.json?v=${Date.now()}`)).json().catch(() => []);
-  const items = (await Promise.all(list.map((e) => load(e.name).then((o) => [e, o]).catch(() => null)))).filter(Boolean);
-  let x = 200; const z = -fi * 70, row = [];
+// One family at a time is loaded (a phone can't hold all fifty models at once); switching drops the last.
+const lists = Object.fromEntries(await Promise.all(FAMILIES.map(async ([f]) => [f, await (await fetch(`glb/${f}.json?v=${VER}`)).json().catch(() => [])])));
+const rows = {}; let shown = null;
+async function loadFamily(f) {
+  if (shown && shown.f !== f) {
+    scene.remove(shown.group);
+    shown.group.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); for (const m of [].concat(o.material)) { m.map?.dispose(); m.normalMap?.dispose(); m.dispose(); } } });
+    for (let i = snowMeshes.length - 1; i >= 0; i--) if (!snowMeshes[i].parent || isIn(snowMeshes[i], shown.group)) snowMeshes.splice(i, 1);
+    delete rows[shown.f]; shown = null;
+  }
+  if (rows[f]) return;
+  const group = new THREE.Group(); scene.add(group);
+  const items = (await Promise.all(lists[f].map((e) => load(e.name).then((o) => [e, o]).catch(() => null)))).filter(Boolean);
+  let x = 200; const z = 0, row = [];
   for (const [e, o] of items) {
     const box = new THREE.Box3().setFromObject(o), w = box.max.x - box.min.x;
-    x += w / 2; o.position.set(x - (box.min.x + box.max.x) / 2, e.hang ? 8 : 0, z); scene.add(o);
-    if (e.hang) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 10, 6), ropeMat); r.rotation.x = Math.PI / 2; r.position.set(x, 8, z); scene.add(r); } // the rope runs the way up (game z), through the grips
+    x += w / 2; o.position.set(x - (box.min.x + box.max.x) / 2, e.hang ? 8 : 0, z); group.add(o);
+    if (e.hang) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 10, 6), ropeMat); r.rotation.x = Math.PI / 2; r.position.set(x, 8, z); group.add(r); } // the rope runs the way up (game z), through the grips
     row.push({ e, o, x, z, size: Math.max(w, box.max.y - box.min.y, box.max.z - box.min.z) }); x += w / 2 + 4;
   }
-  rows[f] = row;
-}));
+  rows[f] = row; shown = { f, group };
+}
+const isIn = (o, g) => { for (let p = o; p; p = p.parent) if (p === g) return true; return false; };
 
+let snowState = { light: 0.12, none: -1 }[q.get("snow")] ?? 0;
+function applySnow() { SNOW.thin.value = Math.max(0, snowState); for (const m of snowMeshes) m.visible = snowState >= 0; }
 let view = q.get("view") || "all", item = 0;
 const frame = (r) => { const y = r.e.hang ? 8 - r.size * 0.35 : r.size * 0.35, d = r.size * 1.5 + 3; return { pos: [r.x + d * 0.45, y + d * 0.3, r.z + d], at: [r.x, y, r.z], cap: r.e.label }; };
-function go(v, k = 0) {
+async function go(v, k = 0) {
+  if (lists[v] && !rows[v]) { document.getElementById("cap").textContent = "加载中…"; await loadFamily(v); applySnow(); }
   view = v; item = k;
   const row = rows[v], V = VIEWS[v] || SCENES[v] || (row?.length ? frame(row[(k + row.length) % row.length]) : { pos: [260, 20, 60], at: [240, 0, 0], cap: "还没有模型" });
   camera.position.set(...V.pos); controls.target.set(...V.at); controls.update();
@@ -134,12 +147,12 @@ function go(v, k = 0) {
   const bar = document.getElementById("bar"); bar.innerHTML = "";
   const btn = (t, on, f) => { const b = document.createElement("button"); b.textContent = t; b.className = on ? "on" : ""; b.onclick = f; bar.append(b); };
   btn("全景", v === "all", () => go("all"));
-  for (const [f, l] of FAMILIES) btn(`${l} ${rows[f]?.length || 0}`, v === f, () => go(f));
+  for (const [f, l] of FAMILIES) btn(`${l} ${lists[f]?.length || 0}`, v === f, () => go(f));
   if (row?.length > 1) { btn("‹", false, () => go(v, item - 1)); btn("›", false, () => go(v, item + 1)); }
-  for (const [t, k2] of [["厚雪", 0], ["薄雪", 0.12], ["无雪", -1]]) btn(t, (k2 < 0 ? !snowMeshes[0]?.visible : snowMeshes[0]?.visible && SNOW.thin.value === k2), () => { SNOW.thin.value = Math.max(0, k2); for (const m of snowMeshes) m.visible = k2 >= 0; go(view, item); });
+  for (const [t, k2] of [["厚雪", 0], ["薄雪", 0.12], ["无雪", -1]]) btn(t, (snowState === k2), () => { snowState = k2; applySnow(); go(view, item); });
 }
 function size() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
-addEventListener("resize", size); size(); go(view, +(q.get("item") || 0));
-if (q.get("snow")) { const k = { light: 0.12, none: -1 }[q.get("snow")] ?? 0; SNOW.thin.value = Math.max(0, k); for (const m of snowMeshes) m.visible = k >= 0; }
+addEventListener("resize", size); size(); await go(view, +(q.get("item") || 0)); applySnow();
+
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 window.__ready = true;
