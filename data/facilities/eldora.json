@@ -1,0 +1,348 @@
+{
+  "resort": "eldora",
+  "name": "Eldora",
+  "origin": {
+    "lat": 39.9413,
+    "lon": -105.5934
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/eldora.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [],
+  "lifts": {
+    "1125554719": {
+      "name": "Alpenglow",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2017,
+      "terminal": "Doppelmayr Uni-G",
+      "color": {
+        "terminal": "#e0552b",
+        "terminal_top": "#232323",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "Replaced Cannonball and Challenge; orange-red Uni-G hood with a black top band and porch.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/alpenglow-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort",
+        "https://liftblog.com/2017/03/07/eldora-to-debut-doppelmayr-six-pack-next-season/"
+      ]
+    },
+    "99641646": {
+      "name": "Caribou",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Lift Engineering (Yan)",
+      "year": null,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Beginner hill; late 1970s.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/caribou-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    "99645422": {
+      "name": "Corona",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Garaventa CTEC",
+      "year": 1998,
+      "color": {
+        "terminal": "#3a3d40"
+      },
+      "color_verified": true,
+      "note": "Backside quad; Lookout Grill at the top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/corona-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    "99641640": {
+      "name": "EZ",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 2000,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/ez-eldora-co/"
+      ]
+    },
+    "99645420": {
+      "name": "Indian Peaks",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Garaventa CTEC",
+      "year": 1998,
+      "color": {
+        "chair": "#a9aeb3"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/indian-peaks-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    "99641637": {
+      "name": "Little Hawk",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Miner-Denver",
+      "year": 1967,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Oldest operating chairlift in Colorado; Yan chairs, three towers.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/little-hawk-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    "99645413": {
+      "name": "Race",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": null,
+      "color": {
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Liftblog lists it as 'Poma'; Yan operator house.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/poma-eldora-co/"
+      ]
+    },
+    "1453393760": {
+      "name": "Sun Kid",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Not confirmed by a lift database.",
+      "verified": false,
+      "sources": []
+    },
+    "99645425": {
+      "name": "Sundance",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Lift Engineering (Yan)",
+      "year": null,
+      "color": {
+        "terminal": "#6b2a2a"
+      },
+      "color_verified": true,
+      "note": "Beginner hill; late 1970s.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sundance-eldora-co/",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    "99641627": {
+      "name": "Tenderfoot",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Not confirmed by a lift database.",
+      "verified": false,
+      "sources": []
+    }
+  },
+  "buildings": [
+    {
+      "name": "Timbers Lodge & Taphouse",
+      "kind": "base_lodge",
+      "x": 792.0,
+      "z": 340.3,
+      "footprint_m": {
+        "length": 47.0,
+        "width": 23.5,
+        "heading_deg": 30.1
+      },
+      "style": "Main base lodge and taphouse (47 x 23 m) by the Alpenglow bottom.",
+      "model": "base_lodge",
+      "osm": "w154719909",
+      "place_check": {
+        "place": "Timbers Lodge",
+        "distance_m": 73.0
+      },
+      "note": "Look not confirmed from a photo.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/154719909",
+        "https://en.wikipedia.org/wiki/Eldora_Mountain_Resort"
+      ]
+    },
+    {
+      "name": "West Wing",
+      "kind": "base_lodge",
+      "x": 743.1,
+      "z": 343.6,
+      "footprint_m": {
+        "length": 46.9,
+        "width": 24.4,
+        "heading_deg": 178.5
+      },
+      "storeys": 2,
+      "style": "Two-storey base building (46 x 24 m) next to Timbers.",
+      "model": "base_lodge",
+      "osm": "w154719908",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/154719908"
+      ]
+    },
+    {
+      "name": "Indian Peaks Lodge",
+      "kind": "base_lodge",
+      "x": 890.3,
+      "z": 454.9,
+      "footprint_m": {
+        "length": 37.9,
+        "width": 27.1,
+        "heading_deg": 90.8
+      },
+      "storeys": 2,
+      "style": "Two-storey base lodge (37 x 27 m); upstairs dining hall with exposed timber posts and trusses and a wall of windows.",
+      "model": "base_lodge",
+      "osm": "w154719907",
+      "note": "Interior seen in the resort photo; exterior not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/154719907",
+        "https://www.eldora.com/activities-amenities/mountain-dining/upstairs-indian-peaks/"
+      ]
+    },
+    {
+      "name": "Caribou Lodge",
+      "kind": "base_lodge",
+      "x": 1021.3,
+      "z": 588.9,
+      "footprint_m": {
+        "length": 31.0,
+        "width": 22.9,
+        "heading_deg": 17.1
+      },
+      "style": "Lodge (31 x 22 m) at the beginner hill by Caribou and EZ.",
+      "model": "base_lodge",
+      "osm": "w1454941290",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/1454941290"
+      ]
+    },
+    {
+      "name": "Lookout Grill",
+      "kind": "restaurant",
+      "x": -1245.2,
+      "z": 54.0,
+      "footprint_m": {
+        "length": 16.7,
+        "width": 16.7,
+        "heading_deg": 80.2
+      },
+      "style": "Small grill (16 x 16 m) and viewpoint at the top of Corona.",
+      "model": "warming_hut",
+      "osm": "w154719230",
+      "place_check": {
+        "place": "Lookout Grill",
+        "distance_m": 1.0
+      },
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/154719230"
+      ]
+    },
+    {
+      "name": "First Aid and Ski Patrol",
+      "kind": "patrol",
+      "x": 829.6,
+      "z": 433.8,
+      "footprint_m": {
+        "length": 10.8,
+        "width": 10.0,
+        "heading_deg": 94.2
+      },
+      "storeys": 2,
+      "style": "Two-storey patrol building (10 x 10 m) at the base.",
+      "model": "firstaid",
+      "osm": "w581326685",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/581326685"
+      ]
+    },
+    {
+      "name": "Nordic Center",
+      "kind": "warming_hut",
+      "x": 1185.6,
+      "z": 596.4,
+      "footprint_m": {
+        "length": 14.4,
+        "width": 11.2,
+        "heading_deg": 6.9
+      },
+      "style": "Small Nordic centre (14 x 11 m) east of the base.",
+      "model": "warming_hut",
+      "osm": "w254093693",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/254093693"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Alpenglow's orange terminal",
+      "description": "Eldora's only high-speed lift: a striking orange-red Doppelmayr Uni-G six-pack out of the base.",
+      "kit": "partial",
+      "kit_note": "chair6 + terminal_detach; paint the hood orange-red with a black top.",
+      "refs": [
+        "1125554719"
+      ]
+    },
+    {
+      "name": "Little Hawk",
+      "description": "Oldest operating chairlift in Colorado (1967 Miner-Denver).",
+      "kit": "yes",
+      "kit_note": "chair2 + terminal_fixed.",
+      "refs": [
+        "99641637"
+      ]
+    }
+  ]
+}

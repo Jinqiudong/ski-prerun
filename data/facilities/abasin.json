@@ -1,0 +1,353 @@
+{
+  "resort": "abasin",
+  "name": "Arapahoe Basin",
+  "origin": {
+    "lat": 39.62795,
+    "lon": -105.87434999999999
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/abasin.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "The A-Frame (historic patrol building at the base) is not in OSM and was not placed."
+  ],
+  "lifts": {
+    "677913293": {
+      "name": "Beavers",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2018,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#a9aeb3",
+        "chair": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "Backside lift to Beaver Bowl.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/beavers-arapahoe-basin-co/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "37353338": {
+      "name": "Black Mountain Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2010,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#4b6a4c",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "First detachable at the Basin; tops out beside Black Mountain Lodge. Olive-green hood.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/black-mountain-express-arapahoe-basin-co/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "685993650": {
+      "name": "Lazy J Tow",
+      "type": "rope_tow",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Surface lift; Wikipedia counts one surface lift but gives no details.",
+      "verified": false,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "17144372": {
+      "name": "Lenawee Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2022,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#2f5b45",
+        "lettering": "#ffffff",
+        "chair": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "First six-pack at the Basin; replaced the Lenawee triple.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/lenawee-express-arapahoe-basin-co/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "17144445": {
+      "name": "Molly Hogan Lift",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2020,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#2f6b55"
+      },
+      "color_verified": true,
+      "note": "One of the shortest quads in the world (398 ft, two towers).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/molly-hogan-arapahoe-basin-co-2/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "258683225": {
+      "name": "Molly's Magic Carpet",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Wikipedia calls it Hogan's Magic Carpet, beside the nearest base parking.",
+      "verified": true,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "37353337": {
+      "name": "Pallavicini Lift",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2020,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#2f6b55",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Replaced the historic Yan double; Omega double chairs. Steep expert line.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/pallavicini-arapahoe-basin-co-2/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "1125353383": {
+      "name": "Pika Place",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Beginner carpet near the base lodge.",
+      "verified": true,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    "102018790": {
+      "name": "Zuma Lift",
+      "type": "fixed_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2007,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#3a3d40",
+        "chair": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "Montezuma Bowl expansion lift.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/zuma-arapahoe-basin-co/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "Black Mountain Lodge",
+      "kind": "restaurant",
+      "x": 368.0,
+      "z": -698.0,
+      "footprint_m": {
+        "length": 40.8,
+        "width": 23.1,
+        "heading_deg": 78.7
+      },
+      "style": "Mid-mountain day lodge at the Black Mountain Express top: dark green-charcoal horizontal lap siding, gabled metal roof, sign with the lodge logo, ski racks and deck.",
+      "model": "restaurant",
+      "osm": "w403401196",
+      "place_check": {
+        "place": "Black Mountain Lodge",
+        "distance_m": 5.0
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/403401196",
+        "https://www.arapahoebasin.com/restaurants/black-mountain-lodge/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin",
+        "https://liftblog.com/black-mountain-express-arapahoe-basin-co/"
+      ]
+    },
+    {
+      "name": "il Rifugio",
+      "kind": "restaurant",
+      "x": -72.4,
+      "z": 322.1,
+      "footprint_m": {
+        "length": 24.6,
+        "width": 9.7,
+        "heading_deg": 15.2
+      },
+      "style": "Small bistro at 12,456 ft near the Beavers/Lenawee tops: dark green-grey lap siding, timber trim, big windows; billed as the highest restaurant in North America.",
+      "model": "warming_hut",
+      "osm": "w403401024",
+      "place_check": {
+        "place": "il Rifugio",
+        "distance_m": 2.7
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/403401024",
+        "https://www.arapahoebasin.com/restaurants/il-rifugio/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    {
+      "name": "Steilhang Hut",
+      "kind": "restaurant",
+      "x": 279.0,
+      "z": 47.8,
+      "footprint_m": {
+        "length": 19.2,
+        "width": 15.5,
+        "heading_deg": 84.6
+      },
+      "style": "German-style hut near the Lenawee Express top: charcoal board siding, stacked-stone base, gabled roof, bright blue door.",
+      "model": "warming_hut",
+      "osm": "w1216124775",
+      "place_check": {
+        "place": "Steilhang Hut",
+        "distance_m": 2.5
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/1216124775",
+        "https://www.arapahoebasin.com/restaurants/steilhang-hut/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    {
+      "name": "Arapahoe Basin Base Lodge",
+      "kind": "base_lodge",
+      "x": 225.2,
+      "z": -1588.6,
+      "footprint_m": {
+        "length": 62.9,
+        "width": 22.5,
+        "heading_deg": 79.1
+      },
+      "style": "Base lodge (62 x 22 m) with Legends Cafe and the 6th Alley bar: rust-red vertical board siding, dark metal roof, long sunny deck with picnic tables.",
+      "model": "base_lodge",
+      "osm": "w37353340",
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/37353340",
+        "https://www.arapahoebasin.com/restaurants/legends-cafe/",
+        "https://www.arapahoebasin.com/restaurants/6-alley/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    {
+      "name": "6th Alley Bar",
+      "kind": "restaurant",
+      "x": 226.3,
+      "z": -1565.1,
+      "style": "Bar and restaurant at the base with a two-level deck (part of the base lodge complex).",
+      "model": null,
+      "osm": "n9770298064",
+      "note": "Inside the base complex; model as part of the base lodge.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/node/9770298064",
+        "https://www.arapahoebasin.com/restaurants/6-alley/",
+        "https://en.wikipedia.org/wiki/Arapahoe_Basin"
+      ]
+    },
+    {
+      "name": "Guest Services",
+      "kind": "ticket",
+      "x": 195.9,
+      "z": -1590.0,
+      "footprint_m": {
+        "length": 15.8,
+        "width": 13.0,
+        "heading_deg": 165.3
+      },
+      "style": "Small ticket/guest services building (15 x 12 m) at the base.",
+      "model": "ticket_office",
+      "osm": "w403402109",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/403402109"
+      ]
+    },
+    {
+      "name": "Kids Center",
+      "kind": "base_lodge",
+      "x": 170.6,
+      "z": -1548.6,
+      "footprint_m": {
+        "length": 19.9,
+        "width": 13.7,
+        "heading_deg": 164.4
+      },
+      "style": "Small children's centre (19 x 13 m) at the base.",
+      "model": null,
+      "osm": "w585364159",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/585364159"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Black Mountain Lodge",
+      "description": "Dark green timber lodge right at the top of Black Mountain Express.",
+      "kit": "partial",
+      "kit_note": "restaurant model with dark green siding.",
+      "refs": []
+    },
+    {
+      "name": "Pallavicini",
+      "description": "Steep double chair up the Pallavicini face, green LPA Alpha stations.",
+      "kit": "yes",
+      "kit_note": "chair2 + terminal_fixed in green.",
+      "refs": [
+        "37353337"
+      ]
+    },
+    {
+      "name": "The Beach",
+      "description": "The base-area parking lot by the slopes where people tailgate (A-Basin's best-known scene).",
+      "kit": "no",
+      "kit_note": "Not in the data; would need a parking row with cars and grills. Position not verified.",
+      "refs": []
+    }
+  ]
+}

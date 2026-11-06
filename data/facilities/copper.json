@@ -1,0 +1,719 @@
+{
+  "resort": "copper",
+  "name": "Copper Mountain",
+  "origin": {
+    "lat": 39.4775,
+    "lon": -106.1605
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/copper.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "Solitude Station (old top of American Eagle) was replaced by The Aerie in 2023.",
+    "Lift colours are from liftblog photos dated 2015-2024."
+  ],
+  "lifts": {
+    "48031629": {
+      "name": "Alpine",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1979,
+      "color": {
+        "chair": "#c8642a",
+        "terminal": "#2b2d30"
+      },
+      "color_verified": true,
+      "note": "Long old double; Yan top drive. Return station replaced by Doppelmayr in 2022. Copper-coloured chairs.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/alpine-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "48031627": {
+      "name": "American Eagle",
+      "type": "chondola",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2018,
+      "cabin_model": "Sigma Diamond (8-passenger)",
+      "color": {
+        "cabin": "#2b2e33",
+        "cabin_logo": "#ffffff",
+        "chair": "#4a4e54",
+        "terminal": "#b9bdc1",
+        "terminal_band": "#c26a2e"
+      },
+      "color_verified": true,
+      "note": "Combination lift out of Center Village: six-seat chairs plus 8-passenger cabins, four chairs to every cabin. Long LPA terminal with three masts, silver hood with a copper band. Cabins charcoal with a white Copper 'C'. Chairs have no bubbles in photos (OSM tags aerialway:bubble=yes, probably for the cabins). Top unloads onto the Aerie's deck.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/american-eagle-copper-mountain-co-2/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)",
+        "https://liftblog.com/2018/03/05/copper-mountain-to-build-a-chondola-bubble-six-pack/"
+      ]
+    },
+    "48031578": {
+      "name": "American Flyer",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": true,
+      "manufacturer": "Leitner-Poma",
+      "year": 2018,
+      "terminal": "LPA",
+      "color": {
+        "bubble": "#2f7fd0",
+        "chair": "#2e3136",
+        "terminal": "#b9bdc1",
+        "terminal_band": "#c26a2e"
+      },
+      "color_verified": true,
+      "note": "World's longest bubble chair (9,886 ft); 182 chairs with blue bubbles and a parking barn for all of them up top. Same silver/copper LPA terminals as American Eagle.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/american-flyer-copper-mountain-co-2/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "55654979": {
+      "name": "Blackjack",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1995,
+      "color": {
+        "chair": "#c43a3a",
+        "terminal": "#7a7f84"
+      },
+      "color_verified": true,
+      "note": "Relocated from the front side; Skytrac Monarch-style return added 2019. Red chairs in photos.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/blackjack-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "463793114": {
+      "name": "Celebrity Ridge",
+      "type": "platter",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2013,
+      "color": {
+        "operator_hut": "#2f5d45"
+      },
+      "color_verified": true,
+      "note": "Short surface lift next to Mountain Chief's top; OSM and Wikipedia say platter, skiresort.info says J-bar. Green Doppelmayr operator house.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/celebrity-ridge-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "87104448": {
+      "name": "Easy Rider",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Sunkid",
+      "year": 1998,
+      "color": {},
+      "color_verified": false,
+      "note": "Beginner carpet in Center Village.",
+      "verified": true,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/"
+      ]
+    },
+    "48031625": {
+      "name": "Excelerator",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1998,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#2f5a47",
+        "lettering": "#e8dfc2",
+        "chair": "#5a5f66"
+      },
+      "color_verified": true,
+      "note": "Poma Omega stations with Copper's dark green hood and cream lettering.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/excelerator-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "87103621": {
+      "name": "Gem",
+      "type": "tbar",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Heron-Poma",
+      "year": 1972,
+      "color": {
+        "tower_pad": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "Short beginner-park lift; skiresort.info calls it a J-bar, OSM a drag lift. Oldest remaining original Copper lift.",
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/gem-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "54672537": {
+      "name": "Kokomo Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2017,
+      "terminal": "Doppelmayr Uni-G",
+      "color": {
+        "terminal": "#2e5a48",
+        "terminal_roof_glass": "#3b5f8a",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "Short beginner HSQ out of West Village; Koko's Hut built beside its top. Sister lift to Woodward Express.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/kokomo-express-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "55654978": {
+      "name": "Lumberjack",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1981,
+      "color": {
+        "chair": "#d0522f",
+        "terminal": "#7a7f84"
+      },
+      "color_verified": true,
+      "note": "Poma Delta tri-leg drive; orange-red chairs. skiresort.info lists a planned Lumberjack Express (2027).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/lumberjack-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "55654976": {
+      "name": "Mountain Chief",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1995,
+      "color": {
+        "chair": "#c43a3a",
+        "terminal": "#4a4e54"
+      },
+      "color_verified": false,
+      "note": "Relocated from the front side; Doppelmayr sheaves. Steep upper line above treeline.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/mountain-chief-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "87103619": {
+      "name": "Pitchfork",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1979,
+      "color": {
+        "chair": "#c8642a",
+        "terminal": "#2b2d30",
+        "operator_hut": "#2f5d45"
+      },
+      "color_verified": true,
+      "note": "Very short beginner double (535 ft); reused Heron-Poma chairs and towers.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/pitchfork-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "54672538": {
+      "name": "Rendezvous",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1982,
+      "color": {
+        "terminal": "#7a7f84",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "Lift Engineering (Yan) drive-tension bottom; Doppelmayr CTEC chairs.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/rendezvous-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "48031626": {
+      "name": "Resolution",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1985,
+      "color": {
+        "terminal": "#2f5d45",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "Poma Alpha drive-tension at the top, green.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/resolution-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "1410963169": {
+      "name": "Rug Rat",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Kids' carpet at Union Creek / West Village. No maker or year found.",
+      "verified": false,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/"
+      ]
+    },
+    "54672536": {
+      "name": "Sierra",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Yan",
+      "year": 1983,
+      "color": {
+        "terminal": "#7a7f84"
+      },
+      "color_verified": true,
+      "note": "Hydraulic tensioning and new Doppelmayr bullwheels; Doppelmayr chairs.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/sierra-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "55660820": {
+      "name": "Slingshot",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": null,
+      "year": null,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet at West Village. No maker or year found.",
+      "verified": false,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/"
+      ]
+    },
+    "258694153": {
+      "name": "Stinger",
+      "type": "magic_carpet",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Sunkid",
+      "year": 2005,
+      "color": {},
+      "color_verified": false,
+      "note": "Carpet in East Village.",
+      "verified": true,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/"
+      ]
+    },
+    "31533331": {
+      "name": "Storm King",
+      "type": "tbar",
+      "seats": null,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2013,
+      "color": {
+        "operator_hut": "#2f5d45"
+      },
+      "color_verified": true,
+      "note": "High-alpine T-bar to Storm King peak; replaced a detachable platter.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/storm-king-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "55654981": {
+      "name": "Super Bee",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1998,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#2f5a47",
+        "lettering": "#e8dfc2",
+        "chair": "#5a5f66",
+        "tower_base": "#e6c229"
+      },
+      "color_verified": true,
+      "note": "Main East Village lift; tri-leg Omega base, double-stack drive.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/super-bee-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "771416855": {
+      "name": "Three Bears",
+      "type": "fixed_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2019,
+      "terminal": "LPA Alpha",
+      "color": {
+        "terminal": "#2e6b4f",
+        "chair": "#6b7077"
+      },
+      "color_verified": true,
+      "note": "Tucker Mountain expert lift, 87 chairs; Skytrac operator house up top.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/three-bears-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "48031577": {
+      "name": "Timberline Express",
+      "type": "detach_chair",
+      "seats": 6,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2024,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#b9bdc1",
+        "terminal_band": "#b58a5a",
+        "chair": "#5a5f66"
+      },
+      "color_verified": false,
+      "note": "Replaced a Doppelmayr detachable quad in 2024; Leitner direct drive.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/timberline-express-copper-mountain-co-2/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    "48031628": {
+      "name": "Woodward Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Doppelmayr",
+      "year": 2011,
+      "terminal": "Doppelmayr Uni-G",
+      "color": {
+        "terminal": "#3d4a55",
+        "operator_hut": "#2f6b4a"
+      },
+      "color_verified": true,
+      "note": "Formerly Union Creek Quad; Doppelmayr EJ chairs with child-friendly bars. Serves the Woodward parks.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/union-creek-express-copper-mountain-co/",
+        "https://www.skiresort.info/ski-resort/copper-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "The Aerie",
+      "kind": "restaurant",
+      "x": 371.1,
+      "z": -703.5,
+      "footprint_m": {
+        "length": 56.3,
+        "width": 35.3,
+        "heading_deg": 130.0
+      },
+      "storeys": 2,
+      "style": "Two-storey modern mid-mountain lodge (25,000 sq ft, 2023): charcoal panel cladding over a stone base, warm timber soffits, floor-to-ceiling windows, steel-framed covered deck with glass rails; the American Eagle chondola unloads onto its upper deck.",
+      "model": "restaurant",
+      "osm": "w1230158292",
+      "note": "Replaced Solitude Station, the old lodge at the top of American Eagle.",
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/1230158292",
+        "https://snowbrains.com/copper-mountain-co-opens-mid-mountain-lodge-aerie-at-the-top-of-american-eagle-chondola",
+        "https://www.visitcoppermountain.com/copper-corner/11-22-23"
+      ]
+    },
+    {
+      "name": "Flyer's",
+      "kind": "warming_hut",
+      "x": -814.0,
+      "z": 24.5,
+      "footprint_m": {
+        "length": 14.5,
+        "width": 7.4,
+        "heading_deg": 170.5
+      },
+      "style": "Small on-mountain shack and bar near the top of American Flyer (14 x 7 m footprint).",
+      "model": "warming_hut",
+      "osm": "w87102575",
+      "place_check": {
+        "place": "Flyer's",
+        "distance_m": 1.6
+      },
+      "note": "Size and use verified; exterior look not confirmed from a photo.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/87102575",
+        "https://www.visitcoppermountain.com/dining/flyers"
+      ]
+    },
+    {
+      "name": "Koko's Hut",
+      "kind": "restaurant",
+      "x": -1197.2,
+      "z": -2151.4,
+      "footprint_m": {
+        "length": 25.1,
+        "width": 19.6,
+        "heading_deg": 25.1
+      },
+      "style": "Small lodge beside the Kokomo Express top terminal, built with the lift in 2017 (25 x 19 m footprint).",
+      "model": "warming_hut",
+      "osm": "w1255456387",
+      "note": "Exterior look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/1255456387",
+        "https://liftblog.com/kokomo-express-copper-mountain-co/",
+        "https://www.visitcoppermountain.com/directory/dining"
+      ]
+    },
+    {
+      "name": "T-Rex Grill",
+      "kind": "warming_hut",
+      "x": -1182.9,
+      "z": -1288.7,
+      "footprint_m": {
+        "length": 8.9,
+        "width": 8.6,
+        "heading_deg": 81.2
+      },
+      "style": "Tiny grill hut (8 x 8 m) by the bottom of Timberline Express.",
+      "model": "warming_hut",
+      "osm": "w87102581",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/87102581",
+        "https://www.visitcoppermountain.com/directory/dining"
+      ]
+    },
+    {
+      "name": "Union Creek lodge",
+      "kind": "base_lodge",
+      "x": -272.3,
+      "z": -2461.0,
+      "footprint_m": {
+        "length": 45.8,
+        "width": 22.0,
+        "heading_deg": 20.5
+      },
+      "style": "West Village (Union Creek) base building with restaurant and rentals, 45 x 22 m.",
+      "model": "base_lodge",
+      "osm": "w87104447",
+      "place_check": {
+        "place": "Union Creek",
+        "distance_m": 4.1
+      },
+      "note": "Exterior look not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/87104447"
+      ]
+    },
+    {
+      "name": "Center Village",
+      "kind": "village_block",
+      "x": 402.4,
+      "z": -2439.0,
+      "style": "Main base: four-to-six-storey condo and hotel blocks in timber, stone and tan render with gabled roofs around Burning Stones Plaza; American Eagle and American Flyer leave from here.",
+      "model": null,
+      "place_check": {
+        "place": "Center Village",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": [
+        "https://liftblog.com/american-eagle-copper-mountain-co-2/"
+      ]
+    },
+    {
+      "name": "East Village",
+      "kind": "village_block",
+      "x": 1228.5,
+      "z": -2364.2,
+      "style": "Smaller base around Super Bee: condo buildings (Summit House East) and a day lodge.",
+      "model": null,
+      "place_check": {
+        "place": "East Village",
+        "distance_m": 0.0
+      },
+      "verified": false,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Copper_Mountain_(Colorado)"
+      ]
+    },
+    {
+      "name": "Timberline Ski Patrol",
+      "kind": "patrol",
+      "x": -849.7,
+      "z": 195.0,
+      "footprint_m": {
+        "length": 14.8,
+        "width": 9.6,
+        "heading_deg": 174.8
+      },
+      "style": "Patrol hut near the tops of American Flyer and Timberline Express, 14 x 9 m.",
+      "model": "firstaid",
+      "osm": "w87102578",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/87102578"
+      ]
+    },
+    {
+      "name": "Ski Patrol Headquarters",
+      "kind": "patrol",
+      "x": 719.5,
+      "z": 255.9,
+      "footprint_m": {
+        "length": 17.5,
+        "width": 14.4,
+        "heading_deg": 174.2
+      },
+      "style": "Patrol headquarters near the tops of Excelerator and Super Bee, 17 x 14 m.",
+      "model": "firstaid",
+      "osm": "w87102571",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/87102571"
+      ]
+    },
+    {
+      "name": "Tucker Mountain Ski Patrol Hut",
+      "kind": "patrol",
+      "x": -958.3,
+      "z": 2339.9,
+      "footprint_m": {
+        "length": 13.4,
+        "width": 8.9,
+        "heading_deg": 1.0
+      },
+      "style": "Small patrol hut at the top of Three Bears on Tucker Mountain, 13 x 8 m.",
+      "model": "firstaid",
+      "osm": "w1024657228",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/1024657228"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "American Flyer blue bubbles",
+      "description": "The world's longest bubble chair: 182 six-seat chairs with bright blue bubbles out of Center Village.",
+      "kit": "partial",
+      "kit_note": "chair6_bubble exists; needs Copper's blue bubble paint and the silver/copper LPA terminal.",
+      "refs": [
+        "48031578"
+      ]
+    },
+    {
+      "name": "American Eagle chondola",
+      "description": "Six-seat chairs with a charcoal 8-passenger Sigma Diamond cabin every fifth carrier on the same rope.",
+      "kit": "partial",
+      "kit_note": "chair6 and gondola exist but not mixed on one line; needs a chondola layout (1 cabin per 4 chairs) and charcoal cabins with a white 'C'.",
+      "refs": [
+        "48031627"
+      ]
+    },
+    {
+      "name": "Center Village LPA terminals",
+      "description": "Long silver Leitner-Poma terminals with a copper-coloured band (American Eagle, American Flyer, Timberline).",
+      "kit": "partial",
+      "kit_note": "terminal_detach exists; paint the hood silver with a copper band.",
+      "refs": [
+        "48031627",
+        "48031578",
+        "48031577"
+      ]
+    },
+    {
+      "name": "The Aerie",
+      "description": "Modern two-storey lodge at the top of American Eagle, the chondola unloads onto its deck.",
+      "kit": "no",
+      "kit_note": "Needs its own model (see gap list).",
+      "refs": []
+    },
+    {
+      "name": "Copper-coloured Yan doubles",
+      "description": "Old fixed-grip doubles (Alpine, Pitchfork) with copper/orange chairs; Lumberjack orange-red, Blackjack red.",
+      "kit": "partial",
+      "kit_note": "chair2/chair3 exist; per-lift chair paint.",
+      "refs": [
+        "48031629",
+        "87103619",
+        "55654978",
+        "55654979"
+      ]
+    }
+  ]
+}

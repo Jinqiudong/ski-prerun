@@ -1,0 +1,279 @@
+{
+  "resort": "aspenmountain",
+  "name": "Aspen Mountain",
+  "origin": {
+    "lat": 39.1652,
+    "lon": -106.81935
+  },
+  "researched": "2026-11-05",
+  "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as data/aspenmountain.json). Coordinates are local metres (x east, z south) from the same origin. 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex.",
+  "notes": [
+    "The Aspen Mountain Club (private, at the summit) and Buckhorn Cabin are not in OSM and were not placed.",
+    "Shadow Mountain (fixed double) is a real lift not in the baked data."
+  ],
+  "lifts": {
+    "451945806": {
+      "name": "Ajax Express",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2003,
+      "terminal": "Poma Omega",
+      "color": {
+        "terminal": "#8c9196"
+      },
+      "color_verified": true,
+      "note": "Upper-mountain HSQ to the summit by the Sundeck.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/ajax-express-aspen-mountain-co/",
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/"
+      ]
+    },
+    "130102108": {
+      "name": "F.I.S.",
+      "type": "fixed_chair",
+      "seats": 2,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2004,
+      "terminal": "Poma Alpha",
+      "color": {
+        "terminal": "#8c9196"
+      },
+      "color_verified": true,
+      "note": "",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/fis-aspen-mountain-co/",
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/"
+      ]
+    },
+    "908942216": {
+      "name": "Hero's",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2023,
+      "terminal": "LPA",
+      "color": {
+        "terminal": "#3b3d40",
+        "chair": "#8d9399"
+      },
+      "color_verified": true,
+      "note": "Pandora terrain expansion; 66 chairs.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/heros-aspen-mountain-co/",
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/"
+      ]
+    },
+    "1414863961": {
+      "name": "Nell Bell",
+      "type": "detach_chair",
+      "seats": 4,
+      "bubble": false,
+      "manufacturer": "Leitner-Poma",
+      "year": 2026,
+      "color": {},
+      "color_verified": false,
+      "note": "New lift from town listed by skiresort.info (2026); no photos found yet.",
+      "verified": false,
+      "sources": [
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/"
+      ]
+    },
+    "17117679": {
+      "name": "Ruthie's",
+      "type": "detach_chair",
+      "seats": 3,
+      "bubble": false,
+      "manufacturer": "Poma",
+      "year": 1997,
+      "color": {
+        "terminal": "#5a6067"
+      },
+      "color_verified": true,
+      "note": "One of only two detachable triples left in North America. OSM tags it a chair_lift with 3 seats.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/ruthies-aspen-mountain-co/",
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/"
+      ]
+    },
+    "17117689": {
+      "name": "Silver Queen",
+      "type": "gondola",
+      "seats": 6,
+      "bubble": true,
+      "manufacturer": "Poma",
+      "year": 1986,
+      "cabin_model": "CWA Omega III LWI",
+      "color": {
+        "cabin": "#1c1d20",
+        "cabin_logo": "#ffffff",
+        "terminal": "#8c9196",
+        "terminal_trim": "#b0302c"
+      },
+      "color_verified": true,
+      "note": "From Gondola Plaza in downtown Aspen to the summit (3,267 ft vertical); black cabins with 'ASPEN', solar panels; very tall lattice towers. skiresort.info gives 2008 (cabin/drive renewal).",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/silver-queen-gondola-aspen-mountain-co/",
+        "https://www.skiresort.info/ski-resort/aspen-mountain/ski-lifts/",
+        "https://en.wikipedia.org/wiki/Aspen_Mountain_(ski_area)"
+      ]
+    }
+  },
+  "buildings": [
+    {
+      "name": "The Sundeck",
+      "kind": "restaurant",
+      "x": -73.0,
+      "z": 1480.2,
+      "footprint_m": {
+        "length": 70.6,
+        "width": 36.0,
+        "heading_deg": 57.7
+      },
+      "style": "Summit lodge (1999) beside the Silver Queen top: long low timber-framed building with a central tall timber-and-glass gable, stone siding, galvanized metal roof; keeps Herbert Bayer's octagonal fireplace.",
+      "model": "restaurant",
+      "osm": "w339894841",
+      "place_check": {
+        "place": "The Sundeck",
+        "distance_m": 4.8
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/339894841",
+        "https://www.aspensnowmass.com/visit/dining/aspen-mountain/sundeck",
+        "https://aspensnowmass.com/visit/weddings-events/weddings/sundeck",
+        "https://www.dwell.com/article/a-visit-to-aspens-surprising-bauhaus-enclave-f8e37864"
+      ]
+    },
+    {
+      "name": "Silver Queen top terminal",
+      "kind": "gondola_station",
+      "x": -7.3,
+      "z": 1534.1,
+      "style": "Grey corrugated-metal gondola terminal building with red trim and a cabin parking barn.",
+      "model": "gondola_station",
+      "position_note": "Top of the Silver Queen line in data/aspenmountain.json.",
+      "verified": true,
+      "sources": [
+        "https://liftblog.com/silver-queen-gondola-aspen-mountain-co/"
+      ]
+    },
+    {
+      "name": "Gondola Plaza",
+      "kind": "gondola_station",
+      "x": 97.1,
+      "z": -2332.5,
+      "footprint_m": {
+        "length": 36.0,
+        "width": 7.3,
+        "heading_deg": 91.6
+      },
+      "style": "Silver Queen bottom terminal building in downtown Aspen, beside The Little Nell hotel.",
+      "model": "gondola_station",
+      "osm": "w228726033",
+      "place_check": {
+        "place": "Gondola Plaza",
+        "distance_m": 12.3
+      },
+      "verified": true,
+      "sources": [
+        "https://www.openstreetmap.org/way/228726033",
+        "https://liftblog.com/silver-queen-gondola-aspen-mountain-co/"
+      ]
+    },
+    {
+      "name": "Aspen Mountain Ski Patrol",
+      "kind": "patrol",
+      "x": -56.0,
+      "z": 1425.5,
+      "footprint_m": {
+        "length": 21.5,
+        "width": 12.7,
+        "heading_deg": 64.0
+      },
+      "style": "Patrol building (21 x 12 m) at the summit near the Ajax Express top.",
+      "model": "firstaid",
+      "osm": "w423512820",
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/423512820",
+        "https://aspenmountainskipatrol.com/"
+      ]
+    },
+    {
+      "name": "Bonnie's",
+      "kind": "restaurant",
+      "x": -432.1,
+      "z": 377.6,
+      "style": "Mid-mountain restaurant with a big sunny deck of red Adirondack chairs.",
+      "model": "restaurant",
+      "place_check": {
+        "place": "Bonnie's",
+        "distance_m": 0.0
+      },
+      "position_note": "From the baked 'Bonnie's' place.",
+      "note": "Building exterior not confirmed.",
+      "verified": false,
+      "sources": [
+        "https://www.aspensnowmass.com/visit/dining/aspen-mountain/bonnies"
+      ]
+    },
+    {
+      "name": "Ruthie's",
+      "kind": "restaurant",
+      "x": -531.4,
+      "z": -1283.6,
+      "footprint_m": {
+        "length": 37.0,
+        "width": 31.6,
+        "heading_deg": 172.2
+      },
+      "style": "Restaurant (36 x 31 m) on the west side near the Ruthie's lift.",
+      "model": "restaurant",
+      "osm": "w230237329",
+      "place_check": {
+        "place": "Ruthie's",
+        "distance_m": 5.6
+      },
+      "verified": false,
+      "sources": [
+        "https://www.openstreetmap.org/way/230237329"
+      ]
+    }
+  ],
+  "signature": [
+    {
+      "name": "Silver Queen Gondola",
+      "description": "Black 6-seat cabins with 'ASPEN' rising straight out of downtown on very tall lattice towers.",
+      "kit": "partial",
+      "kit_note": "gondola6 exists; needs black livery and lattice towers (kit towers are tubular).",
+      "refs": [
+        "17117689"
+      ]
+    },
+    {
+      "name": "The Sundeck",
+      "description": "Timber, stone and glass summit lodge.",
+      "kit": "no",
+      "kit_note": "Needs its own model.",
+      "refs": []
+    },
+    {
+      "name": "Ruthie's detachable triple",
+      "description": "A rare high-speed triple.",
+      "kit": "partial",
+      "kit_note": "No detachable triple carrier; chair3 is fixed-grip with slatted seat.",
+      "refs": [
+        "17117679"
+      ]
+    }
+  ]
+}
