@@ -20,6 +20,7 @@ import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=23";
 import { navRow } from "../core/nav.js?v=9";
 import { rideSound } from "../audio/index.js?v=3";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=3";
+import { dropIn } from "../core/transition.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -2222,6 +2223,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       card.querySelector(".go").onclick = async (e) => {
         addStep(RESORT, { k: "top", at: lift.name, options: [...dests, ...runs].map((x) => x.title), chose: P.title });
         bookRoute(P);
+        await dropIn(P, RESORT, R); // the run's card, then DROP IN (src/core/transition.js)
         camera.clearViewOffset();
         startSki();
         $("pick").hidden = true; clearTags(); flash();
