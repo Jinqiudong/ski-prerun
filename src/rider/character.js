@@ -16,7 +16,7 @@ export function setHair(ch, style) { ch.parts.hair = style === "loose"; ch.parts
 // The game's colour parts and the template's materials they set (trim follows, a little darker).
 export const COLOR_MATS = { jacket: ["MAT_jacket"], pants: ["MAT_pants"], helmet: ["MAT_helmet"], lens: ["MAT_lens"], gloves: ["MAT_mitten"], boots: ["MAT_boot_panel", "MAT_boot_sole"] };
 // Poses held still (the template's frame at 1 s) and tricks played through.
-export const POSES = [["Stand_Idle", "站立"], ["Board_Hold", "抱板"], ["Sit_Snow", "坐雪地"], ["Pose_Wave", "挥手"], ["Pose_Peace", "比耶"], ["Pose_Cheer", "欢呼"], ["Pose_Hold_Photo", "举照片"], ["Radio_Talk_Stand", "对讲机"]];
+export const POSES = [["Stand_Idle", "站立"], ["Board_Hold", "抱板"], ["Sit_Snow", "坐雪地"], ["Pose_Wave", "挥手"], ["Pose_Cheer", "欢呼"], ["Pose_Hold_Photo", "举照片"], ["Radio_Talk_Stand", "对讲机"]];
 export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Anim_Method_Air", "Method"], ["Anim_Nose_Press", "压板头"], ["Anim_Tail_Press", "压板尾"],
   ["Anim_Carve_Ref", "欧式刻滑"], ["Anim_Carve_Spin_Toe", "刻平陀螺"], ["Anim_Carve_S", "立刃 S 弯"], ["Anim_Skid_S", "搓雪 S 弯"], ["Anim_Pop_Ref", "坡上跳跃"], ["Anim_Toe_Slide_Ref", "平花倒滑"]];
 
