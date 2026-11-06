@@ -85,3 +85,19 @@ test("a tower's sound starts just before the chair reaches it, once, and not on 
   const x = sheavePass(16000, 8, 0.15), at = (sec) => { let m = 0; for (let i = Math.floor(sec * 16000) - 400; i < sec * 16000 + 400; i++) m = Math.max(m, Math.abs(x[i])); return m; };
   assert.ok(at(lead) > 2 * at(0.1));
 });
+
+test("the sound lab's recordings are all CC0 with a source, and small enough for a phone", () => {
+  const dir = new URL("../assets/audio/lab/", import.meta.url), { items, missing } = JSON.parse(readFileSync(new URL("manifest.json", dir)));
+  let bytes = 0;
+  const ids = new Set();
+  for (const x of items) {
+    for (const k of ["id", "group", "title", "author", "licence", "source", "file"]) assert.ok(x[k], `${x.id}: ${k}`);
+    assert.ok(!ids.has(x.id)); ids.add(x.id);
+    assert.equal(x.licence, "CC0-1.0", x.id);
+    assert.ok(/^https:\/\/(freesound\.org|opengameart\.org)\//.test(x.source), x.source);
+    assert.ok(["board", "wind", "lift", "mountain", "music"].includes(x.group));
+    bytes += readFileSync(new URL(x.file, dir)).length;
+  }
+  assert.ok(bytes < 8 * 1024 * 1024, `${bytes} bytes`);
+  assert.ok(Array.isArray(missing));
+});
