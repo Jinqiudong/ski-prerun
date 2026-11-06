@@ -7,6 +7,8 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const VIEWS = {
   all: { label: "全景", cap: "山腰餐厅、巡逻医疗站、8 人吊厢，云杉", pos: [26, 11, 40], at: [-5, 4, 2] },
+};
+const SCENES = {
   lodge: { label: "餐厅", cap: "石头墙基、原木墙、暖光玻璃山墙、厚雪屋顶和冰柱、露台", pos: [9, 5, 21], at: [0, 4, 0] },
   cabin: { label: "吊厢", cap: "8 人吊厢：圆润车身、烟色玻璃、银色饰条、里面的座椅", pos: [8.5, 11.2, 18.5], at: [6, 10, 14] },
   hut: { label: "医疗站", cap: "巡逻医疗站：红十字、救援雪橇、小长椅", pos: [-14, 3, 16], at: [-22, 2, 6] },
@@ -38,8 +40,8 @@ sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -45
 scene.add(sun, sun.target);
 
 // Snow underfoot: gentle rolls, a faint grain.
-const ground = new THREE.PlaneGeometry(700, 700, 140, 140); ground.rotateX(-Math.PI / 2);
-const P = ground.attributes.position, hgt = (x, z) => { const r = Math.hypot(x, z); return r < 26 ? 0 : (Math.sin(x * 0.07) * Math.cos(z * 0.05) * 1.2 + Math.max(0, -z - 30) * 0.12) * Math.min(1, (r - 26) / 20); };
+const ground = new THREE.PlaneGeometry(1600, 700, 320, 140); ground.rotateX(-Math.PI / 2);
+const P = ground.attributes.position, hgt = (x, z) => { const r = Math.hypot(x, z); return r < 26 || x > 140 ? 0 : (Math.sin(x * 0.07) * Math.cos(z * 0.05) * 1.2 + Math.max(0, -z - 30) * 0.12) * Math.min(1, (r - 26) / 20); };
 for (let i = 0; i < P.count; i++) P.setY(i, hgt(P.getX(i), P.getZ(i)));
 ground.computeVertexNormals();
 const nor = new THREE.TextureLoader().load("../../assets/tex/snow_02_nor_gl_1k.jpg"); nor.wrapS = nor.wrapT = THREE.RepeatWrapping; nor.repeat.set(90, 90);
@@ -67,8 +69,11 @@ function roomUV(g) {
   g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
 }
 
+const VER = q.get("v") || "7";
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
-const load = (n) => new Promise((ok) => loader.load(`glb/${n}.glb?v=6`, (g) => {
+// Snow can be thinned or taken away: the layer shrinks along its normals (0 deep, 0.12 light, off: hidden).
+const SNOW = { thin: { value: 0 } }, snowMeshes = [];
+const load = (n) => new Promise((ok, no) => loader.load(`glb/${n}.glb?v=${VER}`, (g) => {
   // Baked parts carry their materials and contact shade; the sun and sky light them live. Windows are
   // dark glass with the room's warm light behind; lamps glow.
   g.scene.traverse((o) => {
@@ -76,10 +81,13 @@ const load = (n) => new Promise((ok) => loader.load(`glb/${n}.glb?v=6`, (g) => {
     if (/^window/.test(m.name)) { roomUV(o.geometry); o.material = new THREE.MeshStandardMaterial({ color: 0x141a20, roughness: 0.06, metalness: 0.3, emissive: 0xffffff, emissiveMap: ROOM, emissiveIntensity: 1, envMapIntensity: 1.8 }); }
     else if (/^lamp/.test(m.name)) o.material = new THREE.MeshBasicMaterial({ color: 0xffe2b0 });
     else if (m.transparent) { o.castShadow = false; m.envMapIntensity = 1.6; m.roughness = 0.05; }
-    else m.envMapIntensity = 0.5;
+    else if (/_snow_mat$/.test(m.name)) {
+      m.onBeforeCompile = (sh) => { sh.uniforms.thin = SNOW.thin; sh.vertexShader = "uniform float thin;\n" + sh.vertexShader.replace("#include <begin_vertex>", "vec3 transformed = position - normal * thin;"); };
+      snowMeshes.push(o);
+    } else m.envMapIntensity = 0.5;
   });
   ok(g.scene);
-}));
+}, undefined, no));
 const [lodge, cabin, hut, pine] = await Promise.all(["restaurant", "gondola", "firstaid", "pine"].map(load));
 scene.add(lodge);
 hut.position.set(-22, 0, 6); hut.rotation.y = 0.45; scene.add(hut);
@@ -99,14 +107,39 @@ for (let i = 0; i < 90; i++) {
 }
 for (const [x, z, s] of [[-12, -6, 1.1], [13, -9, 1.2], [-30, -2, 0.9], [20, 4, 0.85]]) { const t = pine.clone(); t.scale.setScalar(s); t.position.set(x, 0, z); scene.add(t); }
 
-let view = q.get("view") || "all";
-function go(v) {
-  view = v; const V = VIEWS[v]; camera.position.set(...V.pos); controls.target.set(...V.at); controls.update();
-  document.getElementById("cap").textContent = V.cap;
+// The catalogue: each family in a row of its own off to the east, carriers hung from a rope.
+const FAMILIES = [["lifts", "缆车"], ["stations", "站台"], ["signs", "路牌"], ["buildings", "建筑"], ["props", "道具"]];
+const rows = {};
+await Promise.all(FAMILIES.map(async ([f], fi) => {
+  const list = await (await fetch(`glb/${f}.json?v=${Date.now()}`)).json().catch(() => []);
+  const items = (await Promise.all(list.map((e) => load(e.name).then((o) => [e, o]).catch(() => null)))).filter(Boolean);
+  let x = 200; const z = -fi * 70, row = [];
+  for (const [e, o] of items) {
+    const box = new THREE.Box3().setFromObject(o), w = box.max.x - box.min.x;
+    x += w / 2; o.position.set(x - (box.min.x + box.max.x) / 2, e.hang ? 8 : 0, z); scene.add(o);
+    if (e.hang) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, w + 4, 6), ropeMat); r.rotation.z = Math.PI / 2; r.position.set(x, 8, z); scene.add(r); }
+    row.push({ e, o, x, z, size: Math.max(w, box.max.y - box.min.y, box.max.z - box.min.z) }); x += w / 2 + 4;
+  }
+  rows[f] = row;
+}));
+
+let view = q.get("view") || "all", item = 0;
+const frame = (r) => { const y = r.e.hang ? 8 - r.size * 0.35 : r.size * 0.35, d = r.size * 1.5 + 3; return { pos: [r.x + d * 0.45, y + d * 0.3, r.z + d], at: [r.x, y, r.z], cap: r.e.label }; };
+function go(v, k = 0) {
+  view = v; item = k;
+  const row = rows[v], V = VIEWS[v] || SCENES[v] || (row?.length ? frame(row[(k + row.length) % row.length]) : { pos: [260, 20, 60], at: [240, 0, 0], cap: "还没有模型" });
+  camera.position.set(...V.pos); controls.target.set(...V.at); controls.update();
+  sun.target.position.set(...V.at); sun.position.copy(SUN).multiplyScalar(80).add(sun.target.position);
+  document.getElementById("cap").textContent = row ? `${V.cap}  ·  ${(k % row.length + row.length) % row.length + 1} / ${row.length}` : V.cap;
   const bar = document.getElementById("bar"); bar.innerHTML = "";
-  for (const [k, W] of Object.entries(VIEWS)) { const b = document.createElement("button"); b.textContent = W.label; b.className = k === view ? "on" : ""; b.onclick = () => go(k); bar.append(b); }
+  const btn = (t, on, f) => { const b = document.createElement("button"); b.textContent = t; b.className = on ? "on" : ""; b.onclick = f; bar.append(b); };
+  btn("全景", v === "all", () => go("all"));
+  for (const [f, l] of FAMILIES) btn(`${l} ${rows[f]?.length || 0}`, v === f, () => go(f));
+  if (row?.length > 1) { btn("‹", false, () => go(v, item - 1)); btn("›", false, () => go(v, item + 1)); }
+  for (const [t, k2] of [["厚雪", 0], ["薄雪", 0.12], ["无雪", -1]]) btn(t, (k2 < 0 ? !snowMeshes[0]?.visible : snowMeshes[0]?.visible && SNOW.thin.value === k2), () => { SNOW.thin.value = Math.max(0, k2); for (const m of snowMeshes) m.visible = k2 >= 0; go(view, item); });
 }
 function size() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
-addEventListener("resize", size); size(); go(view);
+addEventListener("resize", size); size(); go(view, +(q.get("item") || 0));
+if (q.get("snow")) { const k = { light: 0.12, none: -1 }[q.get("snow")] ?? 0; SNOW.thin.value = Math.max(0, k); for (const m of snowMeshes) m.visible = k >= 0; }
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 window.__ready = true;
