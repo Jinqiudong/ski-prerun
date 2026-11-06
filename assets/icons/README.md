@@ -21,3 +21,5 @@ Animals for the map: `assets/animals/<name>.png` (painted cut-outs) and `assets/
 
 Mountain page (cut from the owner's Copper Mountain mock): `back` `bookmark` `snow_now` `refresh` `compass_n`
 `view_close` `view_top` `autorotate` `layer_runs` `layer_lifts` `compass_rose` (painted compass, needle leans 38° east)
+
+| Animation | `ride_crayon_0` crouch, `ride_crayon_1` hop, `ride_crayon_2` hop and cheer — the crayon rider on the rider page's go button when there is a pre-run to go back to (from the owner's GIF) |

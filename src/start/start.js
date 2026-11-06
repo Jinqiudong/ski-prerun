@@ -372,18 +372,15 @@ setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log"
 $("setBtn").onclick = openSettings;
 const face = () => ($("setBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`);
 face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
-// A pre-run left half way (kept by the ride page): offer to go back to it.
+// A pre-run left half way (kept by the ride page): the go button becomes the little crayon rider hopping,
+// and a tap goes straight back to where you left off.
 (() => {
   let ses = null; try { ses = JSON.parse(localStorage.getItem("prerunSession") || "null"); } catch {}
   if (!ses || Date.now() - ses.t > 36 * 3600e3) return;
-  const el = $("resume"), name = ses.resort.replace(/(^|-)\w/g, (m) => m.toUpperCase()).replace(/-/g, " ");
-  el.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`;
-  el.querySelector("b").textContent = `${t("继续")} · ${name}`;
-  el.querySelector("small").textContent = ses.where;
-  el.querySelector("i").style.width = `${Math.round((ses.phase === "ride" ? ses.at : 1) * 100)}%`;
-  el.hidden = false; document.body.classList.add("resuming");
-  // Closed it's a small button; the first tap opens it, ▶ (or a second tap) goes; a tap elsewhere closes it.
-  el.addEventListener("click", (e) => { if (!el.classList.contains("open")) { e.preventDefault(); el.classList.add("open"); } });
-  addEventListener("pointerdown", (e) => { if (!el.contains(e.target)) el.classList.remove("open"); });
+  const btn = $("useBtn"), name = ses.resort.replace(/(^|-)\w/g, (m) => m.toUpperCase()).replace(/-/g, " ");
+  btn.classList.add("resume");
+  btn.innerHTML = [0, 1, 2].map((i) => `<img class="f${i}" src="assets/icons/ride_crayon_${i}.png?v=1" alt="">`).join("");
+  btn.setAttribute("aria-label", `${t("继续")} · ${name} ${ses.where || ""}`);
+  btn.onclick = () => { st.rider = chosen().id; save(); location.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`; };
 })();
 translatePage();
