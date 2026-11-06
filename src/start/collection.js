@@ -10,7 +10,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { EN_ON } from "../core/i18n.js?v=26";
 import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=4";
-import { Pets } from "./pets.js?v=3";
+import { Pets } from "./pets.js?v=4";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
@@ -319,6 +319,7 @@ export class Collection {
     }
     this.pets.frame(t);
     this.renderer.render(this.scene, this.camera);
+    this.pets.after(); // the animal in your hand, drawn over the map
     // Each name floats above its own tile on a thin line, so it's clear which is which however you turn
     // it. Where names would overlap, the nearer tile keeps its name.
     const v = new THREE.Vector3(), w = this.canvas.clientWidth, h = this.canvas.clientHeight, cam = this.camera.position;
