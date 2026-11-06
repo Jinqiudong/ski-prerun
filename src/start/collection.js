@@ -50,7 +50,11 @@ export class Collection {
     const mh = MAP.w * ((MAP.N - MAP.S) * 111) / ((MAP.E - MAP.W) * 85.3);
     const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=4", (x) => (x.colorSpace = THREE.SRGBColorSpace));
     tex.anisotropy = 8;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1 }));
+    // Its edges fade into the snow it lies on, so the sheet has no hard border on screen.
+    const fade = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256);
+      for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const e = Math.min(i, 255 - i, j, 255 - j) / 256, a = Math.min(1, Math.max(0, (e - 0.01) / 0.14)); const k = (j * 256 + i) * 4; g.data[k] = g.data[k + 1] = g.data[k + 2] = 255 * a * a * (3 - 2 * a); g.data[k + 3] = 255; }
+      x.putImageData(g, 0, 0); return new THREE.CanvasTexture(c); })();
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP.w, mh), new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1, alphaMap: fade, transparent: true, depthWrite: false }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = -PLINTH; floor.receiveShadow = true; s.add(floor);
     // The sheet's edge, a little thickness of paper.
     // the snowy ground the map lies on, far past its (faded) edges
@@ -243,7 +247,7 @@ export class Collection {
     for (let it = 0; it < 6; it++) {
       cam.position.set(target.x + Math.sin(polar) * Math.sin(az) * d, target.y + Math.cos(polar) * d, target.z + Math.sin(polar) * Math.cos(az) * d);
       cam.lookAt(target); cam.updateMatrixWorld();
-      let m = 0; for (const p of pts) { v.copy(p).project(cam); m = Math.max(m, Math.abs(v.x) / 0.96, Math.abs(v.y) / 0.6); }
+      let m = 0; for (const p of pts) { v.copy(p).project(cam); m = Math.max(m, Math.abs(v.x) / 1.0, Math.abs(v.y) / 0.78); }
       d *= m;
     }
     this._fit = { a: this.camera.aspect, d: Math.min(this.controls.maxDistance, d) };
@@ -287,9 +291,11 @@ export class Collection {
     this.controls.update();
     const T = this.tilt; for (const k of ["az", "pol"]) T.now[k] += (T.want[k] - T.now[k]) * 0.08;
     T.on = { ...T.now }; this.tiltCamera(1);
-    // The picked tile lifts off the map and grows, turning slowly, so its relief reads; the rest stay put.
     for (const x of this.tiles) {
-      const on = x === this.picked, hov = x === this.hover && !on, up = on ? 5 + Math.sin(t * 1.6) * 0.25 : hov ? 1.5 : 0, sc = on ? 1.7 : hov ? 1.15 : 1;
+      // The picked tile lifts off the map and grows, turning slowly; the others sink into the map so nothing
+      // crosses it as it turns, and rise again when it's put back.
+      const on = x === this.picked, hov = x === this.hover && !on, away = this.picked && !on;
+      const up = on ? 5 + Math.sin(t * 1.6) * 0.25 : away ? -14 : hov ? 1.5 : 0, sc = on ? 1.7 : hov ? 1.15 : 1;
       x.group.position.y += (up - x.group.position.y) * 0.1;
       x.group.scale.setScalar(x.group.scale.x + (sc - x.group.scale.x) * 0.1);
       if (on && !this.fly && !this.dragging) x.group.rotation.y += 0.0035;

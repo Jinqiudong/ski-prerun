@@ -268,12 +268,15 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=39");
+    const { Collection } = await import("./collection.js?v=40");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
     await collection.build(await resortList(), stats, logOf());
+    // Under the title, just how far you've got: mountains visited, and how much of all of them you've skied.
+    { const list = await resortList(), been = list.filter((r) => stats[r.id]?.touched).length, all = list.reduce((a, r) => a + (stats[r.id]?.share || 0), 0) / Math.max(1, list.length);
+      $("worldHead").querySelector("small").textContent = been ? t("去过 {a} 座 · {b} 座里滑了 {p}%", { a: been, b: list.length, p: Math.max(1, Math.round(all * 100)) }) : t("{b} 座山，还没开始", { b: list.length }); }
     $("worldHome").onclick = () => { collection.overview(); $("worldCard").hidden = true; };
     $("allBtn").onclick = $("worldHome").onclick;
     collection.onPick = (r) => { $("tabs").classList.add("shut");
