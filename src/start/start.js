@@ -5,7 +5,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=8";
 import { makeEntrance } from "./entrance.js?v=21";
-import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
+import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=24";
 import { playIntro } from "./intro.js?v=15";
 import { flyTo } from "../core/transition.js?v=2";
@@ -249,7 +249,7 @@ async function setTab(t) {
   const rider = t === "rider";
   for (const id of ["stage", "sheet"]) $(id).hidden = !rider;
   $("status").hidden = !rider || !!rider_ready;
-  $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("jMap").hidden = true; $("trips").hidden = t !== "trip";
+  $("world").hidden = t !== "resort"; $("records").hidden = t !== "log"; $("trips").hidden = t !== "trip";
   if (t === "trip") await openTrips();
   if (t === "resort") await openWorld();
   if (t === "log") await openRecords();
@@ -306,22 +306,9 @@ async function openTrips() {
   trips.render();
 }
 async function openRecords() {
-  const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=13");
+  const list = await resortList();
+  const { renderMemory } = await import("./memory.js?v=14");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
-  box.innerHTML = "";
-  const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
-  for (const r of sorted) {
-    const s = log[r.id]?.stats, el = document.createElement("div");
-    el.className = "rec";
-    el.innerHTML = `<div class="thumb" style="background-image:url(assets/wc/${r.id}.jpg?v=1)"></div><div class="row1"><b>${(s?.share || 0) >= 0.999 ? "🌸 " : ""}${r.name}</b><small>${s?.touched ? `${Math.max(1, Math.round(s.share * 100))}%` : t("还没去过")}</small></div>
-      <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div>
-      <small>${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里 · {n} 趟", { a: s.touched, b: s.runs, km: s.km.toFixed(1), n: s.rides }) : t("去滑一趟，这里就会记下来")}</small>
-      <div class="recBtns">${s?.touched ? `<button class="map">${t("🗺 看地图")}</button>` : ""}${daysOf(r.id).length ? `<button class="bk">${t("📜 预滑路书")}</button>` : ""}</div>`;
-    el.querySelector(".map")?.addEventListener("click", () => openJournal(r));
-    el.querySelector(".bk")?.addEventListener("click", () => openBook(r));
-    box.append(el);
-  }
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
 async function openBook(r) {
@@ -329,33 +316,6 @@ async function openBook(r) {
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
   openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });
-}
-// The journal map for one resort: everything skied there in ink.
-async function openJournal(r) {
-  const [{ Terrain, treeMaskFn }, { TrailMap }, { SkiLog }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=7"), import("../core/skilog.js?v=2")]);
-  const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
-  const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village")), log = new SkiLog(r.id, R);
-  const skied = log.stretches(), track = logOf()[r.id]?.lastTrack || [], s = log.stats();
-  // Frame what you skied; else your last track; else the whole resort.
-  const [bx0, bz0, bx1, bz1] = R.bounds, pts = skied.length ? skied.flat() : track.length ? track : [[bx0, bz0], [bx1, bz1]];
-  const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
-  const box = $("jMap"), cv = box.querySelector("canvas");
-  box.hidden = false;
-  const v = { cx: (Math.min(...xs) + Math.max(...xs)) / 2, cz: (Math.min(...zs) + Math.max(...zs)) / 2, zoom: 0.2 };
-  v.zoom = Math.min(0.5, Math.max(0.06, Math.min(innerWidth / (Math.max(...xs) - Math.min(...xs) + 600), innerHeight / (Math.max(...zs) - Math.min(...zs) + 900))));
-  box.querySelector(".bar b").innerHTML = `📖 ${r.name}<br><small style="font-weight:500;color:#7a5a3a">${t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) })} · ${Math.round(s.share * 100)}%</small>`;
-  const draw = () => {
-    const dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr);
-    tm.view(cv, { cx: v.cx, cz: v.cz, zoom: v.zoom, skied, track, dpr });
-  };
-  draw();
-  let d = null;
-  cv.onpointerdown = (e) => (d = { x: e.clientX, y: e.clientY });
-  cv.onpointermove = (e) => { if (!d) return; v.cx -= (e.clientX - d.x) / v.zoom; v.cz -= (e.clientY - d.y) / v.zoom; d = { x: e.clientX, y: e.clientY }; draw(); };
-  cv.onpointerup = () => (d = null);
-  $("jZoom").onclick = () => { v.zoom = Math.min(1.2, v.zoom * 1.4); draw(); };
-  $("jZoomOut").onclick = () => { v.zoom = Math.max(0.05, v.zoom / 1.4); draw(); };
-  $("jClose").onclick = () => (box.hidden = true);
 }
 function view(v) {
   $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
