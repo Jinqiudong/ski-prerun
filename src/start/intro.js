@@ -2,7 +2,7 @@
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. playIntro({ trip }) is the same scene for a trip: a little plane
 // for each city its riders fly from, landing at Denver (for when friends open a shared trip).
-import { t, EN_ON } from "../core/i18n.js?v=22";
+import { t, EN_ON } from "../core/i18n.js?v=23";
 
 const CSS = `
 #intro { position: fixed; inset: 0; z-index: 50; background: #dde3e9; overflow: hidden; transition: opacity .6s; font-family: "Noto Serif SC", serif; cursor: pointer; }
