@@ -3,7 +3,7 @@
 // a few props. Everything instanced is pooled (facilities.js Pool): full models near the camera, a plain
 // stand-in further out, nothing beyond. GLBs load lazily, only those this resort and this ride need.
 import * as THREE from "three";
-import { kit, kits, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, farCarrier, splitRim, Pool, paintMat, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=1";
+import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, farCarrier, splitRim, Pool, paintMat, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=1";
 
 const GRAPHITE = "#2c3138";
 // Packed snow banked under a deck or building where the ground falls away: a mound whose sides slope out.
@@ -13,11 +13,11 @@ const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vect
 const compose = (x, y, z, yaw, sx = 1, sy = 1, sz = 1) => new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(Y, yaw), new THREE.Vector3(sx, sy, sz));
 
 // A kit model as a group of meshes sharing the kit's geometry (one per building or terminal).
-function instance(k, { paint = CHARCOAL, board = null, shadow = true } = {}) {
+function instance(k, { paint = CHARCOAL, band = null, board = null, shadow = true } = {}) {
   const g = new THREE.Group();
   for (const p of Object.values(k.parts)) {
     let mat = p.material;
-    if (p.kind === "paint") mat = paintMat(paint);
+    if (p.kind === "paint") mat = /band|stripe/.test(p.material.name) ? (band ? paintMat(band) : p.material) : paintMat(paint);
     if (p.kind === "flat" && board && /name_board/.test(p.material.name)) mat = board(p);
     const m = new THREE.Mesh(p.geometry, mat);
     m.castShadow = shadow && p.kind !== "glass" && p.kind !== "lamp"; m.receiveShadow = true;
@@ -39,8 +39,8 @@ function plinth(box, drop) {
 }
 
 export class Facilities {
-  constructor({ T, R, world, renderer, research, resort, known }) {
-    Object.assign(this, { T, R, world, renderer, research, resort, known });
+  constructor({ T, R, world, renderer, research, resort, known, index }) {
+    Object.assign(this, { T, R, world, renderer, research, resort, known, index });
     this.group = new THREE.Group(); world.add(this.group);
     this.cam = new THREE.Vector3(1e9, 0, 0); this.lastRefresh = new THREE.Vector3(1e9, 0, 0);
     this.pools = []; this.carrierPools = new Map(); this.others = []; this.visibles = []; this.t = 0;
@@ -76,7 +76,7 @@ export class Facilities {
     // Terminals at both ends, on plinths where the ground falls away, the lift's name on the board.
     const term = (info) => {
       const k = info.top ? K.top : K.bottom, T0 = TERMINAL[info.name];
-      const grp = instance(k, { paint: spec.terminalColor, board: (p) => nameBoard(p, lift.name, `${info.top ? "顶站" : "底站"} · 海拔 ${alt(info.place.origin).toLocaleString("en-US")} 米`, this.renderer) });
+      const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, lift.name, `${info.top ? "顶站" : "底站"} · 海拔 ${alt(info.place.origin).toLocaleString("en-US")} 米`, this.renderer) });
       if (info.place.origin.y - info.low > 0.3) grp.add(plinth(T0.box, info.place.origin.y - info.low + 1.5));
       grp.position.copy(info.place.origin); grp.rotation.y = info.place.yaw; grp.scale.x = info.place.mirror;
       grp.userData.stand = new THREE.Vector3(...(T0.stand || [8, 0.5, 0]));
@@ -169,7 +169,7 @@ export class Facilities {
   // ---- Lifts around, seen while riding and skiing: towers, a few carriers, terminals, at lower detail ----
   addOtherLift(l) {
     if (l.pts.length < 2 || l.kind === "magic_carpet") return;
-    const spec = liftSpec({ ...l, seats: Math.min(8, Math.max(2, l.seats || 4)) }, this.research, this.known?.[l.name]);
+    const spec = liftSpec({ ...l, seats: Math.min(8, Math.max(2, l.seats || 4)) }, this.research, this.known?.[l.name], this.index);
     const T = this.T, pts = l.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
     const dir = pts[pts.length - 1].clone().sub(pts[0]).setY(0).normalize(), side = new THREE.Vector3(dir.z, 0, -dir.x);
     const surface = spec.surface;
@@ -218,7 +218,7 @@ export class Facilities {
           kit(name).then((k) => {
             const pl = terminalPlace(name, top, top ? pts[pts.length - 1] : pts[0], dir), lv = deckLevel(T, name, pl);
             pl.origin.y = lv.hi;
-            const grp = instance(k, { paint: spec.terminalColor, board: (p) => nameBoard(p, l.name, null, this.renderer) });
+            const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, l.name, null, this.renderer) });
             if (lv.hi - lv.lo > 0.3) grp.add(plinth(TERMINAL[name].box, lv.hi - lv.lo + 1.5));
             grp.position.copy(pl.origin); grp.rotation.y = pl.yaw; grp.scale.x = pl.mirror;
             o.group.add(grp);
@@ -230,7 +230,7 @@ export class Facilities {
         const C = this.carrierPool(spec.carrier);
         o.pool = C; o.gap = spec.cabin ? 55 : surface ? 25 : 33; o.speed = spec.detachable ? 5 : surface ? 3 : 2.3;
         o.color = new THREE.Color(spec.cabin ? GRAPHITE : spec.color);
-        if (spec.chondola) { o.pool2 = this.carrierPool("gondola"); o.color2 = new THREE.Color(GRAPHITE); } // a cabin every fifth carrier
+        if (spec.chondola) { o.pool2 = this.carrierPool(spec.cabinCarrier || "gondola"); o.color2 = new THREE.Color(spec.cabinColor || GRAPHITE); } // a cabin every fifth carrier
       }
       this.lastRefresh.set(1e9, 0, 0);
     }).catch(() => {});
@@ -240,7 +240,7 @@ export class Facilities {
       const pool = { items: [], n: 0, pool: null };
       this.carrierPools.set(name, pool);
       kit(name).then((k) => {
-        const P = k.parts, near = [{ geometry: P.bake.geometry, material: P.bake.material }, { geometry: P.paint?.geometry, paint: true }, { geometry: P.snow?.geometry, material: P.snow?.material }, { geometry: P.glass?.geometry, material: P.glass?.material, order: 2 }];
+        const near = Object.values(k.parts).filter((p) => p.kind !== "lit" && p.kind !== "lamp").map((p) => ({ geometry: p.geometry, material: p.material, paint: p.kind === "paint", order: p.kind === "glass" ? 2 : 0 }));
         pool.pool = new Pool(this.group, near, [{ geometry: farCarrier(name), paint: true }], 32, { nearR: 220, farR: 1300 });
         for (const m of pool.pool.meshes) if (m.material.transparent) m.castShadow = false;
       });
@@ -283,13 +283,16 @@ export class Facilities {
     // The research's named buildings at their real places: a model of the building's own name when the kit
     // has one (models/facilities/glb/buildings.json), else the kit model it maps to. Gondola stations
     // are drawn with their lifts.
-    const own = new Set(await fetch("models/facilities/glb/buildings.json?v=9").then((r) => r.json()).then((l) => l.map((e) => e.name)).catch(() => []));
+    const own = this.index?.has || new Set();
     const slug = (n) => n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    // A landmark model that names this building ("for" in signature.json), else one named like it.
+    const landmark = (n) => modelsFor(this.index, n).find((e) => e.family === "signature" && !TERMINAL[e.name])?.name || (own.has(slug(n)) ? slug(n) : null);
+    const isStation = (n) => modelsFor(this.index, n).some((e) => TERMINAL[e.name]); // drawn as its lift's terminal
     const KIND = { restaurant: "restaurant", base_lodge: "base_lodge", village_block: "base_lodge", warming_hut: "warming_hut", patrol: "firstaid", ticket: "ticket_office" };
     const list = this.research?.buildings?.length
-      ? this.research.buildings.filter((b) => b.model !== "gondola_station" && b.kind !== "gondola_station").map((b) => ({
+      ? this.research.buildings.filter((b) => b.model !== "gondola_station" && b.kind !== "gondola_station" && !isStation(b.name)).map((b) => ({
         name: b.name, exact: true, heading: b.footprint_m?.heading_deg, at: toXZ(b),
-        model: own.has(slug(b.name)) ? slug(b.name) : own.has(b.model) ? b.model : KIND[b.kind] || "restaurant",
+        model: landmark(b.name) || (own.has(b.model) ? b.model : KIND[b.kind] || "restaurant"),
       })).filter((b) => b.at)
       : [...villages.map((v) => ({ name: v.name, model: "base_lodge", at: [v.x, v.z] })),
         ...R.places.filter((p) => p.kind === "food" && villages.every((v) => Math.hypot(v.x - p.x, v.z - p.z) > 260)).map((p) => ({ name: p.name, model: "restaurant", at: [p.x, p.z] }))];

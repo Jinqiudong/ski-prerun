@@ -20,7 +20,7 @@ import { rideSound } from "../audio/index.js?v=3";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=3";
 import { dropIn } from "../core/transition.js?v=2";
 import { Facilities } from "./kitworld.js?v=1";
-import { loadResearch, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=1";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -52,9 +52,9 @@ const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true, bubbleColor: "#2
 // data/facilities/<resort>.json when there is one, else the OpenStreetMap tags (facilities.js).
 const TOWER_EVERY = 85, SPEED = 5;
 let CHAIR_GAP = 33, CHAIR_STEP = 33, HALF_GAUGE = 3.0, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false, SPEC = null, SEAT = null;
-function setLiftKind(lift, research) {
+function setLiftKind(lift, research, index) {
   const known = RESORT === "copper" ? LIFT_KIND[lift.name] : null;
-  SPEC = liftSpec({ ...lift, seats: Math.min(8, Math.max(2, lift.seats || 4)) }, research, known);
+  SPEC = liftSpec({ ...lift, seats: Math.min(8, Math.max(2, lift.seats || 4)) }, research, known, index);
   if (!SPEC.carrier) SPEC = { ...SPEC, carrier: "chair2" }; // a surface lift ridden as a chair (none are offered)
   SEAT = seatOf(SPEC.carrier);
   CABIN = SPEC.cabin;
@@ -645,7 +645,7 @@ function build(ctx) {
   // Lift: the kit's towers, terminals and carriers (kitworld.js), the ropes.
   const ropeMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.7, roughness: 0.35 });
   for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, 0.03, 5), ropeMat));
-  const fac = ctx.fac = new Facilities({ T, R, world, renderer, research: ctx.research, resort: RESORT, known: RESORT === "copper" ? LIFT_KIND : null });
+  const fac = ctx.fac = new Facilities({ T, R, world, renderer, research: ctx.research, index: ctx.kitIndex, resort: RESORT, known: RESORT === "copper" ? LIFT_KIND : null });
   fac.liftKits = ctx.liftKits;
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
   // Chairs evenly round the loop with ours as one of them: the gap is shrunk a touch so the last
@@ -2151,7 +2151,7 @@ $("tabFab").onclick = () => {
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxToggle").textContent = t(i.hidden ? "雪况 ⌄" : "收起 ⌃"); };
 const riderLoad = loadBoarder(); // start early, it is a few MB
 async function main() {
-  const [R, far, research] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT)]);
+  const [R, far, research, kitIndex] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT), loadKitIndex()]);
   const load = (f, srgb, tries = 0) => new Promise((res, rej) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
@@ -2165,14 +2165,14 @@ async function main() {
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
   const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
-  setLiftKind(lift, research);
+  setLiftKind(lift, research, kitIndex);
   // The lift's models (carrier, tower parts, terminals): the ride waits for these; the rest comes later.
   const [carrier, base, shaft, head, bottom, top0] = await kits([SPEC.carrier, "tower_base", "tower_shaft", "tower_head", SPEC.bottom, SPEC.top]);
   if (TRIP) addStep(RESORT, { k: "lift", name: lift.name });
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: boarderModel(), lift, mask, research, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
   ctx.tex.cord.repeat.set(1, 1);
   build(ctx);
   $("status").remove();

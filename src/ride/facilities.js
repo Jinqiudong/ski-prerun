@@ -16,7 +16,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 const VER = 9;
 const BASE = "models/facilities/glb/"; // relative to look.html
 export const CHARCOAL = "#3b4048";
-const CARRIERS = ["chair2", "chair3", "chair4_fixed", "chair4", "chair6", "chair6_bubble", "chair8_bubble", "gondola6", "gondola", "gondola10", "cabriolet", "tbar", "platter"];
+const CARRIERS = ["chondola_chair", "chondola_cabin", "chair2", "chair3", "chair4_fixed", "chair4", "chair6", "chair6_bubble", "chair8_bubble", "gondola6", "gondola", "gondola10", "cabriolet", "tbar", "platter"];
 const BUILDINGS = ["restaurant", "firstaid", "base_lodge", "warming_hut", "yurt", "restroom", "ticket_office"];
 
 // ---------- What each real lift is ----------
@@ -34,8 +34,23 @@ export async function loadResearch(resort) {
   } catch { return null; }
 }
 
+// The kit's own lists (glb/<family>.json): a model may say which real lifts or buildings it stands for
+// ("for"), so a lift gets its own terminal hood or carrier and a named building its landmark model.
+export async function loadKitIndex() {
+  const fams = ["lifts", "stations", "buildings", "signature"], index = { has: new Set(), for: new Map() };
+  await Promise.all(fams.map(async (f) => {
+    const list = await fetch(`${BASE}${f}.json?v=${VER}`).then((r) => r.json()).catch(() => []);
+    for (const e of list) {
+      index.has.add(e.name);
+      for (const n of e.for || []) { const k = n.toLowerCase(); if (!index.for.has(k)) index.for.set(k, []); index.for.get(k).push({ ...e, family: f }); }
+    }
+  }));
+  return index;
+}
+export const modelsFor = (index, name) => index?.for.get(String(name).toLowerCase()) || [];
+
 // The models for a lift: carrier, terminals, gauge, paint. `known` is a checked override (seats, bubble).
-export function liftSpec(lift, research, known) {
+export function liftSpec(lift, research, known, index = null) {
   const r = research?.lifts.get(String(lift.id)) || research?.lifts.get(lift.name.toLowerCase()) || {};
   const seats = r.seats ?? known?.seats ?? lift.seats ?? 4;
   const bubble = !!(r.bubble ?? (known ? known.bubble : lift.bubble));
@@ -53,9 +68,19 @@ export function liftSpec(lift, research, known) {
     else if (seats === 4) carrier = detachable ? "chair4" : "chair4_fixed";
     else carrier = seats === 3 ? "chair3" : "chair2";
   }
+  // The lift's own models from the kit, where it has them: chondola chairs and cabins, the terminal hood
+  // its maker builds, a landmark top station (Thunderhead Lodge, Silver Queen).
+  const own = modelsFor(index, lift.name).filter((e) => TERMINAL[e.name] || CARRIERS.includes(e.name));
+  const ownCarrier = own.find((e) => e.family === "lifts" && e.name !== "chondola_cabin")?.name;
+  if (ownCarrier) carrier = ownCarrier;
   const isCabin = /^gondola|cabriolet/.test(carrier || "");
   const term = isCabin ? ["gondola_station", "gondola_station"] : detachable ? ["terminal_detach", "terminal_detach_top"] : ["terminal_fixed", "terminal_fixed"];
+  const bottomOwn = own.find((e) => e.family === "stations" && TERMINAL[e.name] && !TERMINAL[e.name].topOnly);
+  const topOwn = own.find((e) => TERMINAL[e.name]?.topOnly);
+  if (bottomOwn && detachable && !isCabin) term[0] = bottomOwn.name;
+  if (topOwn) term[1] = topOwn.name;
   return {
+    cabinCarrier: own.some((e) => e.name === "chondola_cabin") ? "chondola_cabin" : null,
     carrier, cabin: isCabin, surface, seats, detachable,
     bubble: /bubble/.test(carrier || ""), bottom: term[0], top: term[1],
     gauge: TERMINAL[term[0]].gauge, ...colours(r, known), researched: !!r.type, chondola: type === "chondola" || lift.kind === "mixed_lift" && !!r.cabin_model, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
@@ -66,7 +91,7 @@ export function liftSpec(lift, research, known) {
 function colours(r, known) {
   const c = typeof r.color === "string" ? { chair: r.color } : r.color || r.colour || {};
   const chair = c.chair || CHARCOAL, terminal = c.terminal || CHARCOAL; // cabins keep the kit's graphite
-  return { color: chair, terminalColor: terminal, towerColor: c.tower || terminal, bubbleColor: c.bubble || known?.bubbleColor || null };
+  return { color: chair, terminalColor: terminal, towerColor: c.tower || terminal, bubbleColor: c.bubble || known?.bubbleColor || null, bandColor: c.terminal_band || c.terminal_stripe || null, cabinColor: c.cabin || null };
 }
 
 // Terminals in the game's frame (+z the way up, +x the up rope's side). `bull`: the local z of the
@@ -78,12 +103,19 @@ export const TERMINAL = {
   terminal_detach_top: { gauge: 3.0, ropeH: 5.35, bull: 10, box: [-6, 13, -15, 14.4], stand: [9.5, 0.75, -5.5], unload: 12 },
   terminal_fixed: { gauge: 2.3, ropeH: 4.0, bull: 0, box: [-3.7, 12.3, -4.6, 7.4], top: { flip: true, mirror: true }, stand: [7, 0.2, 1.5], unload: 4 },
   gondola_station: { gauge: 3.0, ropeH: 4.25, bull: -7, box: [-10, 10, -16.6, 14.6], top: { flip: true }, stand: [11, 0.6, 3], unload: 9 },
+  // Landmark top stations (models/facilities/glb/signature.json): the line ends at the bullwheel (bx, bull).
+  thunderhead_lodge: { gauge: 3.0, ropeH: 9.5, bull: 0, bx: 22.5, box: [-28, 31, -19.6, 17.4], stand: [12, 0.5, -23], unload: 8, topOnly: true },
+  silver_queen_top: { gauge: 3.0, ropeH: 4.25, bull: 9, box: [-15.5, 7, -15, 15], stand: [-4, 0.5, -10], unload: 10, topOnly: true },
 };
+// The makers' detachable hoods (stations.json) stand where terminal_detach does.
+for (const n of ["terminal_detach_lpa", "terminal_detach_omega", "terminal_detach_unig", "terminal_detach_dopp90"]) TERMINAL[n] = TERMINAL.terminal_detach;
 // Where a terminal stands: its origin, yaw and mirror, for the line's end p heading dir (the way up).
 export function terminalPlace(name, atTop, p, dir) {
-  const t = TERMINAL[name], f = (atTop && t.top) || {}, flip = f.flip ? -1 : 1;
-  const origin = p.clone().addScaledVector(dir, -flip * t.bull);
-  return { origin, yaw: Math.atan2(dir.x, dir.z) + (f.flip ? Math.PI : 0), mirror: f.mirror ? -1 : 1 };
+  const t = TERMINAL[name], f = (atTop && t.top) || {};
+  const pl = { origin: new THREE.Vector3(), yaw: Math.atan2(dir.x, dir.z) + (f.flip ? Math.PI : 0), mirror: f.mirror ? -1 : 1 };
+  const v = localToWorld(pl, t.bx || 0, 0, t.bull); // the bullwheel's offset from the origin
+  pl.origin.copy(p).sub(v).setY(p.y);
+  return pl;
 }
 export function localToWorld(pl, x, y, z, out = new THREE.Vector3()) {
   const c = Math.cos(pl.yaw), s = Math.sin(pl.yaw), lx = x * pl.mirror;
@@ -115,11 +147,11 @@ export function gradePad(T, name, pl, level, margin = 16, blend = 32) {
 }
 
 // Where a rider sits in each carrier (the game's frame: grip at the origin, +z the way up).
-const DETACH_L = { chair4: 2.5, chair6: 2.7, chair6_bubble: 2.95, chair8_bubble: 3.1 };
+const DETACH_L = { chair4: 2.5, chair6: 2.7, chondola_chair: 2.7, chair6_bubble: 2.95, chair8_bubble: 3.1 };
 const CABIN = { gondola: [1.7, 2.1], gondola6: [1.5, 2.0], gondola10: [1.95, 2.2] };
 export function seatOf(name) {
   if (DETACH_L[name]) {
-    const n = +name.match(/\d/)[0], L = DETACH_L[name], sw = 0.62;
+    const n = +(name.match(/\d/) || [6])[0], L = DETACH_L[name], sw = 0.62;
     return { xs: Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * sw), top: -L + 0.09, z: 0.13, pivot: [-L + 0.74, -0.36] };
   }
   if (/^chair/.test(name)) { const n = +name.match(/\d/)[0], sw = 0.56; return { xs: Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * sw), top: -2.2 + 0.045, z: 0.08 }; }
@@ -172,7 +204,8 @@ export function kit(name) {
       else if (kind === "lit") { roomUV(geometry); material = windowMat(); }
       else if (kind === "glass") { material.envMapIntensity = 1.6; material.roughness = 0.05; material.depthWrite = false; material.side = THREE.DoubleSide; }
       geometry.computeBoundingBox();
-      parts[kind] = { geometry, material, kind };
+      let key = kind; for (let i = 2; parts[key]; i++) key = `${kind}${i}`; // a second paint (a band) or lettering
+      parts[key] = { geometry, material, kind };
     });
     const box = new THREE.Box3();
     for (const p of Object.values(parts)) box.union(p.geometry.boundingBox);
@@ -310,7 +343,7 @@ function canvasTex(c, renderer) {
 }
 // The lift's name on a terminal's board (4.6 × 0.75 m or 6 × 0.48 m): navy letters on cream.
 export function nameBoard(part, name, sub, renderer) {
-  const b = part.geometry.boundingBox, w = b.max.x - b.min.x, h = b.max.y - b.min.y;
+  const b = part.geometry.boundingBox, w = Math.max(b.max.x - b.min.x, b.max.z - b.min.z), h = b.max.y - b.min.y;
   const c = document.createElement("canvas"); c.width = 1024; c.height = Math.round((1024 * h) / w); const g = c.getContext("2d");
   g.fillStyle = "#ece2cd"; g.fillRect(0, 0, c.width, c.height);
   g.strokeStyle = "#1f2f4a"; g.lineWidth = 8; g.strokeRect(10, 10, c.width - 20, c.height - 20);
