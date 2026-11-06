@@ -216,6 +216,46 @@ def _chair_fixed(name, n, padded=False):
     crust((W, 0.07, 0.035), (0, 0.44, zs + 0.95), K["SN"])
     finalize(name, 512, ao_dist=0.4)
 
+def chair3_detach():
+    """A detachable triple (Ruthie's, Aspen Mountain, Poma 1997, one of two left in North America): the
+    kit's detachable chair with three padded seats, one footrest across, on a shorter C hanger.
+    Sources: liftblog.com Ruthie's photos (2017-02)."""
+    _chair_detach("chair3_detach", 3, L=2.4)
+
+def chair2_riblet():
+    """A Riblet centre-pole double (Looking Glass, Winter Park, 1966): one straight pole from a Riblet clamp
+    down behind the middle of the seat, a T of tube under the seat, two back bars on the pole, armrests bent
+    from one tube at each end, a pan seat with thin grey pads; no restraint bar, no footrest.
+    Sources: liftblog.com Looking Glass photos (2017-01)."""
+    new_col("chair2_riblet"); K = kit(); P = K["P"]
+    K["PAD"] = flat("pad_grey", "#5a5f66", 0.75, grain=0.06)
+    sw = 0.56; W = 2 * sw; zs = -2.15; xs = W / 2 + 0.02
+    # The Riblet grip: a long clamp, two bolts, the hook the pole hangs from.
+    box((0.12, 0.42, 0.11), (0, 0, -0.02), K["DARK"], bevel=0.02)
+    box((0.16, 0.3, 0.16), (0.05, 0, -0.14), K["STEEL"], bevel=0.025)
+    for y in (-0.1, 0.1): cyl(0.028, 0.26, (0.05, y, -0.12), K["DARK"], rot=(0, math.pi / 2, 0), verts=6)
+    pipe([(0.05, 0, -0.22), (0.02, 0, -0.38), (0, 0.06, -0.48)], 0.035, K["DARK"])
+    # The centre pole, straight, and the T under the seat.
+    yp = 0.47  # the pole runs down behind the seat back
+    rod((0, 0.06, -0.48), (0, yp, zs + 0.85), 0.042, P, kind="paint")
+    rod((0, yp, zs + 0.85), (0, yp, zs - 0.04), 0.042, P, kind="paint")
+    cyl(0.055, 0.12, (0, yp, zs + 0.85), P, verts=10, kind="paint")
+    rod((-xs, yp, zs - 0.04), (xs, yp, zs - 0.04), 0.03, P, kind="paint")
+    for z in (zs + 0.32, zs + 0.62): rod((0, yp, z), (0, 0.42, z), 0.03, P, kind="paint")
+    for s in (-1, 1):
+        poly([(s * xs, yp, zs - 0.04), (s * xs, -0.3, zs - 0.04), (s * xs, -0.34, zs + 0.02)], 0.026, P, "paint")
+        pipe([(s * xs, 0.42, zs + 0.62), (s * (xs + 0.02), 0.28, zs + 0.34), (s * (xs + 0.03), -0.24, zs + 0.3), (s * (xs + 0.02), -0.32, zs + 0.0)], 0.024, P, "paint")
+    for z in (zs + 0.32, zs + 0.62): rod((-xs, 0.42, z), (xs, 0.42, z), 0.026, P, kind="paint")
+    rod((0, yp, zs - 0.04), (0, -0.3, zs - 0.04), 0.026, P, kind="paint")
+    # The pan seat and its pads, the back pads on the bars.
+    box((W, 0.6, 0.04), (0, 0.02, zs), K["SHELL"], bevel=0.015)
+    for i in range(2):
+        x = -W / 2 + sw * (i + 0.5)
+        box((sw - 0.05, 0.54, 0.06), (x, 0.0, zs + 0.05), K["PAD"], bevel=0.025, seg=2)
+        box((sw - 0.05, 0.05, 0.42), (x, 0.39, zs + 0.47), K["PAD"], rot=(-0.12, 0, 0), bevel=0.02, seg=2)
+    crust((W, 0.07, 0.035), (0, 0.38, zs + 0.7), K["SN"]); crust((W - 0.1, 0.4, 0.04), (0, 0.0, zs + 0.1), K["SN"])
+    finalize("chair2_riblet", 512, ao_dist=0.4)
+
 def chair2(): _chair_fixed("chair2", 2)
 def chair3(): _chair_fixed("chair3", 3)
 def chair4_fixed(): _chair_fixed("chair4_fixed", 4, padded=True)
@@ -664,7 +704,7 @@ def tower_lattice():
     crust((2 * xr + 1.0, 0.16, 0.08), (0, -0.45, za + 0.33), SN); crust((2 * xr + 1.0, 0.16, 0.08), (0, 0.45, za + 0.33), SN)
     finalize("tower_lattice", 1024, ao_dist=0.8)
 
-MODELS = {"tower_lattice": tower_lattice, "chondola_cabin": chondola_cabin, "chondola_chair": chondola_chair, "gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
+MODELS = {"chair3_detach": chair3_detach, "chair2_riblet": chair2_riblet, "tower_lattice": tower_lattice, "chondola_cabin": chondola_cabin, "chondola_chair": chondola_chair, "gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
           "chair2": chair2, "chair3": chair3, "chair4_fixed": chair4_fixed,
           "chair4": chair4, "chair6": chair6, "chair6_bubble": chair6_bubble, "chair8_bubble": chair8_bubble,
           "tower_head": tower_head, "tower_shaft": tower_shaft, "tower_base": tower_base, "tower_head_surface": tower_head_surface,
