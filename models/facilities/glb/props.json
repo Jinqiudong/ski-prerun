@@ -1,1 +1,4 @@
-[]
+[{"name": "picnic_table", "label": "野餐桌"}, {"name": "bench", "label": "长椅"}, {"name": "board_rack", "label": "雪板架"},
+ {"name": "fire_pit", "label": "篝火坑"}, {"name": "snow_gun", "label": "风扇式造雪机"}, {"name": "snow_gun_pole", "label": "造雪枪杆"},
+ {"name": "slope_light", "label": "夜滑灯杆"}, {"name": "pole_pad", "label": "缆车塔防护垫"}, {"name": "safety_fence", "label": "安全网 10 米"},
+ {"name": "snowcat", "label": "压雪车"}, {"name": "snowmobile", "label": "雪地摩托"}]

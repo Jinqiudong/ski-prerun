@@ -1,1 +1,3 @@
-[{"name": "restaurant", "label": "山腰餐厅"}, {"name": "firstaid", "label": "巡逻医疗站"}]
+[{"name": "restaurant", "label": "山腰餐厅"}, {"name": "firstaid", "label": "巡逻医疗站"}, {"name": "base_lodge", "label": "山脚服务大楼"},
+ {"name": "warming_hut", "label": "取暖小屋"}, {"name": "yurt", "label": "蒙古包"}, {"name": "restroom", "label": "洗手间"},
+ {"name": "ticket_office", "label": "售票处"}]
