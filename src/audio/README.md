@@ -1,0 +1,33 @@
+# Sound
+
+All the ride's sound is WebAudio, made in the browser. There are no sound files: the material is
+computed from seeds in `buffers.js`. Music files can be added later through the manifest.
+
+| File | What |
+| --- | --- |
+| `engine.js` | One AudioContext per page. It starts on the first touch, click or key (iOS needs this) and pauses while the page is hidden. Buses `sfx`, `ambience`, `music` and `voice` (kept for voice chat), each through a duck gain, then a limiter. `duck(amount, seconds)` turns music and effects down under voice. On/off and volumes live in localStorage `prerunSound`. |
+| `buffers.js` | Pure functions, seeded: snow texture, skid grit, crunches, landing thump, sheave clacks, station clunk, reverb tail. |
+| `snow.js` | `BoardSound`: the board on snow, driven every frame by `board.js` `Rider`. `boardMix()` is the mapping, and it is pure and tested. |
+| `ambience.js` | Wind (speed plus gusts, cut by the bubble), the mountain bed, the lift's hum, tower clacks, and station machinery. |
+| `music.js` | `Music`: the manifest player. It crossfades by mood and has `play(id, atSeconds)`, `current()` and `follow()`. It also writes the generated tracks. |
+| `index.js` | `RideSound`, with one call per frame for each phase: `lift()`, `top()`, `ski()` and `hike()`. Also `rideSound()` (the page's single instance) and the exports `play`, `current`, `follow` and `duck`. |
+| `panel.js` | The sound drawer in the ride's menu, plus the credit line. |
+
+## How the physics drive the snow
+- **Glide**: the base running flat. Lowpassed texture whose level and brightness grow with speed. It gets quieter on an edge or in a skid.
+- **Carve**: the edge hiss. Band-passed texture. Its level follows `|lean|` (edge angle) and speed^1.5. Its centre is 850 + 75·v + 1150·edge Hz. The texture plays faster with speed, so its grain speeds up too.
+- **Scrape**: a skid (`rider.skid`, which is braking or pace −1). Granular grit that is louder in a skid and dies as the speed reaches 0. On ice it also chatters (a 23 Hz wobble).
+- **Rumble**: the board's low body. Louder in a skid and on ice.
+- **Crunches** while `pushing` or `walking`. A **thump** on landing that scales with the hop's height. In the air the snow layers cut out.
+- **Snow type**: `groomed` (default), or `powder` off the piste (more than 45 m from the route). `?surface=ice|powder|groomed` on look.html forces one type.
+
+Each update sets at most about 12 AudioParams, and only those that changed by more than 2 %. Nodes are made once. The only per-event nodes are one-shots (a crunch, a clack) and music notes, which are scheduled a bar ahead.
+
+## Music
+`assets/audio/music/manifest.json` lists the tracks: `id`, `title`, `artist`, `licence` (SPDX), `source` and `mood` (`lift`, `ski` or `calm`). Each track also has either `file` (a file in that folder) or `gen` (`key`, `seed`, `bars`).
+- Only CC0 or CC-BY files are allowed. A CC-BY track must have its artist and source in the manifest. The sound drawer and the page's credit line show them. `tests/audio.test.mjs` checks every entry.
+- The phase picks the mood: calm at the top and on hikes, lift on the chair, ski on the way down. A mood change crossfades over 4 s.
+- Listen together: a generated track is the same on every phone at the same second. `play(trackId, atSeconds)` lines friends up, and `current()` returns `{ id, at, ... }`. `follow()` hands the choice back to the mood.
+
+## Listening
+Render offline to WAV with an OfflineAudioContext. `makeMixer(ctx)` plus `new RideSound(ctx, mix, { timer: false })` build the same graph. Call `ski()`/`lift()` with explicit `t`, then `music.pump(seconds)` and `startRendering()`.
