@@ -6,7 +6,7 @@ import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=8";
 import { makeEntrance } from "./entrance.js?v=21";
 import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=23";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=24";
 import { playIntro } from "./intro.js?v=14";
 playIntro();
 
@@ -296,7 +296,7 @@ async function openWorld() {
 let trips = null;
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=27");
+    const { Trips } = await import("./trips.js?v=28");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
     const code = new URLSearchParams(location.search).get("trip");
@@ -306,7 +306,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList(), log = logOf(), box = $("recList");
-  const { renderMemory } = await import("./memory.js?v=12");
+  const { renderMemory } = await import("./memory.js?v=13");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
   box.innerHTML = "";
   const sorted = [...list].sort((a, b) => (log[b.id]?.stats?.share || 0) - (log[a.id]?.stats?.share || 0));
