@@ -16,7 +16,7 @@ import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=7";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=22";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=23";
 import { navRow } from "../core/nav.js?v=9";
 
 const $ = (id) => document.getElementById(id);
