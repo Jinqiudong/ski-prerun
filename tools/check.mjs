@@ -1,7 +1,8 @@
-// Static checks for a site with no build step: every relative import, script, stylesheet and asset path
+// Static checks for a site with no build step: every module parses, and every relative import, script, stylesheet and asset path
 // written literally in src/, the pages and the model catalogue points at a file that exists.
 // usage: node tools/check.mjs   (exit 1 on a broken path)
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join, normalize, relative } from "node:path";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
@@ -25,5 +26,10 @@ for (const f of files) {
     if (!existsSync(join(ROOT, r)) && !existsSync(join(ROOT, "models/facilities", m[1]))) bad.push(`${relative(ROOT, f)} → ${m[1]}`);
   }
 }
+// Every module must at least parse.
+for (const f of files.filter((f) => /\.m?js$/.test(f))) {
+  try { execFileSync(process.execPath, ["--check", f], { stdio: "pipe" }); }
+  catch (e) { bad.push(`${relative(ROOT, f)}: ${String(e.stderr).split("\n").find((l) => /Error/.test(l)) || "syntax error"}`); }
+}
 if (bad.length) { console.error("Broken paths:\n  " + bad.join("\n  ")); process.exit(1); }
-console.log(`ok: ${files.length} files, every literal path resolves`);
+console.log(`ok: ${files.length} files, every literal path resolves, every module parses`);
