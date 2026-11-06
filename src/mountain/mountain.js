@@ -685,7 +685,7 @@ async function main() {
   });
   $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini", "picking", "detail"); });
   addEventListener("resize", () => dio.resize());
-  window.__mtn = { scene, renderer, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
+  window.__mtn = { scene, renderer, camera, world, T, R, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
     restyle(run, lift) { // try a line style: rebuild the runs, and the lifts' marks on the snow (null: none)
       world.remove(runLayer); runLayer = runs(T, R.runs, { ...RUN_STYLE, ...run }); world.add(runLayer);
       if (liftLayer) world.remove(liftLayer); liftLayer = lift ? liftMarks(T, R.lifts, lift) : null; if (liftLayer) world.add(liftLayer);
