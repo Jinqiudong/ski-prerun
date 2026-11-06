@@ -20,7 +20,7 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/styles/paper.css?v=1">
-  <link rel="stylesheet" href="src/styles/ride-paper.css?v=1">
+  <link rel="stylesheet" href="src/styles/ride-paper.css?v=2">
 </head>
 <body>
   <canvas id="c"></canvas>
@@ -45,10 +45,8 @@
   <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a href="javascript:location.reload()">再坐一次</a></div></div>
   <div id="skiHud" class="glass" hidden><div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
   <div id="turnCue" hidden></div>
-  <canvas id="minimap" width="256" height="256" hidden></canvas>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
-  <div id="bigMap" hidden><canvas></canvas><div class="bar"><b>🗺 雪场地图 · 点一个地方，选从哪里出发</b><button id="mapMe">回到我</button><button id="mapLog">📖</button><button id="mapMore">更多</button><button id="mapClose" aria-label="关闭">×</button></div><div class="pickCard" hidden></div></div>
   <button id="trickBtn" hidden>🤸<br>动作</button>
   <div id="trickWheel" hidden></div>
   <div id="liftOffer" class="glass" hidden></div>
@@ -59,6 +57,6 @@
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { liftRide } from "./src/core/transition.js?v=2"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=9"></script>
+  <script type="module" src="src/ride/ride.js?v=10"></script>
 </body>
 </html>

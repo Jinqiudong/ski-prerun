@@ -8,7 +8,7 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Diorama } from "./diorama.js?v=20";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
 import { addStep } from "../ride/roadbook.js?v=12";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=25";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=26";
 import { openNav } from "../core/nav.js?v=9";
 import { liftTicket } from "../core/transition.js?v=2";
 
@@ -690,7 +690,7 @@ async function main() {
   });
   $("miniBack").addEventListener("click", () => { mini = null; document.body.classList.remove("mini", "picking", "detail"); });
   addEventListener("resize", () => dio.resize());
-  window.__mtn = { scene, renderer, camera, world, T, R, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
+  window.__mtn = { scene, renderer, camera, controls, world, T, R, get runLayer() { return runLayer; }, get lifts() { return lifts; }, look, applyLook, THREE, // test hook
     restyle(run, lift) { // try a line style: rebuild the runs, and the lifts' marks on the snow (null: none)
       world.remove(runLayer); runLayer = runs(T, R.runs, { ...RUN_STYLE, ...run }); world.add(runLayer);
       if (liftLayer) world.remove(liftLayer); liftLayer = lift ? liftMarks(T, R.lifts, lift) : null; if (liftLayer) world.add(liftLayer);

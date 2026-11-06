@@ -11,10 +11,11 @@ import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Diorama } from "../mountain/diorama.js?v=20";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=7";
+import { TrailMap } from "./mapview.js?v=8";
+import { PaintedMap } from "./paintedmap.js?v=1";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=25";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=26";
 import { navRow } from "../core/nav.js?v=9";
 import { rideSound } from "../audio/index.js?v=4";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=4";
@@ -938,7 +939,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     prog = i0; ended = false;
     st.phase = "ski";
     $("skiHud").hidden = false;
-    $("minimap").hidden = false;
+    pmap.show(true);
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
     tilt.zero = null; // the way you hold the phone now is "straight on"
     $("desc").textContent = tilt.ok ? "沿路线带你滑 · 手机左右倾转弯 · 往前倾加速、往回倒减速" : "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
@@ -951,40 +952,29 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
   let nav = null, offFor = 0, lastLook = 0, onRun = null;
-  // The map in the corner while skiing: a small square of the trail map (mapview.js), north up, your route
-  // in gold, you as your rider's portrait. Tap it for the full map: pan, pinch, tap a place, and confirm to
-  // start from there (a run) or ride it (a lift). Skiing waits while the map is open.
+  // The map in the corner while skiing: the painted map (paintedmap.js), a round cut-out of the resort's
+  // watercolour around you with what you've skied inked on it. Tap it for the whole painting: pan, pinch,
+  // tap a place to start from there (a run) or ride it (a lift). Skiing waits while the map is open.
+  // The trail map (mapview.js) still draws the roadbook's maps.
   const tmap = new TrailMap(T, R, ctx.mask, R.places.filter((p) => p.kind === "village"));
-  let tmapAt = 0, mapOpen = false, mapUp = null, journal = false;
-  // What you've skied here (skilog.js), shown on the journal map.
+  let tmapAt = 0;
+  // What you've skied here (skilog.js), inked on the painted map.
   const skiLog = new SkiLog(RESORT, R);
   st.log = skiLog; // testing
+  const pmap = new PaintedMap({ resort: RESORT, R, log: skiLog, me: () => (phys ? { x: phys.x, z: phys.z } : null),
+    route: () => (chosen && !ended ? chosen.path.slice(Math.max(0, prog - 1)) : []), track: () => skiLog.track, rideable: (l) => rideable(l),
+    routeName: () => (chosen ? chosen.short || chosen.title : ""), onGo: (c) => goTo(c), onMore: () => openReplan() });
+  st.pmap = pmap; // testing
   st.hud = () => {
-    if (st.phase !== "ski" || !phys || ended || mapOpen || clock() - tmapAt < 60) return;
+    if (st.phase !== "ski" || !phys || ended || pmap.isOpen || clock() - tmapAt < 60) return;
     tmapAt = clock();
-    const cv = $("minimap"), dpr = cv.width / 128;
-    // Turned with you, the way ahead up (eased, so the map doesn't swing with every wiggle).
-    mapUp = mapUp == null ? phys.heading : mapUp + angleDiff(phys.heading, mapUp) * 0.15; // here angleDiff is a - b
-    const route = chosen.path.slice(Math.max(0, prog - 1)), t = clock() / 1000;
-    if (planetMap) {
-      // A wider flat map around you, wrapped onto a little planet, you on top.
-      planetSrc ||= Object.assign(document.createElement("canvas"), { width: 256, height: 256 });
-      tmap.view(planetSrc, { cx: phys.x, cz: phys.z, zoom: 0.17, route, skied: plStretches, t, dpr: 2, up: mapUp });
-      tmap.planet(cv, planetSrc);
-      tmap.drawYou(cv.getContext("2d"), cv.width / 2, cv.height / 2 + 10 * dpr, Math.PI, t, dpr, 44 * dpr);
-    } else tmap.view(cv, { cx: phys.x, cz: phys.z, zoom: 0.32, route, you: { x: phys.x, z: phys.z, heading: phys.heading }, t, dpr, up: mapUp });
+    pmap.drawMini();
   };
-  // The corner map's look: flat, or a little planet (set in the menu, kept on this phone).
-  let planetMap = localStorage.getItem("prerunMapStyle") === "planet", planetSrc = null, plStretches = [];
-  const setMapStyle = (planet) => { planetMap = planet; $("minimap").classList.toggle("planet", planet); try { localStorage.setItem("prerunMapStyle", planet ? "planet" : "flat"); } catch {} };
-  setMapStyle(planetMap);
-  setInterval(() => { if (planetMap && st.phase === "ski") plStretches = skiLog.stretches(); }, 4000);
   function openMenu() {
     const ski = st.phase === "ski" && phys && !ended;
     fan("fanDown", $("menuBtn"), [
       ["packing", "路书", () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) })],
       ski && ["trailmap", "地图", openBigMap],
-      ski && ["compass_n", planetMap ? "平面小地图" : "小星球地图", () => setMapStyle(!planetMap)],
       ["windy", "声音", openSoundPanel], // no speaker icon in the library yet: the wind is the closest
       ["sliders", "设置", openSettings],
       ["st_done", "结束今天", endToday],
@@ -992,92 +982,11 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   $("menuBtn").onclick = openMenu;
   $("menuBtn").querySelector("img").src = `assets/icons/${myAvatar()}.png?v=1`;
-  const bm = { cx: 0, cz: 0, zoom: 0.2, pin: null, choice: null, ptrs: new Map(), moved: 0, pinch: null };
-  const bigCv = $("bigMap").querySelector("canvas");
-  function drawBig() {
-    if (!mapOpen) return;
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    if (bigCv.width !== Math.round(innerWidth * dpr)) { bigCv.width = Math.round(innerWidth * dpr); bigCv.height = Math.round(innerHeight * dpr); }
-    if (journal) tmap.view(bigCv, { cx: bm.cx, cz: bm.cz, zoom: bm.zoom, skied: bm.skied, track: skiLog.track, you: { x: phys.x, z: phys.z, heading: phys.heading }, t: performance.now() / 1000, dpr });
-    else tmap.view(bigCv, { cx: bm.cx, cz: bm.cz, zoom: bm.zoom, route: chosen.path.slice(Math.max(0, prog - 1)), skied: bm.skied, you: { x: phys.x, z: phys.z, heading: phys.heading }, pin: bm.pin, t: performance.now() / 1000, dpr });
-    requestAnimationFrame(drawBig);
-  }
-  function openBigMap() {
-    if (st.phase !== "ski" || !phys || ended) return;
-    journal = false; bm.skied = skiLog.stretches();
-    $("bigMap").querySelector(".bar b").textContent = "🗺 雪场地图 · 点一个地方，选从哪里出发";
-    mapOpen = true; bm.cx = phys.x; bm.cz = phys.z; bm.zoom = 0.22; bm.pin = null;
-    $("bigMap").querySelector(".pickCard").hidden = true;
-    $("bigMap").hidden = false;
-    drawBig();
-  }
-  const closeBigMap = () => { mapOpen = false; $("bigMap").hidden = true; };
-  // The journal: the whole resort with everything you've skied here in ink, your last ride dashed, and
-  // how much of the mountain you've covered.
-  function openJournal() {
-    if (!phys) return;
-    skiLog.save();
-    journal = true; bm.skied = skiLog.stretches(); bm.pin = null;
-    const s = skiLog.stats(), xs = [], zs = [];
-    for (const seg of bm.skied) for (const [x, z] of seg) { xs.push(x); zs.push(z); }
-    for (const [x, z] of skiLog.track) { xs.push(x); zs.push(z); }
-    if (!xs.length) { xs.push(phys.x); zs.push(phys.z); }
-    const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
-    bm.cx = (x0 + x1) / 2; bm.cz = (z0 + z1) / 2; bm.zoom = clamp(Math.min(innerWidth / (x1 - x0 + 600), innerHeight / (z1 - z0 + 900)), 0.06, 0.5);
-    $("bigMap").querySelector(".bar b").innerHTML = `📖 滑雪记录<br><small style="font-weight:500">滑过 ${s.touched}/${s.runs} 条雪道 · 约 ${s.km.toFixed(1)} 公里 · 雪场的 ${Math.round(s.share * 100)}%</small>`;
-    const card = $("bigMap").querySelector(".pickCard");
-    card.innerHTML = `<b>红线是你滑过的地方，虚线是这一趟</b><small>${s.share >= 1 ? "🌸 整个雪场都滑遍了！" : `还有 ${s.runs - s.touched} 条雪道没去过，下次去打卡吧`}</small>`;
-    card.hidden = false;
-    mapOpen = true; $("bigMap").hidden = false; drawBig();
-  }
+  function openBigMap() { if (st.phase === "ski" && phys && !ended) pmap.openSheet(); }
+  const closeBigMap = () => pmap.close();
+  // After the run: the same sheet, to look back (no starting from it).
+  const openJournal = () => { skiLog.save(); pmap.openSheet({ browse: true }); };
   st.journal = openJournal;
-  $("minimap").onclick = openBigMap;
-  $("mapClose").onclick = closeBigMap;
-  $("mapMe").onclick = () => { bm.cx = phys.x; bm.cz = phys.z; };
-  $("mapMore").onclick = () => { closeBigMap(); openReplan(); };
-  $("mapLog").onclick = () => (journal ? openBigMap() : openJournal());
-  // Drag to pan, pinch to zoom, tap to choose.
-  bigCv.addEventListener("pointerdown", (e) => { bm.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); bm.moved = 0; if (bm.ptrs.size === 2) { const [a, b] = [...bm.ptrs.values()]; bm.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: bm.zoom }; } });
-  bigCv.addEventListener("pointermove", (e) => {
-    const p = bm.ptrs.get(e.pointerId); if (!p) return;
-    const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-    if (bm.ptrs.size === 2 && bm.pinch) { const [a, b] = [...bm.ptrs.values()]; bm.zoom = clamp(bm.pinch.zoom * Math.hypot(a.x - b.x, a.y - b.y) / bm.pinch.d, 0.05, 1.2); bm.moved += 99; return; }
-    bm.moved += Math.abs(dx) + Math.abs(dy);
-    bm.cx -= dx / bm.zoom; bm.cz -= dy / bm.zoom;
-  });
-  const ptrUp = (e) => {
-    const was = bm.ptrs.has(e.pointerId); bm.ptrs.delete(e.pointerId); if (bm.ptrs.size < 2) bm.pinch = null;
-    if (!was || bm.moved > 8 || bm.ptrs.size || journal) return;
-    const x = bm.cx + (e.clientX - innerWidth / 2) / bm.zoom, z = bm.cz + (e.clientY - innerHeight / 2) / bm.zoom;
-    const c = mapChoice(x, z), card = $("bigMap").querySelector(".pickCard");
-    if (!c) { bm.pin = null; card.hidden = false; card.innerHTML = "<b>那里没有雪道</b><small>点一条雪道或者一条缆车</small>"; return; }
-    bm.pin = c.at; bm.choice = c;
-    card.innerHTML = `<b>${c.label}</b><small>${c.sub}</small><div class="two"><button class="no">取消</button><button class="go">${c.lift ? "去坐 ›" : "从这里出发 ›"}</button></div>`;
-    card.querySelector(".no").onclick = () => { card.hidden = true; bm.pin = null; };
-    card.querySelector(".go").onclick = () => { closeBigMap(); goTo(c); };
-    card.hidden = false;
-  };
-  bigCv.addEventListener("pointerup", ptrUp); bigCv.addEventListener("pointercancel", (e) => { bm.ptrs.delete(e.pointerId); bm.pinch = null; });
-  bigCv.addEventListener("wheel", (e) => { e.preventDefault(); bm.zoom = clamp(bm.zoom * (e.deltaY < 0 ? 1.15 : 0.87), 0.05, 1.2); }, { passive: false });
-  const distToLine = (pts, x, z) => {
-    let d = Infinity;
-    for (let i = 1; i < pts.length; i++) {
-      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], dx = bx - ax, dz = bz - az;
-      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-      d = Math.min(d, Math.hypot(ax + dx * t - x, az + dz * t - z));
-    }
-    return d;
-  };
-  // What a tap on the map means: the nearest lift line (to ride it) or run (to start there).
-  function mapChoice(x, z) {
-    const tol = 22 / bm.zoom; // about a fingertip, in metres at this zoom
-    const l = R.lifts.filter((l) => rideable(l)).map((l) => ({ l, d: distToLine(l.pts, x, z) })).sort((a, b) => a.d - b.d)[0];
-    const spot = runNear(x, z, tol * 1.4), runD = spot ? Math.hypot(spot.run.pts[spot.i][0] - x, spot.run.pts[spot.i][1] - z) : Infinity;
-    if (l && l.d < tol && (l.d < tol * 0.5 || l.d < runD * 0.8)) return { lift: l.l, at: l.l.pts[0], label: `🚡 去坐 ${l.l.name}`, sub: "滑到缆车站，坐上去" };
-    if (spot) return { spot, at: spot.run.pts[spot.i], label: `从 ${LEVEL_TXT_ICON[spot.run.level] || ""}${spot.run.name || "这条雪道"} 出发`, sub: `在这里重新出生，接着去 ${chosen.short || chosen.title}` };
-    return null;
-  }
-  const LEVEL_TXT_ICON = { easy: "🟢 ", intermediate: "🟦 ", advanced: "◆ ", expert: "◆◆ " };
   // The roadbook: each way down as a step (the runs in order, the lift at the bottom, the path for its map).
   const bookRoute = (P, changed = false) => addStep(RESORT, { k: "route", changed, title: P.title, segs: P.segs.map((g) => ({ n: g.run.name || "无名雪道", l: g.run.level })), next: P.next?.name || null, path: thinPath(P.path),
     flats: P.flats.map((f) => ({ n: f.run.name || "无名雪道", m: f.m, k: f.kind, at: f.at })) });
@@ -1313,7 +1222,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   });
   st.trick = doTrick; // testing
   function stepSki(dt) {
-    if (mapOpen) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map
+    if (pmap.isOpen) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map
     if (spawn) { snd?.ski(phys, { paused: true, dt }); spawnStep(dt); return; }
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
@@ -1593,7 +1502,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     tbtn.hidden = true; closeWheel();
     $("skiHud").hidden = true;
     $("turnCue").hidden = true;
-    $("minimap").hidden = true;
+    pmap.show(false);
     $("arrive").hidden = false;
     const link = (l, to, label) => `<a class="btn go" href="${withResort(`look.html?lift=${encodeURIComponent(l)}${to ? `&to=${encodeURIComponent(to)}` : ""}`)}">${label}</a>`;
     let title, note, row = "";

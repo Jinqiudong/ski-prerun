@@ -56,6 +56,11 @@ const EN = {
   "看全图，选从哪里出发": "See it all, start anywhere", "这一趟怎么走的，明天照着走": "This run's way, to follow tomorrow", "这个雪场你滑过的地方": "Where you've skied here", "右上角的小地图样式": "The corner map's style", "回到开始页": "Back to the start",
   "菜单": "Menu", "📜 路书 · 怎么滑、哪里容易错": "📜 Roadbook · how to ski it, where it's easy to go wrong", "按这条路线滑 ›": "Ski this way ›", "从这条滑下去 ›": "Ski down this one ›", "回沙盘": "Back to the model", "再来一次": "Again",
   "取消": "Cancel", "从这里出发 ›": "Start here ›", "去坐 ›": "Go ride it ›", "那里没有雪道": "No run there", "点一条雪道或者一条缆车": "Tap a run or a lift",
+  // The painted map (src/ride/paintedmap.js)
+  "已滑": "Skied", "已滑 {p}%": "Skied {p}%", "我的 {name}": "My {name}", "绿道": "Green", "蓝道": "Blue", "黑道": "Black", "双黑": "Double",
+  "点山上任意地方 → 从那里出发 · 点雪道 → 看名字和难度 · 彩色 = 滑过 · 铅笔线 = 还没滑": "Tap anywhere on the mountain → start there · tap a run → its name and level · colour = skied · pencil = not yet",
+  "换条路线": "Another way", "去找他 ›": "Go to them ›", "跟随": "Follow", "滑到缆车站，坐上去": "Ski to the lift and ride it", "无名雪道": "Unnamed run",
+  "滑过了": "skied", "还没滑过": "not skied yet", "在这里重新出发，接着去 {x}": "start here, then on to {x}",
   // Planning
   "我的行程": "My trips", "＋ 新建行程": "＋ New trip", "即将出发": "Coming up", "去过的": "Been there",
   "还没有行程。建一个，生成链接发给朋友，大家就能看到同一份计划。": "No trips yet. Make one and send the link: everyone sees the same plan.",
