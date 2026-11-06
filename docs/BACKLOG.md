@@ -21,3 +21,6 @@ Work that waits on something else. Newest first.
 - Same chair when boarding within a few seconds of each other.
 - Voice: near friends open automatically (proximity, louder when closer); far friends by walkie-talkie push-to-talk with a radio squelch. WebRTC mesh, Supabase for signalling, a TURN relay for some networks. Safari only (in-app browsers often block the mic).
 - Listen together: one friend picks a track from the game's own licensed library and everyone hears it in sync (`src/audio` `play(trackId, atSeconds)`). Streaming services can't be rebroadcast inside the game.
+
+## Radio prop (assets/props/radio.glb)
+Parent it to `Hand_R_Socket`. Starting offset, fitted on `Radio_Talk_Stand` (batch 3) at 1 s: `rotation.set(1.6232, -0.0524, -0.6807)`, `position.set(0.031, -0.003, 0.020)`. On tpl_m the radio sits about 1 cm lower; to raise it, use position (0.0376, -0.0034, 0.0273). Fit it again after batch 4 changes the radio clips.
