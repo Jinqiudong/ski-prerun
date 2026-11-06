@@ -18,6 +18,8 @@ import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
 import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=22";
 import { navRow } from "../core/nav.js?v=9";
+import { rideSound } from "../audio/index.js?v=1";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -913,7 +915,7 @@ const ROUTE_GOLD = 0xf2b632;
 const fmtLen = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} 公里` : `${Math.round(m)} 米`);
 const fmtMin = (s) => `${Math.max(1, Math.round(s / 60))} 分钟`;
 // At the top: get off, rise above the summit, and plan where to go — a base, the next lift, or just a run.
-function topOfLift({ T, R, lift, line, ctx, getChair }) {
+function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const st = { phase: null, t0: 0, focus: new THREE.Vector3(), pick: null };
   const g1 = line.ground[line.ground.length - 1];
   const myLevel = (() => { try { const l = JSON.parse(localStorage.getItem("prerun") || "{}").level; return LEVELS.includes(l) ? l : "intermediate"; } catch { return "intermediate"; } })();
@@ -1227,6 +1229,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
       ["packing", "路书", () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) })],
       ski && ["trailmap", "地图", openBigMap],
       ski && ["compass_n", planetMap ? "平面小地图" : "小星球地图", () => setMapStyle(!planetMap)],
+      ["windy", "声音", openSoundPanel], // no speaker icon in the library yet: the wind is the closest
       ["sliders", "设置", openSettings],
       ["st_done", "结束今天", endToday],
     ]);
@@ -1553,8 +1556,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
   });
   st.trick = doTrick; // testing
   function stepSki(dt) {
-    if (mapOpen) return; // skiing waits while you look at the map
-    if (spawn) { spawnStep(dt); return; }
+    if (mapOpen) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map
+    if (spawn) { snd?.ski(phys, { paused: true, dt }); spawnStep(dt); return; }
     const P = chosen, path = P.path, r = phys, last = path.length - 1;
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
     if (near.d < 70) prog = Math.max(prog, near.i);
@@ -1602,10 +1605,18 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
     if (tree) {
       const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1;
       r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z);
-      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); }
+      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); snd?.bump(Math.min(1, r.speed / 10)); }
       r.speed *= 0.15;
     }
     poseBoarder(ctx.rider, r);
+    // The board's sound: the physics as it is now, how high a trick's hop is, off the piste is powder
+    // (?surface=ice|powder|groomed sets the snow), the top station fading behind.
+    if (snd) {
+      const tr = ctx.rider.userData.trick, f = tr ? tr.t / tr.dur : 0, air = tr && tr.air > 0 && f < 1 ? tr.air * 4 * f * (1 - f) : 0;
+      const topP = line.towers[line.towers.length - 1].p;
+      snd.setSurface(SURFACE || (near.d > 45 ? "powder" : "groomed"));
+      snd.ski(r, { air, station: clamp(1 - Math.hypot(r.x - topP.x, r.z - topP.z) / 120, 0, 1), dt });
+    }
     tracks.add(r);
     stepGuide(P, clock());
     const NL = ctx.nightLights;
@@ -1924,7 +1935,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair }) {
       stepSki(Math.min(dt, 0.05));
     } else if (st.phase === "hike" && hk) {
       stepHike(Math.min(dt, 0.05));
+      snd?.hike({ dt });
     }
+    if (st.phase === "unload" || st.phase === "rise" || st.phase === "pick" || st.phase === "dive") snd?.top({ station: st.phase === "unload" ? 0.8 : 0.35, dt: Math.min(dt, 0.05) });
     if (reveal && st.phase !== "ski") {
       // Draw the chosen plan leg by leg, from the top down.
       const kk = Math.min(1, (now - reveal.t0) / (900 + 500 * routeMarks.length)), total = reveal.total;
@@ -2349,6 +2362,7 @@ const sit = (model, lookYaw) => sitBoarder(model, lookYaw, new THREE.Vector3(0, 
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
+const SURFACE = ["groomed", "powder", "ice"].find((x) => x === params.get("surface")) || null; // the snow under the board, for trying the sound
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
@@ -2438,7 +2452,10 @@ async function main() {
   addEventListener("pagehide", keep);
   const clock = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
   const mins = (m) => (m < 60 ? `${Math.max(1, Math.round(m))} 秒` : `${Math.round(m / 60)} 分钟`);
-  const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair });
+  // Sound: the board, the air, the lift and music (src/audio). It waits for the first tap on a phone.
+  const snd = rideSound();
+  snd?.ready.then(() => { const c = creditLine(snd.music.tracks()); if (c) $("credit").append(c); });
+  const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair, snd });
   window.__top = top;
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
@@ -2508,6 +2525,7 @@ async function main() {
     }
     for (const c of [chairsUp, padsUp, chairsDown, padsDown, bubblesUp, bubblesDown, rimsUp, rimsDown]) c.instanceMatrix.needsUpdate = true;
     bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
+    if (!top.phase) snd?.lift({ d, total: line.total, towers: line.towers, rate: fast ? 20 / 3 : rate, shelter: 1 - bubbleOpen, dt }); // the bubble down keeps the wind off
     bubbleMatrix(bubbleOpen, myBubble.matrix);
     if (hintOn) { // the note sits under the canopy's middle, on screen
       if (arrived) { hintOn = false; $("bubbleHint").hidden = true; }
