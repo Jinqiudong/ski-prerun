@@ -58,7 +58,7 @@ def balcony(f, x, z, w, d, M, y=0.0, posts=True):
         f.box((0.1, 0.1, 1.3), (x + s * (w / 2 - 0.3), y - d * 0.45, z - 0.6), TIM, rot=(-0.75, 0, 0))
     f.box((w, 0.12, 0.1), (x, y - d + 0.06, z + 1.05), TIM)
     f.box((w, 0.08, 0.08), (x, y - d + 0.06, z + 0.15), TIM)
-    n = int(w / 0.26)
+    n = int(w / 0.32)
     for k in range(n): f.box((0.05, 0.05, 0.85), (x - w / 2 + 0.1 + k * (w - 0.2) / (n - 1), y - d + 0.06, z + 0.6), TIM)
     f.box((w + 0.04, 0.2, 0.1), (x, y - d + 0.06, z + 1.14), M["sn"], bevel=0.04, seg=1, kind="snow")
     f.box((w - 0.4, d * 0.6, 0.14), (x, y - d * 0.55, z + 0.03), M["sn"], bevel=0.06, seg=1, kind="snow")
@@ -137,7 +137,7 @@ def _village(name):
         if t in "gG": gables.append((x, bw if t == "g" else bw * 1.35, t == "G"))
         bx = x  # the back: windows only, and a service door every other bay
         for k in range(up):
-            for s in (-1, 1): win(bk, -bx + s * bw * 0.22, G + k * FH + 0.75, 1.1, 1.65, M)
+            for s in (-1, 1): win(bk, -bx + s * bw * 0.22, G + k * FH + 0.75, 1.1, 1.65, M, snow=False)
         if i % 2: B.door(bk, -bx, F0, 1.0, 2.2, M, lite=True)
         else: win(bk, -bx, 1.2, 2.0, 1.8, M, cols=2)
     # Cross gables: a bay standing forward of the wall up to the roof, its own steep roof and gable.
@@ -158,10 +158,10 @@ def _village(name):
         win(g, 0, T + 0.5, 1.0, 1.1, M, cols=1, snow=False)
         B.truss(g, w, -0.2, T + 0.1, rise - 0.35, M, r=0.22)
     # The main roof: ridge along X, dormers on the front slope between the gables, chimneys.
-    ma, mtop = B.gable_roof(Frame((0, 0, 0), PI / 2), D, -L / 2 - 0.9, L / 2 + 0.9, T, R, 1.1, M, thick=0.36, st=0.62, ice=int(L))
+    ma, mtop = B.gable_roof(Frame((0, 0, 0), PI / 2), D, -L / 2 - 0.9, L / 2 + 0.9, T, R, 1.1, M, thick=0.36, st=0.62, ice=16)
     u = D / 2 - 2.2
     for i, t in enumerate(bays):
-        if t == "w" or (t == "b" and i % 2): B.dormer(W0, -L / 2 + bw * (i + 0.5), -u, mtop(u), math.tan(ma), 2.4, M, hw=1.9, drise=0.9, wall=ACC)
+        if t == "w": B.dormer(W0, -L / 2 + bw * (i + 0.5), -u, mtop(u), math.tan(ma), 2.4, M, hw=1.9, drise=0.9, wall=ACC)
     for x in (-L * 0.3, L * 0.22): stack(x, 1.2, mtop(1.2) - 0.6, 2.4, M)
     # Gable ends: windows each floor, a small one high in the gable, a lantern by the end door.
     for s in (-1, 1):
@@ -530,7 +530,7 @@ def silver_queen_top():
         box((0.25, yb - ya + 0.3, 0.32), (s * (hw + 0.1), (ya + yb) / 2, z0 + 0.1), RED)
         box((0.2, yb - ya + 0.2, 0.2), (s * (hw + 0.12), (ya + yb) / 2, zw + 0.05), RED)
         a = math.atan2(zr - zw, hw)
-        slab((math.hypot(hw, zr - zw) + 0.3, yb - ya - 0.2, 0.45), (s * hw / 2, (ya + yb) / 2, (zw + zr) / 2 + 0.3), SN, rot=(0, -s * a, 0))
+        slab((math.hypot(hw, zr - zw) + 0.3, yb - ya - 0.2, 0.45), (s * hw / 2, (ya + yb) / 2, (zw + zr) / 2 + 0.3), SN, rot=(0, s * a, 0))
     for (xa, za), (xb, zb) in zip(prof[2:], prof[3:] + prof[:1]):  # red frame round the open end
         c = Vector(((xa + xb) / 2, yb + 0.1, z0 + (za + zb) / 2)); ln = math.hypot(xb - xa, zb - za); a = math.atan2(zb - za, xb - xa)
         box((ln + 0.25, 0.2, 0.3), c, RED, rot=(0, -a, 0))
@@ -556,4 +556,271 @@ def silver_queen_top():
     blob((14.5, 1.4, 0.7), (0, ya - 1.2, 0.15), SN, lumps=0.1); blob((1.4, bd, 0.7), (bx - bw / 2 - 0.8, -2.0, 0.1), SN, lumps=0.1)
     finalize("silver_queen_top", 1024, ao_dist=1.2)
 
-MODELS = {"sundeck": sundeck, "silver_queen_top": silver_queen_top, "thunderhead_lodge": thunderhead_lodge, "sunspot_lodge": sunspot_lodge, "village_block_a": village_block_a, "village_block_b": village_block_b, "village_block_c": village_block_c}
+# ---------- Copper: The Aerie ----------
+def flat_roof(x0, x1, y0, y1, z, M, over=0.0, soffit="honey", fascia="char", t=0.5, snow=0.6, tilt=0.0):
+    """A low-slope roof slab with a deep overhang: honey timber soffit under it, a dark fascia, thick snow."""
+    cx, cy, w, d = (x0 + x1) / 2, (y0 + y1) / 2, x1 - x0, y1 - y0
+    box((w, d, t), (cx, cy, z), M[fascia], rot=(tilt, 0, 0), bevel=0.04)
+    box((w - 0.3, d - 0.3, 0.06), (cx, cy, z - t / 2 - 0.02), M[soffit], rot=(tilt, 0, 0))
+    for k in range(int(w / 1.2)): box((0.16, d - 0.4, 0.22), (x0 + 0.6 + k * 1.2, cy, z - t / 2 - 0.12), M["honey"], rot=(tilt, 0, 0))
+    if snow: slab((w - 0.2, d - 0.2, snow), (cx, cy, z + t / 2 + snow / 2 - 0.05), M["sn"], rot=(tilt, 0, 0))
+
+def glazing(f, x0, x1, z0, z1, M, step=1.5, transoms=(), y=0.0, mull="honeyz"):
+    """A curtain of floor-to-ceiling glass in timber mullions."""
+    w = x1 - x0; f.box((w, 0.06, z1 - z0), ((x0 + x1) / 2, y + 0.02, (z0 + z1) / 2), M["win"], kind="lit")
+    n = max(1, round(w / step))
+    for k in range(n + 1): f.box((0.14, 0.2, z1 - z0), (x0 + k * w / n, y - 0.06, (z0 + z1) / 2), M[mull])
+    for z in (z0,) + tuple(transoms) + (z1,): f.box((w + 0.1, 0.2, 0.14), ((x0 + x1) / 2, y - 0.06, z), M[mull])
+
+def the_aerie():
+    """The Aerie (2023) at the top of Copper's American Eagle: a modern two-storey lodge. A board-formed
+    concrete and stone base storey, an upper storey in charcoal panels with floor-to-ceiling glass in honey
+    timber frames on the view side, low roofs on deep honey glulam soffits, a concrete stair tower, and the
+    covered upper deck the chondola unloads onto: black steel columns, a pergola of glulam beams, glass rails.
+    Sources: visitcoppermountain.com Aerie photos (2023-11), snowbrains.com; OSM way 1230158292
+    (56.3 x 35.3 m); built here 52 x 30 m with the deck."""
+    new_col("the_aerie"); M = mats(); B.anchor(M)
+    ST, SN, CH, CO, HN = M["st"], M["sn"], M["char"], M["conc"], M["honeyz"]
+    L, D, G, T = 50.0, 24.0, 4.6, 9.4
+    box((L, D, G), (0, 0, G / 2), CO)
+    for k in range(int(G / 0.3)): box((L + 0.02, D + 0.02, 0.02), (0, 0, 0.3 + k * 0.3), flat("formlines", "#95908a", 0.9, grain=0))  # board-form lines
+    box((L - 0.2, D - 0.2, T - G), (0, 0, (G + T) / 2), CH)
+    for k in range(int(L / 0.9)):  # panel joints on the charcoal
+        for y in (-D / 2 - 0.01, D / 2 + 0.01): box((0.03, 0.02, T - G), (-L / 2 + 0.45 + k * 0.9, y, (G + T) / 2), flat("joint", "#24272a", 0.6, grain=0))
+    box((L + 0.3, D + 0.3, 0.35), (0, 0, G), M["honey"])
+    fr, bk = Frame((0, -D / 2 - 0.05, 0)), Frame((0, D / 2 + 0.05, 0), PI)
+    # The view side (front): the upper storey all glass in honey frames, the base storey in stone with windows.
+    glazing(fr, -L / 2 + 2, L / 2 - 8, G + 0.2, T - 0.3, M, transoms=(G + 2.8,))
+    fr.box((L - 10, 0.25, G - 0.6), (-4, -0.1, (G - 0.6) / 2 + 0.3), ST)
+    for x in range(-20, 14, 5): glazing(fr, x - 1.6, x + 1.6, 0.9, 3.4, M, step=1.6, y=-0.24)
+    # The back (slope side): the entrance portal in honey timber with red-framed glass doors and the sign.
+    glazing(bk, -L / 2 + 4, -4, G + 0.6, T - 1.0, M, step=1.8)
+    for x in (6, 14): glazing(bk, x - 2, x + 2, G + 0.6, T - 1.0, M, step=2.0)
+    px = 6.0
+    bk.box((8.0, 2.4, G), (px, -1.2, G / 2), M["honey"]); bk.box((8.4, 3.2, 0.5), (px, -1.6, G + 0.2), CH)
+    RD = flat("door_red", "#9b3a30", 0.5, grain=0)
+    for x in (px - 2.2, px - 0.7, px + 0.8, px + 2.3):
+        bk.box((1.3, 0.1, 2.6), (x, -2.42, 1.3), RD); bk.box((1.0, 0.06, 2.3), (x, -2.48, 1.35), M["win"], kind="lit")
+    bk.box((5.0, 0.1, 0.5), (px, -2.5, G - 0.6), CH)
+    text("AERIE", 0.4, bk.p(px, -2.58, G - 0.6), M["cream"], rot=(PI / 2, 0, bk.a), extrude=0.01)
+    bk.box((7.0, 0.2, 1.0), (-10, -0.05, 2.0), ST)
+    # Ends: concrete stair tower at the east, glass at the west upper corner.
+    tx = L / 2 + 2.5
+    box((5.0, 9.0, T + 2.5), (tx, 2.0, (T + 2.5) / 2), CO)
+    for k in range(int((T + 2.5) / 0.3)): box((5.02, 9.02, 0.02), (tx, 2.0, 0.3 + k * 0.3), flat("formlines", "#95908a", 0.9, grain=0))
+    win(Frame((tx, 2.0 - 4.55, 0)), 0, G + 1.0, 0.8, 3.0, M, cols=1, fr="char", snow=False)
+    flat_roof(tx - 2.9, tx + 2.9, -3.0, 7.0, T + 2.7, M, t=0.4)
+    wf = Frame((-L / 2 - 0.05, 0, 0), -PI / 2)
+    glazing(wf, -D / 2 + 1, D / 2 - 1, G + 0.2, T - 0.3, M, transoms=(G + 2.8,))
+    for x in (-6, 0, 6): glazing(wf, x - 1.5, x + 1.5, 0.9, 3.4, M, y=-0.02)
+    # Roofs: the main roof on deep soffits, tilted up a little to the view; a raised clerestory over the hall.
+    flat_roof(-L / 2 - 2.5, L / 2 + 0.5, -D / 2 - 2.5, D / 2 + 1.5, T + 0.25, M, t=0.55, tilt=0.03)
+    box((22, 8, 1.6), (-8, -2, T + 1.2), CH); glazing(Frame((-8, -6.05, 0)), -10.5, 10.5, T + 0.6, T + 1.9, M, step=1.5)
+    flat_roof(-20.5, 4.5, -7.5, 3.5, T + 2.25, M, t=0.4)
+    # The covered upper deck on the -X end where the chondola unloads: steel columns, glulam pergola, glass rails.
+    dx0, dx1, dy0, dy1, dz = -L / 2 - 12.0, -L / 2, -D / 2 - 1.0, D / 2 - 3.0, G
+    box((dx1 - dx0, dy1 - dy0, 0.4), ((dx0 + dx1) / 2, (dy0 + dy1) / 2, dz - 0.2), CH)
+    box((dx1 - dx0 - 0.2, dy1 - dy0 - 0.2, 0.05), ((dx0 + dx1) / 2, (dy0 + dy1) / 2, dz + 0.02), M["deck"])
+    for x in (dx0 + 0.4, (dx0 + dx1) / 2):
+        for y in (dy0 + 0.4, dy1 - 0.4): box((0.35, 0.35, T + 0.8), (x, y, (T + 0.8) / 2), CH)
+    for k in range(9): box((dx1 - dx0 + 1.5, 0.3, 0.5), ((dx0 + dx1) / 2 - 0.5, dy0 + 0.6 + k * (dy1 - dy0 - 1.2) / 8, T + 1.0), HN)
+    for x in (dx0 + 0.4, (dx0 + dx1) / 2): box((0.4, dy1 - dy0 + 1.0, 0.6), (x, (dy0 + dy1) / 2, T + 0.6), CH)
+    for k in range(9): B.pad((dx1 - dx0 + 1.2, 0.36, 0.14), ((dx0 + dx1) / 2 - 0.5, dy0 + 0.6 + k * (dy1 - dy0 - 1.2) / 8, T + 1.32), SN)
+    GR = glass("rail_glass", "#b8c8d4", 0.3)
+    for (x0, y0, x1, y1) in ((dx0, dy0, dx1, dy0), (dx0, dy0, dx0, dy1), (dx0, dy1, dx1 - 6, dy1)):
+        Lr = math.hypot(x1 - x0, y1 - y0); a = math.atan2(y1 - y0, x1 - x0)
+        box((Lr, 0.04, 1.0), ((x0 + x1) / 2, (y0 + y1) / 2, dz + 0.55), GR, rot=(0, 0, a), kind="glass")
+        box((Lr, 0.1, 0.08), ((x0 + x1) / 2, (y0 + y1) / 2, dz + 1.08), CH, rot=(0, 0, a))
+        box((Lr, 0.2, 0.1), ((x0 + x1) / 2, (y0 + y1) / 2, dz + 1.16), SN, rot=(0, 0, a), bevel=0.04, seg=1, kind="snow")
+    for i, (x, y) in enumerate(((dx0 + 3, -8), (dx0 + 3, -2), (dx0 + 8, -8), (dx0 + 8, -2))): B.picnic((x, y, dz + 0.05), M["deck"], SN, rot=PI / 2)
+    # The ground terrace and racks on the view side; snow banked round the base.
+    for i, x in enumerate((-16, -9, -2, 5)): B.picnic((x, -D / 2 - 5.0, 0.0), M["deck"], SN, rot=0.04 * i)
+    for x in (-21, 10, 18): B.rack((x, -D / 2 - 8.0, 0), M["tim"], SN, rot=PI / 2)
+    B.drifts([(0, D / 2 + 3.6, L, 1.6), (L / 2 + 5.8, 0, 1.4, D), (-4, -D / 2 - 0.9, L - 10, 1.0)], M, h=0.7)
+    finalize("the_aerie", 2048, ao_dist=1.5)
+
+# ---------- Aspen Highlands: Merry-Go-Round ----------
+def merry_go_round():
+    """Merry-Go-Round, mid-mountain at Aspen Highlands where the main lifts meet: a long, low single-storey
+    restaurant under one broad, shallow-pitched standing-seam roof with deep eaves, a stone base, dark board
+    walls, glass all along the south front in timber frames, a lantern of clerestory windows along the ridge,
+    and a big south deck with tables, parasols and ski racks. Sources: aspensnowmass.com Merry-Go-Round
+    page; OSM way 151179417 (49 x 34 m, 435 seats). The roof's colour is not confirmed."""
+    new_col("merry_go_round"); M = mats(); B.anchor(M)
+    ST, TIM, SN, BR = M["st"], M["tim"], M["sn"], M["brown"]
+    L, D, F, T = 48.0, 26.0, 0.9, 5.2; R = D / 2 * 0.24
+    box((L + 0.4, D + 0.4, F), (0, 0, F / 2), ST, bevel=0.05)
+    box((L, D, T - F), (0, 0, (F + T) / 2), BR)
+    box((L + 0.3, D + 0.3, 0.12), (0, 0, F + 0.06), TIM)
+    fr = Frame((0, -D / 2 - 0.04, 0))
+    nb = 12
+    for k in range(nb + 1): fr.box((0.32, 0.32, T - F), (-L / 2 + k * L / nb, -0.15, (F + T) / 2), TIM)
+    for k in range(nb):
+        x0, x1 = -L / 2 + k * L / nb + 0.16, -L / 2 + (k + 1) * L / nb - 0.16
+        if k in (5, 6):
+            B.door(fr, (x0 + x1) / 2, F, 2.4, 2.5, M, double=True, glazed=True, y=-0.02)
+            glazing(fr, x0, x1, F + 2.8, T - 0.3, M, step=1.4, mull="tim")
+        else: glazing(fr, x0, x1, F + 0.2, T - 0.3, M, step=1.4, transoms=(F + 2.9,), mull="tim")
+    fr.box((L + 0.4, 0.4, 0.4), (0, -0.15, T - 0.1), TIM)
+    bk = Frame((0, D / 2 + 0.04, 0), PI)
+    for x in range(-20, 24, 6): win(bk, x, F + 1.1, 2.4, 1.6, M, cols=2)
+    B.door(bk, 1.0, F - 0.6, 1.2, 2.3, M)
+    for s in (-1, 1):
+        e = Frame((s * (L / 2 + 0.04), 0, 0), s * PI / 2)
+        for x in (-8, -3, 3, 8): win(e, x, F + 1.1, 2.2, 1.8, M, cols=2)
+        B.gable_wall(Frame((s * (L / 2 + 0.02), 0, 0), s * PI / 2), D, 0, T, R, BR, 0.2)
+    # The broad roof: standing seam on both slopes, deep eaves with exposed rafter tails, the ridge lantern.
+    over = 3.0; ZR = T + R
+    for s in (-1, 1):
+        ye = s * (D / 2 + over); seamed_roof(-L / 2 - 1.5, L / 2 + 1.5, ye, 0.0, T - over * R / (D / 2), ZR, M, mat="green", snow=0.6)
+        for k in range(nb * 2 + 1):
+            x = -L / 2 - 1.2 + k * (L + 2.4) / (nb * 2)
+            box((0.2, over + 0.6, 0.28), (x, s * (D / 2 + over / 2 - 0.2), T - 0.25 - over / 2 * R / (D / 2)), TIM, rot=(-s * math.atan2(R, D / 2), 0, 0))
+        box((L + 3.2, 0.2, 0.4), (0, s * (D / 2 + over), T - over * R / (D / 2) - 0.15), TIM)
+    lw, lh = 4.0, 1.5
+    box((L * 0.6, 2 * lw, lh), (0, 0, ZR + lh / 2 - 0.3), BR)
+    for s in (-1, 1):
+        f = Frame((0, s * lw, 0), 0 if s < 0 else PI)
+        glazing(f, -L * 0.3 + 0.5, L * 0.3 - 0.5, ZR - 0.1, ZR + lh - 0.5, M, step=1.6, mull="tim")
+    B.gable_roof(Frame((0, 0, 0), PI / 2), 2 * lw, -L * 0.3 - 0.6, L * 0.3 + 0.6, ZR + lh - 0.35, lw * 0.3, 0.8, M, thick=0.25, st=0.45, ice=0)
+    stack(-L / 2 + 6, 3.0, ZR - 1.6, 3.2, M, w=1.5, d=1.8)
+    # The south deck: framing, boards, timber railings with snow, tables, parasols, the ski racks below it.
+    dy0, dd = -D / 2 - 0.2, 12.0; dz = F
+    box((L + 6, dd, 0.35), (0, dy0 - dd / 2, dz - 0.2), TIM, bevel=0.03)
+    for i in range(int(dd / 0.3)): box((L + 5.8, 0.27, 0.06), (0, dy0 - 0.15 - i * 0.3, dz + 0.0), M["deck"], bevel=0.01)
+    ry = dy0 - dd + 0.1
+    for x0, x1 in ((-L / 2 - 3, -4), (4, L / 2 + 3)):
+        n = int((x1 - x0) / 1.8)
+        for k in range(n + 1): box((0.14, 0.14, 1.05), (x0 + k * (x1 - x0) / n, ry, dz + 0.52), TIM)
+        for z in (0.5, 1.0): box((x1 - x0, 0.14, 0.14), ((x0 + x1) / 2, ry, dz + z), TIM)
+        box((x1 - x0, 0.24, 0.12), ((x0 + x1) / 2, ry, dz + 1.11), SN, bevel=0.05, seg=1, kind="snow")
+    for s in (-1, 1):
+        x = s * (L / 2 + 3)
+        for z in (0.5, 1.0): box((0.14, dd, 0.14), (x, dy0 - dd / 2, dz + z), TIM)
+        box((0.24, dd, 0.12), (x, dy0 - dd / 2, dz + 1.11), SN, bevel=0.05, seg=1, kind="snow")
+    for i in range(3): box((7.6, 0.45, 0.2), (0, ry - 0.3 - i * 0.42, dz - 0.25 - i * 0.28), ST, bevel=0.03)
+    cols = ("#8e3b32", "#e6dac3", "#36506e", "#c9a65a")
+    for r_, y in enumerate((dy0 - 3.0, dy0 - 7.5)):
+        for k, x in enumerate(range(-20, 22, 6)):
+            B.picnic((x, y, dz + 0.04), M["deck"], SN, rot=0.05 * ((k + r_) % 3 - 1))
+            if (k + r_) % 2 == 0: B.parasol((x + 2.8, y, dz + 0.04), TIM, flat("cloth" + cols[k % 4], cols[k % 4], 0.9), SN)
+    for x in (-L / 2 - 6, L / 2 + 6): B.rack((x, dy0 - 4.0, 0), TIM, SN, rot=0.0)
+    for x in (-12, 12): B.rack((x, ry - 3.2, 0), TIM, SN, rot=PI / 2)
+    B.drifts([(0, D / 2 + 1.5, L + 4, 1.8), (-L / 2 - 1.2, 0, 1.6, D), (L / 2 + 1.2, 0, 1.6, D)], M, h=0.8)
+    finalize("merry_go_round", 2048, ao_dist=1.5)
+
+# ---------- Aspen Highlands: the Highland Bowl ridge ----------
+FLAG_COLS = ("#3b6aa8", "#efefe8", "#b8322c", "#3f7a4a", "#d9b23a")
+
+def flag_string(p0, p1, sag, M, n=None):
+    """A line of Tibetan prayer flags from p0 to p1 sagging by `sag`: blue, white, red, green, yellow."""
+    p0, p1 = Vector(p0), Vector(p1); L = (p1 - p0).length; n = n or int(L / 0.55)
+    pt = lambda t: p0.lerp(p1, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
+    pts = [pt(k / 12) for k in range(13)]
+    for a, b in zip(pts, pts[1:]): S.rod(a, b, 0.012, M["rope"], verts=4)
+    d = (p1 - p0).normalized(); ang = math.atan2(d.y, d.x)
+    for k in range(n):
+        t = (k + 0.5) / n; c = pt(t) - Vector((0, 0, 0.2)); col = FLAG_COLS[k % 5]
+        box((0.32, 0.01, 0.36), c, M["flag" + col], rot=(0.08 * math.sin(k * 1.7), 0, ang + 0.15 * math.sin(k)))
+
+def highland_peak():
+    """The top of Highland Bowl (12,392 ft): a stone cairn draped in prayer flags, flag lines strung out to
+    poles along the ridge, the summit sign. Origin at the cairn's foot. The ridge position needs DEM and
+    track data the bake does not have; the game places this at the summit."""
+    new_col("highland_peak"); M = mats(); B.anchor(M)
+    M["rope"] = flat("flag_rope", "#5b5248", 0.8, grain=0)
+    for c in FLAG_COLS: M["flag" + c] = flat("flag" + c, c, 0.9, grain=0.05)
+    ST, SN = M["st"], M["sn"]
+    for k, (r, h) in enumerate(((1.6, 0.6), (1.3, 0.55), (1.0, 0.5), (0.7, 0.45), (0.45, 0.35))):  # the cairn
+        z = sum(hh for _, hh in ((1.6, 0.6), (1.3, 0.55), (1.0, 0.5), (0.7, 0.45), (0.45, 0.35))[:k])
+        cyl(r, h, (0, 0, z + h / 2), ST, verts=9, r2=r * 0.85, rot=(0, 0, k * 0.7))
+    top = 2.45
+    cyl(0.05, 3.0, (0, 0, top + 1.4), M["tim"], verts=8)
+    poles = [(9.0, -2.0, 3.2), (-8.0, 1.5, 3.0), (2.5, 9.0, 2.8), (-1.5, -8.5, 2.6)]
+    for x, y, h in poles:
+        S.rod((x, y, 0), (x * 1.02, y * 1.02, h), 0.05, M["tim"], verts=8)
+        blob((1.0, 1.0, 0.5), (x, y, 0.1), SN, lumps=0.05)
+        flag_string((0, 0, top + 2.8), (x, y, h), 0.6, M)
+    flag_string(poles[0][:2] + (poles[0][2],), poles[2][:2] + (poles[2][2],), 0.8, M)
+    for k in range(10):  # flags wrapped round the cairn
+        a = k * 0.63; box((0.3, 0.01, 0.34), (1.05 * math.cos(a), 1.05 * math.sin(a), 0.9 + (k % 3) * 0.4), M["flag" + FLAG_COLS[k % 5]], rot=(0.15, 0, a + PI / 2))
+    # The summit sign on two posts.
+    f = Frame((2.6, -2.2, 0), 0.4)
+    for x in (-0.8, 0.8): f.cyl(0.07, 2.0, (x, 0, 1.0), M["tim"], verts=8)
+    f.box((2.2, 0.08, 0.8), (0, -0.06, 1.65), M["sign"], bevel=0.02)
+    text("HIGHLAND PEAK", 0.2, f.p(0, -0.11, 1.8), M["cream"], rot=(PI / 2, 0, f.a), extrude=0.01)
+    text("12,392 FT", 0.2, f.p(0, -0.11, 1.5), M["cream"], rot=(PI / 2, 0, f.a), extrude=0.01)
+    f.pad((2.2, 0.2, 0.1), (0, -0.06, 2.1), SN)
+    mound(2.6, 0.5, (0, 0, -0.05), SN)
+    finalize("highland_peak", 1024, ao_dist=1.0)
+
+def mound(r, h, at, mat): return B.mound(r, h, at, mat)
+
+def bootpack():
+    """A 12 m stretch of the Highland Bowl bootpack: a narrow trench kicked into the ridge snow, steps every
+    35 cm climbing 40 degrees, the walls pushed up either side. The way up is -Y; origin at the foot.
+    The game strings these along the ridge line."""
+    new_col("bootpack"); M = mats(); B.anchor(M); SN = M["sn"]
+    L, slope = 12.0, math.radians(38); n = int(L / 0.35)
+    for k in range(n):
+        y = -k * 0.35; z = -y * math.tan(slope)
+        box((0.6, 0.38, 0.16), (0.05 * math.sin(k * 0.9), y - 0.17, z + 0.05), SN, bevel=0.05, seg=1, kind="snow")
+    a = slope
+    for s in (-1, 1):
+        box((0.7, L / math.cos(a) + 0.4, 0.5), (s * 0.62, -L / 2, L / 2 * math.tan(a) + 0.12), SN, rot=(-a, 0, 0), bevel=0.2, seg=2, kind="snow")
+    box((2.4, L / math.cos(a) + 0.4, 0.2), (0, -L / 2, L / 2 * math.tan(a) - 0.12), SN, rot=(-a, 0, 0), bevel=0.08, seg=1, kind="snow")
+    for k in range(6): cyl(0.03, 0.9, (0.55 * (-1) ** k, -1.0 - k * 2.0, (1.0 + k * 2.0) * math.tan(a) + 0.4), M["tim"], verts=6)  # a few wands
+    finalize("bootpack", 512, ao_dist=0.5)
+
+# ---------- Arapahoe Basin / Mary Jane: dark lap-sided lodges ----------
+def _lap_lodge(name, tint, door_hex, sign):
+    """A high-alpine lodge of dark horizontal lap siding on a stone base under a gabled standing-seam roof,
+    a long deck, a sign board on the gable (A-Basin's Black Mountain Lodge and il Rifugio, the Steilhang Hut,
+    Winter Park's Lunch Rock). Sources: arapahoebasin.com dining pages via the research notes."""
+    new_col(name); M = mats(); B.anchor(M)
+    LAP = textured("lap_" + name, "old_planks_02", 1.3, tint, 0.85, "X")
+    ST, TIM, SN = M["st"], M["tim"], M["sn"]
+    W, D, F, T = 20.0, 12.0, 1.4, 5.0; R = D / 2 * 0.62
+    box((W + 0.3, D + 0.3, F), (0, 0, F / 2), ST, bevel=0.05)
+    box((W, D, T - F), (0, 0, (F + T) / 2), LAP)
+    for k in range(int((T - F) / 0.22)):  # the laps' shadow lines
+        z = F + 0.2 + k * 0.22
+        for y in (-D / 2 - 0.01, D / 2 + 0.01): box((W, 0.02, 0.025), (0, y, z), flat("lapline", "#1d2120", 0.8, grain=0))
+    for sx in (-1, 1):
+        for sy in (-1, 1): box((0.22, 0.22, T - F), (sx * W / 2, sy * D / 2, (F + T) / 2), TIM)
+    fr = Frame((0, -D / 2 - 0.02, 0))
+    for x in (-7.5, -4.5, 4.5, 7.5): win(fr, x, F + 0.6, 2.0, 2.2, M, cols=2, fr="tim")
+    DR = flat("door_" + name, door_hex, 0.5, grain=0)
+    fr.box((1.8, 0.1, 2.5), (0, -0.03, F + 1.25), DR); fr.box((0.9, 0.06, 0.7), (0, -0.09, F + 1.8), M["win"], kind="lit")
+    for s_ in (-1, 1): fr.box((0.16, 0.18, 2.6), (s_ * 1.0, -0.06, F + 1.3), TIM)
+    bk = Frame((0, D / 2 + 0.02, 0), PI)
+    for x in (-6, -2, 2, 6): win(bk, x, F + 0.8, 1.6, 1.6, M)
+    for s_ in (-1, 1):
+        e = Frame((s_ * (W / 2 + 0.02), 0, 0), s_ * PI / 2)
+        B.gable_wall(Frame((s_ * (W / 2), 0, 0), s_ * PI / 2), D, 0, T, R, LAP, 0.2)
+        for x in (-3, 3): win(e, x, F + 0.8, 1.6, 1.8, M)
+        win(e, 0, T + 0.6, 1.4, 1.3, M, cols=2, snow=False)
+    e = Frame((-W / 2 - 0.25, 0, 0), -PI / 2)
+    e.box((5.0, 0.12, 0.9), (0, -0.05, T + R * 0.62 + 0.55), M["sign"], bevel=0.03)
+    text(sign, 0.42, e.p(0, -0.13, T + R * 0.62 + 0.55), M["cream"], rot=(PI / 2, 0, e.a), extrude=0.01)
+    over = 0.9
+    for sgn in (-1, 1):
+        seamed_roof(-W / 2 - over, W / 2 + over, sgn * (D / 2 + over), 0.0, T - over * R / (D / 2), T + R, M, mat="char", snow=0.55)
+        box((W + 2 * over, 0.18, 0.3), (0, sgn * (D / 2 + over), T - over * R / (D / 2) - 0.1), TIM)
+    cyl(0.12, 1.6, (W / 4, 1.5, T + R - 1.5 * R / (D / 2) + 0.7), M["steel"], verts=10)
+    # The deck on the front, with a steel railing and tables.
+    dd = 5.0
+    box((W + 2, dd, 0.3), (0, -D / 2 - dd / 2, F - 0.15), TIM, bevel=0.03)
+    for i in range(int(dd / 0.3)): box((W + 1.8, 0.27, 0.05), (0, -D / 2 - 0.15 - i * 0.3, F + 0.02), M["deck"])
+    steel_rail((-W / 2 - 1, -D / 2 - dd), (W / 2 + 1, -D / 2 - dd), F, M)
+    for x in (-W / 2 - 1, W / 2 + 1): steel_rail((x, -D / 2 - dd), (x, -D / 2), F, M)
+    for i in range(4): box((0.4, 1.6, 0.2), (-W / 2 - 1.3 - i * 0.35, -D / 2 - 2.0, F - 0.2 - i * 0.33), ST, bevel=0.03)
+    for x in (-6, 0, 6): B.picnic((x, -D / 2 - 2.8, F + 0.05), M["deck"], SN)
+    B.rack((W / 2 + 3.0, -D / 2 - 2.0, 0), TIM, SN, rot=PI / 2)
+    B.drifts([(0, D / 2 + 0.8, W + 2, 1.5), (W / 2 + 0.8, 0, 1.4, D)], M, h=0.8)
+    finalize(name, 1024, ao_dist=1.2)
+
+def lap_lodge_green(): _lap_lodge("lap_lodge_green", (0.42, 0.55, 0.47), "#3f5a4a", "BLACK MOUNTAIN LODGE")
+def lap_lodge_charcoal(): _lap_lodge("lap_lodge_charcoal", (0.4, 0.4, 0.42), "#36506e", "STEILHANG HUT")
+
+MODELS = {"lap_lodge_green": lap_lodge_green, "lap_lodge_charcoal": lap_lodge_charcoal, "highland_peak": highland_peak, "bootpack": bootpack, "the_aerie": the_aerie, "merry_go_round": merry_go_round, "sundeck": sundeck, "silver_queen_top": silver_queen_top, "thunderhead_lodge": thunderhead_lodge, "sunspot_lodge": sunspot_lodge, "village_block_a": village_block_a, "village_block_b": village_block_b, "village_block_c": village_block_c}

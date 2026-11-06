@@ -617,7 +617,54 @@ def chondola_chair():
     try: _chair_detach("chondola_chair", 6)
     finally: globals()["kit"] = k0
 
-MODELS = {"chondola_cabin": chondola_cabin, "chondola_chair": chondola_chair, "gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
+def tower_lattice():
+    """A tall steel lattice gondola tower like the Silver Queen's: four angle legs tapering from 6 m square at
+    the foot to 1.6 m under the head, X-braced panels, rest platforms, a caged ladder; the head is a lattice
+    crossarm with a twin sheave train at each end. 40 m tall: the game scales it to the tower's height
+    (0.75 to 1.5 keeps the bracing looking right). Origin at the foot; ropes at x = ±3.0, z = 41.5."""
+    new_col("tower_lattice"); K = kit(); P, SN = flat("paint_lattice", "#7f868c", 0.5, 0.2, grain=0), K["SN"]
+    H, b0, b1, n = 40.0, 3.0, 0.8, 12
+    half = lambda z: b0 + (b1 - b0) * z / H
+    zs = [H * (k / n) ** 0.9 for k in range(n + 1)]  # panels a little shorter low down
+    def leg_pt(sx, sy, z): h = half(z); return (sx * h, sy * h, z)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            rod(leg_pt(sx, sy, 0), leg_pt(sx, sy, H), 0.11, P, verts=6, kind="paint")
+            box((0.9, 0.9, 0.6), (sx * b0, sy * b0, 0.3), flat("concrete", "#aca79f", 0.92, grain=0.12), bevel=0.04)
+    faces = [((-1, -1), (1, -1)), ((1, -1), (1, 1)), ((1, 1), (-1, 1)), ((-1, 1), (-1, -1))]
+    for za, zb in zip(zs, zs[1:]):
+        for (ax, ay), (bx, by) in faces:
+            rod(leg_pt(ax, ay, za), leg_pt(bx, by, zb), 0.05, P, verts=4, kind="paint")
+            rod(leg_pt(bx, by, za), leg_pt(ax, ay, zb), 0.05, P, verts=4, kind="paint")
+            rod(leg_pt(ax, ay, zb), leg_pt(bx, by, zb), 0.055, P, verts=4, kind="paint")
+    for z in (H * 0.35, H * 0.7):  # rest platforms on the ladder side
+        box((2 * half(z) + 0.4, 1.0, 0.05), (0, -half(z) - 0.4, z), K["TREAD"])
+        for x in (-half(z) - 0.2, half(z) + 0.2): rod((x, -half(z) - 0.9, z), (x, -half(z) - 0.9, z + 1.05), 0.025, K["GALV"])
+        rod((-half(z) - 0.2, -half(z) - 0.9, z + 1.05), (half(z) + 0.2, -half(z) - 0.9, z + 1.05), 0.025, K["GALV"])
+    for k in range(int(H / 0.9)):  # the ladder up the -Y face, hoops of its cage
+        z = 1.0 + k * 0.9; y = -half(z) - 0.25
+        if z > H: break
+        box((0.5, 0.03, 0.03), (0, y, z), K["GALV"])
+        if k % 2: ring((0, y - 0.3, z), 0.38, 0.015, K["GALV"], n=10)
+    for x in (-0.25, 0.25): rod((x, -half(0) - 0.25, 1.0), (x, -half(H) - 0.25, H), 0.025, K["GALV"], verts=6)
+    # The head: a lattice crossarm across the line, sheave trains at its ends.
+    xr, za = 3.0, H + 0.5
+    for y in (-0.45, 0.45):
+        for z in (za - 0.45, za + 0.25): rod((-xr - 0.5, y, z), (xr + 0.5, y, z), 0.07, P, verts=6, kind="paint")
+        for k in range(9):
+            x0 = -xr - 0.5 + k * (2 * xr + 1.0) / 8; x1 = -xr - 0.5 + (k + 1) * (2 * xr + 1.0) / 8
+            rod((x0, y, za - 0.45), (x1, y, za + 0.25), 0.04, P, verts=4, kind="paint")
+    for k in range(5): x = -xr - 0.5 + k * (2 * xr + 1.0) / 4; rod((x, -0.45, za + 0.25), (x, 0.45, za + 0.25), 0.04, P, verts=4, kind="paint")
+    for s in (-1, 1): rod((s * b1, 0, H), (s * (xr - 0.6), 0, za - 0.45), 0.07, P, verts=6, kind="paint")
+    rz = 0
+    for s in (-1, 1): rz = _train(K, s * xr, za + 0.62, n=8)
+    box((2 * xr + 1.2, 1.0, 0.04), (0, -0.95, za - 0.5), K["TREAD"])
+    rod((-xr - 0.6, -1.4, za + 0.5), (xr + 0.6, -1.4, za + 0.5), 0.025, K["GALV"])
+    for x in (-xr - 0.6, 0, xr + 0.6): rod((x, -1.4, za - 0.5), (x, -1.4, za + 0.5), 0.025, K["GALV"])
+    crust((2 * xr + 1.0, 0.16, 0.08), (0, -0.45, za + 0.33), SN); crust((2 * xr + 1.0, 0.16, 0.08), (0, 0.45, za + 0.33), SN)
+    finalize("tower_lattice", 1024, ao_dist=0.8)
+
+MODELS = {"tower_lattice": tower_lattice, "chondola_cabin": chondola_cabin, "chondola_chair": chondola_chair, "gondola": gondola, "gondola6": gondola6, "gondola10": gondola10, "cabriolet": cabriolet,
           "chair2": chair2, "chair3": chair3, "chair4_fixed": chair4_fixed,
           "chair4": chair4, "chair6": chair6, "chair6_bubble": chair6_bubble, "chair8_bubble": chair8_bubble,
           "tower_head": tower_head, "tower_shaft": tower_shaft, "tower_base": tower_base, "tower_head_surface": tower_head_surface,
