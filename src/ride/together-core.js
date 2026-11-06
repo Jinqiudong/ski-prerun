@@ -18,7 +18,7 @@ export function rideTrip(list, today, resort, member, wanted = null) {
 }
 
 // Messages on the channel ride:<trip>:<resort>:
-//   hi   { id, name, avatar, colors, stance, ask }   who I am (ask: please say who you are too)
+//   hi   { id, name, avatar, colors, rider, stance, ask }   who I am: rider is my look's (ask: please say who you are too)
 //   s    { id, ph, ... }                             where I am (below), about 4 a second while it changes
 //   m    { id, k }                                   a quick message (QUICK)
 //   bye  { id }                                      I left
@@ -60,7 +60,27 @@ export function cleanHi(p) {
   if (!p || typeof p !== "object" || !ID.test(p.id)) return null;
   const colors = {};
   if (p.colors && typeof p.colors === "object") for (const [k, v] of Object.entries(p.colors)) if (/^[a-z]{2,10}$/.test(k) && HEX.test(v)) colors[k] = v;
-  return { id: p.id, name: str(p.name, 20) || "", avatar: AV.test(p.avatar) ? p.avatar : "av_rider", colors, stance: p.stance === "goofy" ? "goofy" : "regular", ask: !!p.ask };
+  return { id: p.id, name: str(p.name, 20) || "", avatar: AV.test(p.avatar) ? p.avatar : "av_rider", colors, rider: cleanRider(p.rider), stance: p.stance === "goofy" ? "goofy" : "regular", ask: !!p.ask };
+}
+// The rider in someone's look (core/look.js): { ch } (a character: template, sizes, parts, colours by
+// material, board), { preset, colors } or { preset }; only the right kinds of value (the ride keeps the
+// sizes inside the template's ranges). null if it isn't one.
+export function cleanRider(r) {
+  if (!r || typeof r !== "object") return null;
+  if (r.ch && typeof r.ch === "object") {
+    const c = r.ch; if (c.tpl !== "F" && c.tpl !== "M") return null;
+    const ch = { tpl: c.tpl, parts: {}, colors: {} };
+    for (const [k, v] of Object.entries(c).slice(0, 40)) if (/^[a-z]{2,12}$/.test(k) && typeof v === "number" && Number.isFinite(v)) ch[k] = v;
+    if (c.parts && typeof c.parts === "object") for (const [k, v] of Object.entries(c.parts).slice(0, 20)) if (/^[a-z_]{2,16}$/.test(k)) ch.parts[k] = !!v;
+    if (c.colors && typeof c.colors === "object") for (const [k, v] of Object.entries(c.colors).slice(0, 40)) if (/^MAT_\w{1,30}$/.test(k) && HEX.test(v)) ch.colors[k] = v;
+    if (/^[A-D]$/.test(c.board)) ch.board = c.board;
+    if (c.glossyHelmet === true) ch.glossyHelmet = true;
+    return { ch };
+  }
+  const out = {};
+  if (/^[A-D]$/.test(r.preset)) out.preset = r.preset;
+  if (r.colors && typeof r.colors === "object") for (const [k, v] of Object.entries(r.colors).slice(0, 12)) if (/^[a-z]{2,10}$/.test(k) && HEX.test(v)) (out.colors ||= {})[k] = v;
+  return out.preset || out.colors ? out : null;
 }
 
 // Worth sending again? Moved, turned, changed phase, or quiet for `keep` ms (so friends know I'm here).

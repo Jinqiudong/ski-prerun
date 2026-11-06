@@ -9,7 +9,7 @@
 import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=29";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
 import { daysOf } from "../ride/roadbook.js?v=14";
-import { myLook, sameLook } from "../core/look.js?v=3";
+import { myLook, sameLook } from "../core/look.js?v=4";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };

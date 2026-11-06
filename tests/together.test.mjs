@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rideTrip, cleanState, cleanHi, changed, seatOrder, seatsOf, chairToJoin, whereOf, alongPts } from "../src/ride/together-core.js";
+import { rideTrip, cleanState, cleanHi, cleanRider, changed, seatOrder, seatsOf, chairToJoin, whereOf, alongPts } from "../src/ride/together-core.js";
 
 const trip = (o) => ({ id: "t-" + Math.random().toString(36).slice(2, 8), shared: true, from: "2026-11-05", to: "2026-11-08", srv: { members: [{ id: "mA" + "0".repeat(8) }] }, ...o });
 
@@ -25,7 +25,17 @@ test("cleanState keeps only what a state may hold", () => {
   assert.equal(s, null);
   assert.equal(cleanState({ id: "mB12345678", ph: "ski", x: 10, z: 5, h: 1, sp: 99 }).sp, 60);
   const h = cleanHi({ id: "mB12345678", name: "阿北", avatar: "<script>", colors: { jacket: "#112233", pants: "red" } });
-  assert.deepEqual([h.avatar, h.colors], ["av_rider", { jacket: "#112233" }]);
+  assert.deepEqual([h.avatar, h.colors, h.rider], ["av_rider", { jacket: "#112233" }, null]);
+});
+
+test("cleanRider keeps a look's rider: a character, or a preset and colours", () => {
+  const ch = { tpl: "M", height: 180, weight: 60, parts: { hood: 1, "<b>": true }, colors: { MAT_jacket: "#334455", MAT_pants: "url(x)", jacket: "#000000" }, board: "C", fav: "Anim_Ollie", evil: { a: 1 }, glossyHelmet: "yes" };
+  assert.deepEqual(cleanRider({ ch }), { ch: { tpl: "M", height: 180, weight: 60, parts: { hood: true }, colors: { MAT_jacket: "#334455" }, board: "C" } });
+  assert.equal(cleanRider({ ch: { tpl: "X" } }), null, "no such template");
+  assert.deepEqual(cleanRider({ preset: "B" }), { preset: "B" });
+  assert.deepEqual(cleanRider({ preset: "Z", colors: { jacket: "#aabbcc", boots: 3 } }), { colors: { jacket: "#aabbcc" } });
+  assert.equal(cleanRider("A"), null);
+  assert.deepEqual(cleanHi({ id: "mB12345678", rider: { preset: "D" } }).rider, { preset: "D" });
 });
 
 test("changed: moves and turns on the snow; a lift only once a second or on a jump", () => {

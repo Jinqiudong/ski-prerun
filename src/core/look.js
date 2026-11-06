@@ -3,7 +3,7 @@
 import { myAvatar } from "./i18n.js?v=29";
 import { canon } from "../start/season.js?v=3";
 
-// The four outfits and the character preset each is (rider-a.js OUTFITS[k].ch).
+// The four outfits and the character preset each is (boarder.js OUTFITS[k].ch).
 const OUTFIT_TPL = { o_pine: "A", o_night: "B", o_wine: "C", o_glacier: "D" };
 
 // My rider: { ch } (one I made), { preset, colors } (one saved before characters, on A), or { preset }.

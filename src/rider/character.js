@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
-export const CFG = await (await fetch("data/rider_templates.json?v=2")).json();
+export const CFG = await (await fetch("data/rider_templates.json?v=3")).json();
 export const PARTS = { hair: "ACC_Hair", hood: "ACC_Hood", vest: "ACC_Vest", visor: "ACC_Visor", stickers: "ACC_Stickers", hair_braid: "ACC_Hair_Braid" };
 // The parts toggled on and off (the hair is a style, below).
 export const PART_LABEL = { hood: "帽兜", vest: "马甲", visor: "帽檐", stickers: "贴纸", grid: "格纹" };
@@ -22,15 +22,22 @@ export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Ani
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 const files = {};
-const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=3`));
+const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=4`));
 // The ride's clips (stance, turns, lift, air, stops, falls, chairlift talk, radio) live in a second, skeleton-only file;
 // tracks bind by bone name, so they play on the template as they are. Only the ride needs them.
 const rides = {};
-const rideOf = (tpl) => (rides[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_ride.glb?v=1`));
+const rideOf = (tpl) => (rides[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_ride.glb?v=2`));
+// The light version for the ride (about 30k triangles drawn, 512 px textures): the same skeleton, names and
+// morphs, and no clips of its own. Each file loads once; every rider made from it shares its geometry and textures.
+const lods = {};
+const lodOf = (tpl) => (lods[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_lod.glb?v=1`));
+export const loadTemplate = (tpl, { lod = false } = {}) => Promise.all(lod ? [lodOf(tpl), rideOf(tpl)] : [fileOf(tpl)]);
 
 // A fresh copy of a template, ready to dress and pose: { root, tpl, set(ch), play(name), step(dt) }.
-export async function makeCharacter(tpl, { ride = false } = {}) {
-  const g = await fileOf(tpl), animations = ride ? [...g.animations, ...(await rideOf(tpl)).animations] : g.animations;
+// { ride }: the full template with the ride's clips too; { lod }: the light one with only the ride's clips.
+export async function makeCharacter(tpl, { ride = false, lod = false } = {}) {
+  const g = await (lod ? lodOf(tpl) : fileOf(tpl));
+  const animations = lod ? (await rideOf(tpl)).animations : ride ? [...g.animations, ...(await rideOf(tpl)).animations] : g.animations;
   const { clone } = await import("three/addons/utils/SkeletonUtils.js");
   const root = clone(g.scene);
   root.traverse((o) => {
@@ -47,7 +54,7 @@ export async function makeCharacter(tpl, { ride = false } = {}) {
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(animations.map((c) => [c.name, c]));
   let action = null, held = true, t = 0; const off = [], gaze = { y: 0, p: 0, ty: 0, tp: 0, wait: 3 };
   const C = {
-    root, tpl, bones, mixer,
+    root, tpl, bones, mixer, clips,
     set(ch) { applyCharacter(root, CFG.templates[tpl], ch); },
     // A pose holds its frame at 1 s; a trick plays on a loop. Crossfade between them.
     // { once, dur }: play it through once (stretched to dur seconds) and hold the last frame.
@@ -57,6 +64,7 @@ export async function makeCharacter(tpl, { ride = false } = {}) {
       a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, once ? 1 : Infinity); a.clampWhenFinished = once;
       a.timeScale = held ? 0 : dur ? clip.duration / dur : 1; if (held) a.time = 1;
       a.play(); if (action && action !== a) action.crossFadeTo(a, fade, false); action = a; C.current = name;
+      holdProp(C, name);
     },
     // The line a clip rides along (the character AI's method, rider_viewer.html): the clip plays in place,
     // and its board says where it goes: on the toe edge the path turns toward the toes, on the heel edge
@@ -99,6 +107,42 @@ export async function makeCharacter(tpl, { ride = false } = {}) {
   };
   return C;
 }
+
+// Things held in a hand while a clip plays, on the right palm's socket bone: the radio (assets/props/radio.glb)
+// and a photo card (10.5 × 7.5 cm) between the palms. Per template, three.js rotation (XYZ, radians) and position
+// (metres) in the socket's frame, fitted by the character AI at the held frame (radio: batch 4b; card: batch 4).
+export const PROPS = {
+  Radio_Talk_Stand: { prop: "radio", F: [[-0.7685, 1.9, -0.0231], [0.0603, 0.034, -0.0469]], M: [[-1.2481, 1.81, 0.4752], [0.0693, 0.0482, -0.0505]] },
+  Radio_Talk_Ride: { prop: "radio", F: [[0.0278, 1.8117, -0.8175], [0.0528, 0.034, -0.0459]], M: [[0.0859, 1.6483, -0.8761], [0.0584, 0.0482, -0.0508]] },
+  Pose_Hold_Photo: { prop: "card", F: [[0.3367, -0.2409, 3.1416], [0.0971, 0, -0.0239]], M: [[0.3367, -0.0772, 3.1416], [0.0997, 0, -0.0077]] },
+};
+let radioFile = null, cardMesh = null;
+function propMesh(kind) {
+  if (kind === "radio") return (radioFile ||= loader.loadAsync("assets/props/radio.glb?v=1")).then((g) => g.scene.clone());
+  if (!cardMesh) { // a little snapshot: a blue sky over a white ridge, on a paper card
+    const c = document.createElement("canvas"); c.width = 128; c.height = 92; const x = c.getContext("2d");
+    x.fillStyle = "#f6f1e6"; x.fillRect(0, 0, 128, 92);
+    const sky = x.createLinearGradient(0, 6, 0, 70); sky.addColorStop(0, "#7fa6cf"); sky.addColorStop(1, "#cfe0ee"); x.fillStyle = sky; x.fillRect(6, 6, 116, 64);
+    x.fillStyle = "#f8fafc"; x.beginPath(); x.moveTo(6, 70); x.lineTo(40, 30); x.lineTo(58, 46); x.lineTo(80, 22); x.lineTo(122, 64); x.lineTo(122, 70); x.fill();
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    cardMesh = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.075, 0.002), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+  }
+  return Promise.resolve(cardMesh.clone());
+}
+// Put the clip's prop (if it has one) in C's hand, or take it away. The prop's geometry and material are shared.
+export function holdProp(C, clip) {
+  const want = PROPS[clip], kind = want?.prop || null;
+  if ((C.prop?.userData.kind || null) === kind) { if (want) fitProp(C, want); return; }
+  C.prop?.removeFromParent(); C.prop = null; C.propAsk = null;
+  if (!kind) return;
+  const ask = (C.propAsk = {});
+  propMesh(kind).then((o) => {
+    if (C.propAsk !== ask) return; // something else was played meanwhile
+    o.userData.kind = kind; o.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+    C.prop = o; C.bones.Hand_R_Socket?.add(o); fitProp(C, want);
+  });
+}
+const fitProp = (C, want) => { const [r, p] = want[C.tpl] || want.F; C.prop?.rotation.set(...r); C.prop?.position.set(...p); };
 
 // Height (a uniform scale), the sliders (each to its _up or _down morph), parts on or off, and colours.
 let gridTex = null, gridEmis = null;

@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
 import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=14";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick } from "../rider/rider-a.js?v=16";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=1";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
@@ -21,7 +21,7 @@ import { rideSound } from "../audio/index.js?v=4";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=6";
 import { dropIn } from "../core/transition.js?v=4";
 import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=2";
+import { rideTogether } from "./together.js?v=3";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
@@ -1277,7 +1277,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (tree) {
       const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1;
       r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z);
-      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); snd?.bump(Math.min(1, r.speed / 10)); }
+      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); snd?.bump(Math.min(1, r.speed / 10)); fallBoarder(ctx.rider); }
       r.speed *= 0.15;
     }
     poseBoarder(ctx.rider, r);
@@ -1586,7 +1586,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       rider.position.lerpVectors(riderFrom, riderTo, u);
       rider.position.y += Math.sin(Math.min(1, t / 0.6) * Math.PI) * 0.15 * (1 - u);
       rider.rotation.set(0, yaw0, 0);
-      if (u < 0.25) sitBoarder(rider, 0, new THREE.Vector3(0, 0.6, -0.08)); else standBoarder(rider, (u - 0.25) / 0.75);
+      if (u < 0.25) sitBoarder(rider, 0); else standBoarder(rider, (u - 0.25) / 0.75);
       rider.position.y = Math.max(rider.position.y, T.heightAt(rider.position.x, rider.position.z));
       const c = rider.position.clone();
       camera.position.copy(camBehind(c, u * 2.4, 5.5, 2.2));
@@ -2084,8 +2084,9 @@ addEventListener("pointermove", (e) => {
 });
 addEventListener("pointerup", () => (drag = null));
 
-// Rider A: hips on the cushion (it stands on the chair at the feet's height, 0.59 m under the seat).
-const sit = (model, lookYaw) => sitBoarder(model, lookYaw, new THREE.Vector3(0, 0.6, -0.08));
+// Hips on the cushion (the rider stands on the chair at the feet's height, 0.595 m under the seat; boarder.js
+// SEAT); with a friend in the chair (talk: the side they sit on), turned to them, talking.
+const sit = (model, lookYaw, talk = 0) => sitBoarder(model, lookYaw, undefined, talk);
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
@@ -2125,7 +2126,7 @@ $("tabFab").onclick = () => {
 };
 // The top pill: tap it for the snow (and, skiing, the controls); tap again to fold it.
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxToggle").textContent = t(i.hidden ? "雪况 ⌄" : "收起 ⌃"); };
-const riderLoad = loadBoarder(); // start early, it is a few MB
+const riderLoad = loadBoarder(); // start early: the light template and its clips, about 1.8 MB
 async function main() {
   const [R, far, research, kitIndex] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT), loadKitIndex()]);
   const load = (f, srgb, tries = 0) => new Promise((res, rej) => new THREE.TextureLoader().load(`assets/tex/${f}`, (t) => {
@@ -2148,7 +2149,7 @@ async function main() {
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
   ctx.tex.cord.repeat.set(1, 1);
   build(ctx);
   $("status").remove();
@@ -2223,7 +2224,8 @@ async function main() {
     seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN }),
     setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort });
   window.__together = together;
-  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; } };
+  window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
+    rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel) }; // testing (the radio has no moment in the ride yet)
   // The lifts around this one, seen from the chair; then the buildings, signs and props.
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
   setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
@@ -2277,7 +2279,7 @@ async function main() {
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
     if (top.phase) { top.step(now, dt); together.frame(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
-    sit(ctx.rider, look.yaw);
+    sit(ctx.rider, look.yaw, together.mate());
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
     const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, SEAT.top + 0.86, -Math.sin(yaw) * MY_SEAT));

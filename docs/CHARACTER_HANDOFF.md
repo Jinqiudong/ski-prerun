@@ -1,6 +1,6 @@
 # What the game needs from the character pipeline
 
-The game today loads two templates (`assets/riders/tpl_f.glb`, `tpl_m.glb`) and `data/rider_templates.json` on the rider page (`src/rider/character.js`); the ride still uses the old `rider_a_v2.glb` (`src/rider/rider-a.js`) because the templates have no riding clips. The tuned female and male versions (Rider A, Rider B) should replace both.
+The game loads two templates (`assets/riders/tpl_f.glb`, `tpl_m.glb`) and `data/rider_templates.json` on the rider page (`src/rider/character.js`). Since batch 4 the ride draws the light versions (`tpl_*_lod.glb`) with the ride clips (`tpl_*_ride.glb`) through `src/rider/boarder.js`; the old `rider_a_v2.glb` is gone.
 
 ## 1. Files
 - `tpl_f.glb` and `tpl_m.glb`: glTF binary, Draco-compressed, ≤ 3.5 MB each, textures ≤ 2048 px.
@@ -131,3 +131,7 @@ In the ride the player and several friends are on screen at once on an iPhone. F
 - A `batch4/` folder next to `batch3/`, with the four GLBs plus the two `_lod` GLBs and a `HANDOFF_batch4.md`.
 - In the note, list what changed per clip.
 - Include a contact sheet of every changed clip, rendered with the game's `character.js` in **real colours, not silhouettes**. Show the front and the side at the held frame (poses) or at the key frames (the rest).
+
+### Received (batch 4, 4b, 4c)
+- In the game: `tpl_*.glb` from 4c, `tpl_*_ride.glb` from 4b, `tpl_*_lod.glb` and `rider_templates.json` from 4. The radio and card offsets are in `character.js` `PROPS` (and `docs/BACKLOG.md`).
+- The ride plays every ride clip except `Skid_Stop_Toe` (its skid is always on the heel edge). `Chairlift_Sit_Talk` is mirrored in code for a friend on the right. Screenshots: `docs/art/riders/batch4/`.

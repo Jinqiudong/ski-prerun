@@ -10,9 +10,10 @@ Work that waits on something else. Newest first.
 - Friends: "去找他" flies over the mountain to land beside them; "跟随" follows.
 
 ## Waiting on the character models (owner + character AI)
-- **Riding clips for the templates** so the ride can use the four friends instead of Rider A: chairlift sit (alone and side by side), look left/right on the chair, unload, skate, carve left/right, skid stop heel/toe, tuck, fall and get up, small air, the signature tricks.
-- **Walkie-talkie:** a pose with the radio raised to the mouth while riding (push-to-talk when friends are far apart), and the radio in the hand or on the jacket chest strap otherwise. The radio prop itself is a facilities/props model (Blender family `props`): a small handheld with antenna, PTT button, belt clip.
-- **Riding together on a chair:** two to six friends sitting down together, bar coming down, little gestures (point, wave, lean in to talk).
+- Done in batch 4: the ride draws the templates (`src/rider/boarder.js`: `tpl_*_lod.glb` with the `tpl_*_ride.glb` clips) for me and for friends riding together; the chair clips (sit, look, talk, point, wave), the radio pose, falls and getting up are in.
+- **Walkie-talkie:** the radio is ready in the ride (`talkBoarder`: `Radio_Talk_Ride` over the riding pose, the radio in the hand) but nothing calls it until push-to-talk exists (voice, below). Still wanted: the radio on the jacket chest strap otherwise.
+- **Riding together on a chair:** more than two friends in a chair all talk toward me; the bar coming down; `Chairlift_Point` plays only on a friend's "这条好滑" / "缆车站见".
+- More edge angle in `Heelside_Carve` / `Toeside_Carve` (the ride adds its own lean today; see the batch-4 note).
 - Hair and jacket-hem bones for wind; bigger body and fit morphs.
 
 ## Riding together (after shared trips) — part 1 built in `src/ride/together.js`; voice is part 2
@@ -22,4 +23,13 @@ Work that waits on something else. Newest first.
 - Listen together: one friend picks a track from the game's own licensed library and everyone hears it in sync (`src/audio` `play(trackId, atSeconds)`). Streaming services can't be rebroadcast inside the game.
 
 ## Radio prop (assets/props/radio.glb)
-Parent it to `Hand_R_Socket`. Starting offset, fitted on `Radio_Talk_Stand` (batch 3) at 1 s: `rotation.set(1.6232, -0.0524, -0.6807)`, `position.set(0.031, -0.003, 0.020)`. On tpl_m the radio sits about 1 cm lower; to raise it, use position (0.0376, -0.0034, 0.0273). Fit it again after batch 4 changes the radio clips.
+Parent it to `Hand_R_Socket`. Offsets per clip and template from the character AI (batch 4b, measured in three.js at the held frame, 1 s; they replace batch 3's and batch 4's), in `character.js` `PROPS`: `rotation.set(x, y, z)` (XYZ, radians), `position.set(x, y, z)` (metres), in the socket's frame. The antenna points straight up and the speaker toward the mouth; the bottom 5–6 cm sits inside the fist.
+
+| clip | template | rotation | position |
+|---|---|---|---|
+| `Radio_Talk_Stand` | F | (−0.7685, 1.9000, −0.0231) | (0.0603, 0.0340, −0.0469) |
+| `Radio_Talk_Stand` | M | (−1.2481, 1.8100, 0.4752) | (0.0693, 0.0482, −0.0505) |
+| `Radio_Talk_Ride` | F | (0.0278, 1.8117, −0.8175) | (0.0528, 0.0340, −0.0459) |
+| `Radio_Talk_Ride` | M | (0.0859, 1.6483, −0.8761) | (0.0584, 0.0482, −0.0508) |
+
+The photo card (`Pose_Hold_Photo`, 10.5 × 7.5 cm, between the palms) is on the same socket (batch 4): F rotation (0.3367, −0.2409, 3.1416), position (0.0971, 0, −0.0239); M rotation (0.3367, −0.0772, 3.1416), position (0.0997, 0, −0.0077).
