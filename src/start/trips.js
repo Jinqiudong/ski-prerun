@@ -6,9 +6,10 @@
 // sees the same plan, live. Each section has an owner; anyone else's edit becomes a proposal the owner
 // accepts or declines. A copy is kept on this phone for offline. Older trips stay on this phone until
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=23";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=24";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=1";
 import { daysOf } from "../ride/roadbook.js?v=12";
+import { myLook, sameLook } from "../core/look.js?v=1";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
@@ -548,8 +549,8 @@ export class Trips {
       const tr = toLocal(s), sig = JSON.stringify(s), changed = sig !== this.sigs[id] || this.trip?.srv?.offline; this.sigs[id] = sig;
       if (!isMember(tr)) { if (this.cur === id) { save(this.list.filter((x) => x.id !== id)); this.joinScreen(s); } return; }
       put(tr);
-      const meM = this.member(tr, memberId()); // my face follows the avatar I chose
-      if (meM && meM.look?.avatar !== myAvatar() && !this.lookSent) { this.lookSent = true; api.join(id, meM.name, meM.from || "", { ...(meM.look || {}), avatar: myAvatar() }).then(() => this.live?.ping()).catch(() => {}); }
+      const meM = this.member(tr, memberId()); // my face follows the avatar I chose, my rider the one I ride
+      if (meM && !sameLook(meM.look, myLook()) && !this.lookSent) { this.lookSent = true; api.join(id, meM.name, meM.from || "", { ...(meM.look || {}), ...myLook() }).then(() => this.live?.ping()).catch(() => {}); }
       if (this.cur !== id) return;
       if (changed) this.show(tr, false, true); else { this.trip = tr; this.liveText(tr); }
     })();
@@ -579,7 +580,7 @@ export class Trips {
     if (!tr.shared) {
       const name = myName() || (await this.askName()); if (!name) return;
       try {
-        const id = await api.create(name, (tr.people.find((p) => p.name === this.me) || tr.people[0])?.from || "", { avatar: myAvatar() }, toData(tr));
+        const id = await api.create(name, (tr.people.find((p) => p.name === this.me) || tr.people[0])?.from || "", myLook(), toData(tr));
         cur = toLocal(await api.get(id));
       } catch (e) { return this.toast(e.offline ? t("没连上网，有网了再分享") : t("没分享成：{x}", { x: e.message })); }
       save([...this.list.filter((x) => x.id !== tr.id), cur]); // the phone's copy becomes the shared one
@@ -741,7 +742,7 @@ export class Trips {
       const name = nameEl.value.trim(), code = from.value.trim().toUpperCase();
       if (!name) { nameEl.focus(); nameEl.placeholder = t("先填个名字"); return; }
       const btn = this.box.querySelector(".join"); btn.disabled = true;
-      try { await api.join(tr.id, name, /^[A-Z]{3}$/.test(code) ? code : "", { avatar: myAvatar() }); }
+      try { await api.join(tr.id, name, /^[A-Z]{3}$/.test(code) ? code : "", myLook()); }
       catch (err) { btn.disabled = false; return this.toast(err.offline ? t("没连上网，有网了再加入") : t("没加入成：{x}", { x: err.message })); }
       setMyName(name); this.joined = tr.id;
       const fresh = toLocal(await api.get(tr.id).catch(() => s)); put(fresh);
@@ -883,7 +884,7 @@ export class Trips {
           const me = meName.trim(); if (!me) { const f = this.box.querySelector(".f-me"); f.placeholder = t("先填个名字"); f.focus(); return; }
           setMyName(me); e.target.disabled = true;
           try {
-            const id = await api.create(me, meP().from, { avatar: myAvatar() }, toData(d)), fresh = toLocal(await api.get(id));
+            const id = await api.create(me, meP().from, myLook(), toData(d)), fresh = toLocal(await api.get(id));
             put(fresh); return this.show(fresh);
           } catch { this.toast(t("没连上网，先存在这台手机上；有网了点「＋ 邀请」分享")); }
         }
@@ -909,7 +910,7 @@ export class Trips {
     if (parts.length) await run(() => api.edit(tr.id, "dates", dp, parts.join("，")), "dates");
     if (!same(d.maybe, tr.maybe)) await run(() => api.edit(tr.id, "plan", { maybe: d.maybe }, `可能去的山改成 ${d.maybe.map((id) => this.name(id)).join("、") || "看雪定山"}`), "plan");
     const now = d.people.find((p) => p.me), was = tr.people.find((p) => p.me), look = this.member(tr, memberId())?.look || {};
-    if (now && was && now.from !== was.from) await run(() => api.join(tr.id, was.name, now.from, { ...look, avatar: myAvatar() }));
+    if (now && was && now.from !== was.from) await run(() => api.join(tr.id, was.name, now.from, { ...look, ...myLook() }));
     if (fail.length) this.toast(fail[0].offline ? t("没连上网，这次没改成") : t("没改成：{x}", { x: fail[0].message }));
     else if (sent.length) this.toast(t("已发给 {x} 确认", { x: [...new Set(sent)].join("、") }));
     else this.toast(t("改好了，大家都能看到"));

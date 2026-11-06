@@ -26,6 +26,13 @@ for (const f of files) {
     if (!existsSync(join(ROOT, r)) && !existsSync(join(ROOT, "models/facilities", m[1]))) bad.push(`${relative(ROOT, f)} → ${m[1]}`);
   }
 }
+// One module, one cache key: the same file imported with two ?v= numbers loads twice (two copies of its state).
+const keys = new Map();
+for (const f of files) for (const m of readFileSync(f, "utf8").matchAll(/["'`](\.{0,2}\/?[\w./-]+\.m?js)\?v=(\d+)["'`]/g)) {
+  const t = normalize(join(dirname(f), m[1])), k = keys.get(t);
+  if (k && k.v !== m[2]) bad.push(`${relative(ROOT, t)} is imported as ?v=${k.v} (${k.f}) and ?v=${m[2]} (${relative(ROOT, f)})`);
+  else if (!k) keys.set(t, { v: m[2], f: relative(ROOT, f) });
+}
 // Every module must at least parse.
 for (const f of files.filter((f) => /\.m?js$/.test(f))) {
   try { execFileSync(process.execPath, ["--check", f], { stdio: "pipe" }); }

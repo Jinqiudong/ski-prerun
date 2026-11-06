@@ -1,125 +1,180 @@
-// Snow memory: every pre-run day and every trip you've been on becomes a card (that mountain in
-// watercolour, the day's words, its stamp), stacked into a season you can flip back through: swipe up to
-// send the front card to the back. Tap one for the day: the painting, its stickers, the way you went.
-import { t, EN_ON } from "../core/i18n.js?v=23";
-import { daysOf } from "../ride/roadbook.js?v=12";
+// Snow memory, by ski season (November to April): the season at a glance (trips, days, mountains, runs,
+// and who you skied with, by their faces), then one group photo per ski day: that mountain's watercolour
+// behind, the people who skied it in front as their own riders, and from a trip's second day on, the day
+// before held up in a frame. Each photo is rendered once (photo.js), kept in IndexedDB, and only made when
+// it scrolls near; tap one to see it large and save or share it.
+import { t, EN_ON, myAvatar } from "../core/i18n.js?v=24";
+import { memberId } from "./shared-trip.js?v=1";
+import { myRiderLook } from "../core/look.js?v=1";
+import { buildSeasons, seasonOf, seasonName, seasonShort, photoKey, ymd } from "./season.js?v=1";
 
-const C = { ink: "#22344d", red: "#b6463b", card: "#f8f1e4", mute: "#8a8278" };
+const PHOTO_V = 2; // photo.js VERSION (kept here so the cache is read without loading three.js)
+const C = { ink: "#22344d", navy: "#262f4c", red: "#b6463b", card: "#fdfbf6", mute: "#8a8278" };
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const paint = (id) => `assets/wc/${id}.jpg?v=1`;
-const when = (ms) => { const d = new Date(ms); return EN_ON ? `${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}` : `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`; };
-const dayOf = (ms) => { const d = new Date(ms); return EN_ON ? `${MON[d.getMonth()]} ${d.getDate()}` : `${d.getMonth() + 1} · ${d.getDate()}`; };
-const monthOf = (ms) => { const d = new Date(ms); return `${MON[d.getMonth()]} ${d.getFullYear()}`; };
+const paint = (id) => (id ? `assets/wc/${id}.jpg?v=1` : "assets/wc/colorado.jpg?v=1");
+const dateOf = (d) => { const x = new Date(d + "T00:00:00"); return `${MON[x.getMonth()]} ${x.getDate()}`; };
+const ICON = (n, cls = "") => `<img class="${cls}" src="assets/icons/${n}.png?v=1" alt="">`;
 
 const CSS = `
-.mem { margin: 0 -14px 18px; padding: 18px 0 20px; background: linear-gradient(#3d4466, #2f3552); color: #f1ebe0; text-align: center; overflow: hidden; }
-.mem .k { font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: #c9c2d8; }
-.mem .h { font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: #f6efe3; margin-top: 4px; }
-.mem .s { font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: #b8b2c9; } .mem .s i { font-style: normal; color: #8a86a3; margin: 0 6px; }
-.mem .stack { position: relative; height: 440px; margin: 14px auto 0; width: 300px; perspective: 900px; touch-action: pan-x; user-select: none; -webkit-user-select: none; }
-.mem .mcard { position: absolute; left: 0; right: 0; top: 0; background: ${C.card}; border-radius: 14px; box-shadow: 0 10px 24px rgba(0,0,0,.35); overflow: hidden; text-align: left; transform-origin: 50% 0; transition: transform .5s cubic-bezier(.3,.7,.3,1), opacity .35s, filter .5s; cursor: pointer; }
-.mem .mcard .top { display: flex; justify-content: space-between; padding: 10px 14px 4px; font: 12px "Cormorant Garamond", serif; color: #7b746b; letter-spacing: .04em; }
-.mem .mcard .top b { font-weight: 500; color: ${C.red}; white-space: nowrap; margin-left: 8px; flex: none; } .mem .mcard .top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mem .mcard .pic { position: relative; height: 280px; margin: 4px 14px 0; background: center/cover; }
-.mem .mcard .foot { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 16px 14px; }
-.mem .mcard .foot b { font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; color: #33302c; } .mem .mcard .foot small { font: 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #7b746b; }
-.mem .mcard .seal { position: absolute; right: 10px; top: 10px; width: 70px; height: 70px; transform: rotate(10deg); filter: drop-shadow(0 3px 4px rgba(0,0,0,.25)); }
-.mem .hint { font: 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #b8b2c9; margin-top: 8px; }
-.mem .empty { font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #d8d2e4; padding: 30px 30px 10px; line-height: 1.5; }
-.memday { position: fixed; inset: 0; z-index: 30; overflow-y: auto; background: #f6efe3; padding: calc(18px + env(safe-area-inset-top)) 18px 40px; color: #3d3a36; }
-.memday .x { position: fixed; right: 14px; top: calc(12px + env(safe-area-inset-top)); width: 38px; height: 38px; border-radius: 50%; font-size: 20px; color: ${C.ink}; background: #fffdf8; border: 1px solid #cbbfa9; z-index: 2; }
-.memday .k { font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: ${C.mute}; }
-.memday .h { font: 600 30px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.ink}; margin: 4px 0 2px; }
-.memday .s { font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.mute}; }
-.memday .mrow { display: flex; gap: 12px; margin-top: 16px; align-items: flex-start; }
-.memday .frame { flex: 0 0 210px; background: #fdfbf6; padding: 12px 12px 8px; box-shadow: 0 8px 18px rgba(90,70,40,.16); }
-.memday .frame .pic { height: 230px; background: center/cover; }
-.memday .frame .cap { text-align: center; font: 14px "Cormorant Garamond", serif; color: #7b746b; margin-top: 8px; line-height: 1.3; }
-.memday .stk { position: relative; flex: 1; min-height: 260px; }
-.memday .stk > * { position: absolute; filter: drop-shadow(0 3px 4px rgba(90,70,40,.22)); }
-.memday .sec { display: flex; align-items: center; gap: 10px; margin: 22px 0 8px; font: 18px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; }
-.memday .sec::after { content: ""; flex: 1; height: 1px; background: #d9cdb9; }
-.memday .way { font: 17px/1.55 "Cormorant Garamond", "Noto Serif SC", serif; color: #5b554e; }
-.memday .acts { display: flex; gap: 8px; margin-top: 18px; }
-.memday .acts button { flex: 1; font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #fffdf8; background: ${C.ink}; border: 0; border-radius: 999px; padding: 8px; }
-.memday .acts button.o { color: ${C.ink}; background: #fdfbf6; border: 1px solid #cbbfa9; }
+.mem2 { margin: 0 -14px 18px; }
+.mem2 .mh { background: ${C.navy}; color: #f1ebe0; text-align: center; margin-top: calc(-1 * env(safe-area-inset-top)); padding: calc(26px + env(safe-area-inset-top)) 18px 22px; border-radius: 0 0 22px 22px; }
+.mem2 .k { font: 500 11px Oswald, sans-serif; letter-spacing: .32em; color: #c9c4d6; }
+.mem2 .h { font: 600 34px/1.15 "Cormorant Garamond", "Noto Serif SC", serif; color: #f6efe3; margin-top: 6px; }
+.mem2 .chips { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.mem2 .chips button { font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: #e9e3d6; background: transparent; border: 1px solid rgba(233,227,214,.45); border-radius: 999px; padding: 3px 13px; cursor: pointer; }
+.mem2 .chips button.on { background: #f6efe3; color: ${C.ink}; border-color: #f6efe3; }
+.mem2 .nums { display: flex; justify-content: center; gap: 22px; margin-top: 14px; }
+.mem2 .nums div { display: grid; justify-items: center; }
+.mem2 .nums b { font: 600 30px/1.1 "Cormorant Garamond", serif; color: #f6efe3; }
+.mem2 .nums small { font: 12px "Noto Serif SC", serif; color: #c9c4d6; }
+.mem2 .crew { display: flex; justify-content: center; margin-top: 14px; }
+.mem2 .crew img { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #f6efe3; background: #e6ebee; margin-left: -8px; box-shadow: 0 3px 6px rgba(0,0,0,.25); }
+.mem2 .crew img:first-child { margin-left: 0; }
+.mem2 .with { font: 14px "Noto Serif SC", serif; color: #d9d3e2; margin-top: 6px; }
+.mem2 .photos { padding: 18px 16px 4px; display: grid; gap: 22px; }
+.mem2 .ph { background: ${C.card}; padding: 10px 10px 12px; box-shadow: 0 8px 18px rgba(90,70,40,.18); cursor: pointer; transform: rotate(var(--tilt, 0deg)); }
+.mem2 .ph .img { position: relative; aspect-ratio: 900 / 700; background: #e7e5e0 center/cover; overflow: hidden; }
+.mem2 .ph .img .wash { position: absolute; inset: 0; background: center/cover; opacity: .45; }
+.mem2 .ph .img .dev { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: #6f7684; }
+.mem2 .ph .img img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .5s; }
+.mem2 .ph .img img.in { opacity: 1; }
+.mem2 .ph .cap { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 10px 4px 0; }
+.mem2 .ph .cap b { font: 600 22px/1.2 "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.ink}; }
+.mem2 .ph .cap small { font: 15px "Cormorant Garamond", serif; color: ${C.mute}; white-space: nowrap; }
+.mem2 .ph .line { font: italic 14px "Cormorant Garamond", "Noto Serif SC", serif; color: #7b746b; margin: 2px 4px 0; }
+.mem2 .empty { font: 16px/1.6 "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; padding: 26px 22px 6px; text-align: center; }
+.memshot { position: fixed; inset: 0; z-index: 30; overflow-y: auto; background: #f6efe3; padding: calc(18px + env(safe-area-inset-top)) 16px 40px; color: #3d3a36; }
+.memshot .x { position: fixed; right: 14px; top: calc(12px + env(safe-area-inset-top)); width: 38px; height: 38px; border-radius: 50%; font-size: 20px; color: ${C.ink}; background: #fffdf8; border: 1px solid #cbbfa9; z-index: 2; }
+.memshot .k { font: 500 10px Oswald, sans-serif; letter-spacing: .3em; color: ${C.mute}; }
+.memshot .frame { background: ${C.card}; padding: 12px 12px 16px; margin-top: 14px; box-shadow: 0 10px 22px rgba(90,70,40,.2); }
+.memshot .frame img { width: 100%; display: block; aspect-ratio: 900 / 700; background: #e7e5e0; }
+.memshot .frame b { display: block; font: 600 26px/1.2 "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.ink}; margin-top: 10px; }
+.memshot .frame small { font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: ${C.mute}; }
+.memshot .who { font: 15px "Noto Serif SC", serif; color: #6f675e; margin-top: 6px; }
+.memshot .acts { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.memshot .acts button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #fffdf8; background: ${C.ink}; border: 0; border-radius: 999px; padding: 8px 12px; white-space: nowrap; }
+.memshot .acts button img { width: 22px; height: 22px; }
+.memshot .acts button.o { color: ${C.ink}; background: #fdfbf6; border: 1px solid #cbbfa9; }
 `;
 let styled = false;
 const style = () => { if (styled) return; styled = true; const s = document.createElement("style"); s.textContent = CSS; document.head.append(s); };
-const seal = (label, cls = "seal") => `<svg class="${cls}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fbf7ef"/><circle cx="50" cy="50" r="40" fill="none" stroke="${C.red}" stroke-width="2.4"/><circle cx="50" cy="50" r="33" fill="none" stroke="${C.red}" stroke-width="1" stroke-dasharray="2 3"/><path d="M30 60 L42 44 L50 52 L58 40 L72 60Z" fill="${C.red}" opacity=".85"/><text x="50" y="76" text-anchor="middle" font-family="Cormorant Garamond" font-size="11" font-weight="600" fill="${C.red}">${esc(label)}</text><text x="50" y="32" text-anchor="middle" font-family="Oswald" font-size="7" letter-spacing="1.5" fill="${C.red}">PRE-RUN</text></svg>`;
-const stub = (text) => `<svg viewBox="0 0 120 60" style="width:118px"><rect x="4" y="6" width="112" height="48" rx="4" fill="#5f6f7c" stroke="#fffdf8" stroke-width="4"/><circle cx="96" cy="30" r="5" fill="#f6efe3"/><text x="12" y="26" font-family="Oswald" font-size="9" letter-spacing="2" fill="#fffdf8">LIFT TICKET</text><text x="12" y="44" font-family="Cormorant Garamond" font-size="15" font-weight="600" fill="#fffdf8">${esc(text)}</text></svg>`;
 
-// The cards: one per pre-run day (from the roadbook) and one per trip that's over.
-function cards(resorts) {
-  const name = (id) => resorts.find((r) => r.id === id)?.name.replace(/ Mountain$| Basin$/, "") || id, out = [];
-  for (const r of resorts) for (const day of daysOf(r.id)) {
-    const runs = [], lifts = [];
-    for (const s of day.steps) { if (s.k === "route") for (const g of s.segs) if (!runs.includes(g.n)) runs.push(g.n); if (s.k === "lift") lifts.push(s.name); }
-    out.push({ kind: "prerun", id: r.id, t: day.t0, title: name(r.id), words: (runs.length ? runs : lifts).slice(0, 3).join(" · ") || name(r.id), runs, lifts, day,
-      stat: EN_ON ? `${runs.length} runs · ${lifts.length} lifts` : `${runs.length} 条雪道 · ${lifts.length} 趟缆车` });
-  }
-  let trips = []; try { trips = JSON.parse(localStorage.getItem("prerunTrips") || "[]"); } catch { /* none */ }
-  const now = new Date().toISOString().slice(0, 10);
-  for (const tr of trips) if (tr.to < now) {
-    const ids = (tr.maybe && tr.maybe.length ? tr.maybe : [...new Set((tr.days || []).map((d) => d.resort))]).filter((id) => resorts.some((r) => r.id === id));
-    if (!ids.length) continue;
-    out.push({ kind: "trip", id: ids[0], t: new Date(tr.from + "T09:00:00").getTime(), title: tr.name, words: ids.map(name).join(" · "), stat: EN_ON ? "a trip" : "一次旅行", trip: tr });
-  }
-  return out.sort((a, b) => b.t - a.t);
+// ---- The photo cache: IndexedDB (a JPEG blob per photo key), and the blobs' URLs for this visit.
+const urls = new Map(), blobs = new Map();
+let dbp = null;
+const db = () => (dbp ||= new Promise((ok) => {
+  try { const r = indexedDB.open("prerunMemory", 1); r.onupgradeneeded = () => r.result.createObjectStore("photos"); r.onsuccess = () => { ok(r.result); prune(r.result); }; r.onerror = () => ok(null); } catch { ok(null); }
+}));
+// Photos made by an older version are let go.
+function prune(d) { try { const s = d.transaction("photos", "readwrite").objectStore("photos"), q = s.getAllKeys(); q.onsuccess = () => { for (const k of q.result) if (!String(k).startsWith(`p${PHOTO_V}:`)) s.delete(k); }; } catch { /* fine */ } }
+async function idb(mode, fn) {
+  const d = await db(); if (!d) return null;
+  return new Promise((ok) => { try { const q = fn(d.transaction("photos", mode).objectStore("photos")); q.onsuccess = () => ok(q.result ?? null); q.onerror = () => ok(null); } catch { ok(null); } });
+}
+const make = (d) => async () => (await import("./photo.js?v=1")).renderPhoto({ resort: d.resort, held: d.held || undefined, people: d.people, holder: d.holder });
+const pending = new Map();
+const photoURL = (d) => { const k = photoKey(d, PHOTO_V); if (!pending.has(k)) pending.set(k, fetchPhoto(d, k).finally(() => pending.delete(k))); return pending.get(k); };
+async function fetchPhoto(d, k) {
+  if (urls.has(k)) return urls.get(k);
+  let b = await idb("readonly", (s) => s.get(k));
+  if (!(b instanceof Blob)) { b = await make(d)(); idb("readwrite", (s) => s.put(b, k)); }
+  blobs.set(k, b);
+  const u = URL.createObjectURL(b); urls.set(k, u); return u;
 }
 
+// ---- The words of a day.
+function words(d, S, name) {
+  const at = d.resort ? name(d.resort) : null, date = dateOf(d.date);
+  const title = d.trip ? (at ? `${at} · ${t("第 {n} 天", { n: d.n })}` : t("还没定雪场的那天")) : `${at} · ${t("预滑")}`;
+  let line;
+  if (d.held) line = d.held.resort ? t("手里是前一天的 {x}", { x: name(d.held.resort) }) : t("手里是前一天的雪山");
+  else if (d.trip && S.days[S.days.length - 1] === d) line = t("开板第一天");
+  else if (d.trip) line = t("「{x}」的第一天", { x: d.trip.name || t("行程") });
+  else line = d.runs.length ? d.runs.slice(0, 3).join(" · ") : t("一个人的预滑");
+  if (d.trip && !d.resort && !d.held) line = d.trip.name ? `「${d.trip.name}」 · ${t("第 {n} 天", { n: d.n })}` : t("第 {n} 天", { n: d.n });
+  return { title, date, line };
+}
+const withLine = (names) => {
+  const shown = names.slice(0, 4), more = names.length - shown.length;
+  if (EN_ON) return more ? `with ${shown.join(", ")} and ${more} more` : `with ${shown.slice(0, -1).join(", ")}${shown.length > 1 ? " and " : ""}${shown[shown.length - 1]}`;
+  return `和 ${shown.join("、")}${more ? ` 等 ${names.length} 人` : ""} 一起滑`;
+};
+
+// ---- The page.
+let live = null; // this render's observer, let go on the next
 export function renderMemory(box, { resorts, openBook }) {
   style();
-  const list = cards(resorts);
-  const days = new Set(list.map((c) => new Date(c.t).toDateString())).size, mts = new Set(list.map((c) => c.id)).size, trips = list.filter((c) => c.kind === "trip").length;
-  box.className = "mem";
-  box.innerHTML = `<div class="k">SNOW MEMORY</div><div class="h">${t("我的雪季")}</div>
-    <div class="s">${EN_ON ? `${list.length} cards<i>·</i>${days} days<i>·</i>${mts} mountains` : `${list.length} 张卡<i>·</i>${days} 天<i>·</i>${mts} 座山`}${trips ? `<i>·</i>${EN_ON ? `${trips} trips` : `${trips} 次旅行`}` : ""}</div>
-    ${list.length ? `<div class="stack">${list.map((c, k) => `<div class="mcard" data-k="${k}"><div class="top"><span>${esc(c.words)}</span><b>${monthOf(c.t)}</b></div>
-      <div class="pic" style="background-image:url(${paint(c.id)})">${c.kind === "prerun" ? seal(dayOf(c.t)) : ""}</div>
-      <div class="foot"><b>${esc(c.title)}</b><small>${esc(c.stat)}</small></div></div>`).join("")}</div>
-      <div class="hint">${list.length > 1 ? `↑ ${t("向上翻，一张一张往回看")}` : ""}</div>` : `<div class="empty">${t("还没有记忆。去预滑或者去滑一趟，就会在这里留下一张卡。")}</div>`}`;
-  if (!list.length) return;
-  const els = [...box.querySelectorAll(".mcard")], n = els.length;
-  let order = els.map((_, k) => k);
-  // The front card down at the bottom, the older ones rising behind it, tipped back.
-  const lay = () => order.forEach((k, pos) => {
-    const c = els[k], back = Math.min(pos, 4);
-    c.style.zIndex = 20 - pos;
-    c.style.opacity = pos > 4 ? "0" : "1";
-    c.style.filter = pos ? `brightness(${1 - back * 0.08})` : "none";
-    c.style.transform = pos ? `translateY(${100 - back * 34}px) translateZ(${-back * 30}px) rotateX(${22 + back * 4}deg) scale(${1 - back * 0.03})` : "translateY(100px)";
-  });
-  lay();
-  const stack = box.querySelector(".stack");
-  let y0 = null, moved = false;
-  stack.onpointerdown = (e) => { y0 = e.clientY; moved = false; };
-  stack.onpointermove = (e) => { if (y0 != null && Math.abs(e.clientY - y0) > 10) moved = true; };
-  stack.onpointerup = (e) => {
-    if (y0 == null) return; const dy = e.clientY - y0; y0 = null;
-    if (!moved) { const k = order[0]; openDay(list[k], openBook); return; }
-    if (n < 2 || Math.abs(dy) < 30) return;
-    const front = els[order[0]];
-    if (dy < 0) { front.style.transform = "translateY(-60px) rotateX(70deg)"; front.style.opacity = "0"; setTimeout(() => { order = [...order.slice(1), order[0]]; lay(); }, 280); }
-    else { order = [order[n - 1], ...order.slice(0, n - 1)]; lay(); }
+  const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || d); } catch { return JSON.parse(d); } };
+  const byId = Object.fromEntries(resorts.map((r) => [r.id, r]));
+  const name = (id) => byId[id]?.name.replace(/ Mountain$| Basin$/, "") || id;
+  const today = ymd(new Date()), now = seasonOf(today);
+  const seasons = buildSeasons({ trips: read("prerunTrips", "[]"), book: read("prerunBook", "{}"), valid: (id) => !!byId[id], today,
+    me: { id: memberId(), name: "我", avatar: myAvatar(), rider: myRiderLook() } });
+  if (!seasons.some((s) => s.season === now)) seasons.push({ season: now, days: [], friends: [], stats: { trips: 0, days: 0, mountains: 0, runs: 0 } });
+  seasons.sort((a, b) => b.season - a.season);
+  let cur = (seasons.find((s) => s.season === now && s.days.length) || seasons.find((s) => s.days.length) || seasons[0]).season;
+  box.className = "mem2";
+  const draw = () => {
+    live?.stop();
+    const S = seasons.find((s) => s.season === cur), st = S.stats, names = S.friends.map((p) => p.name).filter(Boolean);
+    box.innerHTML = `<div class="mh"><div class="k">SNOW MEMORY</div><div class="h">${seasonName(S.season)} ${t("雪季")}</div>
+      ${seasons.length > 1 ? `<div class="chips">${seasons.map((s) => `<button data-s="${s.season}" class="${s.season === cur ? "on" : ""}">${seasonShort(s.season)}</button>`).join("")}</div>` : ""}
+      <div class="nums">${[[st.trips, "趟行程"], [st.days, "天"], [st.mountains, "座山"], [st.runs, "条雪道"]].map(([n, w]) => `<div><b>${n}</b><small>${t(w)}</small></div>`).join("")}</div>
+      ${S.friends.length ? `<div class="crew">${S.friends.slice(0, 8).map((p) => ICON(p.avatar)).join("")}</div><div class="with" translate="no">${esc(withLine(names))}</div>` : S.days.length ? `<div class="with">${t("一个人的雪季")}</div>` : ""}</div>
+      ${S.days.length ? `<div class="photos">${S.days.map((d, i) => { const w = words(d, S, name); return `<figure class="ph" data-i="${i}" style="--tilt:${[-0.8, 0.7, -0.4, 0.9][i % 4]}deg;margin:0">
+        <div class="img"><div class="wash" style="background-image:url(${paint(d.resort)})"></div><div class="dev">${t("冲洗中…")}</div></div>
+        <div class="cap"><b translate="no">${esc(w.title)}</b><small>${w.date}</small></div><div class="line" translate="no">${esc(w.line)}</div></figure>`; }).join("")}</div>`
+        : `<div class="empty">${t(S.season === now ? "这个雪季还没开板。去预滑一趟，或者和朋友去滑，每天都会在这里留一张合照。" : "这个雪季没有记录。")}</div>`}`;
+    for (const b of box.querySelectorAll(".chips button")) b.onclick = () => { cur = +b.dataset.s; draw(); };
+    const figs = [...box.querySelectorAll(".ph")];
+    for (const f of figs) f.onclick = () => openShot(S.days[+f.dataset.i], S, name, openBook);
+    live = develop(box, figs, S.days);
   };
+  draw();
 }
 
-// One day, as a page of the journal: the painting with its caption, the day's stickers, the way you went.
-function openDay(c, openBook) {
-  const el = document.createElement("div");
-  el.className = "memday";
-  const way = c.kind === "prerun" ? c.day.steps.map((s) => (s.k === "base" ? s.name : s.k === "lift" ? `🚡 ${s.name}` : s.k === "route" ? s.segs.map((g) => g.n).join(" → ") : s.k === "arrive" ? `📍 ${s.title}` : "")).filter(Boolean).join(" → ") : c.words;
-  el.innerHTML = `<button class="x" aria-label="close">×</button><div class="k">SNOW MEMORY · ${t("雪的记忆")}</div><div class="h">${esc(c.title)}</div><div class="s">${when(c.t)}${c.kind === "prerun" ? ` · ${t("预滑")}` : ""}</div>
-    <div class="mrow"><div class="frame"><div class="pic" style="background-image:url(${paint(c.id)})"></div><div style="text-align:center;color:#c3b59d;font-size:10px;margin-top:6px">• • •</div><div class="cap">${esc(c.words)}</div></div>
-      <div class="stk"><div style="left:0;top:0;transform:rotate(-6deg)">${stub(`${c.title} · ${monthOf(c.t)}`)}</div>
-        <div style="left:14px;top:62px;width:86px;height:86px;transform:rotate(9deg)">${seal(dayOf(c.t), "")}</div>
-        ${c.lifts?.length ? `<div style="left:6px;top:160px;transform:rotate(4deg)">${stub(`🚡 ${c.lifts[0]}`)}</div>` : ""}</div></div>
-    <div class="sec">${t("那天")}</div><div class="way">${esc(way) || "—"}<br><span style="color:#8a8278">${esc(c.stat)}</span></div>
-    <div class="acts">${c.kind === "prerun" ? `<button class="bk">${t("📜 预滑路书")}</button>` : ""}<button class="o close">${t("收起")}</button></div>`;
+// Make the photos near the screen, one at a time, nearest first; the rest wait until they scroll near.
+function develop(box, figs, days) {
+  const near = new Set(), done = new Set();
+  let busy = false, stopped = false;
+  const show = (f, u) => { const im = new Image(); im.alt = ""; im.onload = () => im.classList.add("in"); im.src = u; f.querySelector(".img").append(im); };
+  const pump = async () => {
+    if (busy || stopped) return;
+    const mid = innerHeight / 2, next = [...near].filter((f) => !done.has(f)).sort((a, b) => Math.abs(a.getBoundingClientRect().top - mid) - Math.abs(b.getBoundingClientRect().top - mid))[0];
+    if (!next) return;
+    busy = true; done.add(next);
+    try { const u = await photoURL(days[+next.dataset.i]); if (!stopped) show(next, u); }
+    catch (e) { console.warn("photo", e); next.querySelector(".dev").textContent = ""; }
+    busy = false; pump();
+  };
+  const io = new IntersectionObserver((es) => { for (const e of es) { if (e.isIntersecting) near.add(e.target); else near.delete(e.target); } pump(); }, { root: box.closest("#records"), rootMargin: "500px 0px" });
+  for (const f of figs) io.observe(f);
+  return { stop() { stopped = true; io.disconnect(); } };
+}
+
+// One photo, large: share it, save it, or open that day's roadbook.
+async function openShot(d, S, name, openBook) {
+  const w = words(d, S, name), el = document.createElement("div");
+  el.className = "memshot";
+  const who = d.people.map((p) => (p.me ? t("我") : p.name)).filter(Boolean);
+  const canShare = !!navigator.share && !!navigator.canShare;
+  el.innerHTML = `<button class="x" aria-label="close">×</button><div class="k">SNOW MEMORY · ${seasonName(S.season)}</div>
+    <div class="frame"><img alt=""><b translate="no">${esc(w.title)}</b><small translate="no">${w.date} · ${esc(w.line)}</small>
+      <div class="who" translate="no">${esc(who.join(" · "))}</div></div>
+    <div class="acts">${canShare ? `<button class="share">${ICON("photo")}${t("分享")}</button>` : ""}<button class="save ${canShare ? "o" : ""}">${canShare ? "" : ICON("photo")}${t("存到手机")}</button>
+      ${d.prerun && d.resort ? `<button class="o bk">${ICON("trailmap")}${t("预滑路书")}</button>` : ""}<button class="o close">${t("合上")}</button></div>`;
   document.body.append(el);
   const close = () => el.remove();
   el.querySelector(".x").onclick = close; el.querySelector(".close").onclick = close;
-  el.querySelector(".bk")?.addEventListener("click", () => { close(); openBook(c.id); });
+  el.querySelector(".bk")?.addEventListener("click", () => { close(); openBook(d.resort); });
+  const u = await photoURL(d).catch(() => null); if (!u || !el.isConnected) return;
+  el.querySelector("img").src = u;
+  const k = photoKey(d, PHOTO_V), file = () => new File([blobs.get(k)], `snow-${d.date}${d.resort ? "-" + d.resort : ""}.jpg`, { type: "image/jpeg" });
+  const save = () => { const a = document.createElement("a"); a.href = u; a.download = `snow-${d.date}.jpg`; document.body.append(a); a.click(); a.remove(); };
+  el.querySelector(".save").onclick = save;
+  el.querySelector(".share")?.addEventListener("click", async () => {
+    const f = file();
+    if (navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: w.title }); } catch { /* cancelled */ } } else save();
+  });
 }
