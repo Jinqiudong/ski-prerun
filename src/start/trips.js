@@ -6,7 +6,7 @@
 // sees the same plan, live. Each section has an owner; anyone else's edit becomes a proposal the owner
 // accepts or declines. A copy is kept on this phone for offline. Older trips stay on this phone until
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=23";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=24";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=1";
 import { daysOf } from "../ride/roadbook.js?v=12";
 
@@ -27,7 +27,7 @@ const ABOUT = {
   highlands: { zh: "以 Highland Bowl 出名，要徒步上去的高山大碗。", en: "Home of Highland Bowl, a hike-to alpine bowl.", words: "Highland Bowl · Hike-to · Steeps", drive: 4 },
   buttermilk: { zh: "缓、宽，适合初学，也是 X Games 的场地。", en: "Gentle and wide for learning, and home of the X Games.", words: "Gentle · Learn Here · X Games", drive: 4 },
 };
-const CITY = { SFO: "San Francisco", LAX: "Los Angeles", SEA: "Seattle", JFK: "New York", EWR: "Newark", LGA: "New York", BOS: "Boston", ORD: "Chicago", IAH: "Houston", DFW: "Dallas", ATL: "Atlanta", MIA: "Miami", SAN: "San Diego", PDX: "Portland", SJC: "San Jose", OAK: "Oakland", PHX: "Phoenix", SLC: "Salt Lake City", MSP: "Minneapolis", DCA: "Washington", IAD: "Washington", AUS: "Austin", YVR: "Vancouver", YYZ: "Toronto", PEK: "Beijing", PVG: "Shanghai", SHA: "Shanghai", CAN: "Guangzhou", SZX: "Shenzhen", HKG: "Hong Kong", TPE: "Taipei", NRT: "Tokyo", HND: "Tokyo", ICN: "Seoul", LHR: "London", DEN: "Denver" };
+export const CITY = { SFO: "San Francisco", LAX: "Los Angeles", SEA: "Seattle", JFK: "New York", EWR: "Newark", LGA: "New York", BOS: "Boston", ORD: "Chicago", IAH: "Houston", DFW: "Dallas", ATL: "Atlanta", MIA: "Miami", SAN: "San Diego", PDX: "Portland", SJC: "San Jose", OAK: "Oakland", PHX: "Phoenix", SLC: "Salt Lake City", MSP: "Minneapolis", DCA: "Washington", IAD: "Washington", AUS: "Austin", YVR: "Vancouver", YYZ: "Toronto", PEK: "Beijing", PVG: "Shanghai", SHA: "Shanghai", CAN: "Guangzhou", SZX: "Shenzhen", HKG: "Hong Kong", TPE: "Taipei", NRT: "Tokyo", HND: "Tokyo", ICN: "Seoul", LHR: "London", DEN: "Denver" };
 const BANDS = [C.ink, C.pine, C.wine];
 // What to carry for a hike-to (from guides to Highland Bowl and the like).
 export const GEAR = { zh: ["能挂板的背包（25–30 升）或板带", "水，比你觉得的多带一些", "能量棒", "多一件保暖中间层", "备用手套", "雪镜和墨镜", "防晒", "手机充满电"], en: ["A pack that carries a board (25–30 L), or straps", "Water — more than you think", "Snacks", "A warm mid layer", "Spare gloves", "Goggles and sunglasses", "Sunscreen", "A charged phone"] };

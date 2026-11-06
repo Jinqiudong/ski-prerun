@@ -6,10 +6,12 @@ import { RIDERS, PART_ZH, OUTFITS } from "../rider/rider-a.js?v=15";
 import { CFG, PART_LABEL, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=8";
 import { makeEntrance } from "./entrance.js?v=21";
 import { daysOf, openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=12";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=23";
-import { playIntro } from "./intro.js?v=14";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=24";
+import { playIntro } from "./intro.js?v=15";
 import { flyTo } from "../core/transition.js?v=1";
-playIntro();
+// The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
+// mountain, or the Memory tab.
+playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
 
 const $ = (id) => document.getElementById(id);
 // A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
@@ -295,11 +297,19 @@ async function openWorld() {
 }
 // Trips: plan where and when, with whom; share as a link.
 let trips = null;
+// Straight to a mountain, flying in from Denver.
+function goResort(id) { st.resort = id; save(); flyTo(id); location.href = `mountain/?resort=${encodeURIComponent(id)}`; }
+// One trip on the trips tab (from the opening).
+async function openTrip(id) {
+  await setTab("trip");
+  const tr = trips.list.find((x) => x.id === id);
+  if (tr?.shared) trips.open(id); else if (tr) trips.show(tr);
+}
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=27");
+    const { Trips } = await import("./trips.js?v=28");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
-    trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: (id) => { st.resort = id; save(); flyTo(id); location.href = `mountain/?resort=${encodeURIComponent(id)}`; } });
+    trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
     if (code) trips.incoming(code);
   }

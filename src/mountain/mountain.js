@@ -8,7 +8,7 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Diorama } from "./diorama.js?v=20";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
 import { addStep } from "../ride/roadbook.js?v=12";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=23";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=24";
 import { openNav } from "../core/nav.js?v=9";
 import { liftTicket } from "../core/transition.js?v=1";
 
