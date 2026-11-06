@@ -120,6 +120,14 @@ const EN = {
   "开板第一天": "First day on snow", "一个人的预滑": "A pre-run on my own", "这个雪季没有记录。": "Nothing from this season.",
   "这个雪季还没开板。去预滑一趟，或者和朋友去滑，每天都会在这里留一张合照。": "No days on snow this season yet. Pre-run one, or ski with friends: every day leaves a group photo here.",
   "存到手机": "Save", "全部": "All", "合上": "Close",
+  // Riding together (src/ride/together.js)
+  "等我": "Wait for me", "缆车站见": "Meet at the lift", "这条好滑": "This run's great", "我先下去了": "Heading down", "去找你": "Coming to you",
+  "{lift} 缆车上": "on {lift}", "{lift} 山顶": "top of {lift}", "在山顶": "at the top", "徒步上山": "hiking up", "在 {lift} 底站": "at the {lift} lift", "在 {run}": "on {run}",
+  "和 {name} 一起坐 {lift}": "Riding {lift} with {name}", "和 {name} 一起坐 {lift} ›": "Ride {lift} with {name} ›", "{name} 坐上了 {lift}": "{name} got on {lift}",
+  "坐 {name} 后面那把": "In the chair behind {name}", "跟着 {name}": "Following {name}", "去找 {name}…": "Off to {name}…", "到 {name} 身边了": "Here with {name}",
+  "已发送：{msg}": "Sent: {msg}", "{name} 也在山上": "{name} is on the mountain too", "{name} 不在线了，不跟了": "{name} went offline: stopped following",
+  "滑起来就跟着 {name} 走": "Once you ski, you'll follow {name}", "{name} 在 {lift} 上，去底站": "{name} is on {lift}: to its bottom station", "跟着 {name}，重新规划": "Following {name}: route updated",
+  "找不到去 {name} 那儿的路": "No way to {name} from here", "{name} 那里附近没有雪道": "No run near {name}", "传话": "Quick message", "和 {name} 去 {dest}": "With {name} to {dest}", "朋友": "Friend",
 };
 export function t(zh, vars) {
   let s = EN_ON ? EN[zh] ?? zh : zh;

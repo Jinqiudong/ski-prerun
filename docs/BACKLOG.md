@@ -15,9 +15,8 @@ Work that waits on something else. Newest first.
 - **Riding together on a chair:** two to six friends sitting down together, bar coming down, little gestures (point, wave, lean in to talk).
 - Hair and jacket-hem bones for wind; bigger body and fit morphs.
 
-## Riding together (after shared trips)
-- See friends live on the mountain and the maps (Supabase Realtime broadcast per trip and resort).
-- Follow a friend; "go to them" — fly over the mountain and land beside them.
-- Same chair when boarding within a few seconds of each other.
+## Riding together (after shared trips) — part 1 built in `src/ride/together.js`; voice is part 2
+- Done: friends live on the mountain and the maps (Supabase Realtime broadcast per trip and resort); follow; "去找他" (fly over, land beside them); same chair within 6 s; quick messages ("等我", "缆车站见", "这条好滑", "我先下去了", "去找你").
+- Icons wanted for it (stand-ins now): `msg_chat` (the quick-message button; `rider` stands in), `msg_wait` (`rest`), `msg_meet` (`lift`), `msg_good` (`star`), `msg_down` (`snowboard`), `msg_coming` (`compass_rose`).
 - Voice: near friends open automatically (proximity, louder when closer); far friends by walkie-talkie push-to-talk with a radio squelch. WebRTC mesh, Supabase for signalling, a TURN relay for some networks. Safari only (in-app browsers often block the mic).
 - Listen together: one friend picks a track from the game's own licensed library and everyone hears it in sync (`src/audio` `play(trackId, atSeconds)`). Streaming services can't be rebroadcast inside the game.

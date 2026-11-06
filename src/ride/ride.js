@@ -5,22 +5,23 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=12";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick } from "../rider/rider-a.js?v=15";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=13";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick } from "../rider/rider-a.js?v=16";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Diorama } from "../mountain/diorama.js?v=20";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=8";
-import { PaintedMap } from "./paintedmap.js?v=1";
+import { PaintedMap } from "./paintedmap.js?v=2";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=26";
-import { navRow } from "../core/nav.js?v=9";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=27";
+import { navRow } from "../core/nav.js?v=10";
 import { rideSound } from "../audio/index.js?v=4";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=4";
-import { dropIn } from "../core/transition.js?v=2";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=5";
+import { dropIn } from "../core/transition.js?v=3";
 import { Facilities } from "./kitworld.js?v=1";
+import { rideTogether } from "./together.js?v=1";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=1";
 
 const $ = (id) => document.getElementById(id);
@@ -911,7 +912,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("liftName").innerHTML = `${LEVEL_MARK[run.level]}${run.name}`;
     startSki();
   }
-  function startSki() {
+  function startSki(at = null) {
     const P = chosen, path = P.path;
     camera.fov = 66; camera.updateProjectionMatrix(); // a wider view on the snow
     setTimeout(() => { if (st.phase === "ski") makeSprite(); }, 1000); // as dressed now
@@ -930,7 +931,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     let i0 = 0;
     while (i0 < path.length - 2 && P.dist[i0] < 25) i0++;
     phys.place(path[i0][0], path[i0][1], pathDir(path, i0), 2);
-    const h0 = pathDir(path, i0);
+    if (at) { phys.place(at.x, at.z, at.h, at.speed ?? 3); i0 = nearestOn(path, at.x, at.z, 0, path.length - 1).i; } // riding together: beside a friend
+    const h0 = at ? at.h : pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks?.dispose(scene);
     tracks = new Tracks(scene, T);
@@ -1515,6 +1517,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       title = `到 ${P.short} 了 🎉`;
       note = ls.length ? `从这里还能坐：${ls.map((l) => l.name).join("、")}` : "今天的路线滑完了";
       row = ls.slice(0, 3).map((l) => link(l.name, null, `坐 ${l.name} 上山 ›`)).join("");
+    } else if (P.kind === "friend") {
+      title = t("到 {name} 身边了", { name: P.short });
+      note = P.leads.lifts.length ? `这里能坐 ${P.leads.lifts.join("、")}` : "";
+      row = P.leads.lifts.slice(0, 3).map((n) => link(n, null, `坐 ${n} 上山 ›`)).join("");
     } else if (P.kind === "lift") {
       title = `到 ${P.short} 底站了`;
       note = "上去以后可以再选下一段";
@@ -1897,6 +1903,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     cards.onscroll = () => {
       clearTimeout(settle);
       settle = setTimeout(() => {
+        if (st.phase !== "pick") return; // a smooth scroll still settling after DROP IN
         const mid = cards.getBoundingClientRect().left + cards.clientWidth / 2;
         let best = null, bd = Infinity;
         for (const P of list()) { const r = P.card.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < bd) { bd = d; best = P; } }
@@ -1959,6 +1966,58 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       g.strokeStyle = col(s.run.level); g.stroke();
     });
   }
+  // ---- Riding together (together.js): where I am, landing beside a friend, a route to a friend.
+  st.live = () => ({ phys: st.phase === "ski" && !spawn ? phys : null, ended, run: onRun?.run.name || null,
+    dest: st.phase === "ski" && chosen?.end && !ended ? { x: chosen.end[0], z: chosen.end[1], name: chosen.short || chosen.title } : null,
+    wait: ended && chosen ? (chosen.next?.name || (chosen.kind === "lift" ? chosen.short : null) || chosen.leads?.lifts?.[0] || null) : null });
+  // Onto the snow at (x, z) heading h, beside a friend: from the chair (the caller has left it), the top, a
+  // hike or another run. The way on is planned again from there: to the same place, else down the run.
+  // speed: theirs, so you ride on together (the flight over was the transition: no drop from the sky).
+  // with: { name, run, dest: { x, z, name } }: the run they're on and where they are going; you go with them.
+  st.landAt = (x, z, h, note = "", speed = 3, withF = null) => {
+    let spot = null;
+    if (withF?.run) for (const run of R.runs) { if (run.name !== withF.run || run.area) continue; run.pts.forEach(([px, pz], i) => { const d = Math.hypot(px - x, pz - z); if (d < 60 && (!spot || d < spot.d)) spot = { run, i, d }; }); }
+    spot ||= runNear(x, z, 150); if (!spot) return false;
+    const run = spot.run, P = st.phase === "ski" && chosen ? chosen : null, from = nodesNear(graph, x, z, 120);
+    let Q = null;
+    const D = withF?.dest, Ld = D && R.lifts.find((l) => bigLift(l) && Math.hypot(l.pts[0][0] - D.x, l.pts[0][1] - D.z) < 40); // their way ends at a lift
+    const toD = !D ? [] : Ld ? [graph.liftNodes.get(Ld)?.bottom].filter(Boolean) : nodesNear(graph, D.x, D.z, 250);
+    const rtD = toD.length && from.length ? planFrom(from, toD) : null;
+    if (rtD) Q = makePlan([{ type: "run", run, from: spot.i, to: Math.min(run.pts.length - 1, spot.i + 1), length: 0 }, ...rtD.legs],
+      { kind: "together", key: `with:${withF.name}`, title: t("和 {name} 去 {dest}", { name: withF.name, dest: D.name }), short: D.name, icon: "", to: toD, end: [D.x, D.z], leads: leadsTo([D.x, D.z]), seconds: rtD.seconds });
+    const rt = !Q && P?.to?.length && from.length ? planFrom(from, P.to) : null;
+    if (rt) { const { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder } = P;
+      Q = makePlan([{ type: "run", run, from: spot.i, to: Math.min(run.pts.length - 1, spot.i + 1), length: 0 }, ...rt.legs], { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, harder, seconds: rt.seconds }); }
+    const endR = run.pts[run.pts.length - 1];
+    if (!Q) Q = makePlan([{ type: "run", run, from: spot.i, to: run.pts.length - 1, length: run.length }], { kind: "run", key: `run:${run.name}`, title: run.name || "无名雪道", short: run.name, icon: "", end: endR, leads: leadsTo(endR), first: run, to: nodesNear(graph, endR[0], endR[1], 60) });
+    if (!Q) return false;
+    if (st.phase !== "ski" || !phys) {
+      if (hk) { world.remove(hk.flags); hk = null; }
+      $("arrive").hidden = true; $("pick").hidden = true; $("guide").hidden = true; clearTags();
+      if (ctx.rider.parent !== scene) scene.attach(ctx.rider);
+      ctx.rider.scale.set(1, 1, 1);
+      chosen = Q; bookRoute(Q, true); startSki({ x, z, h, speed });
+      if (note) flashCue(note);
+    } else { rideInstead(Q, note); phys.place(x, z, h, speed); prog = nearestOn(Q.path, x, z, 0, Q.path.length - 1).i; }
+    spawn = null;
+    return true;
+  };
+  // Follow: a route from here to a friend's spot (x, z), or to the bottom of the lift they're on. null if
+  // there's no way (or I'm already there).
+  st.routeTo = ({ x, z, lift: liftName, name, note }) => {
+    if (st.phase !== "ski" || !phys) return null;
+    const L = liftName ? R.lifts.find((l) => l.name === liftName) : null;
+    const from = nodesNear(graph, phys.x, phys.z, 160), to = L ? [graph.liftNodes.get(L)?.bottom].filter(Boolean) : nodesNear(graph, x, z, 90);
+    if (!from.length || !to.length) return null;
+    let rt = null, harder = null;
+    for (const lv of LEVELS.slice(LEVELS.indexOf(myLevel))) if ((rt = planRoute(graph, from, to, lv))) { harder = lv !== myLevel ? lv : null; break; }
+    if (!rt) return null;
+    const end = L ? L.pts[0] : [x, z];
+    const Q = makePlan(rt.legs, { to, kind: "friend", key: `friend:${name}`, title: t("跟着 {name}", { name }), short: name, icon: "", seconds: rt.seconds, harder, end, leads: leadsTo(end), lift: L });
+    if (!Q) return null;
+    rideInstead(Q, note + (harder ? ` · <b class="warn">要过${LEVEL_ZH[harder]}</b>` : ""));
+    return Q;
+  };
   st.plans = { dests, runs };
   // Testing: jump the rider `m` metres down the route, or onto the run named `run`.
   st.warp = (m, run) => {
@@ -2147,6 +2206,15 @@ async function main() {
   let hintOn = TRIP && HAS_BUBBLE && !CABIN;
   const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
+  // Off the chair: at the top, or riding together, landing beside a friend somewhere else.
+  function offLift() { arrived = true; skipping = null; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco").src = "assets/icons/snowboard.png?v=1"; $("bubble").hidden = true; $("bubbleHint").hidden = true; hintOn = false; }
+  // Riding together (together.js): friends on the same shared trip, live. Nothing at all when riding alone.
+  const together = rideTogether({ scene, camera, renderer, T, R, lift, line, ctx, top, along, resort: RESORT, trip: TRIP, d0, d1,
+    get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,
+    speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate)),
+    seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN }),
+    setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort });
+  window.__together = together;
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; } };
   // The lifts around this one, seen from the chair; then the buildings, signs and props.
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
@@ -2161,7 +2229,7 @@ async function main() {
       if (TRIP) {
         d = d1;
         if (!arrived) {
-          arrived = true; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco").src = "assets/icons/snowboard.png?v=1";
+          offLift();
           // Put our chair at the unload point first: after "skip" it was still where it last was.
           along(line.up, d, p); along(line.up, d + 4, q);
           myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0); myChair.updateMatrixWorld(true);
@@ -2199,7 +2267,7 @@ async function main() {
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
-    if (top.phase) { top.step(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
+    if (top.phase) { top.step(now, dt); together.frame(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
     sit(ctx.rider, look.yaw);
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     // Over the rider's shoulder (they sit left of the hanger), a little above, looking slightly down.
@@ -2216,6 +2284,7 @@ async function main() {
     sun.target.position.copy(head);
     fadeNames(names, camera);
     ctx.fac.update(camera.position, dt);
+    together.frame(now, dt);
     renderer.render(scene, camera);
   });
 }
