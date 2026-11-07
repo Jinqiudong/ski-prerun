@@ -29,8 +29,12 @@ export function powderAmount(cm, force = null, rules = POWDER) {
   if (cm == null || !Number.isFinite(cm)) return 0;
   return clamp((cm - rules.minCm) / (rules.fullCm - rules.minCm) + (cm >= rules.minCm ? 0.25 : 0));
 }
-// A groomed run: tagged classic (OSM piste:grooming), or untagged and green or blue (resorts groom those).
-export const groomedRun = (run) => /classic/.test(run.grooming || "") || (!run.grooming && (run.level === "easy" || run.level === "intermediate"));
+// A run whose name says it isn't groomed (an inference, not a tag): trees, glades, bowls, chutes, a cirque.
+export const WILD_NAME = /\b(trees?|glades?|bowls?|chutes?|cirque)\b/i;
+export const wildName = (name) => WILD_NAME.test(name || "");
+// A groomed run: tagged classic (OSM piste:grooming), or untagged and green or blue (resorts groom those),
+// unless its name says trees, glades, a bowl, a chute or a cirque.
+export const groomedRun = (run) => /classic/.test(run.grooming || "") || (!run.grooming && !wildName(run.name) && (run.level === "easy" || run.level === "intermediate"));
 
 // The terrain's part (0..1) at each terrain grid point: slope, which way it faces against the wind, and
 // whether it is a hollow or a crest. heights: Float32Array gw × gh (row-major, z rows), cell: metres.
@@ -288,4 +292,40 @@ export function treeHit(r, tree, prefer = null, rules = TREE) {
   out.heading = Math.atan2(tx, tz);
   out.speed = Math.max(r.speed * Math.sqrt(1 - into * into) * rules.keep, Math.min(r.speed, rules.slide));
   return out;
+}
+
+// ---------- What a run is like, for the roadbook ----------
+// The facts about the stretch of a run you rode (pts: its points, default the whole run), each with where it
+// comes from: "tag" (OpenStreetMap says so), "terrain" (measured from the heights), "inferred" (our rules).
+// powder: { f: powderField, amt: 0..1 } or null. Returns
+//   { len, drop, pitch, mean, surface: { k: "moguls" | "groomed" | "offpiste" | "ungroomed", src, wild },
+//     powder: { k: "edges" | "whole", src: "inferred" } | null }
+export function runFacts(run, pts = run.pts, heightAt, powder = null, rules = POWDER) {
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  const hs = pts.map(([x, z]) => heightAt(x, z)), drop = Math.max(0, Math.round(hs[0] - Math.min(...hs)));
+  const pitch = Math.round(runPitch(pts, heightAt)), mean = len ? Math.round(Math.atan2(drop, len) * DEG) : 0;
+  const parts = String(run.grooming || "").split(/[+;,]/), mog = run.moguls !== undefined ? run.moguls : mogulRun(run, runPitch(run.pts, heightAt));
+  const surface = mog === "tag" || parts.includes("mogul") ? { k: "moguls", src: "tag" }
+    : parts.includes("classic") ? { k: "groomed", src: "tag" }
+      : parts.includes("backcountry") ? { k: "offpiste", src: "tag" }
+        : mog === "natural" ? { k: "moguls", src: "inferred" }
+          : groomedRun(run) ? { k: "groomed", src: "inferred" }
+            : { k: "ungroomed", src: "inferred", wild: wildName(run.name) };
+  let pw = null;
+  if (powder?.f && powder.amt > 0 && pts.length > 1) {
+    // down the middle, and halfway into the bank either side (where the cats push the snow)
+    const off = (rules.groomed.centre + rules.groomed.edge) / 2;
+    let mid = 0, edge = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i], L = Math.hypot(bx - ax, bz - az) || 1, nx = -(bz - az) / L, nz = (bx - ax) / L;
+      mid += powderAt(powder.f, ax, az);
+      edge += Math.max(powderAt(powder.f, ax + nx * off, az + nz * off), powderAt(powder.f, ax - nx * off, az - nz * off));
+    }
+    mid = (mid / (pts.length - 1)) * powder.amt; edge = (edge / (pts.length - 1)) * powder.amt;
+    const deep = 0.25;
+    if (surface.k === "groomed") { if (edge > deep) pw = { k: "edges", src: "inferred" }; }
+    else if (Math.max(mid, edge) > deep) pw = { k: "whole", src: "inferred" };
+  }
+  return { len: Math.round(len), drop, pitch, mean, surface, powder: pw };
 }

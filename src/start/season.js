@@ -3,7 +3,7 @@
 // (the roadbook: when, where, which runs). One day becomes one group photo on the memory tab. No DOM and
 // no three.js here, so it is tested in node (tests/season.test.mjs).
 
-import { AVATARS } from "../core/i18n.js?v=44";
+import { AVATARS } from "../core/i18n.js?v=45";
 
 // Friends' faces go round the owner's painted animals (as on the trip page).
 export const CREW = ["av_rider", "av_fox", "av_hare", "av_marmot", "av_elk", "av_bear", "av_girl"];
@@ -85,7 +85,7 @@ export function buildSeasons({ trips = [], book = {}, valid = () => true, me, to
     for (const day of list) {
       if (!day?.steps?.length || !day.t0) continue;
       const d = ymd(new Date(day.t0)), runs = [];
-      for (const s of day.steps) if (s.k === "route") for (const g of s.segs || []) if (g.n && !runs.includes(g.n)) runs.push(g.n);
+      for (const s of day.steps) if (s.k === "route" || s.k === "go") for (const g of s.segs || []) if (g.n && !runs.includes(g.n)) runs.push(g.n);
       const same = days.find((x) => x.date === d && x.resort === resort);
       if (same) { for (const r of runs) if (!same.runs.includes(r)) same.runs.push(r); same.prerun = true; continue; }
       days.push({ date: d, resort, n: 0, len: 0, trip: null, held: null, people: [mine], runs, prerun: true, t0: day.t0 });

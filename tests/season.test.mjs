@@ -43,7 +43,7 @@ test("future days aren't memories yet", () => {
 test("pre-runs join the trip's day at that mountain, or stand on their own", () => {
   const at = (d, h) => new Date(`${d}T${h}:00`).getTime();
   const book = {
-    copper: [{ t0: at("2026-11-20", "20:00"), steps: [{ k: "route", segs: [{ n: "Andy's Encore" }, { n: "Bouncer" }] }] }],
+    copper: [{ t0: at("2026-11-20", "20:00"), steps: [{ k: "route", segs: [{ n: "Andy's Encore" }] }, { k: "go", segs: [{ id: "1", n: "Bouncer" }, { id: "2", n: "Andy's Encore" }] }] }], // old and new steps
     steamboat: [{ t0: at("2026-03-01", "10:00"), steps: [{ k: "route", segs: [{ n: "Heavenly Daze" }] }] }, { t0: 1, steps: [] }],
     nowhere: [{ t0: at("2026-11-20", "10:00"), steps: [{ k: "lift" }] }],
   };
