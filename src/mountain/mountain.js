@@ -9,10 +9,11 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
 import { addStep } from "../ride/roadbook.js?v=20";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=39";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=40";
 import { openNav } from "../core/nav.js?v=17";
 import { liftTicket } from "../core/transition.js?v=10";
 import { startParty } from "../core/party.js?v=9";
+import { bunnySpot } from "../ride/practice-core.js?v=1";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
@@ -197,6 +198,25 @@ async function main() {
     item.base = base;
     return item;
   });
+  // The bunny hill (宝宝坡, practice-core.js): a pin on the mountain where it really is, and a card in its base's
+  // lifts; both go to the practice (look.html?practice=1).
+  const bunny = bunnySpot(R, (x, z) => T.heightAt(x, z));
+  const goPractice = () => {
+    const go = () => (location.href = `../look.html?practice=1&resort=${RESORT_ID}`);
+    if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => "denied").finally(go); // iOS: tilt to ride
+    else go();
+  };
+  pin(`<b><img class="pi" src="../assets/icons/practice.png?v=1" alt="">${tr("去宝宝坡练习")}</b><i></i>`, "pin bunny", new THREE.Vector3(bunny.x, T.heightAt(bunny.x, bunny.z) * EXAG + 60, bunny.z), goPractice);
+  const bunnyCard = (base) => {
+    if (Math.hypot(bunny.x - base.x, bunny.z - base.z) > 1500) return;
+    const card = document.createElement("div");
+    card.className = "liftCard bunny";
+    card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/practice.png?v=1" alt="">${tr("宝宝坡")}</b><span class="lvls">${bunny.name && bunny.name !== "Lift" ? bunny.name : ""}</span></div>
+      <div class="chips"><span><img src="../assets/icons/ski.png?v=1" alt="">${tr("{len} 米 · 平均 {deg}°", { len: Math.round(bunny.L), deg: bunny.mean })}</span><span><img src="../assets/icons/challenge.png?v=1" alt="">${tr("加速 · 立刃 · 换刃 · 刹车")}</span></div>
+      <div class="acts"><button class="go">${tr("去宝宝坡练习 ›")}</button></div>`;
+    card.querySelector(".go").addEventListener("click", goPractice);
+    cards.append(card);
+  };
   $("baseClose").addEventListener("click", () => {
     $("base").classList.remove("show");
     basePins.forEach((p) => p.el.classList.remove("on"));
@@ -261,7 +281,7 @@ async function main() {
   const tagBox = $("liftTags"), cards = $("liftCards");
   // In a party with someone else in it, "坐这条上山" becomes "约大家一起坐".
   const together = () => party.in && party.members().length > 0;
-  setInterval(() => { const k = together() ? "约大家一起坐 ›" : "坐这条上山 ›"; for (const b of cards.querySelectorAll(".liftCard .go")) if (b.dataset.k !== k) { b.dataset.k = k; b.textContent = tr(k); } }, 1000);
+  setInterval(() => { const k = together() ? "约大家一起坐 ›" : "坐这条上山 ›"; for (const b of cards.querySelectorAll(".liftCard:not(.bunny) .go")) if (b.dataset.k !== k) { b.dataset.k = k; b.textContent = tr(k); } }, 1000);
   function openBase(base) {
     const ls = liftsAt(base).filter((l) => RIDEABLE.includes(l.kind)); // carpets and drag lifts aren't ridden in the game
     // Seen from the base looking up its main lift: the camera flies down from the whole mountain to there,
@@ -306,6 +326,7 @@ async function main() {
       cards.append(card);
       info.card = card;
     }
+    bunnyCard(base);
   }
   function endIntro() {
     if (!mini) return;

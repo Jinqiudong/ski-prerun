@@ -15,7 +15,7 @@ import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=9";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=39";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=40";
 import { navRow } from "../core/nav.js?v=17";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=13";
@@ -27,6 +27,8 @@ import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, de
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
 import { Guide } from "./guide.js?v=4";
+import { bunnySpot, worldLift } from "./practice-core.js?v=1";
+import { startPractice, spotTitle } from "./practice.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -1729,6 +1731,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       }
     } else if (st.phase === "ski") {
       stepSki(Math.min(dt, 0.05));
+    } else if (st.phase === "practice") {
+      prac.step(Math.min(dt, 0.05));
     } else if (st.phase === "hike" && hk) {
       stepHike(Math.min(dt, 0.05));
       snd?.hike({ dt });
@@ -1745,7 +1749,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
         acc += share;
       }
     }
-    st.focus.copy(st.phase === "ski" || st.phase === "hike" ? ctx.rider.position : camera.position);
+    st.focus.copy(st.phase === "ski" || st.phase === "hike" || st.phase === "practice" ? ctx.rider.position : camera.position);
     if (st.phase === "pick") return; // the miniature is drawn by st.render
   };
   const flash = () => { const f = $("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); };
@@ -2166,6 +2170,17 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     camera.position.set(best.x - n.x * 4, T.heightAt(best.x, best.z) + 2.5, best.z - n.z * 4);
     return { x: Math.round(best.x), z: Math.round(best.z), w: +best.w.toFixed(2) };
   };
+  // The bunny hill practice (practice.js): ?practice=1 lands here straight off the chair, at the resort's bunny hill.
+  let prac = null;
+  st.practice = (spot) => {
+    st.phase = "practice"; aerial?.dispose(true); aerial = null;
+    camera.fov = 66; camera.updateProjectionMatrix(); camera.clearViewOffset();
+    $("liftName").textContent = spotTitle(spot); $("liftIco").src = "assets/icons/practice.png?v=1"; $("desc").textContent = "";
+    const own = R.lifts.find((l) => l.name === spot.lift && rideable(l));
+    prac = startPractice({ scene, camera, canvas: renderer.domElement, T, rider: ctx.rider, snd, spot, tilt, treeAt, resort: RESORT,
+      exits: { mountain: withResort("mountain/"), lift: own && withResort(`look.html?lift=${encodeURIComponent(own.name)}`), liftName: own?.name } });
+    st.prac = prac.api; // testing
+  };
   st.fx = fx; st.buddy = buddy; // testing
   st.deepPowder = (R0 = 250) => { // testing: onto the deepest powder near here, no tree in the way, down the fall line
     let best = null;
@@ -2296,7 +2311,8 @@ async function main() {
   markMoguls(R.runs, (x, z) => T.heightAt(x, z)); // run.moguls: which runs have bumps (snow-core.js MOGULS), for the signs, cards and the run
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
-  const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
+  const PRACTICE = params.has("practice") ? bunnySpot(R, (x, z) => T.heightAt(x, z)) : null; // the bunny hill: the world round its chairlift
+  const lift = (PRACTICE && worldLift(R, PRACTICE)) || R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
   setLiftKind(lift, research, kitIndex);
   // The lift's models (carrier, tower parts, terminals): the ride waits for these; the rest comes later.
   const [carrier, base, shaft, head, bottom, top0] = await kits([SPEC.carrier, "tower_base", "tower_shaft", "tower_head", SPEC.bottom, SPEC.top]);
@@ -2401,6 +2417,7 @@ async function main() {
   // The lifts around this one, seen from the chair; then the buildings, signs and props.
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
   setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
+  if (PRACTICE) { offLift(); top.practice(PRACTICE); }
   renderer.setAnimationLoop((now) => {
     const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); // the first frame's time can be before `last` (set after a long load step): never backwards
     last = now;
