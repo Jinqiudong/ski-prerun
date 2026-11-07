@@ -12,10 +12,10 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=9";
-import { PaintedMap } from "./paintedmap.js?v=14";
+import { PaintedMap } from "./paintedmap.js?v=15";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=44";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=45";
 import { navRow } from "../core/nav.js?v=22";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=18";
@@ -26,7 +26,7 @@ import { startParty } from "../core/party.js?v=14";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=2";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=2";
-import { Guide } from "./guide.js?v=10";
+import { Guide } from "./guide.js?v=11";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
 import { startPractice, spotTitle } from "./practice.js?v=8";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
@@ -964,7 +964,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     world.add(hk.flags);
     addStep(RESORT, { k: "hike", name: hike.name, mins: hike.mins, gain: hike.gain || 0, gear: HIKE_GEAR });
     camera.fov = 60; camera.updateProjectionMatrix();
-    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap(); buddy.hide();
+    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap(); buddy.hide(); document.body.classList.remove("navmin");
     document.body.classList.remove("picking"); camera.clearViewOffset();
     for (const m of [...marks.children]) { marks.remove(m); m.geometry.dispose(); }
     routeMarks = []; reveal = null; clearTags();
@@ -1048,8 +1048,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     crash = null; shake = 0; stall = 0; passTree = null; camH = null; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
-    buddy.start(P, prog);
+    if (!NOGUIDE) buddy.start(P, prog);
     st.phase = "ski";
+    document.body.classList.toggle("navmin", !NOGUIDE); // the guide leads: signs and the strip, no text (ride-paper.css)
+    strip.start(P);
     $("skiHud").hidden = false;
     pmap.show(true);
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : P.title;
@@ -1064,6 +1066,30 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
   let nav = null, offFor = 0, lastLook = 0, onRun = null;
+  // The HUD while the guide leads (body.navmin): one strip of icons, like a car's nav: speed, the run you're on
+  // (its mark and name), where the way ends (a lift or a base), how far. No sentences. The run's name changes
+  // only once you're settled on the new one (0.8 s), with a flash of ink so a turn onto another run is seen.
+  const strip = {
+    run: null, cand: null, held: 0, near: false,
+    start(P) {
+      this.run = null; this.cand = null; this.near = false;
+      const to = P.next ? ["lift", P.next.name] : P.kind === "lift" ? ["lift", P.short] : P.kind === "base" ? ["lodge", P.short] : null;
+      $("hsTo").hidden = !to; $("hsToSep").hidden = !to;
+      if (to) { $("hsToIco").src = `assets/icons/${to[0]}.png?v=1`; $("hsToName").textContent = to[1] || ""; }
+      $("hsRun").innerHTML = P.first ? `${LEVEL_MARK[P.first.level] || ""}<span>${P.first.name || t("无名雪道")}</span>` : "";
+    },
+    step(r, left, run, dt) {
+      $("hsSpeed").textContent = Math.round(r.speed * 3.6);
+      const km = left >= 1000; $("hsLeft").textContent = km ? (left / 1000).toFixed(1) : Math.round(left); $("hsLeftU").textContent = km ? "km" : "m";
+      if (!run || run === this.run) { this.cand = null; return; }
+      if (run !== this.cand) { this.cand = run; this.held = 0; return; }
+      if ((this.held += dt) < 0.8) return;
+      const was = this.run; this.run = run; this.cand = null;
+      const el = $("hsRun");
+      el.innerHTML = `${LEVEL_MARK[run.level] || ""}<span>${run.name || t("无名雪道")}</span>`;
+      if (was && was.name !== run.name) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } // onto another run
+    },
+  };
   // The map in the corner while skiing: the painted map (paintedmap.js), a round cut-out of the resort's
   // watercolour around you with what you've skied inked on it. Tap it for the whole painting: pan, pinch,
   // tap a place to start from there (a run) or ride it (a lift). Skiing waits while the map is open.
@@ -1159,7 +1185,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const sx = x - Math.cos(h) * 17, sz = z + Math.sin(h) * 17;
       group.add(ctx.fac.junctionSign(sx, sz, h + Math.PI, j.options, () => junctionSign(T, sx, sz, h + Math.PI, j.options, renderer)));
       const way = j.options.find((o) => o.route);
-      if (way && Math.abs(way.bearing) > 0.18) group.add(chevrons(T, path, j.i, way.bearing));
+      if (way && Math.abs(way.bearing) > 0.18) { const c = chevrons(T, path, j.i, way.bearing); c.userData.chev = true; group.add(c); }
     }
     scene.add(group);
     nav = { group, js };
@@ -1248,7 +1274,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   // The way to go, on the snow ahead of you: big gold arrowheads every 6.5 m along the route for the next 130 m,
   // flowing forward and fading with distance, so the line through each turn is always in front of you.
-  let guide = null;
+  let guide = null, arrowA = 1;
   function chevronGeometry() { // a flat "^", 1.8 m wide, pointing +z
     const T0 = [0, 0, 0.6], RO = [0.9, 0, -0.3], RI = [0.9, 0, -0.75], N = [0, 0, 0.12], LI = [-0.9, 0, -0.75], LO = [-0.9, 0, -0.3];
     const pos = [T0, RO, RI, T0, RI, N, T0, N, LI, T0, LI, LO].flat();
@@ -1280,7 +1306,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
     }
     guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
-    guide.material.opacity = 0.92 * buddy.alpha; // quiet while the guide leads (guide.js)
+    // none while the guide leads in sight (guide.js), eased in and out; always there with no guide
+    arrowA += ((NOGUIDE ? 1 : buddy.alpha) - arrowA) * 0.08;
+    guide.material.opacity = 0.92 * arrowA; guide.visible = arrowA > 0.01;
+    if (nav) for (const o of nav.group.children) if (o.userData.chev) o.visible = arrowA > 0.3; // and the chevrons before each turn-off
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
@@ -1369,7 +1398,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (const f of [flatAhead, rise]) if (f && !f.told) { f.told = true; flashCue(f.kind === "flat" ? `前面 ${fmtLen(f.m)} 平路 · 别刹车，带速度，板放平` : `前面 ${fmtLen(f.m)} 上坡 · 要走上去`); }
     // Moguls ahead on the way (蘑菇道): once for each mogul run, as it comes up.
     const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
-    if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
+    if (mg) { mogTold.add(mg.run); mogTold.add("any"); buddy.sign("moguls"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Which way a heel-side skid turns the board's nose, as boarder.js / animal.js draw it (mirrored if goofy).
     const heelSide = (o) => (o.userData.kind === "animal" ? -1 : -(o.userData.toeX || 1)) * (o.userData.goofy ? -1 : 1);
@@ -1511,6 +1540,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (now - lastLook > 500) { lastLook = now; onRun = runNear(r.x, r.z, 26); if (onRun) skiLog.mark(onRun.run, onRun.i); }
     skiLog.step(r.x, r.z, now);
     $("skiWhere").innerHTML = onRun ? `你在 ${nameR(onRun.run)}` : "雪道外";
+    strip.step(r, left, near.d < 45 ? seg.run : onRun?.run, dt); // on the route: the run the route is on (it changes at its turn-offs)
+    if (left < 160 && !strip.near) { strip.near = true; const ic = P.next ? "lift" : P.kind === "lift" ? "lift" : P.kind === "base" ? "lodge" : null; if (ic) buddy.sign(ic, 3); } // nearly there: where it ends
     // Off the route for a while: replan from the run I'm on, if it leads anywhere.
     offFor = near.d > 45 ? offFor + dt : 0;
     if (offFor > 1.2 && onRun && replan(r)) { offFor = 0; return; }
@@ -1555,7 +1586,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const l = R.lifts.find((l) => rideable(l) && !offered.has(l) && l !== P.lift && l !== P.next && ahead(l));
     if (!l) return;
     offered.add(l); offer = l;
-    box.innerHTML = `<b>${ICO("lift")}前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`;
+    box.innerHTML = NOGUIDE ? `<b>${ICO("lift")}前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`
+      : `<b class="mini"><img src="assets/icons/lift.png?v=1" alt="">${l.name}</b><div class="two"><button class="go">${t("上山")}</button><button class="no">${t("继续")}</button></div>`; // the guide leads: the lift, its name, two buttons
+    box.classList.toggle("mini", !NOGUIDE);
     box.querySelector(".go").onclick = () => { location.href = withResort(`look.html?lift=${encodeURIComponent(l.name)}`); };
     box.querySelector(".no").onclick = () => { box.hidden = true; };
     box.hidden = false;
@@ -1698,7 +1731,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("liftOffer").hidden = true; closeBigMap();
     if (guide) guide.visible = false;
     tbtn.hidden = true; closeWheel();
-    $("skiHud").hidden = true;
+    $("skiHud").hidden = true; document.body.classList.remove("navmin");
     $("turnCue").hidden = true;
     pmap.show(false);
     $("arrive").hidden = false;
@@ -1796,7 +1829,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       applyCam();
       if (u >= 1) {
         if (st.phase === "rise") {
-          st.phase = "pick"; flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); chosen?.card.scrollIntoView({ inline: "center", block: "nearest" });
+          st.phase = "pick"; document.body.classList.remove("navmin"); flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); chosen?.card.scrollIntoView({ inline: "center", block: "nearest" });
           if (chosen) requestAnimationFrame(() => aimAt(chosen)); // fit again now the cards are there to fit above
         }
         else startSki();
@@ -2253,7 +2286,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       exits: { mountain: withResort("mountain/"), lift: own && withResort(`look.html?lift=${encodeURIComponent(own.name)}`), liftName: own?.name } });
     st.prac = prac.api; // testing
   };
-  st.fx = fx; st.buddy = buddy; // testing
+  st.fx = fx; st.buddy = buddy; st.strip = strip; // testing
   st.deepPowder = (R0 = 250) => { // testing: onto the deepest powder near here, no tree in the way, down the fall line
     let best = null;
     for (let dx = -R0; dx <= R0; dx += 10) for (let dz = -R0; dz <= R0; dz += 10) {
@@ -2327,6 +2360,8 @@ const sit = (model, lookYaw, talk = 0) => sitBoarder(model, lookYaw, undefined, 
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
+// ?guide=0: no guide animal; the way-finding is the old one (the text card, the turn card, the arrows on the snow).
+const NOGUIDE = params.get("guide") === "0";
 const SURFACE = ["groomed", "powder", "ice"].find((x) => x === params.get("surface")) || null; // the snow under the board, for trying the sound
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
@@ -2369,7 +2404,13 @@ $("tabFab").onclick = () => {
 };
 // The top pill: tap it for the snow (and, skiing, the controls); tap again to fold it.
 // A chosen (not live) hour and sky are marked 自选 on the pill, folded or not.
-const pillLabel = () => { $("wxToggle").innerHTML = `${COND.live ? "" : `<span class="sim">${t("自选")}</span>`}${t($("topInfo").hidden ? "雪况 ⌄" : "收起 ⌃")}`; };
+// While the guide leads (body.navmin) the pill folds to a round 雪况 button: the sky's icon, a dot when chosen.
+const SKY_ICON = { clear: "sunny", cloudy: "partly", overcast: "cloudy", snow: "snow_now" };
+const pillLabel = () => {
+  $("wxToggle").innerHTML = `${COND.live ? "" : `<span class="sim">${t("自选")}</span>`}${t($("topInfo").hidden ? "雪况 ⌄" : "收起 ⌃")}`;
+  $("wxIco").src = `assets/icons/${(!COND.live && SKY_ICON[COND.sky]) || "snow_now"}.png?v=1`;
+  $("top").classList.toggle("open", !$("topInfo").hidden); $("top").classList.toggle("chosen", !COND.live);
+};
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; pillLabel(); };
 pillLabel();
 const riderLoad = loadBoarder(); // start early: the light template and its clips, about 1.8 MB

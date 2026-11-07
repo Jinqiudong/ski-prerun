@@ -21,6 +21,7 @@ All are 128×128 PNG with transparent backgrounds. Load as `assets/icons/<name>.
 | Tricks (drawn by the game agent in the house style) | `trick` (a board in the air with a sparkle: the ride's 动作 button) `trick_ollie` `trick_spin` `trick_indy` `trick_melon` `trick_tailgrab` (grabs: the board from above, a mitten on the edge it holds) `trick_nose` `trick_tailpress` (presses: one end in the snow): the trick wheel |
 | Practice (drawn by the game agent in the house style) | `practice` (a gentle bunny hill with an S of turns between two training cones and a flag: 宝宝坡, the practice's entry and card) |
 | Snow (drawn by the game agent in the house style) | `moguls` (round snow bumps on a slope with a tiny red mushroom: 蘑菇道, a mogul run; the HUD's 前方蘑菇道 cue, the run cards, the roadbook, the resort page). Powder uses the owner's `powder`. |
+| Way-finding (drawn by the game agent in the house style) | `nav_left` `nav_right` `nav_straight` (fat gold arrows: the turn-off ahead, in the guide animal's bubble) `nav_here` (an arrow down into a spot: this way, now, into the trees) `nav_back` (a pink U-turn: the wrong way) `hud_speed` (a dial, green to red: the ride's speed in the HUD strip) |
 
 Icons marked "drawn by the game agent in the house style" were drawn with code, not painted by the owner:
 `node tools/draw_icons.mjs [name ...]` (needs `npm i --no-save puppeteer-core` and Chrome) redraws them and the

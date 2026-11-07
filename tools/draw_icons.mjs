@@ -3,7 +3,7 @@
 // transparent backgrounds. Each icon is a list of parts in a 128-unit box; the page jitters every outline a little
 // so it reads hand-drawn, washes the fills with a faint paper texture, pools a darker tone at the edges, and
 // renders at 4× before scaling down. Also writes a review sheet next to some of the owner's icons.
-// usage: node tools/draw_icons.mjs [name ...]   (needs puppeteer-core: npm i --no-save puppeteer-core, and Chrome)
+// usage: node tools/draw_icons.mjs [--sheet] [name ...]  (--sheet: the review sheet of just the named icons)   (needs puppeteer-core: npm i --no-save puppeteer-core, and Chrome)
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import puppeteer from "puppeteer-core";
@@ -199,6 +199,51 @@ ICONS.trick_tailgrab = () => grab(26, 74, 35);
 ICONS.trick_nose = () => press(1);
 ICONS.trick_tailpress = () => press(-1);
 
+// The guide's way-finding signs (the fox's bubble on the way down): fat gold arrows with an ink line, like a
+// painted trail sign; the wrong way back is dusty pink. And the HUD's speed: a little dial.
+const ARROW = { fill: "#e8c26e", shade: "#a8823a" }; // a deeper gold than C.gold: it has to read on the paper bubble
+const turn = (m) => { // a left turn; m mirrors it into a right one
+  const X = (x) => (m ? 128 - x : x);
+  return [U(
+    { ...capsule(X(84), 118, X(84), 52, 28), ...ARROW, hl: ["M-6 10 V40"] },
+    { ...capsule(X(84), 50, X(48), 50, 28), ...ARROW },
+    { d: poly([X(54), 18], [X(8), 50], [X(54), 82]), ...ARROW, hl: [m ? "M98 32 L110 44" : "M30 32 L18 44"] }),
+  ];
+};
+ICONS.nav_left = () => turn(false);
+ICONS.nav_right = () => turn(true);
+ICONS.nav_straight = () => [U(
+  { ...capsule(64, 120, 64, 52, 30), ...ARROW, hl: ["M-7 8 V40"] },
+  { d: poly([24, 58], [64, 8], [104, 58]), ...ARROW, hl: ["M44 44 L58 26"] }),
+];
+// 就是这里: an arrow down into a spot on the snow
+ICONS.nav_here = () => [
+  { d: ell(64, 110, 50, 12), fill: C.white, shade: C.blue, sw: 4.5, hl: ["M26 108 Q36 101 52 100"] },
+  { d: ell(64, 109, 18, 4.5), fill: C.blue, sw: 0 },
+  U({ ...capsule(64, 8, 64, 60, 28), ...ARROW, hl: ["M-6 8 V30"] },
+    { d: poly([28, 56], [64, 100], [100, 56]), ...ARROW }),
+];
+// 走错了: a U-turn, back the way you came
+ICONS.nav_back = () => {
+  const P = { fill: C.pink, shade: "#b77d86" };
+  return [U(
+    { ...capsule(90, 120, 90, 54, 26), ...P, hl: ["M-5 10 V40"] },
+    { d: "M103 54 A39 39 0 0 0 25 54 L51 54 A13 13 0 0 1 77 54 Z", ...P, hl: ["M34 44 Q40 26 58 20"] },
+    { ...capsule(38, 54, 38, 70, 26), ...P },
+    { d: poly([8, 66], [38, 108], [68, 66]), ...P }),
+  ];
+};
+// the HUD's speed: a dial, green to red, the needle well over
+ICONS.hud_speed = () => [
+  { d: "M10 96 A54 54 0 0 1 118 96 Q118 104 110 104 H18 Q10 104 10 96 Z", fill: C.cream, hl: ["M22 78 Q30 58 48 50"] },
+  { d: "M24 92 A40 40 0 0 1 40 60", sw: 9, ink: C.sage, jit: 0.3 },
+  { d: "M46 56 A40 40 0 0 1 84 56", sw: 9, ink: C.gold, jit: 0.3 },
+  { d: "M90 60 A40 40 0 0 1 104 92", sw: 9, ink: C.red, jit: 0.3 },
+  { ...capsule(64, 92, 94, 58, 9), fill: C.dslate, sw: 3.5 },
+  { d: circ(64, 92, 10), fill: C.dslate, sw: 4, hl: ["M59 89 Q60 86 63 85"] },
+  { d: line([2, 120], [26, 120]), sw: 4 }, { d: line([40, 120], [88, 120]), sw: 4 }, { d: line([102, 120], [120, 120]), sw: 4 },
+];
+
 // a snowboard from the side, centred on (cx, cy), turned by a degrees
 function board(cx, cy, a) {
   const tr = `rotate(${a} ${cx} ${cy})`;
@@ -376,7 +421,7 @@ async function sheet(news, olds) {
 }
 </script></body></html>`;
 
-const only = process.argv.slice(2);
+const args = process.argv.slice(2), wantSheet = args.includes("--sheet"), only = args.filter((a) => a !== "--sheet");
 const names = Object.keys(ICONS).filter((n) => !only.length || only.includes(n));
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new" });
 const page = await browser.newPage();
@@ -388,7 +433,7 @@ for (const name of names) {
   made.push([name, url]);
   console.log("drew", name);
 }
-if (!only.length) {
+if (!only.length || wantSheet) { // --sheet with names: the review sheet of just those
   const OLD = ["jacket", "gloves", "lens", "helmet", "hanger", "palette", "lift", "star", "rest", "photo", "memory"];
   const olds = OLD.map((n) => [n, "data:image/png;base64," + readFileSync(join(OUT, n + ".png")).toString("base64")]);
   const url = await page.evaluate((a, b) => sheet(a, b), made, olds);
