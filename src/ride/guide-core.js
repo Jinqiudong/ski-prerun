@@ -1,4 +1,4 @@
-// The guide's rules, with no DOM and no three.js (tested: tests/guide.test.mjs). A little animal on a board rides
+// The guide's rules, with no DOM and no three.js (tested: tests/guide.test.mjs). A little animal on its own feet runs
 // the route 15–25 m ahead of you: it waits (turned round, a word in a bubble) when you fall behind, holds at a
 // junction's mouth until you're there, comes back when you go the wrong way. Sometimes it takes you off the route
 // for a detour that finds a new spot (a line through the trees; moguls and powder are designed, not built), then
@@ -18,7 +18,7 @@ export function guideAnimal(resortAnimal, mine) {
 // One pool per moment. {name}: the animal's name; the rest are said as they are.
 export const LINES = {
   start: ["我是{name}，今天我带路！", "跟着{name}走，不会迷路～", "出发咯，跟紧我！", "{name}来带路啦"],
-  lead: ["这边这边～", "跟紧我哦", "今天雪真好", "风好舒服～", "你滑得不错嘛", "看我的板印走就对了", "前面一路顺～", "嘿嘿，追上我呀", "我闻到松树的味道了", "别看风景啦，看我～"],
+  lead: ["这边这边～", "跟紧我哦", "今天雪真好", "风好舒服～", "你滑得不错嘛", "看我的脚印走就对了", "前面一路顺～", "嘿嘿，追上我呀", "我闻到松树的味道了", "别看风景啦，看我～"],
   wait: ["慢慢来～", "跟上呀", "我在这儿等你", "不急不急～", "我在前面哦！", "喂～这边！", "等你一下下", "我不走，你慢慢滑"],
   resume: ["走咯！", "好嘞，继续！", "跟上啦～", "就是这样！"],
   turnL: ["前面要左转哦", "下个路口往左～", "等下靠左边！"],
@@ -27,7 +27,7 @@ export const LINES = {
   wrong: ["哎——不是那边！", "走错啦，回来回来～", "那边不对哦", "等等我！路在这边"],
   back: ["对啦，就是这条", "回来啦～", "好险好险", "嗯！跟着我"],
   crash: ["哎呀，没事吧？", "拍拍雪，再来～", "树也吓了一跳", "摔一下不算什么"],
-  inTrees: ["小心树哦～", "低头，有树枝！", "跟着我的板印走", "这里好安静", "松针掉进领子里了"],
+  inTrees: ["小心树哦～", "低头，有树枝！", "跟着我的脚印走", "这里好安静", "松针掉进领子里了"],
   go: ["跟我来！", "走！钻树林咯～", "就这儿，进！"],
   no: ["好，下次再带你去～", "那我们走大路～"],
   unlock: ["找到啦！", "这是我们的秘密基地～", "记住这里哦"],

@@ -15,7 +15,7 @@ import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=7";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=37";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=38";
 import { navRow } from "../core/nav.js?v=15";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=11";
@@ -26,7 +26,7 @@ import { startParty } from "../core/party.js?v=7";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
-import { Guide } from "./guide.js?v=2";
+import { Guide } from "./guide.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
