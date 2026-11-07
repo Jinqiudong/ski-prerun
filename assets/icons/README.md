@@ -15,6 +15,13 @@ All are 128×128 PNG with transparent backgrounds. Load as `assets/icons/<name>.
 | Stamps | `st_prerun` `st_booked` `st_ontrip` `st_done` `st_favorite` `st_notyet` `st_cancelled` |
 | Crew avatars | `av_rider` `av_girl` `av_fox` `av_hare` `av_marmot` `av_elk` `av_bear` |
 | More | `snowreport` `difficulty` `trailmap` `challenge` `packing` `budget` `season` |
+| Wardrobe (drawn by the game agent in the house style) | `look_mirror` (hand mirror: the 外形 item, hair and build) |
+| Voice (drawn by the game agent in the house style) | `voice_mic` (mic on) `voice_mic_off` (mic crossed out: off, a muted friend) `voice_radio` (walkie-talkie: hold-to-talk, a friend on the radio) `voice_speaking` (bubble with sound waves: a friend speaking) |
+| Riding together (drawn by the game agent in the house style) | `msg_chat` (quick-message button) `msg_wait` (raised glove, 等我) `msg_meet` (lift station and map pin, 缆车站见) `msg_good` (thumbs up with snowflakes, 这条好滑) `msg_down` (a rider dropping in, 我先下去了) `msg_coming` (paper plane with a dashed trail, 去找你 and the fly-over) |
+
+Icons marked "drawn by the game agent in the house style" were drawn with code, not painted by the owner:
+`node tools/draw_icons.mjs [name ...]` (needs `npm i --no-save puppeteer-core` and Chrome) redraws them and the
+side-by-side check `docs/art/icons/new_icons_review.png`. Swap in a painted one any time under the same name.
 
 Animals for the map: `assets/animals/<name>.png` (painted cut-outs) and `assets/animals/3d/<name>.glb`
 (rigged, walking; `tools/build_animals.py`).
@@ -26,8 +33,5 @@ Mountain page (cut from the owner's Copper Mountain mock): `back` `bookmark` `sn
 
 Wanted (pets' emote bubbles on the map, `src/start/pets.js` `EMOTES` uses stand-ins until they arrive): `emo_heart` (比心 hand heart), `emo_happy` (happy sparkle star), `emo_music` (music notes), `emo_surprise` (!), `emo_question` (?), `emo_sleepy` (zzz with a moon), `emo_snow` (snowflake; `season` stands in), `emo_sweat` (a sweat drop, puffing; `hike` + a CSS drop stand in), `emo_sun` (basking in the sun; `sunny` stands in), `emo_relieved` (phew, home again; `rest` + "呼~" stand in). `emo_homesick` (想回家, looking up at home from below its cliff; `lodge` + text stand in), `emo_missing` (想家, missing its own mountain from someone else's; `resorts` + text stand in), `emo_huff` (哼, a huffy puff; `windy` + text stand in), `emo_lost` (找不着北, lost; `compass_rose` + text stand in), `emo_ladder` (想要梯子, wants a ladder; `lift` + text stand in). `emo_music` uses `palette` for now.
 
-Wanted (riding together, `src/ride/together-core.js` `QUICK` and the button in `together.js` use stand-ins until they arrive): `msg_chat` (a speech bubble: the quick-message button; `rider` stands in), `msg_wait` (a raised hand, "等我"; `rest`), `msg_meet` (a lift station with a pin, "缆车站见"; `lift`), `msg_good` (thumbs up on snow, "这条好滑"; `star`), `msg_down` (a rider dropping in, "我先下去了"; `snowboard`), `msg_coming` (footprints or a paper plane, "去找你" and the fly-over; `compass_rose`).
 
-Wanted (the rider page's wardrobe, `src/start/start.js` `NAV`): `look_mirror` (a hand mirror: the 外形 item, hair and build; `sliders` stands in).
 
-Wanted (voice while riding together, `src/ride/voice.js` uses Chinese text labels until they arrive): `voice_mic` (a microphone: the mic button, on), `voice_mic_off` (the microphone crossed out: off, and a muted friend), `voice_radio` (a walkie-talkie held up: the hold-to-talk button and a friend's tag while they're on it), `voice_speaking` (sound waves from a mouth or a small speaker: a friend speaking; a CSS ring stands in).
