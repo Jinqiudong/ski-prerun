@@ -256,3 +256,36 @@ export function bumpStep(st, hs, speed, dt, rules = BUMP) {
   st.absorb += (want - st.absorb) * Math.min(1, dt * 12);
   return st;
 }
+
+// ---------- A tree in the way ----------
+// The trunk you touch (r: metres from its centre to the board), and how a hit plays out. Straight on (within
+// ~37°) and fast: a crash. Anything else glances off: the part of the speed into the trunk goes, the rest
+// carries on round it, so a brush never stops you and you can't be pinned against a trunk. Moving away from
+// it already, it only keeps you out of the bark. Nearly straight on but slow: you slide round on the side you
+// were going (`prefer`, a unit { x, z }: the route ahead), never below `slide` m/s if you had that much.
+// r: { x, z, heading, speed }; tree: { x, z }. Returns { x, z, heading, speed, crash, hard, into, up }:
+// up, after a crash, the heading to get up facing (clear of the trunk, toward `prefer`).
+export const TREE = { r: 1.2, crashV: 5.5, crashCos: 0.8, keep: 0.85, slide: 1.6 };
+export function treeHit(r, tree, prefer = null, rules = TREE) {
+  let nx = r.x - tree.x, nz = r.z - tree.z;
+  const L = Math.hypot(nx, nz) || 1; nx /= L; nz /= L;
+  const out = { x: tree.x + nx * (rules.r + 0.05), z: tree.z + nz * (rules.r + 0.05), heading: r.heading, speed: r.speed, crash: false, hard: 0, into: 0, up: r.heading };
+  const vx = Math.sin(r.heading), vz = Math.cos(r.heading), vn = vx * nx + vz * nz;
+  if (vn >= 0) return out; // already going away
+  const into = (out.into = -vn);
+  // Round the trunk on one side: perpendicular to the way out, the one closer to (px, pz).
+  const side = (px, pz) => { const s = -nz * px + nx * pz >= 0 ? 1 : -1; return [-nz * s, nx * s]; };
+  // The way round: the travel without its part into the trunk; straight on, the side toward `prefer`.
+  let tx = vx - vn * nx, tz = vz - vn * nz;
+  if (Math.hypot(tx, tz) < 0.25) [tx, tz] = prefer ? side(prefer.x, prefer.z) : side(tx, tz + 1e-3);
+  const tl = Math.hypot(tx, tz); tx /= tl; tz /= tl;
+  const p = prefer || { x: tx, z: tz }, [ux, uz] = p.x * nx + p.z * nz >= 0 ? [p.x, p.z] : side(p.x, p.z);
+  out.up = Math.atan2(ux, uz);
+  if (r.speed * into > rules.crashV && into > rules.crashCos) {
+    out.crash = true; out.hard = clamp(r.speed / 10, 0.3, 1); out.speed = 0;
+    return out;
+  }
+  out.heading = Math.atan2(tx, tz);
+  out.speed = Math.max(r.speed * Math.sqrt(1 - into * into) * rules.keep, Math.min(r.speed, rules.slide));
+  return out;
+}

@@ -2,7 +2,7 @@
 // bumps' zipper, and the board over them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { POWDER, powderAmount, groomedRun, powderTerrain, powderField, powderAt, MOGULS, runPitch, mogulRun, markMoguls, mogulHeight, cap, MogulField, bumpStep } from "../src/ride/snow-core.js";
+import { POWDER, powderAmount, groomedRun, powderTerrain, powderField, powderAt, MOGULS, runPitch, mogulRun, markMoguls, mogulHeight, cap, MogulField, bumpStep, TREE, treeHit } from "../src/ride/snow-core.js";
 
 // A synthetic mountain on a 10 m grid, x east, z south: heights from f(x, z).
 function terrain(f, n = 81, cell = 10) {
@@ -147,4 +147,30 @@ test("over the bumps: slow riders stay on the snow and soak them up; fast ones g
   assert.ok(slow.absorb > 0.3, `knees bend ${slow.absorb}`);
   assert.ok(fast.air > 0.5, `fast air ${fast.air}`);
   assert.ok(fast.top < 1.2, `hops stay small ${fast.top}`);
+});
+
+test("a tree: straight on and fast is a crash; a glance deflects you round it; slow, you slide round; never pinned", () => {
+  const tree = { x: 0, z: 0 }, D = Math.PI / 180;
+  const at = (deg, speed, back = TREE.r - 0.1) => ({ x: -Math.sin(deg * D) * back, z: -Math.cos(deg * D) * back, heading: 0, speed });
+  // straight on at 29 km/h: down, and up facing clear of the trunk (never into it)
+  const c = treeHit(at(0, 8), tree, { x: 0, z: 1 });
+  assert.ok(c.crash && c.speed === 0 && c.hard > 0.5);
+  assert.ok(Math.sin(c.up) * (c.x - tree.x) + Math.cos(c.up) * (c.z - tree.z) >= -1e-9, "gets up facing away from the trunk or round it");
+  assert.ok(Math.abs(Math.hypot(c.x, c.z) - TREE.r - 0.05) < 1e-9, "put just outside the trunk");
+  // a glancing hit (contact 45° off the trunk's centre) at 36 km/h: no crash, turned off it, most of the speed kept
+  const g = treeHit(at(45, 10), tree, { x: 0, z: 1 });
+  assert.ok(!g.crash);
+  assert.ok(g.speed > 5.5, `kept ${g.speed}`);
+  assert.ok(Math.abs(g.heading) > 30 * D && Math.abs(g.heading) < 60 * D, `round it ${g.heading / D}`);
+  // straight on but slow: no crash, slides round toward the way on at a walking pace at least
+  const s = treeHit(at(0, 3), tree, { x: 0.3, z: 0.95 });
+  assert.ok(!s.crash && s.speed >= TREE.slide - 1e-9);
+  assert.ok(Math.sin(s.heading) > 0.9, "round on the side of the way on");
+  // already going away: only kept out of the bark
+  const a = treeHit({ x: 0, z: 1, heading: 0, speed: 5 }, tree);
+  assert.equal(a.speed, 5); assert.equal(a.heading, 0); assert.equal(a.into, 0);
+  // steering into the same trunk frame after frame never stops you
+  let r = { ...at(10, 4), heading: 10 * D };
+  for (let k = 0; k < 90; k++) { const h = treeHit(r, tree, { x: 0, z: 1 }); r = { x: h.x, z: h.z, heading: h.heading + 0.2, speed: h.speed }; }
+  assert.ok(r.speed >= TREE.slide - 1e-9, `still moving ${r.speed}`);
 });
