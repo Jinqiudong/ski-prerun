@@ -7,13 +7,14 @@ import { Terrain } from "../ride/world.js?v=5";
 import { markMoguls } from "../ride/snow-core.js?v=1";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
-import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
+import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=2";
 import { addStep } from "../ride/roadbook.js?v=22";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=41";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=42";
 import { openNav } from "../core/nav.js?v=19";
 import { liftTicket } from "../core/transition.js?v=12";
 import { startParty } from "../core/party.js?v=11";
 import { bunnySpot } from "../ride/practice-core.js?v=1";
+import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
@@ -115,12 +116,18 @@ async function main() {
   // Light the scene for a moment in time and a kind of weather: the picture is tinted (warm low sun, blue
   // night, greyer under cloud); the lights follow the sun.
   const tint = new THREE.Color();
-  const look = { live: true, date: new Date(), kind: "clear", temp: null };
+  // The weather bar is where the conditions are chosen (src/core/conditions.js): 实时, or an hour and a sky,
+  // kept per resort so the ride goes up in them and the ride's 雪况 pill can change them back.
+  const look = { live: true, date: new Date(), kind: "clear", liveKind: "clear", temp: null };
+  const cond0 = loadCond(localStorage, RESORT_ID);
+  if (!cond0.live) Object.assign(look, { live: false, date: dateAt(cond0.hour, RESORT.tz), kind: cond0.sky });
+  const keepCond = () => saveCond(localStorage, RESORT_ID, look.live ? LIVE : choose(LIVE, { hour: +$("hour").value, sky: look.kind }, { liveSky: look.liveKind }));
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${RESORT.lat}&longitude=${RESORT.lon}&current=temperature_2m,weather_code,cloud_cover&timezone=${encodeURIComponent(RESORT.tz)}`;
   const fetchWeather = async () => {
     try {
       const w = await (await fetch(weatherUrl)).json();
-      look.kind = weatherKind(w.current.weather_code, w.current.cloud_cover);
+      look.liveKind = weatherKind(w.current.weather_code, w.current.cloud_cover);
+      if (look.live) look.kind = look.liveKind;
       look.temp = w.current.temperature_2m;
     } catch { /* offline: keep the last weather */ }
   };
@@ -139,7 +146,8 @@ async function main() {
     const local = look.date.toLocaleTimeString("zh-CN", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" });
     // the weather bar: the owner's icon for the sky, now or the hour you're previewing
     $("nowIcon").src = `../assets/icons/${{ clear: day ? "sunny" : "partly", cloudy: "partly", overcast: "cloudy", snow: "snow_now" }[look.kind] || "cloudy"}.png?v=1`;
-    $("nowText").textContent = `${tr(look.live ? "现在" : "预览")} · ${tr(WEATHER_ZH[look.kind])}${look.temp !== null && look.live ? `  ${Math.round(look.temp)}°C` : ""}`;
+    $("now").classList.toggle("chosen", !look.live);
+    $("nowText").textContent = `${tr(look.live ? "现在" : "自选")} · ${tr(WEATHER_ZH[look.kind])}${look.temp !== null && look.live ? `  ${Math.round(look.temp)}°C` : ""}`;
     $("nowTime").textContent = local;
   };
   await fetchWeather();
@@ -152,8 +160,8 @@ async function main() {
   const fmtH = (h) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
   const hourNow = () => { const d = new Date(), [h, m] = d.toLocaleTimeString("en-GB", { timeZone: RESORT.tz, hour: "2-digit", minute: "2-digit" }).split(":"); return +h + m / 60; };
   const sync = () => {
-    const h = look.live ? hourNow() : +$("hour").value;
-    if (look.live) $("hour").value = h;
+    if (look.live) $("hour").value = hourNow();
+    const h = +$("hour").value;
     $("tpTime").textContent = fmtH(h);
     $("tpLive").classList.toggle("on", look.live);
     document.querySelectorAll("[data-wx]").forEach((b) => b.classList.toggle("on", b.dataset.wx === look.kind));
@@ -168,15 +176,24 @@ async function main() {
   $("hour").addEventListener("input", () => {
     look.live = false;
     look.date = new Date(Date.now() + (+$("hour").value - hourNow()) * 3600000);
-    applyLook(); sync();
+    applyLook(); sync(); keepCond();
   });
   document.querySelectorAll("[data-wx]").forEach((b) => b.addEventListener("click", () => {
     if (look.live) { look.live = false; $("hour").value = hourNow(); } // keep the time where it is
-    look.kind = b.dataset.wx; applyLook(); sync();
+    look.kind = b.dataset.wx; applyLook(); sync(); keepCond();
   }));
-  $("tpLive").addEventListener("click", async () => { look.live = true; look.date = new Date(); await fetchWeather(); applyLook(); sync(); });
+  $("tpLive").addEventListener("click", async () => { look.live = true; look.date = new Date(); keepCond(); await fetchWeather(); applyLook(); sync(); });
+  if (!look.live) $("hour").value = cond0.hour;
   sync();
   $("now").addEventListener("click", () => $("timePanel").classList.toggle("show"));
+  // Back from the ride (the page kept in memory): the pill there may have changed the conditions.
+  addEventListener("pageshow", async (e) => {
+    if (!e.persisted) return;
+    const c = loadCond(localStorage, RESORT_ID);
+    if (c.live) { look.live = true; look.date = new Date(); await fetchWeather(); }
+    else { Object.assign(look, { live: false, date: dateAt(c.hour, RESORT.tz), kind: c.sky }); $("hour").value = c.hour; }
+    applyLook(); sync();
+  });
 
   const all = R.runs.flatMap((r) => r.pts);
   const cx = all.reduce((a, p) => a + p[0], 0) / all.length, cz = all.reduce((a, p) => a + p[1], 0) / all.length;

@@ -32,7 +32,7 @@
     #timePanel .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
     #timePanel button { font: inherit; font-size: 13px; color: var(--ink); background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
     #timePanel #live { background: var(--accent); border-color: var(--accent); }
-    body.mini #pins, body.mini #bar, body.mini #now, body.mini #timePanel, body.mini #title, body.mini #vignette, body.mini #base { display: none !important; }
+    body.mini #pins, body.mini #bar, body.mini #title, body.mini #vignette, body.mini #base { display: none !important; }
     #miniTop { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; display: none; justify-content: space-between; align-items: center; gap: 8px; }
     body.mini #miniTop { display: flex; }
     #miniTop .glass { padding: 8px 14px; font-weight: 600; }

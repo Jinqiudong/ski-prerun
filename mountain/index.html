@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../src/styles/mountain.css?v=1">
+  <link rel="stylesheet" href="../src/styles/mountain.css?v=2">
   <script>
     // The app starts by picking a rider; anyone arriving here without one goes there first.
     try { if (!JSON.parse(localStorage.getItem("prerun") || "{}").rider) location.replace("../start.html"); } catch { /* storage off: carry on */ }
@@ -24,7 +24,7 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../src/styles/paper.css?v=1">
-  <link rel="stylesheet" href="../src/styles/mountain-paper.css?v=4">
+  <link rel="stylesheet" href="../src/styles/mountain-paper.css?v=5">
 </head>
 <body>
   <canvas id="c"></canvas>
@@ -77,6 +77,6 @@
   </div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { flyIn } from "../src/core/transition.js?v=12"; flyIn();</script>
-  <script type="module" src="../src/mountain/mountain.js?v=20"></script>
+  <script type="module" src="../src/mountain/mountain.js?v=21"></script>
 </body>
 </html>

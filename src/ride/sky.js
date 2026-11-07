@@ -28,13 +28,17 @@ export function weatherKind(code, cloud) {
 }
 export const WEATHER_ZH = { clear: "晴", cloudy: "多云", overcast: "阴", snow: "下雪" };
 
-// Sky and light for a sun elevation, greyed by cloud.
+// Sky and light for a sun elevation, greyed by cloud. Dusk (the sun from about 6° up to 6° under the horizon)
+// is golden: a peach horizon, an orange sun that stays fairly strong, and a warm fill (p.fill, the sky's light
+// on the shaded snow; p.warm, 0..1, how much dusk it is) instead of the day's blue. Under snow cloud at dusk
+// the sky stays a soft warm grey rather than going night-dark.
 export function palette(elDeg, kind) {
   const C = (h) => new THREE.Color(h);
   const keys = [
     { el: -12, top: C(0x0b1530), mid: C(0x1a2c55), hor: C(0x2b3d66), sun: C(0x6d7fb8), si: 0.0, amb: 0.25, exp: 0.75 },
-    { el: -2, top: C(0x1d2e63), mid: C(0x4a5c9a), hor: C(0xd59a8c), sun: C(0xff9a6a), si: 0.4, amb: 0.35, exp: 0.85 },
-    { el: 6, top: C(0x2c5cb0), mid: C(0x7da3df), hor: C(0xffc49a), sun: C(0xffb178), si: 2.4, amb: 0.4, exp: 0.9 },
+    { el: -6, top: C(0x2e3666), mid: C(0x7a6c9c), hor: C(0xd98f80), sun: C(0xff8a5c), si: 0.6, amb: 0.36, exp: 0.9 },
+    { el: -2, top: C(0x3d4f88), mid: C(0xa892b6), hor: C(0xf3a57f), sun: C(0xff965a), si: 1.5, amb: 0.42, exp: 0.97 },
+    { el: 6, top: C(0x4769ab), mid: C(0xb3b3d2), hor: C(0xffc088), sun: C(0xffa85e), si: 2.9, amb: 0.44, exp: 0.97 },
     { el: 20, top: C(0x1a52b8), mid: C(0x5e97e6), hor: C(0xd6e6f6), sun: C(0xffe6c8), si: 3.3, amb: 0.4, exp: 0.92 },
     { el: 60, top: C(0x1452c4), mid: C(0x4f8ee8), hor: C(0xcfe3f7), sun: C(0xfff6ec), si: 3.6, amb: 0.42, exp: 0.92 },
   ];
@@ -44,10 +48,16 @@ export function palette(elDeg, kind) {
   const mix = (k) => a[k].clone().lerp(b[k], t), num = (k) => a[k] + (b[k] - a[k]) * t;
   const p = { top: mix("top"), mid: mix("mid"), hor: mix("hor"), sun: mix("sun"), si: num("si"), amb: num("amb"), exp: num("exp") };
   const grey = { clear: 0, cloudy: 0.25, overcast: 0.75, snow: 0.85 }[kind];
-  const g = new THREE.Color(0xc4cad3).multiplyScalar(Math.max(0.25, Math.min(1, (elDeg + 6) / 25)));
+  // How much dusk: 1 from 4° under to 6° over the horizon, gone by 8° under and by 16° up.
+  const warm = Math.max(0, Math.min(1, (elDeg + 8) / 4, (16 - elDeg) / 10));
+  // Cloud's grey: dimmer as the sun goes down (but a dusk cloud deck still glows), warmed by the sunset.
+  const g = new THREE.Color(0xc4cad3).multiplyScalar(Math.max(0.25, Math.min(1, (elDeg + 14) / 20))).lerp(new THREE.Color(0xe0b6a4), warm * 0.3);
   for (const k of ["top", "mid", "hor"]) p[k].lerp(g, grey);
   p.si *= 1 - grey * 0.85;
-  p.amb += grey * 0.35;
+  p.amb += grey * (0.35 + 0.25 * warm);
+  p.exp += grey * 0.12 * warm; // a dusk cloud deck: open up a little
+  p.warm = warm;
+  p.fill = new THREE.Color(0x9fc2ff).lerp(new THREE.Color(0xf6dcc0), warm * (1 - grey * 0.5)); // the sky's light on the snow
   p.shadow = 1 - grey * 0.8; // how strong mountain shadows are
   p.fog = { clear: [20000, 95000], cloudy: [14000, 70000], overcast: [6000, 32000], snow: [1500, 9000] }[kind];
   p.clouds = { clear: 0.35, cloudy: 1, overcast: 1, snow: 0.6 }[kind];

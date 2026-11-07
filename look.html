@@ -20,12 +20,12 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/styles/paper.css?v=1">
-  <link rel="stylesheet" href="src/styles/ride-paper.css?v=2">
+  <link rel="stylesheet" href="src/styles/ride-paper.css?v=3">
 </head>
 <body>
   <canvas id="c"></canvas>
   <div id="vignette"></div>
-  <div id="top" class="glass"><b id="topBar"><img id="liftIco" src="assets/icons/lift.png?v=1" alt=""><span id="liftName"></span><small id="wxToggle">雪况 ⌄</small></b><div id="topInfo" hidden><div id="weather"></div><p id="desc"></p></div></div>
+  <div id="top" class="glass"><b id="topBar"><img id="liftIco" src="assets/icons/lift.png?v=1" alt=""><span id="liftName"></span><small id="wxToggle">雪况 ⌄</small></b><div id="topInfo" hidden><div id="cond"></div><div id="weather"></div><p id="desc"></p></div></div>
   <button id="menuBtn" class="rfab" aria-label="菜单"><img alt=""></button>
   <button id="tabFab" class="rfab" aria-label="页面"><img src="assets/icons/resorts.png?v=1" alt=""></button>
   <div id="fanDim" hidden></div><div id="fanDown" class="fan" hidden></div><div id="fanUp" class="fan" hidden></div>
@@ -57,6 +57,6 @@
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { liftRide } from "./src/core/transition.js?v=12"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=33"></script>
+  <script type="module" src="src/ride/ride.js?v=34"></script>
 </body>
 </html>
