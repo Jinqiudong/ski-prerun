@@ -29,7 +29,8 @@ export function rideTrip(list, today, resort, member, wanted = null) {
 //   s    { id, ph, ... }                             where I am (below), about 4 a second while it changes
 //   m    { id, k }                                   a quick message (QUICK)
 //   bye  { id }                                      I left
-// A state: ph "lift" (l lift, d metres along it, v metres a second, b when I boarded, c chair id),
+// A state: ph "lift" (l lift, d metres along it, v metres a second, b when I boarded, c chair id, k my seat
+// and kt when I took it, hd 1 while my chair waits at the loading point for friends on their way),
 // "top" (l, x, z, h), "ski" (x, z, h heading, sp speed, ln lean, run, w the lift I wait at the bottom of),
 // "hike" (x, z, h). Skiing also says where to: e [x, z] and en, its name.
 export const PHASES = ["lift", "top", "ski", "hike"];
@@ -51,6 +52,8 @@ export function cleanState(p) {
   if (p.ph === "lift") {
     s.l = str(p.l); s.d = num(p.d, 0, 20000); s.v = num(p.v, 0, 200) ?? 0; s.b = num(p.b, 0, 1e14); s.c = str(p.c, 80);
     if (!s.l || s.d == null) return null;
+    if (Number.isInteger(p.k) && p.k >= 0 && p.k < 12) { s.k = p.k; s.kt = num(p.kt, 0, 1e14) ?? 0; }
+    if (p.hd === 1) s.hd = 1;
   } else {
     s.x = num(p.x, -1e5, 1e5); s.z = num(p.z, -1e5, 1e5); s.h = num(p.h, -100, 100) ?? 0;
     if (s.x == null || s.z == null) return null;
@@ -94,7 +97,7 @@ export function cleanRider(r) {
 // Worth sending again? Moved, turned, changed phase, or quiet for `keep` ms (so friends know I'm here).
 // On a lift the chair's motion is predictable: only a change of speed, a jump, or once a second.
 export function changed(a, b, dt, keep = 5000) {
-  if (!a || !b || a.ph !== b.ph || a.l !== b.l || a.c !== b.c || a.w !== b.w || a.run !== b.run || a.en !== b.en) return true;
+  if (!a || !b || a.ph !== b.ph || a.l !== b.l || a.c !== b.c || a.k !== b.k || a.hd !== b.hd || a.w !== b.w || a.run !== b.run || a.en !== b.en) return true;
   if (dt >= keep) return true;
   if (a.ph === "lift") return dt >= 1000 || Math.abs(a.v - b.v) > 0.05 || Math.abs(a.d + (a.v * dt) / 1000 - b.d) > 3;
   return Math.hypot(a.x - b.x, a.z - b.z) > 0.3 || Math.abs(a.h - b.h) > 0.05;
@@ -113,20 +116,72 @@ export function seatsOf(members, n) {
   return new Map(sorted.map((m, i) => [m.id, i < order.length ? order[i] : -1]));
 }
 // Do I share a friend's chair? me { id, lift, b (when I boarded) }, states: friends' latest. A friend on
-// the same lift who boarded up to `win` ms before me (or at the same moment, with a smaller id) owns the
-// chair, or `want` (a friend I asked to ride with: no time limit). Returns the state whose chair I take, or null.
-export function chairToJoin(me, states, { win = 6000, want = null } = {}) {
+// the same lift who boarded up to `win` ms before me (or at the same moment, with a smaller id), or whose
+// chair still waits at the loading point (hd), owns the chair; or `want` (a friend I asked to ride with: no
+// time limit). Returns the state whose chair I take, or null.
+export const HOLD = 20000, HOLD_MAX = 45000;
+export function chairToJoin(me, states, { win = HOLD, want = null } = {}) {
   let best = null;
   for (const s of states) {
     if (!s || s.ph !== "lift" || s.l !== me.lift || s.id === me.id || !s.c) continue;
     if (s.c.startsWith(me.id + "@")) continue; // they are in mine
     const asked = want && s.id === want;
     const first = s.b < me.b || (s.b === me.b && s.id < me.id);
-    if (!asked && (!first || me.b - s.b > win)) continue;
+    if (!asked && (!first || (me.b - s.b > win && !s.hd))) continue;
     if (!best || asked || s.b < best.b) best = s;
     if (asked) break;
   }
   return best;
+}
+
+// Who sits where in one chair of n seats. members [{ id, k (the seat they took), kt (when) }]: the earliest
+// claim on a seat keeps it (then the smaller id); the others take the free seat nearest the one they wanted,
+// and those who never said take free seats in seatOrder. Who doesn't fit: -1 (the chair behind). Every phone
+// works it out from the same states, so two riders never share a seat, whatever the channel drops.
+export function chairSeats(members, n) {
+  const ok = (k) => Number.isInteger(k) && k >= 0 && k < n, byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const when = (m) => (ok(m.k) ? m.kt ?? 0 : Infinity);
+  const out = new Map(), taken = new Set(), rest = [];
+  const list = [...members].sort((a, b) => (when(a) === when(b) ? 0 : when(a) < when(b) ? -1 : 1) || byId(a, b));
+  for (const m of list) if (ok(m.k) && !taken.has(m.k)) { taken.add(m.k); out.set(m.id, m.k); } else rest.push(m);
+  for (const m of rest) {
+    const free = ok(m.k) ? [...Array(n).keys()].filter((i) => !taken.has(i)).sort((a, b) => Math.abs(a - m.k) - Math.abs(b - m.k) || a - b) : seatOrder(n).filter((i) => !taken.has(i));
+    const k = free.length ? free[0] : -1;
+    if (k >= 0) taken.add(k);
+    out.set(m.id, k);
+  }
+  return out;
+}
+// The first free seat in the order people fill a chair (for someone getting on), or -1.
+export function freeSeat(seats, n) { const used = new Set(seats.values()); return seatOrder(n).find((i) => !used.has(i)) ?? -1; }
+// The nearest free seat from `from` toward dir (+1: up the seat numbers, the rider's left; -1: right), or -1.
+export function seatToward(seats, n, from, dir) {
+  const used = new Set(seats.values());
+  for (let i = from + dir; i >= 0 && i < n; i += dir) if (!used.has(i)) return i;
+  return -1;
+}
+
+// Boarding together: the first of us at the lift holds the chair at the loading point while friends are on
+// their way (coming: [{ loading }], loading: their ride page is still opening), HOLD ms from sitting down,
+// HOLD_MAX while someone's page loads. How long it still waits (ms); 0: go.
+export function holdLeft(since, now, coming) {
+  if (!coming.length) return 0;
+  return Math.max(0, since + (coming.some((c) => c.loading) ? HOLD_MAX : HOLD) - now);
+}
+// Who is on their way to my chair. me { id, lift, resort, b, c (my chair) }; members: the party's presences
+// (party-core cleanPresence); states: friends' ride states. On their way: a party member opening this lift's
+// ride after me (not in my chair yet), one following me (the party brings them onto my lift), or a friend
+// waiting at the bottom of this lift (they're offered my chair). Not those in my chair already, nor those
+// riding up this lift in another chair (past d0 + 20 m: the chair behind, say). Returns [{ id, loading }].
+export function comingTo(me, members, states) {
+  const inMine = new Set(states.filter((s) => s?.ph === "lift" && (s.c === me.c || (s.l === me.lift && s.d > (me.d0 || 0) + 20))).map((s) => s.id)), out = new Map();
+  for (const m of members) {
+    if (!m || m.id === me.id || !m.in || inMine.has(m.id) || m.c === me.c) continue;
+    const here = m.page === "ride" && m.resort === me.resort && m.lift === me.lift && (m.ph || "lift") === "lift";
+    if (here ? !m.b || m.b > me.b : m.fol === me.id) out.set(m.id, { id: m.id, loading: true });
+  }
+  for (const s of states) if (s && s.id !== me.id && s.ph === "ski" && s.w === me.lift && !inMine.has(s.id) && !out.has(s.id)) out.set(s.id, { id: s.id, loading: false });
+  return [...out.values()];
 }
 
 // Where a friend is, as words: [zh, vars] for i18n's t().

@@ -1,8 +1,14 @@
 // Riding together: friends on the same shared trip, live in the ride. A Realtime broadcast channel per trip
 // and resort (ride:<trip>:<resort>, shared-trip.js's Channel; only people who have the trip id can join it)
 // carries where each of us is, about 4 times a second while it changes. Friends ride as the rider they
-// dressed on the rider page (their look) with a paper name tag; on a lift they sit in a chair, and boarding
-// within a few seconds of each other puts you in the same chair, turned to each other, talking. The painted map shows them; "去找他" flies you over the mountain
+// dressed on the rider page (their look) with a paper name tag; on a lift they sit in a chair. Boarding
+// together: the first of us at a lift holds the chair at the loading point while friends are on their way
+// (the party opening the same lift, following me, or waiting at its bottom; together-core's comingTo,
+// holdLeft), and whoever gets on within the wait sits down in it; the chair swings, a bubble stays up (we see
+// each other), and it goes. Riding together, the camera watches us from in front, three quarters on (our faces
+// button: behind, the way up). Each rider says their seat (k, and when they took it: kt); together-core's chairSeats settles
+// who sits where the same way on every phone, so two riders never share one. Tap the free seat beside you
+// to move over. The painted map shows them; "去找他" flies you over the mountain
 // to land beside them, "跟随" keeps your route on them; quick messages pop over their tags. Voice (voice.js):
 // friends near you are heard where they are, the walkie-talkie reaches everyone; peer to peer, set up on
 // the same channel.
@@ -14,13 +20,14 @@
 // the same moment, seats by id).
 import * as THREE from "three";
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "../core/i18n.js?v=36";
-import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=6";
+import { t, myAvatar } from "../core/i18n.js?v=37";
+import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=7";
 import { ymd } from "../start/trip-intro.js?v=1";
-import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, whereOf, alongPts, QUICK } from "./together-core.js?v=5";
-import { rideVoice } from "./voice.js?v=4";
+import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=6";
+import { rideVoice } from "./voice.js?v=5";
 
-const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = 8000;
+const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = HOLD_MAX;
+const SIT = 900, SETTLE = 2400; // sitting down (ms); the boarding moment before a held chair goes
 const LAND = "prerunTogetherLand", TRIP = "prerunRideTrip";
 const store = (s, k, v) => { try { if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { /* storage off */ } return null; };
 const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -58,6 +65,14 @@ const CSS = `
 #tgSeat { position: fixed; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 13; display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 6px; border-radius: 999px; background: rgba(253,251,246,.97); box-shadow: 0 6px 16px rgba(40,30,20,.25); color: #22344d; font: 600 15px "Noto Serif SC", serif; white-space: nowrap; animation: tg-in .4s ease-out; transition: opacity .6s; }
 #tgSeat .faces { display: flex; } #tgSeat .faces img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fdfbf6; background: #e6ebee; } #tgSeat .faces img + img { margin-left: -10px; }
 #tgSeat.out { opacity: 0; }
+#tgHold { position: fixed; left: 50%; bottom: calc(110px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 13; display: flex; align-items: center; gap: 8px; padding: 5px 5px 5px 6px; border-radius: 999px; background: rgba(253,251,246,.97); box-shadow: 0 6px 16px rgba(40,30,20,.25); color: #22344d; font: 600 14px "Noto Serif SC", serif; white-space: nowrap; animation: tg-in .4s ease-out; }
+#tgHold .faces img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fdfbf6; background: #e6ebee; } #tgHold .faces img + img { margin-left: -10px; }
+#tgHold b { font: 600 15px Oswald, sans-serif; color: #8a8278; min-width: 1.6em; text-align: right; }
+#tgHold button { font: inherit; font-size: 13px; color: #fdfbf6; background: #22344d; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+#tgHold[hidden], .tgSeatGo[hidden], #tgView[hidden] { display: none; }
+#tgView { left: 14px; top: calc(208px + env(safe-area-inset-top)); } #tgView .faces { display: flex; } #tgView .faces img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fdfbf6; background: #e6ebee; } #tgView .faces img + img { margin-left: -12px; }
+.tgSeatGo { position: fixed; left: 0; top: 0; z-index: 4; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px; border: 1.5px dashed #8a8278; background: rgba(253,251,246,.9); color: #22344d; font: 600 12px "Noto Serif SC", serif; white-space: nowrap; cursor: pointer; box-shadow: 0 3px 8px rgba(40,30,20,.18); will-change: transform; }
+.tgSeatGo:active { background: #22344d; color: #fdfbf6; }
 #tgFly { position: fixed; inset: 0; z-index: 30; pointer-events: auto; opacity: 0; transition: opacity .35s; background: radial-gradient(ellipse 70% 58% at 50% 48%, rgba(233,237,242,0) 48%, rgba(233,237,242,.6) 78%, rgba(226,232,238,.96) 100%); }
 #tgFly.on { opacity: 1; } #tgFly.full { background: #dde3e9; }
 #tgFly p { position: absolute; left: 0; right: 0; top: 30vh; margin: 0; text-align: center; color: #22344d; font: 600 22px "Noto Serif SC", serif; letter-spacing: .22em; text-shadow: 0 0 12px #eef2f5, 0 0 4px #fff; }
@@ -81,7 +96,7 @@ function landingCover() {
 }
 
 export function rideTogether(api) {
-  const none = { frame() {}, mate: () => 0, active: false };
+  const none = { frame() {}, mate: () => 0, held: () => false, boarding: () => null, active: false };
   const params = new URLSearchParams(location.search);
   if (params.get("trip")) store(sessionStorage, TRIP, params.get("trip"));
   const party = api.party || null;
@@ -105,6 +120,11 @@ export function rideTogether(api) {
   const boardAt = sync || Date.now() - (api.trip && at0 === 0 ? 0 : 60000);
   const ownChair = `${me}@${boardAt}`;
   let chairId = host ? `${host}@${sync}` : ownChair, joinedChair = !!host, satWith = new Set(), found = false, pendingFollow = null;
+  // My seat: its index in the chair (api.seat().xs) and when I took it. 一起坐: by id among the call's crew,
+  // all at the call's moment, so nobody's claims collide.
+  const xsOf = () => api.seat().xs, seatIx = () => Math.max(0, xsOf().indexOf(api.seat().x));
+  let seat = { k: seatIx(), kt: boardAt };
+  if (host) { const k = seatsOf([...new Set([...crew, host, me])].map((id) => ({ id, b: sync })), xsOf().length).get(me); seat = { k, kt: sync }; if (k >= 0) api.setSeat(xsOf()[k], true); }
   const friends = new Map(); // id → friend
   const style = document.createElement("style"); style.textContent = CSS; document.head.append(style);
   const tags = Object.assign(document.createElement("div"), { id: "tgTags" }), toasts = Object.assign(document.createElement("div"), { id: "tgToasts" });
@@ -147,7 +167,7 @@ export function rideTogether(api) {
       const was = f.s;
       f.s = s; f.at = now; f.gone = 0;
       if (!f.disp || !was || was.ph !== s.ph || was.l !== s.l) f.disp = null; // jump, don't glide, to a new place
-      if (s.ph === "lift" && s.c === chairId && !satWith.has(f.id)) sitTogether(f);
+      if (s.ph === "lift" && s.c === chairId && !satWith.has(f.id) && !top.phase && !api.arrived) sitTogether(f, false);
       offerChair(f);
       if (findId && s.id === findId && !found) { found = true; setTimeout(() => goFind(findId), 400); } // opened to land beside them
       if (pendingFollow === s.id) { pendingFollow = null; startFollow(s.id, true); }
@@ -166,7 +186,12 @@ export function rideTogether(api) {
   let last = null, lastAt = 0, tickAt = 0;
   function myState() {
     const ph = top.phase;
-    if (!ph && !api.arrived) return { id: me, ph: "lift", l: lift.name, d: +api.d.toFixed(1), v: +api.speed().toFixed(2), b: boardAt, c: chairId };
+    if (!ph && !api.arrived) {
+      const s = { id: me, ph: "lift", l: lift.name, d: +api.d.toFixed(1), v: held ? 0 : +api.speed().toFixed(2), b: boardAt, c: chairId };
+      if (seat.k >= 0) { s.k = seat.k; s.kt = seat.kt; }
+      if (held) s.hd = 1;
+      return s;
+    }
     const r = ctx.rider.position, L = top.live?.() || {}, P = L.phys;
     if (ph === "ski") {
       const s = { id: me, ph: "ski", x: +(P ? P.x : r.x).toFixed(1), z: +(P ? P.z : r.z).toFixed(1), h: +(P ? P.heading : ctx.rider.rotation.y).toFixed(2), sp: +(P?.speed || 0).toFixed(1), ln: +(P?.lean || 0).toFixed(2), run: L.run, w: L.wait };
@@ -187,33 +212,45 @@ export function rideTogether(api) {
 
   // ---- Same chair
   const seatInfo = () => api.seat();
+  // Everyone in chair c, with the seat each says they took (me: mine, while I'm in it).
   function chairMembers(c) {
-    const list = alive().filter((f) => f.s.ph === "lift" && f.s.c === c).map((f) => ({ id: f.id, b: f.s.b }));
-    if (chairId === c && !top.phase) list.push({ id: me, b: boardAt });
+    const list = alive().filter((f) => f.s.ph === "lift" && f.s.c === c).map((f) => ({ id: f.id, k: f.s.k, kt: f.s.kt }));
+    if (chairId === c && !top.phase && !api.arrived) list.push({ id: me, k: seat.k, kt: seat.kt });
     return list;
   }
+  const seatsIn = (c) => chairSeats(chairMembers(c), xsOf().length);
   const extrapD = (f, now = performance.now()) => Math.min(line.total, f.s.d + (f.s.v * (now - f.at)) / 1000);
+  // Into chair c (a friend's): the first free seat, else the chair behind. Returns true if I sat down in it.
+  function takeSeat(f, c, d) {
+    const k = freeSeat(chairSeats(chairMembers(c).filter((m) => m.id !== me), xsOf().length), xsOf().length);
+    if (k < 0) { chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k], true); api.d = Math.max(api.d0, d - api.step()); toast(f.avatar, t("坐 {name} 后面那把", { name: esc(f.name) })); last = null; return false; }
+    chairId = c; seat = { k, kt: Date.now() }; api.d = d; api.setSeat(xsOf()[k], true);
+    stopHold(); sitTogether(f, true); last = null;
+    return true;
+  }
   function tryJoin(now) {
     if (joinedChair || top.phase || api.arrived || (!want && Date.now() - boardAt > JOIN_FOR)) return;
     const states = alive().map((f) => f.s), target = chairToJoin({ id: me, lift: lift.name, b: boardAt }, states, { want });
     if (!target) return;
     joinedChair = true;
-    const f = friends.get(target.id), d = extrapD(f, now), seats = seatsOf([...chairMembers(target.c).filter((m) => m.id !== me), { id: me, b: Math.max(boardAt, target.b + 1) }], seatInfo().xs.length);
-    const k = seats.get(me);
-    if (k >= 0) { chairId = target.c; api.d = d; api.setSeat(seatInfo().xs[k]); sitTogether(f); }
-    else { api.d = Math.max(api.d0, d - api.step()); toast(f.avatar, t("坐 {name} 后面那把", { name: esc(f.name) })); }
-    last = null;
+    const f = friends.get(target.id);
+    takeSeat(f, target.c, extrapD(f, now));
   }
-  // 一起坐: my seat in the shared chair, by id among everyone in it: first from the call's crew, then from
-  // who is really there (their states), so a crew member who never came leaves no gap that two people fill.
-  let seatAt = 0;
-  function syncSeat(now) {
-    if (!host || top.phase || api.arrived || chairId !== `${host}@${sync}` || now - seatAt < 1000 || Date.now() - sync > 60000) return;
-    seatAt = now;
-    const there = chairMembers(chairId).map((m) => m.id), ids = there.length > 1 ? there : [...new Set([...crew, host, me])];
-    const seats = seatsOf(ids.map((id) => ({ id, b: sync })), seatInfo().xs.length), k = seats.get(me);
-    if (k >= 0) { if (seatInfo().xs[k] !== seatInfo().x) { api.setSeat(seatInfo().xs[k]); last = null; } }
-    else { chairId = ownChair; api.d = Math.max(api.d0, api.d - api.step()); last = null; toast("lift", t("这把坐满了，坐后面那把")); }
+  // My seat as every phone sees it: if a friend's earlier claim has it, the free one nearest; full, the chair
+  // behind. A seat I'm moved to is a new claim.
+  function settleSeat() {
+    if (top.phase || api.arrived) return;
+    const r = seatsIn(chairId).get(me);
+    if (r === seat.k) return;
+    if (r >= 0) { seat = { k: r, kt: Date.now() }; api.setSeat(xsOf()[r]); last = null; return; }
+    chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k], true); api.d = Math.max(api.d0, api.d - api.step()); last = null;
+    toast("lift", t("这把坐满了，坐后面那把"));
+  }
+  // Move over to seat k, if it's free; the others see it at the next state (sent at once).
+  function moveTo(k) {
+    if (top.phase || api.arrived || k < 0 || k >= xsOf().length || [...seatsIn(chairId)].some(([id, s]) => id !== me && s === k)) return false;
+    seat = { k, kt: Date.now() }; api.setSeat(xsOf()[k]); last = null; tickAt = 0;
+    return true;
   }
   // Riding in a friend's chair: their chair's speed is ours; jump away (skip, seek) and you leave it.
   function keepChair(dt) {
@@ -221,13 +258,19 @@ export function rideTogether(api) {
     const owner = friends.get(chairId.split("@")[0]);
     if (!owner?.s || owner.s.ph !== "lift" || owner.s.c !== chairId || owner.gone) return;
     const want = extrapD(owner), diff = want - api.d;
-    if (Math.abs(diff) > 25) { chairId = ownChair; api.setSeat(seatInfo().xs[1]); last = null; return; }
+    if (Math.abs(diff) > 25) { chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k]); last = null; return; }
     api.d += diff * Math.min(1, dt * 3);
   }
-  function sitTogether(f) {
-    satWith.add(f.id); f.sitAt = performance.now();
-    if (seatInfo().bubble) api.setBubble(false); // the bar comes down
-    gestureBoarder(ctx.rider, "wave"); if (f.model) gestureBoarder(f.model, "wave"); // hello
+  // The boarding moment: whoever just got on sits down (me: I got into their chair), the chair swings with
+  // the weight, the bubble up, hello.
+  let meSitAt = -1e9, swingAt = -1e9, settleUntil = 0;
+  function sitTogether(f, mine) {
+    const now = performance.now();
+    satWith.add(f.id);
+    if (mine) meSitAt = now; else f.sitAt = now;
+    swingAt = now; settleUntil = now + SETTLE;
+    if (seatInfo().bubble) api.setBubble(true); // riding with friends the bubble stays up, so we see each other
+    setTimeout(() => { gestureBoarder(ctx.rider, "wave"); if (f.model) gestureBoarder(f.model, "wave"); }, SIT + 150); // hello
     const box = document.createElement("div"); box.id = "tgSeat";
     box.innerHTML = `<span class="faces"><img src="assets/icons/${myAvatar()}.png?v=1" alt=""><img src="assets/icons/${f.avatar}.png?v=1" alt=""></span><span translate="no"></span>`;
     box.lastChild.textContent = t("和 {name} 一起坐 {lift}", { name: f.name || t("朋友"), lift: lift.name });
@@ -235,6 +278,84 @@ export function rideTogether(api) {
     if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.([30, 40, 30]);
     setTimeout(() => box.classList.add("out"), 3600); setTimeout(() => box.remove(), 4300);
   }
+  // For the ride, each frame on the chair: how far the chair swings (radians about its cross bar) and, while
+  // I sit down, how far I still stand (1 standing … 0 seated; null: seated).
+  function boarding(now = performance.now()) {
+    const ts = (now - swingAt) / 1000, tm = (now - meSitAt) / SIT;
+    const swing = ts >= 0 && ts < 4 ? 0.11 * Math.exp(-ts / 1.1) * Math.sin(ts * Math.PI * 2 / 1.7) : 0;
+    // face: worth watching from in front (someone on their way, getting on, or asked for); with: a friend in my chair
+    return { swing, stand: tm >= 0 && tm < 1 ? 1 - tm : null, face: waiting || now < settleUntil || (shared && !camBack), with: shared };
+  }
+
+  // ---- Boarding together: the first at the lift waits at the loading point for friends on their way
+  // (fresh rides only: not resumed, not joining someone, not a 一起坐 call), up to HOLD (HOLD_MAX while a
+  // page opens), or until "先走". Two seconds at the loading point first, to hear who is around (the channel joins, friends answer).
+  let holding = api.trip && at0 === 0 && !sync && !want && !findId, held = false, waiting = false;
+  const listenFor = 2500, holdBox = document.createElement("div"); holdBox.id = "tgHold"; holdBox.hidden = true;
+  holdBox.innerHTML = `<span class="faces"></span><span translate="no"></span><b></b><button>${t("先走")}</button>`;
+  holdBox.querySelector("button").onclick = () => stopHold();
+  document.body.append(holdBox);
+  function stopHold() { holding = false; waiting = false; holdBox.hidden = true; if (held) { held = false; last = null; } }
+  function stepHold(now) {
+    if (!holding) return;
+    if (top.phase || api.arrived || chairId !== ownChair || api.d > api.d0 + 3) { if (now >= settleUntil) stopHold(); return; }
+    const wall = Date.now(), members = party?.members?.() || [];
+    const coming = comingTo({ id: me, lift: lift.name, resort: api.resort, b: boardAt, c: chairId, d0: api.d0 }, members, alive().map((f) => f.s));
+    const left = holdLeft(boardAt, wall, coming), listening = wall - boardAt < listenFor;
+    const was = held;
+    held = left > 0 || now < settleUntil || listening;
+    if (held !== was) last = null;
+    if (!held) { stopHold(); return; }
+    // The card: who we wait for and how long, once someone is coming.
+    waiting = coming.length > 0;
+    if (!waiting) { holdBox.hidden = true; return; }
+    const who = coming.map((c) => friends.get(c.id) || members.find((m) => m.id === c.id)).filter(Boolean);
+    const key = who.map((w) => w.id).join();
+    if (holdBox.dataset.k !== key) {
+      holdBox.dataset.k = key;
+      holdBox.querySelector(".faces").innerHTML = who.slice(0, 3).map((w) => `<img src="assets/icons/${w.avatar || w.av || "av_rider"}.png?v=1" alt="">`).join("");
+      holdBox.querySelector("span[translate]").textContent = t("等 {name} 一起上", { name: who.map((w) => w.name || t("朋友")).join("、") });
+    }
+    holdBox.querySelector("b").textContent = `${Math.ceil(left / 1000)}`;
+    holdBox.hidden = now < settleUntil;
+  }
+
+  // ---- Changing seats: the free seat on each side of me, as a tag on the seat itself. Only with a friend in
+  // my chair (riding alone, nothing changes).
+  const seatGo = [-1, 1].map((dir) => {
+    const b = document.createElement("button"); b.className = "tgSeatGo"; b.hidden = true; b.dataset.dir = dir;
+    b.textContent = t("坐这"); // on the empty seat itself (the nearest free one on each side of me)
+    b.onclick = (e) => { e.stopPropagation(); if (moveTo(+b.dataset.k)) navigator.vibrate?.(15); };
+    b.addEventListener("pointerdown", (e) => e.stopPropagation());
+    document.body.append(b);
+    return b;
+  });
+  const sv = new THREE.Vector3();
+  // Sharing my chair: the ride watches us from in front, three quarters on (it reads boarding()); a button
+  // with our two faces turns the camera back behind the chair, to see the way up, and round again.
+  let shared = false, camBack = false;
+  const viewBtn = document.createElement("button"); viewBtn.id = "tgView"; viewBtn.className = "rfab"; viewBtn.hidden = true; viewBtn.setAttribute("aria-label", t("看我们"));
+  viewBtn.innerHTML = `<span class="faces"><img alt=""><img alt=""></span>`;
+  viewBtn.onclick = (e) => { e.stopPropagation(); camBack = !camBack; viewBtn.classList.toggle("on", !camBack); };
+  viewBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+  document.body.append(viewBtn);
+  function stepSeatGo(now) {
+    const seats = !top.phase && !api.arrived && !held && now - meSitAt > SIT ? seatsIn(chairId) : null;
+    const mates = seats ? [...seats].filter(([id, k]) => id !== me && k >= 0).map(([id]) => friends.get(id)).filter(Boolean) : [];
+    shared = mates.length > 0;
+    viewBtn.hidden = !shared || !!seatInfo().cabin;
+    viewBtn.classList.toggle("on", shared && !camBack);
+    if (shared) for (const [img, av] of [[viewBtn.querySelectorAll("img")[0], myAvatar()], [viewBtn.querySelectorAll("img")[1], mates[0].avatar]]) if (img.dataset.av !== av) { img.dataset.av = av; img.src = `assets/icons/${av}.png?v=1`; }
+    for (const b of seatGo) {
+      const k = shared ? seatToward(seats, xsOf().length, seat.k, +b.dataset.dir) : -1;
+      b.hidden = k < 0; if (k < 0) continue;
+      b.dataset.k = k;
+      sv.set(xsOf()[k], seatInfo().top + 0.12, seatInfo().z); api.chair().localToWorld(sv); sv.project(camera);
+      if (sv.z > 1 || Math.abs(sv.x) > 1 || Math.abs(sv.y) > 1) { b.hidden = true; continue; }
+      b.style.transform = `translate(${Math.round((sv.x * 0.5 + 0.5) * innerWidth - b.offsetWidth / 2)}px, ${Math.round((-sv.y * 0.5 + 0.5) * innerHeight - b.offsetHeight / 2)}px)`;
+    }
+  }
+
   // Waiting at the bottom of a lift a friend just got on: "ride with them" (into their chair).
   const offered = new Set();
   function offerChair(f) {
@@ -245,7 +366,7 @@ export function rideTogether(api) {
     const a = document.createElement("a"); a.className = "btn go"; a.href = api.withResort(`look.html?lift=${encodeURIComponent(w)}&with=${encodeURIComponent(f.id)}`);
     a.textContent = t("和 {name} 一起坐 {lift} ›", { name: f.name, lift: w });
     row.prepend(a);
-    toast(f.avatar, t("{name} 坐上了 {lift}", { name: esc(f.name), lift: esc(w) }));
+    toast(f.avatar, f.s.hd ? t("{name} 在 {lift} 等你一起坐", { name: esc(f.name), lift: esc(w) }) : t("{name} 坐上了 {lift}", { name: esc(f.name), lift: esc(w) }));
   }
 
   // ---- Friends in 3D
@@ -334,7 +455,7 @@ export function rideTogether(api) {
         if (inMine) k = 0;
         d = api.d + k * step; pool = !inMine;
       }
-      const seats = seatsOf(chairMembers(s.c), api.seat().xs.length), k = Math.max(0, seats.get(f.id) ?? 1), xs = api.seat().xs;
+      const xs = xsOf(), k = Math.max(0, seatsIn(s.c).get(f.id) ?? 1);
       const frame = inMine ? api.chair() : f.frame;
       if (!inMine) {
         at(P, d, v); at(P, d + 4, v2);
@@ -342,9 +463,11 @@ export function rideTogether(api) {
         for (const m of frame.children) if (m.isMesh) m.visible = !pool; // a pool chair is already there
         frame.visible = true;
       } else f.frame.visible = false;
-      // In my chair they turn to me to talk (+1: I'm on their left, +x).
+      // Their own seat, sliding over when they change seats. In my chair they turn to me to talk (+1: I'm
+      // on their left, +x).
       const x = xs[Math.min(k, xs.length - 1)];
-      f.pose = { kind: "lift", frame, seat: new THREE.Vector3(x, api.seat().top - 0.595, api.seat().z), talk: inMine ? Math.sign(api.seat().x - x) : 0 };
+      f.seatX = f.seatX == null || f.seatFrame !== frame ? x : f.seatX + (x - f.seatX) * Math.min(1, dt * 5); f.seatFrame = frame;
+      f.pose = { kind: "lift", frame, seat: new THREE.Vector3(f.seatX, api.seat().top - 0.595, api.seat().z), talk: inMine ? Math.sign(api.seat().x - x) : 0 };
       f.inMine = inMine;
       frame.updateMatrixWorld(true);
       f.pos = frame.localToWorld(f.pose.seat.clone());
@@ -368,7 +491,7 @@ export function rideTogether(api) {
     if (p.kind === "lift") {
       if (m.parent !== p.frame) p.frame.add(m);
       m.position.copy(p.seat); m.quaternion.identity();
-      if (f.sitAt && now - f.sitAt < 700) standBoarder(m, Math.min(1, (now - f.sitAt) / 700)); // sitting down
+      if (f.sitAt && now - f.sitAt < SIT) standBoarder(m, 1 - ease((now - f.sitAt) / SIT)); // sitting down: standing, then the exit clip's first moment, then seated
       else sitBoarder(m, Math.sin(now / 2600 + f.id.length) * 0.5, undefined, p.talk);
       return true;
     }
@@ -514,11 +637,9 @@ export function rideTogether(api) {
     const away = (url) => { store(sessionStorage, LAND, f.name); location.href = api.withResort(url); };
     if (s.ph === "lift") {
       if (onLift && s.l === lift.name) { // in their chair if there's a seat, else the next one
-        const d = extrapD(f), seats = seatsOf([...chairMembers(s.c).filter((m) => m.id !== me), { id: me, b: Date.now() }], api.seat().xs.length), k = seats.get(me);
         joinedChair = true;
-        if (k >= 0) { chairId = s.c; api.d = d; api.setSeat(api.seat().xs[k]); sitTogether(f); }
-        else { chairId = ownChair; api.d = Math.max(api.d0, d - api.step()); }
-        last = null; return;
+        if (s.c !== chairId) takeSeat(f, s.c, extrapD(f));
+        return;
       }
       away(`look.html?lift=${encodeURIComponent(s.l)}&with=${encodeURIComponent(f.id)}`); return;
     }
@@ -550,11 +671,11 @@ export function rideTogether(api) {
   // ---- Every frame (called by the ride just before it draws)
   let lastFrame = performance.now();
   function frame(now) {
-    const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+    const dt = Math.max(0, Math.min(0.1, (now - lastFrame) / 1000)); lastFrame = now;
+    stepHold(now);
     send(now);
-    if (host && !friends.size) syncSeat(now);
     if (!friends.size) { voice.frame(now, []); return; }
-    tryJoin(now); keepChair(dt); syncSeat(now);
+    tryJoin(now); keepChair(dt); settleSeat();
     const picking = top.phase === "pick";
     const live = [];
     for (const f of friends.values()) {
@@ -569,10 +690,11 @@ export function rideTogether(api) {
       const shown = near && pose(f, dt, now);
       if (f.model) f.model.visible = shown;
       f.marker.visible = !shown && dist < TAG_FAR * 3 && !f.gone;
-      if (f.marker.visible) { f.marker.position.copy(f.pos); f.marker.scale.setScalar(Math.max(1, dist / 180)); }
+      if (f.marker.visible) { f.marker.position.copy(f.pos); f.marker.scale.setScalar(f.inMine ? 0.3 : Math.max(1, dist / 180)); } // in my chair, a small one on their seat until their rider is made
       project(f, picking);
       voiceTag(f);
     }
+    stepSeatGo(now); // after place(): the seats as they are this frame
     voice.frame(now, live);
     fab.hidden = !live.length; fab.querySelector(".n").textContent = live.length || "";
     if (!live.length) { qbox.hidden = true; }
@@ -599,11 +721,11 @@ export function rideTogether(api) {
     find: (id) => { const f = friends.get(id); if (!f?.s || f.gone || performance.now() - f.at > STALE) return false; goFind(id); return true; },
     follow: (id) => startFollow(id, true), unfollow: () => stopFollow(true),
   });
-  window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, voice }; // testing
+  window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, get seat() { return seat; }, get held() { return held; }, seatsIn, moveTo, onMessage, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, voice }; // testing
   // A friend beside me in my chair, for the ride to pose me talking to them: +1 on my left (+x), -1 on my right, 0 none.
   function mate() {
     if (top.phase || api.arrived) return 0;
-    const xs = api.seat().xs, mine = api.seat().x, seats = seatsOf(chairMembers(chairId), xs.length);
+    const xs = xsOf(), mine = xs[seat.k] ?? api.seat().x, seats = seatsIn(chairId);
     let best = 0, bd = Infinity;
     for (const [id, k] of seats) {
       if (id === me || k < 0 || !friends.get(id)?.model?.visible) continue;
@@ -611,5 +733,5 @@ export function rideTogether(api) {
     }
     return best;
   }
-  return { active: true, frame, goFind, startFollow, stopFollow, mate };
+  return { active: true, frame, goFind, startFollow, stopFollow, mate, held: () => held, boarding };
 }

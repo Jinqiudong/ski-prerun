@@ -11,8 +11,8 @@ import * as THREE from "three";
 import { animalRider, poseAnimal, startAnimalTrick } from "../rider/animal.js?v=2";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
-import { myRider, fallState } from "../rider/boarder.js?v=6";
-import { t } from "../core/i18n.js?v=36";
+import { myRider, fallState } from "../rider/boarder.js?v=7";
+import { t } from "../core/i18n.js?v=37";
 import { guideAnimal, lineBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=1";
 
 const CSS = `
