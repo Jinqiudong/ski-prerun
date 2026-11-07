@@ -169,7 +169,7 @@ const EN = {
   // The guide animal (src/ride/guide-core.js LINES, guide.js): what it says, the detour offers, the spots found
   "我是{name}，今天我带路！": "I'm {name}, I'll lead today!", "跟着{name}走，不会迷路～": "Follow {name}, you won't get lost~", "出发咯，跟紧我！": "Off we go, stay close!", "{name}来带路啦": "{name} is here to lead",
   "这边这边～": "This way, this way~", "跟紧我哦": "Stay close", "今天雪真好": "The snow's lovely today", "风好舒服～": "What a nice breeze~", "你滑得不错嘛": "You ride pretty well!",
-  "看我的板印走就对了": "Just follow my tracks", "前面一路顺～": "Smooth all the way ahead~", "嘿嘿，追上我呀": "Hehe, catch me!", "我闻到松树的味道了": "I can smell the pines", "别看风景啦，看我～": "Eyes on me, not the view~",
+  "看我的脚印走就对了": "Just follow my paw prints", "前面一路顺～": "Smooth all the way ahead~", "嘿嘿，追上我呀": "Hehe, catch me!", "我闻到松树的味道了": "I can smell the pines", "别看风景啦，看我～": "Eyes on me, not the view~",
   "慢慢来～": "Take your time~", "跟上呀": "Keep up!", "我在这儿等你": "I'm waiting here", "不急不急～": "No rush~", "我在前面哦！": "I'm up ahead!", "喂～这边！": "Hey~ over here!", "等你一下下": "Waiting a sec", "我不走，你慢慢滑": "I'm not going anywhere, take it easy",
   "走咯！": "Let's go!", "好嘞，继续！": "Right, on we go!", "跟上啦～": "There you are~", "就是这样！": "That's it!",
   "前面要左转哦": "Left turn coming up", "下个路口往左～": "Left at the next junction~", "等下靠左边！": "Keep left in a bit!",
@@ -178,7 +178,7 @@ const EN = {
   "哎——不是那边！": "Hey, not that way!", "走错啦，回来回来～": "Wrong way, come back~", "那边不对哦": "That's not it", "等等我！路在这边": "Wait! The way's over here",
   "对啦，就是这条": "Yes, this one", "回来啦～": "You're back~", "好险好险": "Phew, close one", "嗯！跟着我": "Mm! Follow me",
   "哎呀，没事吧？": "Oops, you OK?", "拍拍雪，再来～": "Dust off, go again~", "树也吓了一跳": "The tree got a fright too", "摔一下不算什么": "A tumble's nothing",
-  "小心树哦～": "Mind the trees~", "低头，有树枝！": "Duck, branches!", "跟着我的板印走": "Ride in my tracks", "这里好安静": "So quiet in here", "松针掉进领子里了": "Pine needles down my collar",
+  "小心树哦～": "Mind the trees~", "低头，有树枝！": "Duck, branches!", "跟着我的脚印走": "Follow my footprints", "这里好安静": "So quiet in here", "松针掉进领子里了": "Pine needles down my collar",
   "跟我来！": "Follow me!", "走！钻树林咯～": "Into the trees we go~", "就这儿，进！": "Right here, in!", "好，下次再带你去～": "OK, another time~", "那我们走大路～": "The main way, then~",
   "找到啦！": "Found it!", "这是我们的秘密基地～": "Our secret spot~", "记住这里哦": "Remember this place",
   "要不要钻一下树林？": "Shall we duck into the trees?", "敢不敢试试蘑菇？": "Dare to try the moguls?", "那边有深粉，去不去？": "Deep powder over there, want to go?", "走！": "Go!", "不了": "Not now",

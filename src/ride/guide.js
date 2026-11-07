@@ -1,19 +1,18 @@
-// The guide, drawn: a little animal on a board (rider/animal.js, the same procedural rider you can ride as)
-// carving the route ahead of you, with a word now and then in a paper bubble over its head (the party note's
+// The guide, drawn: a little animal on its own four feet (runner.js) running the route ahead of you, paw prints
+// and puffs of snow behind it, with a word now and then in a paper bubble over its head (the party note's
 // look, core/party.js). Its rules are guide-core.js; ride.js makes one at the top, starts it with each way down,
 // steps it in the skiing phase (it may hand back a plan with a detour spliced in, or without it again), and asks
 // how much the gold arrowheads should show and how wooded the way is just now.
-// Why an animal on a board and not one running: this is a snowboard pre-run, so the guide rides the line you
-// should ride (its board, its lean into each turn are the hint), stops with a skid and turns round to wait, and
-// hops; the resort animals already have all of that (animal.js), with no skeleton beyond their walk cycle. Which
-// one: the resort's, unless it is pale and would vanish on the snow (guide-core.js guideAnimal).
+// On foot, never on a board (the owner): riding together, a board is a friend; the animal running is the guide.
+// Which one: the resort's, unless it is pale and would vanish on the snow (guide-core.js guideAnimal).
 import * as THREE from "three";
-import { animalRider, poseAnimal, startAnimalTrick } from "../rider/animal.js?v=2";
+import { Runner } from "./runner.js?v=1";
+import { Spray } from "./board.js?v=13";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
-import { myRider, fallState } from "../rider/boarder.js?v=8";
-import { t } from "../core/i18n.js?v=38";
-import { guideAnimal, lineBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=1";
+import { myRider, fallState } from "../rider/boarder.js?v=9";
+import { t } from "../core/i18n.js?v=39";
+import { guideAnimal, lineBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=2";
 
 const CSS = `
 #gdBubble { position: fixed; left: 0; top: 0; z-index: 30; width: max-content; max-width: 230px; padding: 7px 12px 8px; border-radius: 12px; background: #fdfbf6; border: 1px solid #d8ccb6;
@@ -47,8 +46,9 @@ const ICON = (n) => `assets/icons/${n}.png?v=1`;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const Y = new THREE.Vector3(0, 1, 0);
-// How tall it stands on screen: the toy animals (animal-core.js ANIMAL_SIZE) scaled to about this, in metres.
-const TALL = 1.9;
+// How tall it stands, metres: a small animal beside a rider (the owner: not bigger); 10–16 m ahead, its paw
+// prints and puffs make it easy to follow.
+const TALL = 1.3;
 
 export class Guide {
   // scene; camera; T (heightAt, normalAt); ground(x, z): the snow's surface (moguls, powder); trees: { grid, cell }
@@ -61,12 +61,9 @@ export class Guide {
     const mine = myRider().ch.animal || null;
     this.animal = guideAnimal(ANIMALS[resort], mine);
     this.name = t(ANIMAL_ZH[this.animal] || "小狐狸");
-    animalRider({ animal: this.animal, board: "B" }).then((root) => {
-      this.root = root; this.holder.add(root);
-      const S = clamp(TALL / (root.userData.tall || 1), 1, 4.5);
-      this.holder.scale.setScalar(S);
-      root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    }).catch(() => {});
+    this.runner = new Runner(this.animal, TALL);
+    this.runner.ready.then(() => { this.root = this.runner.root; this.holder.add(this.root); }).catch(() => {});
+    this.prints = new Prints(scene, T); this.puffs = new Spray(scene, { n: 240, size: 0.32, opacity: 0.85, color: 0xf2f6fc }); this.lookT = 4;
     if (!document.getElementById("gdCss")) { const s = document.createElement("style"); s.id = "gdCss"; s.textContent = CSS; document.head.append(s); }
     this.bubble = document.createElement("div"); this.bubble.id = "gdBubble"; this.bubble.hidden = true; document.body.append(this.bubble);
     this.card = document.createElement("div"); this.card.id = "gdUnlock"; this.card.hidden = true; document.body.append(this.card);
@@ -80,7 +77,7 @@ export class Guide {
     this.card.hidden = true; this.found = [];
     setTimeout(() => { if (this.P === P) this.speak("start"); }, 1600);
   }
-  hide() { this.holder.visible = false; this.bubble.hidden = true; this.bub = null; this.P = null; }
+  hide() { this.holder.visible = false; this.prints.clear(); this.bubble.hidden = true; this.bub = null; this.P = null; }
   // Where you are along the way: the nearest point's distance, plus how far past it you are toward the next.
   along(P, prog, x, z) {
     const i = Math.min(prog, P.path.length - 2), [ax, az] = P.path[i], [bx, bz] = P.path[i + 1], L = P.dist[i + 1] - P.dist[i] || 1;
@@ -127,7 +124,7 @@ export class Guide {
     } else {
       const p = pointAt(P.path, P.dist, g.s, prog), moving = g.mode === "lead" ? clamp(g.v / 4, 0, 1) : 0;
       // a little to one side of your line (not hidden behind your rider, still near the middle of the screen)
-      const lat = clamp(3 * Math.sin(g.s / 80), -1, 1) * (2.2 + 0.6 * Math.sin(g.s / 11)) * (0.6 + 0.4 * moving) * (1 - this.woods * 0.3);
+      const lat = clamp(3 * Math.sin(g.s / 80), -1, 1) * (2.2 + 0.6 * Math.sin(g.s / 11)) * (0.6 + 0.4 * moving);
       want.set(p.x - Math.cos(p.h) * lat, 0, p.z + Math.sin(p.h) * lat);
     }
     if (!this.placed) { this.pos.copy(want); this.placed = true; }
@@ -144,10 +141,18 @@ export class Guide {
     this.n.copy(this.T.normalAt(this.pos.x, this.pos.z, this.n));
     this.holder.visible = !!this.root;
     if (this.root) {
-      this.holder.position.copy(this.pos);
-      const uphill = g.mode === "back" && v > 0.5 && this.ground(this.pos.x + vx * 0.2, this.pos.z + vz * 0.2) > this.pos.y + 0.05;
-      poseAnimal(this.root, { x: 0, y: 0, z: 0, n: this.n, heading: this.heading, speed: v, dt, lean: clamp(Math.atan((v * -yawRate) / 9.8), -0.8, 0.8), skid: v < 0.8 && g.mode !== "turn" ? 0.15 : 0, tuck: 0, pushing: uphill });
+      this.holder.position.copy(this.pos); this.holder.rotation.set(0, this.heading, 0);
+      const fx = Math.sin(this.heading), fz = Math.cos(this.heading), L = this.runner.len * 0.5 || 1;
+      const pitch = Math.atan2(this.ground(this.pos.x - fx * L, this.pos.z - fz * L) - this.ground(this.pos.x + fx * L, this.pos.z + fz * L), 2 * L);
+      // now and then, leading, a look back over its shoulder to see you're there
+      if (g.mode === "lead" && (this.lookT -= dt) < 0) { this.lookT = 6 + Math.random() * 5; this.runner.lookBack(1.1, Math.sign(fz * (r.x - this.pos.x) - fx * (r.z - this.pos.z)) || 1); }
+      for (const f of this.runner.update(dt, { v, yawRate, pitch })) {
+        const x = this.pos.x + fz * f.x + fx * f.z, z = this.pos.z - fx * f.x + fz * f.z, y = this.ground(x, z);
+        this.prints.add(x, y, z, this.heading);
+        this.puffs.emit({ x, y, z, heading: this.heading, speed: 0.5, steer: 1, skid: 0.6 }, 3, 1);
+      }
     }
+    this.prints.update(dt); this.puffs.update(dt);
     // The arrows under it: quiet while it's in sight and leading.
     const next = turns.find((j) => j.s > sR - 5), seen = this.holder.visible && Math.hypot(this.pos.x - r.x, this.pos.z - r.z) < 70;
     this.alpha = arrowAlpha({ mode: g.mode, toTurn: next ? next.s - sR : Infinity, off, seen });
@@ -214,7 +219,7 @@ export class Guide {
     }
     b.hidden = false; b.classList.remove("fade", "pop"); void b.offsetWidth; b.classList.add("pop");
     this.bub = { until: this.clock + (acts ? 7 : 3.2), acts: !!acts };
-    if (hop && this.root) startAnimalTrick(this.root, "ollie");
+    if (hop && this.root) this.runner.hop(kind === "unlock" ? 2 : 1);
   }
   // The bubble over its head, on screen.
   place() {
@@ -240,5 +245,29 @@ export class Guide {
     const s = document.createElement("span"); s.className = "gdSpots";
     s.innerHTML = `<img src="${ICON("trees")}" alt="">${t("已发现 {n} 处秘密地点", { n })}${now ? ` · ${t("这趟 +{k}", { k: now })}` : ""}`;
     noteEl.append(s);
+  }
+}
+
+// Paw prints in the snow behind it: small blue-grey ovals laid on the slope, fading back to white in ~10 s.
+const PRINTS = 64, SNOW = new THREE.Color(0xf4f7fb), INK = new THREE.Color(0x8ea3c2);
+class Prints {
+  constructor(scene, T) {
+    const geo = new THREE.CircleGeometry(0.12, 10); geo.rotateX(-Math.PI / 2); geo.scale(1, 1, 1.35);
+    this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), PRINTS);
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(PRINTS * 3).fill(1), 3);
+    this.mesh.frustumCulled = false; this.mesh.renderOrder = 2;
+    this.T = T; this.age = new Float32Array(PRINTS).fill(99); this.next = 0; this.m = new THREE.Matrix4(); this.q = new THREE.Quaternion(); this.q2 = new THREE.Quaternion(); this.n = new THREE.Vector3(); this.c = new THREE.Color();
+    this.clear(); scene.add(this.mesh);
+  }
+  clear() { this.m.makeScale(0, 0, 0); for (let i = 0; i < PRINTS; i++) { this.mesh.setMatrixAt(i, this.m); this.age[i] = 99; } this.mesh.instanceMatrix.needsUpdate = true; }
+  add(x, y, z, h) {
+    const i = this.next = (this.next + 1) % PRINTS;
+    this.q.setFromUnitVectors(Y, this.T.normalAt(x, z, this.n)).multiply(this.q2.setFromAxisAngle(Y, h));
+    this.m.compose(new THREE.Vector3(x, y + 0.04, z), this.q, new THREE.Vector3(1, 1, 1));
+    this.mesh.setMatrixAt(i, this.m); this.age[i] = 0; this.mesh.instanceMatrix.needsUpdate = true;
+  }
+  update(dt) {
+    for (let i = 0; i < PRINTS; i++) { if (this.age[i] > 12) continue; this.age[i] += dt; this.mesh.setColorAt(i, this.c.copy(INK).lerp(SNOW, Math.min(1, this.age[i] / 10))); }
+    this.mesh.instanceColor.needsUpdate = true;
   }
 }
