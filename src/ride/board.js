@@ -1,45 +1,80 @@
 // Snowboard physics on the real slope, the track the board leaves in the snow, and the spray it kicks up.
 // (The rider, the model, and its poses are in src/rider/boarder.js.)
 import * as THREE from "three";
+import { DEG, wrap, fallLine, dropAlong, gravityAlong, slipAngle, brakeOf, edgeGrip, pivotFor, brakeDecel, edgeTrails, scrubOf } from "./edge-core.js?v=1";
+
+export { governor } from "./edge-core.js?v=1";
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
 
 // Slope physics for one rider. Units: meters, seconds, radians. heading 0 = +z.
+// The board (yaw) and the way it moves (heading) are apart: the edge carves the board round and the travel
+// follows it (tightly on a high edge, sliding on a low one); swinging the board across the travel brakes.
+// Gravity drives the board along its own length: pointing down the fall line it runs, across it nothing.
 export class Rider {
   constructor(terrain) {
     this.terrain = terrain;
     this.x = 0; this.z = 0; this.y = 0;
     this.heading = 0; this.speed = 0; this.steer = 0; this.lean = 0;
+    this.cyaw = 0; this.pivot = 0; this.yaw = 0; this.slip = 0; this.brake = 0; this.caught = 0; this.t = 0;
     this.n = new THREE.Vector3(0, 1, 0);
   }
 
   place(x, z, heading, speed = 2) {
-    Object.assign(this, { x, z, heading, speed, steer: 0, lean: 0 });
+    Object.assign(this, { x, z, heading, speed, steer: 0, lean: 0, cyaw: heading, yaw: heading, pivot: 0, slip: 0, brake: 0, caught: 0 });
     this.y = this.terrain.heightAt(x, z);
   }
 
-  // input: steer -1..1 (right positive): how hard to edge into a turn. pace -1..1: -1 skids the board
-  // across the way you are going to slow down, +1 tucks for speed (brake is pace -1). push: skate or
+  // input: steer -1..1 (right positive): how far onto the edge (the edge angle, up to 50°) and so how hard
+  // into a turn. pace -1..1: back (-) swings the board across the way you move onto the heel edge to brake
+  // (edge-core.js pivotFor, brakeOf), forward (+) runs it flat and tucked. brake: pace -1. push: skate or
   // walk on the flat. offPiste adds deep-snow drag.
   // guided: the route does the steering, so don't swing round to the fall line when stopped.
   // soft 0..1: deep powder underfoot (slower, and the board floats into and out of turns); rough: extra
-  // friction (moguls).
-  step(dt, { steer, pace = 0, brake, push, offPiste, guided, soft = 0, rough = 0 }) {
+  // friction (moguls). heel ±1: the way the heel side turns the board's nose (the rider's stance, as the
+  // model draws a skid). catchable: the steer is the rider's own, so setting the wrong edge in a slide
+  // catches it (a wobble and lost speed, no fall).
+  step(dt, { steer, pace = 0, brake, push, offPiste, guided, soft = 0, rough = 0, heel = 1, catchable = false }) {
     const t = this.terrain, n = t.normalAt(this.x, this.z, this.n);
+    const fl = fallLine(n); this.fall = fl.yaw; this.slope = fl.slope;
     if (brake) pace = -1;
+    this.t += dt;
     this.steer = damp(this.steer, steer, 5 - 2.6 * soft, dt);
     this.pace = damp(this.pace ?? 0, pace, 4, dt);
-    const skid = Math.max(0, -this.pace), tuck = Math.max(0, this.pace);
-    const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
-    const drop = (n.x * fx + n.z * fz) / n.y; // meters of drop per meter along the heading; negative = uphill
-    const along = (9.8 * drop) / Math.sqrt(1 + drop * drop);
-    // The turn: the stick asks for a sideways pull of up to g·tan 50° from the edge. The rider has to
-    // incline into it to balance (tan lean = pull / g), so a fast turn is a wide one and a slow one a pivot.
-    const pull = Math.abs(this.steer) * 9.8 * Math.tan((50 * Math.PI) / 180) * (1 - 0.4 * skid);
+    const bk = Math.max(0, -this.pace), tuck = Math.max(0, this.pace);
+    const edge = Math.abs(this.steer) * 50 * DEG;
+    const grip = edgeGrip(Math.max(edge, bk > 0.05 ? 35 * DEG : 0)); // braking, the heel edge is set hard: it bites, not smears
+    const drop = dropAlong(n, this.heading); // along the travel: negative = uphill
+    // The turn: the edge asks for a sideways pull of up to g·tan 50°. The rider has to incline into it to
+    // balance (tan lean = pull / g), so a fast turn is a wide one and a slow one a pivot.
+    const pull = Math.abs(this.steer) * 9.8 * Math.tan(50 * DEG) * (1 - 0.4 * bk);
     const rate = Math.min(1.6, pull / Math.max(this.speed, 2.5));
-    // Snow friction grows as the base turns across the way you move (a skid); a tuck cuts the air drag.
-    const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 - 0.05 * soft : 0) + 0.035 * soft + rough; // the board floats in powder: less drag than off-piste crud
-    let a = along - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - (this.speed * rate * Math.abs(this.steer)) * 0.05;
+    this.cyaw -= Math.sign(this.steer) * rate * dt;
+    if (this.speed < 0.5 && drop < 0.05 && !push && !guided) {
+      // Stopped across or facing up the hill: turn back toward the fall line instead of standing still.
+      const diff = wrap(fl.yaw - this.cyaw);
+      this.cyaw += Math.sign(diff) * Math.min(Math.abs(diff), dt * 1.2);
+    }
+    // The travel follows the carved board: at once on a high edge, sliding round late on a flat base.
+    this.heading = this.speed < 0.3 ? this.cyaw : this.heading + wrap(this.cyaw - this.heading) * Math.min(1, (3 + 9 * grip) * dt);
+    this.cyaw = this.heading + wrap(this.cyaw - this.heading);
+    // Braking: the board swings across the travel on the heel edge (it trails: the uphill edge).
+    this.pivot = damp(this.pivot, heel * pivotFor(bk), 6, dt);
+    this.yaw = this.cyaw + this.pivot;
+    const slipS = wrap(this.yaw - this.heading), slip = slipAngle(this.yaw, this.heading);
+    const side = bk > 0.05 && !(catchable && Math.abs(this.steer) > 0.6) ? heel : -Math.sign(this.steer) || heel;
+    const trails = edgeTrails(slipS, side);
+    if (!trails && slip > 45 * DEG && this.speed * Math.sin(slip) > 3 && this.caught <= 0) {
+      // Caught the downhill edge: a lurch, most of the speed gone, the board kicked back under you.
+      this.caught = 1; this.speed *= 0.55; this.pivot *= 0.3;
+    }
+    this.caught = Math.max(0, this.caught - dt * 1.5);
+    this.brake = trails ? brakeOf(slip) : 0;
+    // Gravity along the board's running length (nose or tail, whichever leads), carried into the travel.
+    const run = Math.abs(slipS) > Math.PI / 2 ? this.yaw + Math.PI : this.yaw;
+    const aG = gravityAlong(dropAlong(n, run)) * Math.cos(slip);
+    const mu = 0.045 + scrubOf(slip, grip) + (offPiste ? 0.1 - 0.05 * soft : 0) + 0.035 * soft + rough; // the board floats in powder: less drag than off-piste crud
+    let a = aG - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - this.speed * rate * Math.abs(this.steer) * 0.02 - brakeDecel(this.brake, aG);
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
     // Only where gravity won't do it (a flat, at a crawl): going downhill you ride, both feet strapped in.
     this.pushing = push && this.speed < 3.4 && drop > -0.03 && drop < 0.04;
@@ -49,23 +84,19 @@ export class Rider {
     const climb = drop > -0.08 ? 2.2 : 1.2;
     this.walking = push && drop <= -0.03 && this.speed < climb;
     if (this.walking) this.speed = climb;
-    if (this.speed < 0.5 && drop < 0.05 && !this.pushing && !guided) {
-      // Stopped across or facing up the hill: turn back toward the fall line instead of standing still.
-      const fall = Math.atan2(n.x, n.z);
-      const diff = Math.atan2(Math.sin(fall - this.heading), Math.cos(fall - this.heading));
-      this.heading += Math.sign(diff) * Math.min(Math.abs(diff), dt * 1.2);
-    }
-    this.heading -= Math.sign(this.steer) * rate * dt;
     const horiz = this.speed / Math.sqrt(1 + drop * drop);
     this.x += Math.sin(this.heading) * horiz * dt;
     this.z += Math.cos(this.heading) * horiz * dt;
     this.x = Math.min(Math.max(this.x, t.x0 + 30), t.x1 - 30);
     this.z = Math.min(Math.max(this.z, t.z0 + 30), t.z1 - 30);
     this.y = t.heightAt(this.x, this.z);
-    // Inclination that balances the turn's pull: tan(lean) = speed · turn rate / g.
-    this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6 - 3 * soft, dt);
-    this.skid = skid; this.tuck = tuck;
-    this.braking = skid > 0.35;
+    // Inclination that balances the turn's pull: tan(lean) = speed · turn rate / g; a caught edge rocks it.
+    this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6 - 3 * soft, dt) + Math.sin(this.t * 31) * 0.25 * this.caught * dt * 30;
+    // For the pose (boarder.js swings the board 1.2 rad × skid toward the heel side) and the spray.
+    this.slip = slipS; this.edge = edge * (-Math.sign(this.steer) || 0); this.grip = grip;
+    this.skid = Math.min(1, (slipS * heel > 0 ? slip : 0.35 * slip) / 1.2);
+    this.tuck = tuck;
+    this.braking = this.brake > 0.35;
     this.dt = dt;
     return this;
   }

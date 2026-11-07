@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { Rider, Tracks, Spray } from "./board.js?v=12";
+import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
 import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=19";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=8";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
@@ -1305,8 +1305,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (!touching) latIn *= Math.exp(-dt * 0.35);
     // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
     // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: about 7 m either side
-    // of the line, a turn every 30 m.
-    const weave = auto ? 0 : 7 * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1) * (1 - buddy.woods); // none on a line through the trees
+    // of the line, a turn every 30 m; wider on steep snow, so each turn finishes further across the fall line.
+    const weave = auto ? 0 : (7 + 4 * clamp(((r.slope || 0) - 0.21) / 0.31, 0, 1)) * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1) * (1 - buddy.woods); // none on a line through the trees
     const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
     // The rider's right on screen is local -x: (−cos h, +sin h).
     const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
@@ -1316,7 +1316,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const tl = tiltNow();
     // At a crawl a full tilt would only spin you on the spot: it counts for less, the route for more.
     const slow = clamp(r.speed / 5, 0.3, 1);
-    if (!auto && tl && Math.abs(tl.steer) > 0.02) { steer = clamp(tl.steer * slow + (1.15 - slow) * steer, -1, 1); idleFor = 0; latIn = 0; tiltOff = 0; }
+    const own = !auto && tl && Math.abs(tl.steer) > 0.02; // your own edge: set the wrong one in a slide and you catch it
+    if (own) { steer = clamp(tl.steer * slow + (1.15 - slow) * steer, -1, 1); idleFor = 0; latIn = 0; tiltOff = 0; }
     else if (!auto && tl) { tiltOff += dt; steer = clamp(steer, -0.35 - tiltOff * 0.3, 0.35 + tiltOff * 0.3); } // ease back to the line after a turn
     // Flats: ahead of one, warn once and stop braking so speed builds; on one, a tilt or a drag that would
     // only scrub speed counts for little, and the board runs straight and tucked; skating takes over at a crawl.
@@ -1328,11 +1329,16 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
     if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
-    // Speed: held to an easy pace for the run's level unless you drag for more or less.
+    // Which way a heel-side skid turns the board's nose, as boarder.js / animal.js draw it (mirrored if goofy).
+    const heelSide = (o) => (o.userData.kind === "animal" ? -1 : -(o.userData.toeX || 1)) * (o.userData.goofy ? -1 : 1);
+    // Speed: an easy pace for the run's level unless you drag or tilt for more or less. Past it the board
+    // swings on across the way you go at the end of the heel-side turns (the linked turns' skidded half;
+    // the toe-side ones carve), more the faster you are, and that angle brakes (board.js, edge-core.js).
     // (slower through moguls: you pick a line through the bumps; ask for more and you get some air)
     const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1) * (onMogul || seg.run.moguls ? 0.62 : 1) * (1 - 0.45 * buddy.woods);
     const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
-    let pace = asked ? (asked > 0 && r.speed > cap * 1.6 ? -0.5 : asked) : r.speed > cap ? -1 : 0;
+    const heel = heelSide(ctx.rider), gov = governor(r.speed, cap, !(Math.abs(steer) > 0.08 && -Math.sign(steer) !== heel)); // a toe-side turn carves on
+    let pace = asked > 0 ? (r.speed > cap * 1.6 ? -0.5 : asked) : Math.min(asked, -gov);
     if (flat && pace > -0.6) pace = Math.max(pace, 0.8); // tucked through a flat unless you really brake
     // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
     // nothing pulls you uphill.
@@ -1342,7 +1348,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (crash) { // down in the snow after a tree: lying there dazed, then up (boarder.js), the run waits
       crash.t += dt; r.speed = 0; r.dt = dt; r.steer = 0; r.skid = 0; r.tuck = 0; r.lean *= Math.exp(-dt * 6); r.pushing = r.walking = false;
       if (crash.t >= crash.len) crash = null;
-    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0 });
+    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0, heel, catchable: own });
     // Into a tree: stopped short and put back beside it (the route then leads you on). Hard enough and it's a
     // crash: down, a dazed moment with stars round your head, the tree's snow coming down on you, up again.
     const tree = crash ? null : treeAt(r.x, r.z, 1.6);
