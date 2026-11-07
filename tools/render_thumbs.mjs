@@ -1,5 +1,6 @@
-// The rider page's accessory tiles (上衣 › 帽兜 / 马甲 / 格纹, 装备 › 头盔 › 帽檐 / 贴纸): each part rendered once on
-// each template, close up, into a small transparent PNG under assets/riders/thumbs/<part>_<f|m>.png.
+// The rider page's accessory tiles (上衣 › 帽兜 / 马甲 / 格子, 装备 › 头盔 › 帽檐 / 贴纸) and the look's two bodies:
+// each rendered once on each template, close up, into a small transparent PNG under
+// assets/riders/thumbs/<part>_<f|m>.png (and body_<f|m>.png).
 // Rerun it when a template or a part changes.
 // usage: node tools/render_thumbs.mjs   (needs puppeteer-core: npm i --no-save puppeteer-core, and Google Chrome)
 import { createServer } from "node:http";
@@ -10,7 +11,7 @@ import puppeteer from "puppeteer-core";
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
 const OUT = join(ROOT, "assets/riders/thumbs");
 const CHROME = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const SIZE = 160; // drawn at twice this and scaled down, for smooth edges
+const SIZE = 240; // drawn at twice this and scaled down, for smooth edges
 
 // The page: both templates in the same calm colours (pine jacket, dark helmet), lit like the rider page.
 const PAGE = `<!doctype html><html><head><meta charset="utf-8">
@@ -31,12 +32,17 @@ const cam = new THREE.PerspectiveCamera(24, 1, 0.05, 50);
 const small = document.createElement("canvas"); small.width = small.height = ${SIZE};
 const COLORS = { MAT_jacket: "#525a42", MAT_pants: "#c9bfac", MAT_helmet: "#2b2b2e", MAT_lens: "#4d5ce0", MAT_mitten: "#e3dccb" };
 const v = new THREE.Vector3(), box = new THREE.Box3();
-async function snap(tpl, on, { bones, dir, pad, jacket, hair = false }) {
+// The head and what's on it, left out of the clothes' pictures (only a helmet item shows the head).
+const HEADWEAR = /^(Helmet|Goggles|FaceMask|ACC_Hair|ACC_Stickers|ACC_Visor)/;
+async function snap(tpl, on, { bones, dir, pad, jacket, hair = false, head = false, as = null }) {
   const C = await makeCharacter(tpl), ch = presetChar(tpl === "F" ? "A" : "B");
-  Object.assign(ch.colors, COLORS); if (jacket) ch.colors.MAT_jacket = jacket;
-  for (const k of Object.keys(ch.parts)) ch.parts[k] = false;
-  ch.parts.hair = hair && tpl === "F"; ch.parts[on] = true;
+  if (!as) {
+    Object.assign(ch.colors, COLORS); if (jacket) ch.colors.MAT_jacket = jacket;
+    for (const k of Object.keys(ch.parts)) ch.parts[k] = false;
+    ch.parts.hair = hair && tpl === "F"; ch.parts[on] = true;
+  }
   sc.add(C.root); C.set(ch); C.play("Stand_Idle", { fade: 0 }); C.mixer.update(0);
+  if (!head) C.root.traverse((o) => { if (o.isMesh && HEADWEAR.test(o.name)) o.visible = false; });
   C.root.updateMatrixWorld(true); box.makeEmpty();
   for (const [n, b] of Object.entries(C.bones)) if (bones.some((k) => n.startsWith(k))) box.expandByPoint(b.getWorldPosition(v));
   box.expandByScalar(pad);
@@ -47,14 +53,17 @@ async function snap(tpl, on, { bones, dir, pad, jacket, hair = false }) {
   const g = small.getContext("2d"); g.clearRect(0, 0, ${SIZE}, ${SIZE}); g.imageSmoothingQuality = "high"; g.drawImage(r.domElement, 0, 0, ${SIZE}, ${SIZE});
   return small.toDataURL("image/png");
 }
-const BODY = { bones: ["Chest", "Spine", "Shoulder", "Neck"], dir: [0.3, 0.05, 1], pad: 0.2 };
-const HEAD = { bones: ["Head", "Neck"], dir: [0.8, 0.1, 1], pad: 0.13 };
+// One framing for the clothes: the chest and shoulders, close (the hood from behind, where it hangs); the
+// helmet's items on the head; the two bodies (the look's 角色 row) head to waist, as their preset dresses them.
+const CHEST = { bones: ["Chest", "Shoulder", "Neck"], dir: [0.35, 0.12, 1], pad: 0.12 };
+const HEAD = { bones: ["Head", "Neck"], dir: [0.8, 0.1, 1], pad: 0.13, head: true };
 const JOBS = {
-  hood: { bones: ["Head", "Neck", "Chest"], dir: [0.8, 0.5, -1], pad: 0.17 },
-  vest: BODY,
-  grid: { bones: ["Chest", "Shoulder"], dir: [0.3, 0.05, 1], pad: 0.03, jacket: "#3b3d40" },
+  hood: { ...CHEST, dir: [1, 0.45, -0.35] },
+  vest: CHEST,
+  grid: { ...CHEST, pad: 0.03, jacket: "#3b3d40" }, // dark and a little nearer, where the grid's fine lines show
   visor: HEAD,
   stickers: { ...HEAD, dir: [0.5, 0.8, 1] },
+  body: { bones: ["Head", "Chest", "Hips"], dir: [0.25, 0.08, 1], pad: 0.12, head: true, as: true },
 };
 const out = {};
 for (const tpl of ["F", "M"]) for (const [k, o] of Object.entries(JOBS)) out[k + "_" + tpl.toLowerCase()] = await snap(tpl, k, o);
