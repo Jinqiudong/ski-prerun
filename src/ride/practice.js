@@ -14,6 +14,7 @@ import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
 import { t } from "../core/i18n.js?v=41";
 import { fallLine } from "./edge-core.js?v=1";
+import { tiltRead } from "./tilt-core.js?v=1";
 import { sight } from "./snowfx.js?v=1";
 import { STEPS, stepOf, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress, saveProgress, nextStep, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM } from "./practice-core.js?v=1";
 
@@ -253,13 +254,11 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
   });
   const up = (e) => { if (sdrag && e.pointerId === sdrag.id) { sdrag = null; tSteer = tPace = 0; } };
   addEventListener("pointerup", up); addEventListener("pointercancel", up);
-  const ramp = (v, dead, full) => Math.sign(v) * clamp((Math.abs(v) - dead * D) / ((full - dead) * D), 0, 1);
   function input(dt) {
     if (sdrag) return { steer: tSteer, pace: tPace };
     if (!tilt.ok) return { steer: 0, pace: 0 };
     zero ||= { side: tilt.side, fwd: tilt.fwd };
-    zero.fwd += (tilt.fwd - zero.fwd) * dt * 0.05; // a new grip settles in slowly, never reads as braking
-    return { steer: ramp(tilt.side - zero.side, 2, 18), pace: ramp(zero.fwd - tilt.fwd, 6, 24) };
+    return tiltRead(zero, tilt.side, tilt.fwd, dt, 0.05); // a new grip is caught up with, never read as braking
   }
 
   // ---- One frame.
