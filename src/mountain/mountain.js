@@ -8,11 +8,11 @@ import { markMoguls } from "../ride/snow-core.js?v=1";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
-import { addStep } from "../ride/roadbook.js?v=20";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=39";
-import { openNav } from "../core/nav.js?v=17";
-import { liftTicket } from "../core/transition.js?v=10";
-import { startParty } from "../core/party.js?v=9";
+import { addStep } from "../ride/roadbook.js?v=21";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=40";
+import { openNav } from "../core/nav.js?v=18";
+import { liftTicket } from "../core/transition.js?v=11";
+import { startParty } from "../core/party.js?v=10";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.

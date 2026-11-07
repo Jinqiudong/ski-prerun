@@ -509,7 +509,7 @@ export class Facilities {
 const cache = {};
 
 function nameTag(name, p) {
-  const c = document.createElement("canvas"), cx = c.getContext("2d"), label = `🚡 ${name}`;
+  const c = document.createElement("canvas"), cx = c.getContext("2d"), label = name;
   cx.font = "700 44px -apple-system, PingFang SC, sans-serif";
   c.width = Math.ceil(cx.measureText(label).width) + 48; c.height = 72;
   const g = c.getContext("2d");

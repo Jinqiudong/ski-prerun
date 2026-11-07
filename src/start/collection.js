@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "../core/i18n.js?v=39";
+import { EN_ON } from "../core/i18n.js?v=40";
 import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=4";
 import { Pets } from "./pets.js?v=4";
 
@@ -176,7 +176,7 @@ export class Collection {
     const den = at(...DENVER).setY(y0);
     const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0xb6463b }));
     pin.position.copy(den); this.scene.add(pin);
-    this.mark("DENVER ✈", den, "city");
+    this.mark("DENVER ✈\uFE0E", den, "city");
     const box = new THREE.Box3(); for (const t of this.tiles) box.expandByPoint(t.base); box.expandByPoint(den);
     // Seen from the east, as if driving in from Denver: Denver at the bottom, Aspen at the top, so the
     // long east–west spread runs up a phone screen.

@@ -2,7 +2,7 @@
 // to real field recordings and music candidates (assets/audio/lab/manifest.json), so the owner can listen
 // A/B and tick what we should use. Picks are kept on this phone (localStorage "prerunSoundLab").
 // It uses the game's own sound code (snow.js, ambience.js, music.js) but changes nothing in the game.
-import { EN_ON } from "../core/i18n.js?v=39";
+import { EN_ON } from "../core/i18n.js?v=40";
 import { makeMixer } from "./engine.js?v=5";
 import { BoardSound } from "./snow.js?v=4";
 import { Ambience } from "./ambience.js?v=4";
@@ -76,7 +76,7 @@ const GROUPS = [["board", "雪板和雪"], ["wind", "风"], ["lift", "缆车"], 
 // ---- one thing plays at a time ----
 const els = new Map(); // id -> <audio> for files
 function stopAll() {
-  if (playing) { playing.row.classList.remove("on"); playing.row.querySelector(".play").textContent = "▶"; }
+  if (playing) { playing.row.classList.remove("on"); playing.row.querySelector(".play").textContent = "▶\uFE0E"; }
   if (playing?.el) { playing.el.pause(); }
   if (A) { board.hush(); quietAir(); music.stop(0.6); }
   playing = null;
@@ -100,7 +100,7 @@ const values = (row, item) => Object.fromEntries((item.params || []).map((q) => 
 function rowHtml(item, kind) {
   const note = item.file ? `${esc(item.author)} · ${esc(item.licence)} · <a href="${esc(item.source)}" target="_blank" rel="noopener">${tt("来源")}</a>${item.note ? ` · ${esc(EN_ON ? item.noteEn || item.note : item.note)}` : ""}` : item.gen ? `${tt("生成音乐")} · CC0 · ${esc(item.mood)}` : "";
   return `<div class="row ${kind}" data-id="${esc(item.id)}">
-    <button class="play" aria-label="${tt("播放")}">▶</button>
+    <button class="play" aria-label="${tt("播放")}">▶&#xFE0E;</button>
     <div class="what"><span class="tag">${tt(kind === "syn" ? "合成" : kind === "gen" ? "生成音乐" : kind === "realmusic" ? "真实音乐" : "真实录音")}</span><b>${esc(EN_ON ? item.en || item.title : item.title)}</b><small>${note}</small>
       ${(item.params || []).map((q) => `<label>${tt(q.label)} <input type="range" data-k="${q.key}" min="${q.min}" max="${q.max}" step="${q.step}" value="${q.value}"><output>${q.value}${q.unit ? " " + q.unit : ""}</output></label>`).join("")}</div>
     <label class="pick"><input type="checkbox" ${picks[item.id] ? "checked" : ""}><span>${tt("选这个")}</span></label></div>`;

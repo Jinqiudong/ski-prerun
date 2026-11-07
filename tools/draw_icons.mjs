@@ -159,6 +159,71 @@ const ICONS = {
   ],
 };
 
+// The trick wheel: the button (a board in the air with a sparkle) and one per trick. Grabs are the board from
+// above with a mitten on the edge it holds; presses are the board from the side, one end in the snow.
+ICONS.trick = () => [
+  ...board(64, 58, -14),
+  { d: "M98 6 Q101 20 114 22 Q101 24 98 38 Q95 24 82 22 Q95 20 98 6 Z", fill: C.gold, sw: 3.8 },
+  { d: "M22 18 Q24 26 31 27 Q24 28 22 36 Q20 28 13 27 Q20 26 22 18 Z", fill: C.gold, sw: 3.2 },
+  { d: "M26 98 Q46 112 70 104", sw: 4.5 }, { d: "M40 114 Q60 124 84 116", sw: 4.5 },
+];
+ICONS.trick_ollie = () => [
+  snowLine(),
+  { d: "M6 96 Q16 66 34 58", sw: 4, dash: "7 8" },
+  ...board(72, 50, -12),
+  { d: line([52, 76], [52, 90]), sw: 4.5 }, { d: line([72, 74], [72, 94]), sw: 4.5 }, { d: line([92, 70], [92, 84]), sw: 4.5 },
+];
+ICONS.trick_spin = () => [
+  { d: "M8 72 A56 38 0 0 1 116 50", sw: 5.5 },
+  ...board(64, 64, 0),
+  { d: "M120 74 A56 38 0 0 1 36 104", sw: 5.5 },
+  { d: poly([20, 102], [40, 92], [38, 114]), fill: INK, sw: 3 },
+];
+ICONS.trick_indy = () => grab(64, 74, 0);
+ICONS.trick_melon = () => grab(64, 54, 180);
+ICONS.trick_tailgrab = () => grab(26, 74, 35);
+ICONS.trick_nose = () => press(1);
+ICONS.trick_tailpress = () => press(-1);
+
+// a snowboard from the side, centred on (cx, cy), turned by a degrees
+function board(cx, cy, a) {
+  const tr = `rotate(${a} ${cx} ${cy})`;
+  return [
+    { d: rr(cx - 56, cy - 10, 112, 20, 10), fill: C.blue, shade: "#6f86a6", hl: [`M${cx - 42} ${cy - 3} H${cx - 4}`], transform: tr,
+      detail: [{ d: line([cx - 50, cy + 4], [cx + 50, cy + 4]), sw: 3, ink: C.white, op: 0.7 }] },
+    { d: rr(cx - 34, cy - 24, 20, 15, 4), fill: C.dslate, sw: 4, transform: tr },
+    { d: rr(cx + 14, cy - 24, 20, 15, 4), fill: C.dslate, sw: 4, transform: tr },
+  ];
+}
+function snowLine() {
+  return { d: "M4 112 Q36 100 64 104 Q96 108 124 98 V116 Q124 124 116 124 H12 Q4 124 4 116 Z", fill: C.white, shade: C.blue, sw: 5, hl: ["M14 110 Q30 104 44 103"] };
+}
+// a board from above with a sleeved mitten coming in from (hx, hy) to grab its edge, turned by a
+function grab(hx, hy, a) {
+  const mitten = (x, y) => [
+    U({ ...capsule(x, y + 32, x, y + 70, 24), fill: C.sage },
+      { d: rr(x - 16, y - 8, 32, 40, 14), fill: C.cream, hl: [`M${x - 9} ${y + 2} V${y + 14}`] },
+      { ...capsule(x + 16, y + 22, x + 22, y + 6, 12), fill: C.cream }),
+    { d: line([x - 16, y + 32], [x + 16, y + 32]), sw: 4 },
+  ];
+  return [
+    { d: rr(6, 44, 116, 40, 20), fill: C.blue, shade: "#6f86a6", hl: ["M20 54 H52"],
+      detail: [{ d: rr(30, 40, 14, 48, 4), fill: C.dslate, sw: 3.6 }, { d: rr(84, 40, 14, 48, 4), fill: C.dslate, sw: 3.6 }] },
+    { parts: mitten(0, 0), at: [hx, hy, a] },
+  ];
+}
+// a board from the side pressing its nose (dir 1) or tail (-1) into the snow, the other end up
+function press(dir) {
+  const cx = 64 - dir * 4, cy = 70, a = dir * 24, end = 64 + dir * 48;
+  return [
+    snowLine(),
+    ...board(cx, cy, a),
+    { d: circ(end + dir * 6, 94, 3), fill: INK, sw: 0 }, { d: circ(end - dir * 4, 88, 2.4), fill: INK, sw: 0 },
+    { d: circ(end + dir * 12, 84, 2.2), fill: INK, sw: 0 },
+    { d: `M${64 - dir * 46} 22 Q${64 - dir * 40} 14 ${64 - dir * 30} 12`, sw: 4.5 },
+  ];
+}
+
 function mic(off) {
   const body = off ? C.grey : C.slate;
   const parts = [
@@ -253,6 +318,7 @@ function buildSVG(name, items) {
       const wrap = (p, s) => p.transform ? \`<g transform="\${p.transform}">\${s}</g>\` : s;
       return it.union.map((p, i) => wrap(p, strokeOf(p, ds[i]))).join("") + it.union.map((p, i) => wrap(p, fillOf(p, ds[i]))).join("");
     }
+    if (it.at) return \`<g transform="translate(\${it.at[0]} \${it.at[1]}) rotate(\${it.at[2]})">\${it.parts.map(item).join("")}</g>\`;
     if (it.mask) {
       const id = "m" + (uid++);
       defs.push(\`<mask id="\${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128"><rect width="128" height="128" fill="#fff"/>
