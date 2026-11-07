@@ -15,7 +15,7 @@ import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=6";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=35";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=36";
 import { navRow } from "../core/nav.js?v=14";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=10";
@@ -26,6 +26,7 @@ import { startParty } from "../core/party.js?v=5";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
+import { Guide } from "./guide.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -859,6 +860,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       mogBuilt += line.hi - line.lo;
     }
   }
+  // The guide (guide.js): a little animal riding the way ahead of you; now and then it leads you off through the trees.
+  const buddy = new Guide({ scene, camera, T, trees: { grid: treeGrid, cell: TG }, resort: RESORT, rider: ctx.rider, force: params.get("detour"),
+    ground: (x, z) => T.heightAt(x, z) + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE });
   const ICO = (n) => `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">`;
   // ---- Skiing the chosen plan: real slope physics, guided along the route. You choose where on the piste
   // to ride (slide a finger left or right) and how fast (drag up to slow, down to let it run); the way
@@ -915,7 +919,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     world.add(hk.flags);
     addStep(RESORT, { k: "hike", name: hike.name, mins: hike.mins, gain: hike.gain || 0, gear: HIKE_GEAR });
     camera.fov = 60; camera.updateProjectionMatrix();
-    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap();
+    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap(); buddy.hide();
     document.body.classList.remove("picking"); camera.clearViewOffset();
     for (const m of [...marks.children]) { marks.remove(m); m.geometry.dispose(); }
     routeMarks = []; reveal = null; clearTags();
@@ -999,6 +1003,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     crash = null; shake = 0; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
+    buddy.start(P, prog);
     st.phase = "ski";
     $("skiHud").hidden = false;
     pmap.show(true);
@@ -1235,7 +1240,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
     }
     guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
-    guide.material.opacity = 0.92;
+    guide.material.opacity = 0.92 * buddy.alpha; // quiet while the guide leads (guide.js)
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
@@ -1294,14 +1299,14 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const k = segAt(P, prog), seg = P.segs[k], nextSeg = P.segs[k + 1];
     // Aim at a point on the route a little ahead (further when faster), shifted across the piste to where
     // you want to ride. Untouched for a moment, that place swings side to side: easy linked turns.
-    const ahead = 8 + r.speed * 1.2;
+    const ahead = (8 + r.speed * 1.2) * (1 - 0.45 * buddy.woods); // through the trees: the line itself, no cutting corners
     let ti = near.i; while (ti < last && P.dist[ti] - P.dist[near.i] < ahead) ti++;
     idleFor = touching ? 0 : idleFor + dt;
     if (!touching) latIn *= Math.exp(-dt * 0.35);
     // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
     // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: about 7 m either side
     // of the line, a turn every 30 m.
-    const weave = auto ? 0 : 7 * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1);
+    const weave = auto ? 0 : 7 * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1) * (1 - buddy.woods); // none on a line through the trees
     const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
     // The rider's right on screen is local -x: (−cos h, +sin h).
     const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
@@ -1325,7 +1330,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Speed: held to an easy pace for the run's level unless you drag for more or less.
     // (slower through moguls: you pick a line through the bumps; ask for more and you get some air)
-    const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1) * (onMogul || seg.run.moguls ? 0.62 : 1);
+    const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1) * (onMogul || seg.run.moguls ? 0.62 : 1) * (1 - 0.45 * buddy.woods);
     const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
     let pace = asked ? (asked > 0 && r.speed > cap * 1.6 ? -0.5 : asked) : r.speed > cap ? -1 : 0;
     if (flat && pace > -0.6) pace = Math.max(pace, 0.8); // tucked through a flat unless you really brake
@@ -1381,6 +1386,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     }
     tracks.add(r);
     stepGuide(P, clock());
+    const Q = buddy.step(dt, { P, prog, r, off: near.d, js: nav?.js }); if (Q) chosen = Q; // a detour spliced in (or taken out again)
     const NL = ctx.nightLights;
     if (NL) { // brighter close to a floodlight
       let lamp = 0;
@@ -1643,6 +1649,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("arriveTitle").textContent = title;
     addStep(RESORT, { k: "arrive", title });
     $("arriveNote").textContent = note;
+    buddy.arrive($("arriveNote"));
     skiLog.save(true);
     $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">📜 预滑路书</button><button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" id="againDown">再来一次</button>`;
     $("againDown").onclick = rideAgain;
@@ -2153,7 +2160,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     camera.position.set(best.x - n.x * 4, T.heightAt(best.x, best.z) + 2.5, best.z - n.z * 4);
     return { x: Math.round(best.x), z: Math.round(best.z), w: +best.w.toFixed(2) };
   };
-  st.fx = fx; // testing
+  st.fx = fx; st.buddy = buddy; // testing
   st.deepPowder = (R0 = 250) => { // testing: onto the deepest powder near here, no tree in the way, down the fall line
     let best = null;
     for (let dx = -R0; dx <= R0; dx += 10) for (let dz = -R0; dz <= R0; dz += 10) {
