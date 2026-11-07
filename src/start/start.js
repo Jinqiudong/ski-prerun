@@ -5,16 +5,16 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=11";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=12";
 import { ANIMAL_RIDERS, ANIMAL_ZH, animalOf } from "../rider/animal-core.js?v=1";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=2";
 import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
 import { makeEntrance } from "./entrance.js?v=25";
-import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=22";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=41";
-import { playIntro } from "./intro.js?v=28";
-import { flyTo } from "../core/transition.js?v=12";
-import { startParty } from "../core/party.js?v=11";
+import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=23";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=42";
+import { playIntro } from "./intro.js?v=29";
+import { flyTo } from "../core/transition.js?v=13";
+import { startParty } from "../core/party.js?v=12";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -148,12 +148,13 @@ function partAt(e) {
 // ---- Entrances (出场): each comes down the slope from far up in the mountains to you (entrance.js routes).
 // [clip (what ch.fav keeps), name, route]. The tricks are the ride's (its trick wheel), not here.
 const ENTRANCES = [["Anim_Carve_Ref", "欧式刻滑", "A"], ["Anim_Carve_Spin_Toe", "刻平陀螺", "B"], ["Anim_Carve_S", "立刃 S 弯", "C"],
-  ["Anim_Skid_S", "搓雪 S 弯", "E"], ["Anim_Pop_Ref", "坡上跳跃", "F"], ["Anim_Toe_Slide_Ref", "平花倒滑", "G"]];
+  ["Entrance_D", "跳台 Method", "D"], ["Anim_Skid_S", "搓雪 S 弯", "E"], ["Anim_Pop_Ref", "坡上跳跃", "F"], ["Anim_Toe_Slide_Ref", "平花倒滑", "G"]];
 // Each one's line as a little drawing on its card (84 × 56).
 const GLYPH = {
   A: `<path d="M6 46 C 22 46, 20 10, 38 10 S 58 44, 78 22"/>`,
   B: `<path d="M6 46 C 22 40, 30 32, 42 30"/><circle cx="56" cy="26" r="12"/>`,
   C: `<path d="M42 4 C 70 12, 70 22, 42 28 S 14 44, 42 52"/>`,
+  D: `<path d="M6 48 L 34 40 Q 40 38, 42 30"/><path d="M42 30 C 50 6, 64 8, 70 36" stroke-dasharray="2 5"/><path d="M70 36 L 80 34"/>`,
   E: `<path d="M42 4 C 70 12, 70 22, 42 28 S 14 44, 42 52" stroke-width="6" stroke-dasharray="3 4" opacity=".75"/>`,
   F: `<path d="M6 48 L 30 40"/><path d="M30 40 C 40 8, 56 8, 64 34" stroke-dasharray="2 5"/><path d="M64 34 L 80 30"/>`,
   G: `<path d="M6 46 C 22 42, 32 34, 46 30"/><path d="M50 22 L 52 38 M58 20 L 60 36 M66 18 L 68 34" stroke-width="2.5"/>`,
@@ -503,7 +504,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=56");
+    const { Collection } = await import("./collection.js?v=57");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -539,7 +540,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=41");
+    const { Trips } = await import("./trips.js?v=42");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -549,7 +550,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=26");
+  const { renderMemory } = await import("./memory.js?v=27");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
