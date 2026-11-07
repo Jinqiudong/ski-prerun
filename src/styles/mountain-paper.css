@@ -129,3 +129,13 @@
     #detailBody .hint { color: #8a8278 !important; }
   
     #detailBody .mog { width: 20px; height: 20px; margin-left: 2px; vertical-align: -4px; }
+    /* The weather bar is where the ride's conditions are chosen (src/core/conditions.js), so it stays at a
+       base too: a small chip under the replay button, the panel under it. 自选 marks a chosen hour and sky. */
+    #now.chosen #nowText { color: #8a4f22; }
+    body.mini #now { top: calc(64px + env(safe-area-inset-top)); left: auto; right: 14px; z-index: 7; padding: 3px 12px 3px 4px; gap: 4px; }
+    body.mini #now img#nowIcon { width: 28px; height: 28px; } body.mini #now #nowText, body.mini #now .sep, body.mini #now .rf { display: none; }
+    body.mini #now #nowTime { font: 600 15px "Cormorant Garamond", serif; color: #22344d; }
+    body.mini #now.chosen::before { content: "自选"; order: 2; font: 600 11px "Noto Serif SC", serif; color: #fdfbf6; background: #b0703e; border-radius: 999px; padding: 1px 7px; }
+    body.mini #now::after { order: 3; margin-left: 2px; }
+    body.mini #timePanel { top: calc(108px + env(safe-area-inset-top)) !important; z-index: 7; }
+    body.detail #now, body.detail #timePanel { display: none !important; }

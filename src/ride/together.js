@@ -20,11 +20,11 @@
 // the same moment, seats by id).
 import * as THREE from "three";
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "../core/i18n.js?v=43";
-import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=13";
+import { t, myAvatar } from "../core/i18n.js?v=44";
+import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=14";
 import { ymd } from "../start/trip-intro.js?v=1";
 import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=6";
-import { rideVoice } from "./voice.js?v=11";
+import { rideVoice } from "./voice.js?v=12";
 
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = HOLD_MAX;
 const SIT = 900, SETTLE = 2400; // sitting down (ms); the boarding moment before a held chair goes

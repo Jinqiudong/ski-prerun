@@ -5,31 +5,33 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=24";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=13";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=25";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=14";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
-import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
+import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=9";
-import { PaintedMap } from "./paintedmap.js?v=13";
+import { PaintedMap } from "./paintedmap.js?v=14";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=43";
-import { navRow } from "../core/nav.js?v=21";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=44";
+import { navRow } from "../core/nav.js?v=22";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=17";
-import { dropIn } from "../core/transition.js?v=14";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=18";
+import { dropIn } from "../core/transition.js?v=15";
 import { Facilities } from "./kitworld.js?v=5";
-import { rideTogether } from "./together.js?v=17";
-import { startParty } from "../core/party.js?v=13";
+import { rideTogether } from "./together.js?v=18";
+import { startParty } from "../core/party.js?v=14";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=2";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=2";
-import { Guide } from "./guide.js?v=9";
+import { Guide } from "./guide.js?v=10";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=7";
+import { startPractice, spotTitle } from "./practice.js?v=8";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
+import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
+import { condPill } from "./condpill.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -249,9 +251,12 @@ function cardSpruce(detail) {
 // Foliage cards: cut out by the texture's alpha; snow from the mask, only on faces turned to the sky.
 // While it snows: grey thick air, a dim sun. Re-applied when the look is rebuilt.
 let snowing = false;
+// The snowstorm's air takes the sunset's colour at dusk, and lets a little more of the low sun through
+// (set by applySky), so a snowy dusk is a soft warm grey rather than night.
+const snowAir = { color: new THREE.Color(0xd2d8e0), sun: 0.35 };
 function setSnowyAir() {
-  scene.fog = new THREE.FogExp2(0xd2d8e0, 0.0016);
-  sun.intensity *= 0.35;
+  scene.fog = new THREE.FogExp2(snowAir.color.getHex(), 0.0016);
+  sun.intensity *= snowAir.sun;
 }
 
 // How much snow lies on the trees, 0 to 1: set from the weather (see weather()), shared by all foliage.
@@ -303,28 +308,31 @@ function snowfall() {
 }
 
 // The resort's weather: snow in the last three days whitens the trees; snowing now makes it fall.
-// ?snow=0..1 and ?falling=1 override it for previews.
-// After heavy snow, powder (snow-core.js): onPowder(amount 0..1) once it is known; ?powder=1 (0..1, or map
-// for the field itself painted on the snow) forces it.
-async function weather(params, flakes, at, applySky, onPowder) {
-  let recent = null, now = false;
+// The conditions (src/core/conditions.js) decide what is used: live, the forecast; chosen, its sky, with 雪
+// falling and a recent snowfall of at least SNOW_RECENT_CM (so powder). ?snow=0..1 and ?falling=1 override
+// it for previews. After heavy snow, powder (snow-core.js): onPowder(amount 0..1) once it is known;
+// ?powder=1 (0..1, or map for the field itself painted on the snow) forces it.
+async function weather(params, flakes, at, ctx, onPowder) {
+  const live = { kind: null, falling: false, recentCm: null };
   try {
     const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(4)}&longitude=${at.lon.toFixed(4)}&current=weather_code,snowfall,cloud_cover&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=auto`)).json();
-    recent = w.daily.snowfall_sum.slice(0, 3).reduce((a, b) => a + (b || 0), 0);
-    now = (w.current.snowfall || 0) > 0 || [71, 73, 75, 77, 85, 86].includes(w.current.weather_code);
-    applySky?.(weatherKind(w.current.weather_code, w.current.cloud_cover)); // the same greying as the miniature
+    live.recentCm = w.daily.snowfall_sum.slice(0, 3).reduce((a, b) => a + (b || 0), 0);
+    live.falling = (w.current.snowfall || 0) > 0 || [71, 73, 75, 77, 85, 86].includes(w.current.weather_code);
+    live.kind = weatherKind(w.current.weather_code, w.current.cloud_cover); // the same greying as the miniature
   } catch { /* offline: keep the default */ }
+  ctx.live = live;
+  const e = effective(COND, live), recent = e.recentCm;
+  let now = e.falling;
   if (recent != null) treeSnow.value = Math.min(1, 0.5 + recent / 25);
   if (now) treeSnow.value = Math.max(treeSnow.value, 0.85);
   if (params.has("snow")) treeSnow.value = Math.min(1, Math.max(0, Number(params.get("snow"))));
   if (params.has("falling")) now = params.get("falling") === "1";
-  flakes.visible = now;
-  snowing = now;
+  if (e.live && !live.kind && !now) { /* offline and live: the default sky stays */ } else ctx.setWeather(e.kind, now);
   const powder = powderAmount(recent, params.get("powder"));
+  ctx.powderLoaded = powder;
   onPowder?.(powder);
-  if (now && sun) setSnowyAir();
   const cell = (icon, big, small) => `<div class="cell"><img src="assets/icons/${icon}.png?v=1" alt=""><b>${big}</b>${small}</div>`;
-  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
+  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null && e.live ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
 }
 
 function plant(spots, geo, mat, scaleOf) {
@@ -477,9 +485,10 @@ let myBubble = null, bubbleOpen = 1, bubbleWant = 1;
 // ---------- The snow's colour, baked: ridge shadows (blue), the floor under the woods, rock ----------
 // Ridges throw long shadows across the slopes in the low winter sun; seen from the air those shadowed
 // slopes are blue. Marched once on every other vertex (and filled in) to keep loading quick on phones.
-function shadeGround(geo, T, mask, dir, day) {
+// At dusk (warm 0..1) the lit snow is a little golden and the shadows rose-lavender rather than blue.
+function shadeGround(geo, T, mask, dir, day, warm = 0) {
   const { gw, gh } = T, pos = geo.attributes.position, col = new Float32Array(gw * gh * 3);
-  const shade = new Float32Array(gw * gh), lit = new THREE.Color(1, 1, 1), blue = new THREE.Color(0.66, 0.74, 0.96), floor = new THREE.Color(0.8, 0.83, 0.9), c = new THREE.Color();
+  const shade = new Float32Array(gw * gh), lit = new THREE.Color(1, 1, 1).lerp(new THREE.Color(1, 0.96, 0.9), warm), blue = new THREE.Color(0.66, 0.74, 0.96).lerp(new THREE.Color(0.97, 0.9, 0.86), warm), floor = new THREE.Color(0.8, 0.83, 0.9), c = new THREE.Color();
   for (let r = 0; r < gh; r += 2) for (let j = 0; j < gw; j += 2) { const k = r * gw + j; shade[k] = day ? T.sunShadow(pos.getX(k), pos.getZ(k), pos.getY(k) + 1, dir) : 1; }
   for (let r = 0; r < gh; r++) for (let j = 0; j < gw; j++) {
     const k = r * gw + j, r0 = r & ~1, j0 = j & ~1, r1 = Math.min(gh - 1 - ((gh - 1) & 1), r0 + 2), j1 = Math.min(gw - 1 - ((gw - 1) & 1), j0 + 2);
@@ -559,8 +568,17 @@ function build(ctx) {
   renderer.toneMappingExposure = 0.95;
   // The real sun for the resort right now (as on the miniature), sky and light from it; the weather
   // greys it once it has loaded (ctx.applySky).
-  const s0 = solar(new Date(), ctx.R.origin.lat, ctx.R.origin.lon), sunDir = sunVector(s0);
-  const day = sunDir.y > 0.02, lightDir = day ? sunDir.clone() : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
+  // The moment comes from the conditions (src/core/conditions.js): now, or the hour chosen on the resort page
+  // or in the 雪况 pill (ctx.setTime changes it live). Dusk counts as day down to 6° under the horizon: the
+  // light then comes in from the sunset side, warm, rather than switching to moonlight; it is never lower than
+  // 10° (a painter's sun: the north-facing slopes still catch the evening light, and it reads as golden).
+  let s0, sunDir, day, lightDir, elDeg;
+  const sunAt = (date) => {
+    s0 = solar(date, ctx.R.origin.lat, ctx.R.origin.lon); sunDir = sunVector(s0); elDeg = (s0.el * 180) / Math.PI;
+    day = elDeg > -6;
+    lightDir = day ? sunVector({ el: Math.max(s0.el, (10 * Math.PI) / 180), az: s0.az }) : new THREE.Vector3(0.3, 0.5, -0.4).normalize(); // moonlight at night
+  };
+  sunAt(ctx.when);
   const sky = new Sky();
     sky.scale.setScalar(20000);
     sky.material.uniforms.rayleigh.value = 2.2; // a deep, clean mountain blue
@@ -586,9 +604,12 @@ function build(ctx) {
   const hemi = new THREE.HemisphereLight(0x9fc2ff, 0xb9b2a8, 0.55);
   world.add(hemi);
   sun = new THREE.DirectionalLight(0xfff1dd, 3.2);
-  sun.userData.dir = lightDir;
-  ctx.applySky = (kind = "clear") => {
-    const p = palette((s0.el * 180) / Math.PI, kind);
+  sun.userData.dir = lightDir.clone();
+  ctx.kind = "clear";
+  ctx.applySky = (kind = ctx.kind) => {
+    ctx.kind = kind;
+    const p = palette(elDeg, kind), tw = clamp((elDeg + 6) / 7, 0, 1); // tw: 0 at the end of dusk, 1 once the sun is up
+    snowAir.color.set(0xd2d8e0).lerp(p.hor, 0.45 * p.warm); snowAir.sun = 0.35 + 0.3 * p.warm; ctx.warm = p.warm;
     { const u = skyDome.material.uniforms; u.sun.value.copy(sunDir); u.top.value.copy(p.top); u.mid.value.copy(p.mid); u.hor.value.copy(p.hor); u.glow.value.copy(p.sun).multiplyScalar(kind === "clear" ? 1 : 0.3); }
     sky.material.uniforms.sunPosition.value.copy(sunDir);
     sky.material.uniforms.turbidity.value = { clear: 1.8, cloudy: 5, overcast: 12, snow: 14 }[kind];
@@ -596,15 +617,26 @@ function build(ctx) {
     skyEnv.sky.material.uniforms.turbidity.value = sky.material.uniforms.turbidity.value;
     scene.environment?.dispose();
     scene.environment = skyEnv.pm.fromScene(skyEnv.scene).texture;
-    scene.environmentIntensity = day ? 0.5 : 0.12;
+    scene.environmentIntensity = (0.12 + 0.38 * tw) * (1 - 0.55 * p.warm); // the physical sky's reflections are cool: less of them at dusk
     if (!snowing) { scene.fog.color.copy(p.hor).lerp(new THREE.Color(0xa9c6ea), kind === "clear" ? 0.45 : 0); scene.fog.density = { clear: 0.000075, cloudy: 0.00016, overcast: 0.00035, snow: 0.0009 }[kind]; }
     // Lit snow warm, shaded snow blue: a strong warm sun, and the fill from a blue sky.
-    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0)).lerp(new THREE.Color(0xfff0d8), day ? 0.3 : 0);
-    sun.intensity = day ? p.si * 1.15 : 0.5;
-    hemi.intensity = p.amb + 0.12;
-    renderer.toneMappingExposure = p.exp + 0.03;
+    sun.color.copy(day ? p.sun : new THREE.Color(0x8fa6e0)).lerp(new THREE.Color(0xfff0d8), day ? 0.3 + 0.15 * p.warm : 0); // golden, not orange
+    sun.intensity = day ? Math.max(p.si * 1.15, 0.5) : 0.5;
+    hemi.color.copy(p.fill); hemi.groundColor.set(0xb9b2a8).lerp(p.sun, p.warm * 0.35);
+    hemi.intensity = p.amb + 0.12 + 0.45 * p.warm;
+    renderer.toneMappingExposure = p.exp + 0.03 + 0.28 * p.warm;
   };
   ctx.applySky();
+  // A new hour, live: the sun, the sky, how night it is (lamps already built light up or fade; a night with
+  // none built gets them from the next lift); reshade bakes the ridges' shadows again (on letting go).
+  ctx.setTime = (date, reshade = false) => {
+    sunAt(date);
+    sun.userData.dir.copy(lightDir);
+    ctx.applySky();
+    if (snowing) setSnowyAir();
+    ctx.night = clamp((-elDeg - 2) / 6, 0, 1);
+    if (reshade) shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day, ctx.warm);
+  };
   sun.castShadow = true;
   sun.shadow.mapSize.setScalar(coarse ? 1024 : 2048);
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 900 });
@@ -614,7 +646,7 @@ function build(ctx) {
   if (snowing) setSnowyAir();
   // Night (the sun 2° to 8° under the horizon and lower): floodlit runs, lit lift stations, a light on
   // the rider that brightens near the lamps.
-  ctx.night = clamp((-(s0.el * 180) / Math.PI - 2) / 6, 0, 1);
+  ctx.night = clamp((-elDeg - 2) / 6, 0, 1);
   if (ctx.night > 0) {
     const fl = floodlights(T, ctx.R.runs);
     world.add(fl);
@@ -625,7 +657,7 @@ function build(ctx) {
 
   // Ground and far ranges.
   const groundMat = snowA(tex, true);
-  shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day);
+  shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day, ctx.warm);
   const ground = new THREE.Mesh(ctx.groundGeo, groundMat);
   ground.receiveShadow = true;
   world.add(ground);
@@ -2299,6 +2331,9 @@ const SURFACE = ["groomed", "powder", "ice"].find((x) => x === params.get("surfa
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
+// The conditions: chosen on the resort page's weather bar or in the 雪况 pill, kept per resort (live by
+// default). ?hour=17&sky=snow forces a chosen pair for previews and tests (not saved).
+let COND = params.has("hour") || params.has("sky") ? normCond({ live: false, hour: Number(params.get("hour") ?? 12), sky: params.get("sky") || "clear" }) : loadCond(localStorage, RESORT);
 // The party (src/core/party.js): the pet on the screen's edge and the friends on this trip, from the first
 // moment (the ride loads for a while; the others see me on my way here).
 const party = startParty({ page: "ride", resort: RESORT, lift: params.get("lift"), sub: "lift" });
@@ -2333,7 +2368,10 @@ $("tabFab").onclick = () => {
   fan("fanUp", $("tabFab"), [["memory", "记录", () => (location.href = "start.html?tab=log")], ["trips", "行程", () => (location.href = "start.html?tab=trip")], ["rider", "人物", () => (location.href = "start.html?tab=rider")]]);
 };
 // The top pill: tap it for the snow (and, skiing, the controls); tap again to fold it.
-$("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; $("wxToggle").textContent = t(i.hidden ? "雪况 ⌄" : "收起 ⌃"); };
+// A chosen (not live) hour and sky are marked 自选 on the pill, folded or not.
+const pillLabel = () => { $("wxToggle").innerHTML = `${COND.live ? "" : `<span class="sim">${t("自选")}</span>`}${t($("topInfo").hidden ? "雪况 ⌄" : "收起 ⌃")}`; };
+$("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; pillLabel(); };
+pillLabel();
 const riderLoad = loadBoarder(); // start early: the light template and its clips, about 1.8 MB
 async function main() {
   const [R, far, research, kitIndex] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT), loadKitIndex()]);
@@ -2359,7 +2397,7 @@ async function main() {
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]) };
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]), when: effective(COND).date };
   ctx.tex.cord.repeat.set(1, 1);
   build(ctx);
   $("status").remove();
@@ -2371,7 +2409,14 @@ async function main() {
   const flakes = snowfall();
   scene.add(flakes);
   // Powder after heavy snow: the field (where it lies) is worked out once, when the weather says so.
-  weather(params, flakes, R.origin, ctx.applySky, (amt) => {
+  // The sky and the falling snow, live (the pill changes them on the chair).
+  ctx.setWeather = (kind, falling) => {
+    snowing = falling; flakes.visible = falling;
+    if (falling) treeSnow.value = Math.max(treeSnow.value, 0.85);
+    ctx.applySky(kind);
+    if (falling) setSnowyAir();
+  };
+  weather(params, flakes, R.origin, ctx, (amt) => {
     if (amt <= 0 && params.get("powder") !== "map") return;
     setTimeout(() => {
       const f = powderField(T, mask, R.runs, mask.grid[0], mask.grid[1]);
@@ -2380,6 +2425,21 @@ async function main() {
       powderU.powderDebug.value = params.get("powder") === "map" ? 1 : 0;
     }, 50);
   });
+
+  // The same choice in the pill: the sun, the sky and the falling snow change at once (the ridges' shadows
+  // when the hour is let go); powder only from the next lift. Written back for the resort page.
+  const pill = condPill($("cond"), { rec: COND, t, liveSky: () => ctx.live?.kind,
+    apply: (rec, what) => {
+      COND = rec;
+      if (what !== "drag") saveCond(localStorage, RESORT, rec);
+      const e = effective(rec, ctx.live || {});
+      if (what === "drag" || what === "hour" || what === "live") ctx.setTime(e.date, what !== "drag");
+      if (what === "sky" || what === "live") ctx.setWeather(e.kind, e.falling);
+      const later = ctx.powderLoaded != null && Math.abs(powderAmount(e.recentCm) - ctx.powderLoaded) > 0.05;
+      pill.note(later ? t("时间和天空已经换了；粉雪从下一趟缆车开始") : "");
+      pillLabel();
+    } });
+  setInterval(() => COND.live && pill.show(), 60000);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - (TERMINAL[SPEC.top].unload || 9) : line.total * 0.66; // from the loading point to the unload ramp
