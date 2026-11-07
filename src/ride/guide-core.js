@@ -142,9 +142,10 @@ export const indexAt = (dist, s) => { let i = 0; while (i < dist.length - 1 && d
 
 // A line through the trees beside the route: it leaves the route at a, swings 20–35 m out to one side into the
 // woods, runs among the trees, and comes back onto the route at b. Each candidate's line is threaded between the
-// trunks (a best path over sideways nudges of up to 5 m, 1 m per 3 m); it must keep 2.4 m clear of every trunk,
-// have the woods close round it, and never climb. Returns the most wooded: { a, b, pts, side, woods, clear, s0, L }
-// or null. treesNear(x, z, r) → [{ x, z }]; height(x, z); avoid: [[s0, s1]] stretches to keep out of (turn-offs).
+// trunks (a best path over sideways nudges of up to 5 m, 1 m per 3 m, as far from them as it can, up to 5 m); it
+// must keep 2.4 m clear of every trunk, have the woods close round it, and never climb. Of those, the most wooded
+// with the widest gaps (a line you can ride, not a slalom of near misses):
+// { a, b, pts, side, woods, clear, s0, L } or null. treesNear(x, z, r) → [{ x, z }]; height(x, z); avoid: [[s0, s1]] stretches to keep out of (turn-offs).
 export function findTreeLine({ path, dist, from, to, treesNear, height, avoid = [], lengths = [150, 190], outs = [22, 32], step = 20 }) {
   const total = dist[dist.length - 1];
   let best = null;
@@ -168,7 +169,7 @@ export function findTreeLine({ path, dist, from, to, treesNear, height, avoid = 
         const b = base[k], lim = Math.min(5, Math.floor(Math.min(b.u, 1 - b.u) * 40)), sc = new Float32Array(N).fill(-1e9), fr = new Int8Array(N);
         for (let j = 0; j < N; j++) {
           const o = j - 5; if (Math.abs(o) > lim) continue;
-          const c = Math.min(4, clearAt(b.x + b.nx * o, b.z + b.nz * o)), here = c < 2.4 ? -50 : c - Math.abs(o) * 0.05;
+          const c = Math.min(5, clearAt(b.x + b.nx * o, b.z + b.nz * o)), here = c < 2.4 ? -50 : c - Math.abs(o) * 0.05;
           if (!k) { sc[j] = here; continue; }
           let bj = -1, bv = -1e9;
           for (const d of [-1, 0, 1]) { const q = j + d; if (q >= 0 && q < N && score[k - 1][q] > bv) { bv = score[k - 1][q]; bj = q; } }
@@ -192,7 +193,7 @@ export function findTreeLine({ path, dist, from, to, treesNear, height, avoid = 
       }
       const woods = seen.size;
       if (!ok || woods < 10) continue;
-      const sc = woods + clear * 3;
+      const sc = woods + clear * 6;
       if (!best || sc > best.sc) best = { a: indexAt(dist, s0), b: indexAt(dist, s0 + L) + 1, pts, side, woods, clear: +clear.toFixed(2), s0, L, sc };
     }
   }

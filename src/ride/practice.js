@@ -9,13 +9,14 @@ import * as THREE from "three";
 import { Rider, Tracks, Spray } from "./board.js?v=13";
 import { poseBoarder, myRider } from "../rider/boarder.js?v=12";
 import { Runner } from "./runner.js?v=1";
-import { guideAnimal } from "./guide-core.js?v=2";
+import { guideAnimal } from "./guide-core.js?v=3";
+import { TREE, treeHit } from "./snow-core.js?v=2";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
 import { t } from "../core/i18n.js?v=42";
 import { fallLine } from "./edge-core.js?v=1";
 import { tiltRead, tiltZero } from "./tilt-core.js?v=2";
-import { sight } from "./snowfx.js?v=1";
+import { sight } from "./snowfx.js?v=2";
 import { STEPS, stepOf, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress, saveProgress, nextStep, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM } from "./practice-core.js?v=1";
 
 const CSS = `
@@ -275,8 +276,13 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
     } else {
       const inp = check.done && key !== "hold" ? { steer: 0, pace: -1 } : input(dt); // passed: brought to a stop while the card is up
       r.step(dt, { steer: inp.steer, pace: inp.pace, push: false, offPiste: false, guided: false, heel: heel(), catchable: Math.abs(inp.steer) > 0.02 });
-      const tree = treeAt(r.x, r.z, 1.6);
-      if (tree) { const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1; r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z); r.speed *= 0.15; }
+      // a trunk: glanced off round it (snow-core.js treeHit); straight on and fast, stopped, turned clear of it
+      const tree = treeAt(r.x, r.z, TREE.r);
+      if (tree) {
+        const h = treeHit(r, tree, { x: Math.sin(r.fall ?? r.heading), z: Math.cos(r.fall ?? r.heading) });
+        r.x = h.x; r.z = h.z; r.y = T.heightAt(r.x, r.z);
+        if (h.into > 0) { r.heading = r.cyaw = r.yaw = h.crash ? h.up : h.heading; r.pivot = 0; r.speed = h.crash ? 0 : h.speed; }
+      }
       r.surf = 0;
       if (!check.done) {
         checkStep(check, { speed: r.speed, heading: r.heading, fall: r.fall, slip: r.slip, caught: r.caught, steer: r.steer, heel: heel(), x: r.x, z: r.z, dt });
@@ -303,7 +309,7 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
     want.y = Math.max(T.heightAt(want.x, want.z) + 1.6, r.y + 3.2);
     camera.position.lerp(want, Math.min(1, dt * 4));
     camera.lookAt(_look.set(r.x + Math.sin(ch) * 8, r.y + 0.6, r.z + Math.cos(ch) * 8));
-    sight.occA.value.copy(camera.position); sight.occB.value.set(r.x, r.y + 0.9, r.z); sight.occOn.value = 1; // trees between see-through
+    sight.occA.value.copy(camera.position); sight.occB.value.set(r.x, r.y + 0.9, r.z); sight.occOn.value = 1; sight.occK.value.set(3.2, 1.3, 2, 5); sight.occT.value = 1; // trees between see-through
     if (check) liveGauge();
   }
   // The coach: just below you on the hill, turned to you, while you stand; ahead and to one side as you ride; for a

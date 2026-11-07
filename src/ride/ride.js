@@ -24,11 +24,11 @@ import { Facilities } from "./kitworld.js?v=4";
 import { rideTogether } from "./together.js?v=16";
 import { startParty } from "../core/party.js?v=12";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
-import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
-import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
-import { Guide } from "./guide.js?v=7";
+import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=2";
+import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=2";
+import { Guide } from "./guide.js?v=8";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=5";
+import { startPractice, spotTitle } from "./practice.js?v=6";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 
 const $ = (id) => document.getElementById(id);
@@ -842,9 +842,18 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const t of treeGrid.get(`${Math.floor(x / TG) + i},${Math.floor(z / TG) + j}`) || []) if ((t.x - x) ** 2 + (t.z - z) ** 2 < 100) n++;
     return Math.min(1, n / 3);
   };
+  // The same for the camera, without steps: each tree within 13 m counts less the further it is, so riding
+  // past one tree or between two clumps doesn't pump the view in and out.
+  const woodsAround = (x, z) => {
+    let n = 0;
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const t of treeGrid.get(`${Math.floor(x / TG) + i},${Math.floor(z / TG) + j}`) || []) n += Math.max(0, 1 - ((t.x - x) ** 2 + (t.z - z) ** 2) / 169);
+    return Math.min(1, Math.max(0, n - 0.6) / 2.4);
+  };
   // ---- The snow's fun (snow-core.js, snowfx.js): a crash into a tree, powder, moguls.
   // crash: { t, len } while the rider lies dazed and gets up; shake: the camera's, after a hit.
-  let crash = null, shake = 0, inWoods = 0, pspray = null, powderTold = false, onMogul = false;
+  // stall: how long you've been stopped without asking to; passTree: the trunk you just got up from.
+  // camH: the camera's own heading, following the board's with a lag (no whip on a quick turn).
+  let crash = null, shake = 0, inWoods = 0, pspray = null, powderTold = false, onMogul = false, stall = 0, passTree = null, camH = null;
   const mogTold = new Set(), bump = {}, mogN = new THREE.Vector3(0, 1, 0), _mn = new THREE.Vector3(), _head = new THREE.Vector3(), _back = new THREE.Vector3(), _want = new THREE.Vector3(), _cw = new THREE.Vector3(), _side = new THREE.Vector3(), _look = new THREE.Vector3();
   const fx = new CrashFX(scene, (x, z) => T.heightAt(x, z) + powderDepth(x, z) * POWDER_RAISE);
   const powderDepth = (x, z) => (ctx.powder ? powderAt(ctx.powder.f, x, z) * ctx.powder.amt : 0);
@@ -1004,7 +1013,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     tracks = new Tracks(scene, T);
     spray ||= new Spray(scene);
     pspray ||= new Spray(scene, { n: 900, size: 0.85, opacity: 0.6, color: 0xd6e0f0 }); // powder's plumes, a little blue so they read on the snow
-    crash = null; shake = 0; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
+    crash = null; shake = 0; stall = 0; passTree = null; camH = null; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
     buddy.start(P, prog);
@@ -1346,25 +1355,38 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     // Stopped on purpose (holding the brake): stand still rather than pivot on the spot.
     const parked = pace < -0.2 && r.speed < 0.8;
     const pw = powderDepth(r.x, r.z); // how deep the powder is here (0..1)
+    // Stalled where you didn't ask to stop (traversing deep snow off the piste, beside a trunk): after a moment
+    // the board turns down the fall line, and if that's not enough you skate out of it. Never stuck.
+    stall = !crash && !parked && r.speed < 0.6 ? stall + dt : 0;
+    if (stall > 0.6 && !(own && Math.abs(tl.steer) > 0.3)) steer = clamp(angleDiff(r.heading, r.fall ?? r.heading) * 2.5, -1, 1);
     if (crash) { // down in the snow after a tree: lying there dazed, then up (boarder.js), the run waits
       crash.t += dt; r.speed = 0; r.dt = dt; r.steer = 0; r.skid = 0; r.tuck = 0; r.lean *= Math.exp(-dt * 6); r.pushing = r.walking = false;
-      if (crash.t >= crash.len) crash = null;
-    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0, heel, catchable: own });
-    // Into a tree: stopped short and put back beside it (the route then leads you on). Hard enough and it's a
-    // crash: down, a dazed moment with stars round your head, the tree's snow coming down on you, up again.
-    const tree = crash ? null : treeAt(r.x, r.z, 1.6);
-    if (tree) {
-      const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1;
-      r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z);
-      if (r.speed > 2.5) {
-        const hard = clamp(r.speed / 10, 0.3, 1);
-        flashCue(t("撞到树了")); navigator.vibrate?.([90, 40, 60]); snd?.crash(hard);
-        fx.hitTree(tree, Math.sin(r.heading), Math.cos(r.heading), hard);
-        const len = fallBoarder(ctx.rider, null, 1.1 + hard * 0.5);
-        if (len) crash = { t: 0, len, ax: dx / L, az: dz / L, tx: tree.x, tz: tree.z }; // ax, az: away from the tree
-        shake = Math.max(shake, 0.4 + hard * 0.6);
+      if (crash.t >= crash.len) { // up, facing clear of the trunk toward the way on, with a push off
+        r.heading = r.cyaw = r.yaw = crash.up; r.pivot = 0; r.speed = 1.5;
+        passTree = { tree: crash.tree, t: 1.5 }; crash = null;
       }
-      r.speed *= 0.15;
+    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0, heel, catchable: own });
+    if (stall > 1.4 && !crash) { r.speed = Math.max(r.speed, 1.4); r.pushing = true; }
+    // Into a tree (snow-core.js treeHit): a glancing hit deflects you round the trunk with most of your speed.
+    // Straight on and fast it's a crash: down, a dazed moment with stars round your head, the tree's snow
+    // coming down on you, then up facing the way on. The trunk you just got up from lets you ride off it.
+    if (passTree && (passTree.t -= dt) <= 0) passTree = null;
+    const tree = crash ? null : treeAt(r.x, r.z, TREE.r);
+    if (tree && tree !== passTree?.tree) {
+      const h = pathDir(path, ti), hit = treeHit(r, tree, { x: Math.sin(h), z: Math.cos(h) });
+      r.x = hit.x; r.z = hit.z; r.y = T.heightAt(r.x, r.z);
+      if (hit.crash) {
+        flashCue(t("撞到树了")); navigator.vibrate?.([90, 40, 60]); snd?.crash(hit.hard);
+        fx.hitTree(tree, Math.sin(r.heading), Math.cos(r.heading), hit.hard);
+        const len = fallBoarder(ctx.rider, null, 1.1 + hit.hard * 0.5), L = Math.hypot(r.x - tree.x, r.z - tree.z) || 1;
+        if (len) crash = { t: 0, len, ax: (r.x - tree.x) / L, az: (r.z - tree.z) / L, tx: tree.x, tz: tree.z, tree, up: hit.up }; // ax, az: away from the tree
+        else { r.heading = r.cyaw = r.yaw = hit.up; passTree = { tree, t: 1.5 }; }
+        r.speed = len ? 0 : 1.5;
+        shake = Math.max(shake, 0.4 + hit.hard * 0.6);
+      } else if (hit.into > 0) { // a brush: a bump felt, a little snow off the branches, on round it
+        if (hit.into > 0.35 && r.speed > 3) { navigator.vibrate?.(25); shake = Math.max(shake, 0.15 * hit.into); fx.hitTree(tree, Math.sin(r.heading), Math.cos(r.heading), 0.2 * hit.into); }
+        r.cyaw = r.yaw = r.heading = hit.heading; r.pivot = 0; r.speed = hit.speed;
+      }
     }
     // The bumps under the board (moguls): up and over each one, knees soaking it up, a little air when fast;
     // the board pitched with the snow under it.
@@ -1411,23 +1433,42 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     // Chase camera, like the game's. Higher and a little further back than before, looking well ahead: more
     // of the slope and the valley. In the woods it comes in closer and lower, under the branches (and the
     // trees between it and the rider are see-through: snowfx.js seeThrough).
-    inWoods += (woodsNear(r.x, r.z) - inWoods) * Math.min(1, dt * 1.5);
-    const back = _back.set(-Math.sin(r.heading), 0, -Math.cos(r.heading));
-    const want = _want.set(r.x, r.y, r.z).addScaledVector(back, (7.5 + r.speed * 0.1) * (1 - inWoods) + (4.6 + r.speed * 0.05) * inWoods);
+    // In the woods (钻树林) the view drops to the rider's eye line, near first person: just over and behind
+    // the head, looking down the line ahead, so the gaps between the trunks read. Eased in and out over a
+    // couple of seconds (woodsAround has no steps; the guide's tree line counts as woods all along), the
+    // camera's heading lags the board's (no whip when you flick between trunks), never any roll, the field
+    // of view only a few degrees wider.
+    const wT = Math.max(woodsAround(r.x, r.z), buddy.woods);
+    inWoods += (wT - inWoods) * Math.min(1, dt * (wT > inWoods ? 0.9 : 0.6));
+    const w = inWoods, tall = ctx.rider.userData.tall || 1.7;
+    if (camH == null) camH = r.heading;
+    camH += angleDiff(r.heading, camH) * Math.min(1, dt * (5 - 2.8 * w));
+    const back = _back.set(-Math.sin(camH), 0, -Math.cos(camH));
+    const want = _want.set(r.x, r.y, r.z).addScaledVector(back, (7.5 + r.speed * 0.1) * (1 - w) + (2.3 + r.speed * 0.04) * w);
     // In a crash it swings round to the open side, away from the tree and out from under its branches, and
     // looks at the rider down in the snow with the tree behind, its snow coming down.
     const ck = crash?.ax != null ? Math.max(0, Math.min(1, crash.t / 0.5, (crash.len - crash.t) / 0.7)) : 0;
     if (ck > 0) want.lerp(_cw.set(r.x + crash.ax * 7 - crash.az * 1.8, r.y, r.z + crash.az * 7 + crash.ax * 1.8), ck);
-    want.y = Math.max(T.heightAt(want.x, want.z) + 1.6, r.y + 3.4 - 1.1 * inWoods * (1 - ck) + 0.4 * ck);
-    camera.position.lerp(want, Math.min(1, dt * 4));
-    camera.lookAt(_look.set(r.x + Math.sin(r.heading) * 9, r.y + 0.6 - 0.3 * inWoods, r.z + Math.cos(r.heading) * 9).lerp(_cw.set(r.x - crash?.ax * 0.4 || r.x, r.y + 0.9, r.z - crash?.az * 0.4 || r.z), ck));
-    if (shake > 0.01) { // the hit, felt: a short shake that dies away
+    const eye = 3.4 * (1 - w) + (tall + 0.4) * w;
+    want.y = Math.max(T.heightAt(want.x, want.z) + 1.6 - 0.5 * w, r.y + eye * (1 - ck) + 3.8 * ck);
+    camera.position.lerp(want, Math.min(1, dt * (4 + 3 * w)));
+    // Where it looks: 9 m ahead out on the open snow; in the woods 15 m down the line, at head height over the
+    // snow there (so on a steep pitch it looks down the slope, not over it).
+    const la = 9 + 6 * w, lx = r.x + Math.sin(camH) * la, lz = r.z + Math.cos(camH) * la;
+    _look.set(lx, (r.y + 0.6) * (1 - w) + (T.heightAt(lx, lz) + 1.2) * w, lz);
+    camera.lookAt(_look.lerp(_cw.set(r.x - crash?.ax * 0.4 || r.x, r.y + 0.9, r.z - crash?.az * 0.4 || r.z), ck));
+    const fov = 66 + 4 * w * (1 - ck);
+    if (Math.abs(fov - camera.fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    if (shake > 0.01) { // the hit, felt: a short shake that dies away (in the woods, close in, no roll)
       const k = clock() / 1000;
       camera.position.x += Math.sin(k * 41) * shake * 0.09; camera.position.y += Math.sin(k * 53 + 1) * shake * 0.07;
-      camera.rotateZ(Math.sin(k * 37 + 2) * shake * 0.025);
+      camera.rotateZ(Math.sin(k * 37 + 2) * shake * 0.025 * (1 - w));
       shake *= Math.exp(-dt * 4.5);
     }
-    sight.occA.value.copy(camera.position); sight.occB.value.set(r.x, r.y + Math.min(0.9, (ctx.rider.userData.tall || 1.7) * 0.55) - 0.4 * ck, r.z); sight.occOn.value = 1;
+    // See-through only for what stands between the lens and the rider: in the woods, close in, a narrow
+    // tunnel and hardly any whole-tree thinning (the trunks ahead are what you steer by; they stay solid).
+    sight.occA.value.copy(camera.position); sight.occB.value.set(r.x, r.y + Math.min(0.9, tall * 0.55) - 0.4 * ck, r.z); sight.occOn.value = 1;
+    sight.occK.value.set(3.2 - 2 * w, 1.3 - 0.5 * w, 2 - 1.5 * w, 5 - 3.6 * w); sight.occT.value = 1 - 0.75 * w;
     const left = Math.max(0, P.dist[last] - P.dist[prog]);
     $("skiSpeed").textContent = Math.round(r.speed * 3.6);
     $("skiLeft").textContent = fmtLen(left);

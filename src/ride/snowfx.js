@@ -5,15 +5,18 @@
 // is one instanced mesh (36 clumps) and one points draw (stars, birds and puffs together), updated only while
 // something is falling; the moguls are one static mesh per mogul run near the way down.
 import * as THREE from "three";
-import { lineHeight, MOGULS } from "./snow-core.js?v=1";
+import { lineHeight, MOGULS } from "./snow-core.js?v=2";
 
 // ---------- Seeing the rider through the trees ----------
-// Tree pixels in a cone from the camera to the rider (3.2 m round at the lens, 1.3 m at the rider) and
-// anything a couple of metres from the lens are screen-door dithered away (a fixed pattern of discarded
-// pixels: no sorting, no blending), so in the woods you look down a tunnel through the branches at your
-// rider. Trees whose trunk stands right in that line thin out as a whole as well (tested per instance in the
-// vertex shader). Shadows are drawn with the default depth material, so the trees still throw them.
-export const sight = { occA: { value: new THREE.Vector3() }, occB: { value: new THREE.Vector3() }, occOn: { value: 0 } };
+// Tree pixels in a cone from the camera to the rider (occK.x m round at the lens, occK.y at the rider) and
+// anything closer to the lens than occK.z..occK.w m are screen-door dithered away (a fixed pattern of
+// discarded pixels: no sorting, no blending), so from the chase camera you see your rider through the
+// branches. Trees whose trunk stands right in that line thin out as a whole as well (tested per instance in
+// the vertex shader), by occT 0..1. The chase camera uses 3.2, 1.3, 2..5 m and 1; down at eye level in the
+// woods (ride.js) the tunnel is narrow, only what's right at the lens goes and whole trees hardly thin, so the
+// trunks you ride between stay solid and nothing flickers away as you pass. Shadows use the default depth
+// material, so the trees still throw them.
+export const sight = { occA: { value: new THREE.Vector3() }, occB: { value: new THREE.Vector3() }, occOn: { value: 0 }, occK: { value: new THREE.Vector4(3.2, 1.3, 2, 5) }, occT: { value: 1 } };
 export function seeThrough(mat, crown = 0.3) {
   const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey.bind(mat);
   mat.customProgramCacheKey = () => key() + "|see";
@@ -21,7 +24,7 @@ export function seeThrough(mat, crown = 0.3) {
     prev.call(mat, sh, r);
     Object.assign(sh.uniforms, sight);
     sh.vertexShader = sh.vertexShader
-      .replace("#include <common>", "#include <common>\nuniform vec3 occA, occB; uniform float occOn; varying float vOcc; varying float vViewZ; varying vec3 vOW;")
+      .replace("#include <common>", "#include <common>\nuniform vec3 occA, occB; uniform float occOn, occT; varying float vOcc; varying float vViewZ; varying vec3 vOW;")
       .replace("#include <project_vertex>", `#include <project_vertex>
         vOcc = 0.0; vViewZ = -mvPosition.z;
         #ifdef USE_INSTANCING
@@ -32,19 +35,19 @@ export function seeThrough(mat, crown = 0.3) {
           float t = dot(tb.xz - occA.xz, ab) / max(dot(ab, ab), 1e-4);
           float rad = length(instanceMatrix[1].xyz) * ${crown.toFixed(2)} + 0.8; // the crown's reach, from the tree's height
           float off = length(occA.xz + ab * clamp(t, 0.0, 1.0) - tb.xz);
-          vOcc = (1.0 - smoothstep(rad * 0.6, rad, off)) * (1.0 - smoothstep(0.75, 0.92, t)) * step(-0.2, t);
+          vOcc = occT * (1.0 - smoothstep(rad * 0.6, rad, off)) * (1.0 - smoothstep(0.75, 0.92, t)) * step(-0.2, t);
         }
         #else
         vOW = (modelMatrix * vec4(transformed, 1.0)).xyz;
         #endif`);
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform vec3 occA, occB; uniform float occOn; varying float vOcc; varying float vViewZ; varying vec3 vOW;")
+      .replace("#include <common>", "#include <common>\nuniform vec3 occA, occB; uniform vec4 occK; uniform float occOn; varying float vOcc; varying float vViewZ; varying vec3 vOW;")
       .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
         if (occOn > 0.5) {
           vec3 ab = occB - occA;
-          float t = clamp(dot(vOW - occA, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0), rad = mix(3.2, 1.3, t);
+          float t = clamp(dot(vOW - occA, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0), rad = mix(occK.x, occK.y, t);
           float cone = (1.0 - smoothstep(rad * 0.5, rad, length(occA + ab * t - vOW))) * (1.0 - smoothstep(0.97, 1.0, t)); // right up to the rider, nothing beyond
-          float occ = max(max(cone, vOcc * 0.6), 1.0 - smoothstep(2.0, 5.0, vViewZ));
+          float occ = max(max(cone, vOcc * 0.6), 1.0 - smoothstep(occK.z, occK.w, vViewZ));
           if (occ > 0.0 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < occ) discard; // clear in the middle, dithered at the edge
         }`);
   };
