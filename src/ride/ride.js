@@ -21,7 +21,7 @@ import { rideSound } from "../audio/index.js?v=5";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=7";
 import { dropIn } from "../core/transition.js?v=4";
 import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=5";
+import { rideTogether } from "./together.js?v=6";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
