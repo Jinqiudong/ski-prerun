@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
 import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=14";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=3";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=4";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
@@ -15,13 +15,13 @@ import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=3";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=31";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=32";
 import { navRow } from "../core/nav.js?v=11";
 import { rideSound } from "../audio/index.js?v=5";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=7";
 import { dropIn } from "../core/transition.js?v=4";
 import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=6";
+import { rideTogether } from "./together.js?v=7";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
@@ -1181,7 +1181,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
-  const ICON = { ollie: "⬆️", indy: "🤙", melon: "🍈", tailGrab: "✋", nose: "👇", tailPress: "👆" };
+  const ICON = { ollie: "⬆️", spin: "🌀", indy: "🤙", melon: "🍈", tailGrab: "✋", nose: "👇", tailPress: "👆" };
   const wheel = $("trickWheel"), tbtn = $("trickBtn");
   let wheelOpen = null;
   function showTrickBtn() { tbtn.hidden = !(st.phase === "ski" && tricksOf(ctx.rider).length); }

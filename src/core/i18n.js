@@ -34,6 +34,8 @@ const EN = {
   // The rider page's wardrobe
   "上衣": "Jacket", "裤子": "Pants", "装备": "Gear", "外形": "Look", "发型": "Hair", "体形 {n}": "Build {n}", "更多 ⌄": "More ⌄", "随机": "Shuffle",
   "马甲颜色": "Vest colour", "亮面": "Glossy", "更多颜色": "More colours", "更多动作": "More moves", "改过": "changed", "左脚在前": "left foot forward", "右脚在前": "right foot forward",
+  "小动物": "Animals", "小动物不穿衣服，换块雪板吧": "Animals don't wear clothes: try another board", "转一圈": "Spin",
+  "鼠兔": "Pika", "雪兔": "Hare", "土拨鼠": "Marmot", "雷鸟": "Ptarmigan", "狐狸": "Fox", "大角羊": "Bighorn", "黑熊": "Bear", "马鹿": "Elk", "驼鹿": "Moose",
   "再点一次正在做的 trick，设成最爱（出场时会做）": "Tap the playing trick again to make it your favourite (your rider comes in with it).",
   "🎨 改颜色": "🎨 Colours", "🎨 改颜色 · 存成我的": "🎨 Colours · save as mine", "穿这套去滑 ›": "Ride in this ›", "给这套穿搭取个名字": "Name this outfit", "比如：周末粉雪": "e.g. Weekend powder",
   "改颜色": "Colours", "穿搭加载中…": "Loading…", "还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。": "None yet. Pick an outfit, tap Colours to change a few things, give it a name, and it's saved here.",
