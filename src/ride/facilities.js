@@ -77,7 +77,10 @@ export function liftSpec(lift, research, known, index = null) {
   const term = isCabin ? ["gondola_station", "gondola_station"] : detachable ? ["terminal_detach", "terminal_detach_top"] : ["terminal_fixed", "terminal_fixed"];
   const bottomOwn = own.find((e) => e.family === "stations" && TERMINAL[e.name] && !TERMINAL[e.name].topOnly);
   const topOwn = own.find((e) => TERMINAL[e.name]?.topOnly);
-  if (bottomOwn && detachable && !isCabin) term[0] = term[1] = bottomOwn.name; // the maker's hood at both ends (turned round at the top)
+  // The research may name the hood itself (terminal_model), which wins over a name match: two resorts can
+  // have a lift of the same name (Summit Express at Buttermilk and at Solitude) with different makers.
+  const hood = TERMINAL[r.terminal_model] && !TERMINAL[r.terminal_model].topOnly ? r.terminal_model : bottomOwn?.name;
+  if (hood && detachable && !isCabin) term[0] = term[1] = hood; // the maker's hood at both ends (turned round at the top)
   if (topOwn) term[1] = topOwn.name;
   // Its own towers (the 40 m lattice towers of the Silver Queen): the rope at the model's height.
   const tw = named.find((e) => e.family === "lifts" && /^tower_/.test(e.name) && e.rope);
@@ -120,7 +123,7 @@ export const TERMINAL = {
 // turned round and mirrored (as terminal_fixed is): the bullwheel uphill, the up rope still on its +x
 // side, so the chairs come in under the hood past the operator's hut and stop over the deck; the rider
 // gets off on the up rope's side and stands on the snow beyond the deck, uphill of the maze, by the sign.
-for (const n of ["terminal_detach_lpa", "terminal_detach_omega", "terminal_detach_unig", "terminal_detach_dopp90"]) TERMINAL[n] = { ...TERMINAL.terminal_detach, top: { flip: true, mirror: true }, stand: [8.5, 0.3, -7], unload: 13 };
+for (const n of ["terminal_detach_lpa", "terminal_detach_omega", "terminal_detach_unig", "terminal_detach_dopp90", "terminal_detach_ctec", "terminal_detach_dline"]) TERMINAL[n] = { ...TERMINAL.terminal_detach, top: { flip: true, mirror: true }, stand: [8.5, 0.3, -7], unload: 13 };
 // Where a terminal stands: its origin, yaw and mirror, for the line's end p heading dir (the way up).
 export function terminalPlace(name, atTop, p, dir) {
   const t = TERMINAL[name], f = (atTop && t.top) || {};

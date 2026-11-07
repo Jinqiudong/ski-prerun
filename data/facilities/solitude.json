@@ -1,0 +1,512 @@
+{
+ "resort": "solitude",
+ "name": "Solitude Mountain Resort",
+ "researched": "2026-11-07",
+ "about": "Real lifts and buildings of Solitude Mountain Resort (Big Cottonwood Canyon, Utah), researched for the 3D scenes. Lifts are keyed by OSM way id. Buildings give lat/lon (origin not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "Lift colours are from liftblog photos dated Sep 2015 and Feb 2016, and Jan 2024 for Eagle Express.",
+  "Eagle Express (137770106) is the 2023 Doppelmayr six-pack; it replaced Utah's first detachable (1989 VonRoll/CTEC quad).",
+  "OSM's 'Powderhorn 2' is Powderhorn II.",
+  "All 8 chairlifts and the one carpet are in OSM; no real lift is missing. No new lifts at Solitude on liftblog's 2024-2026 lists.",
+  "All Solitude restaurants list 'closed until winter 26/27' on 2026-11-07 (opening day Nov 20).",
+  "Two bases: Moonbeam (day lodge, Eagle/Moonbeam Express, Link, carpet) and the Village (Apex, Sunrise, Link), joined by Link.",
+  "Reference photos: solitude/photos/ (see SOURCES.md)."
+ ],
+ "lifts": {
+  "137770106": {
+   "name": "Eagle Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2023,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#2a5fb8",
+    "terminal_band": "#8a959c",
+    "chair": "#b8bcc0",
+    "tower": "#a9adb0",
+    "operator_hut": "#6e7377"
+   },
+   "color_verified": true,
+   "note": "Six-pack that replaced the 1989 VonRoll/CTEC detachable quad (Utah's first detachable) in 2023; liftblog calls the stations Uni-G M. Royal-blue curved roof hood with silver-grey end and side panels, grey modern operator house at the top, galvanized towers (taller than the old lift). 85 chairs, 15 towers, top drive, 4,733 ft. Chairs silver-grey frames with black seats and puck footrests, no bubbles. Bottom station is compact, at the east end of the Moonbeam parking ('To Eagle Express' on the base map).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/eagle-express-solitude-ut-2/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/",
+    "https://skiutah.com/blog/solitude-mountain-completes-two"
+   ],
+   "terminal_model": "terminal_detach_unig"
+  },
+  "400353161": {
+   "name": "Summit Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2015,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#2a5fb8",
+    "terminal_band": "#8a959c",
+    "chair": "#b8bcc0",
+    "tower": "#a9adb0",
+    "operator_hut": "#2a5fb8"
+   },
+   "color_verified": true,
+   "note": "Uni-G stations: royal-blue roof with glazed panels and silver-grey ends, blue operator huts. 80 chairs, 19 towers, top drive, 5,080 ft; the line dips before climbing to the summit. A small log-cabin hut stands by the top terminal.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/summit-express-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_unig"
+  },
+  "137770105": {
+   "name": "Apex Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2008,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#2a5fb8",
+    "terminal_band": "#c0c6cc",
+    "chair": "#a3a8ac",
+    "tower": "#a9adb0",
+    "operator_hut": "#2a5fb8",
+    "lettering": "#d8b24a"
+   },
+   "color_verified": true,
+   "note": "Uni-GS (Doppelmayr CTEC variant of the Uni-G): royal-blue hood with silver ribs over a glazed roof, rounded glass end, gold 'Apex EXPRESS' script on the side, blue operator huts. 52 chairs, 12 towers, top drive. Leaves from Solitude Village by Last Chance Lodge.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/apex-express-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "137770107": {
+   "name": "Moonbeam Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2008,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#2a5fb8",
+    "terminal_band": "#c0c6cc",
+    "chair": "#a3a8ac",
+    "tower": "#a9adb0",
+    "operator_hut": "#2a5fb8",
+    "lettering": "#d8b24a"
+   },
+   "color_verified": true,
+   "note": "Same Uni-GS look as Apex: royal-blue hood, silver-ribbed glazed roof, 'Moonbeam EXPRESS' script, blue operator huts. 64 chairs, 11 towers, top drive. Main lift out of the Moonbeam base.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/moonbeam-express-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "137770109": {
+   "name": "Powderhorn II",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2009,
+   "color": {
+    "terminal": "#25282b",
+    "chair": "#8a8f94",
+    "tower": "#a9adb0"
+   },
+   "color_verified": true,
+   "note": "Fixed quad relocated from the 2005 Moonbeam quad; black Galaxy II terminals with a glazed control cab, galvanized towers. 94 chairs, 14 towers. The Roundhouse stands just above its bottom terminal.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/powderhorn-ii-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ]
+  },
+  "137770104": {
+   "name": "Honeycomb Return",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2002,
+   "color": {
+    "terminal": "#25282b",
+    "chair": "#8a8f94",
+    "tower": "#a9adb0",
+    "operator_hut": "#25282b"
+   },
+   "color_verified": true,
+   "note": "Short, steep quad out of the bottom of Honeycomb Canyon; integrated drive/tension terminal at the top (black hood with skylights), fixed bullwheel return at the bottom. 9 towers, 1,300 ft. Seasonal.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/honeycomb-return-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ]
+  },
+  "137770108": {
+   "name": "Link",
+   "type": "fixed_chair",
+   "seats": 2,
+   "bubble": false,
+   "manufacturer": "CTEC",
+   "year": 1988,
+   "color": {
+    "terminal": "#25282b",
+    "chair": "#8a8f94",
+    "tower": "#25282b"
+   },
+   "color_verified": true,
+   "note": "Short double connecting the Moonbeam base and Solitude Village; black CTEC Enterprise A-frame-leg terminal with a glazed cab, labelled 'LINK'. 56 chairs, 6 towers.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/link-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ]
+  },
+  "137735976": {
+   "name": "Sunrise",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "CTEC",
+   "year": 1980,
+   "color": {
+    "terminal": "#25282b",
+    "chair": "#8a8f94",
+    "tower": "#25282b"
+   },
+   "color_verified": true,
+   "note": "Beginner/intermediate triple from the village; black CTEC bottom drive/tension terminal on splayed legs with 'SUNRISE' sign, bullwheel unload at the top. 132 chairs, 17 towers. Year/maker: liftblog CTEC 1980, skiresort.info Thiokol 1977.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/sunrise-solitude-ut/",
+    "https://liftblog.com/solitude-ut/",
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/"
+   ]
+  },
+  "975730213": {
+   "name": "Solitude Magic Carpet",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "44 m carpet in the Moonbeam beginner area; skiresort.info lists one 'Solitude Magic Carpet' without maker or year. A Forest Service project realigned the Moonbeam conveyor.",
+   "verified": false,
+   "sources": [
+    "https://www.skiresort.com/en/ski-resort/solitude/ski-lifts/",
+    "https://www.fs.usda.gov/r04/uinta-wasatch-cache/projects/60555"
+   ]
+  }
+ },
+ "buildings": [
+  {
+   "name": "Moonbeam Lodge",
+   "kind": "base_lodge",
+   "lat": 40.623432,
+   "lon": -111.597671,
+   "footprint_m": {
+    "length": 43.7,
+    "width": 27.2,
+    "heading_deg": 113.2
+   },
+   "style": "Main day lodge at the Moonbeam base (44 x 27 m): cafeteria, Argenta Pub, rentals on the ground floor. Photos of the Moonbeam base show cream stucco walls on a split-stone base, heavy exposed timber king-post trusses over the entrances, grey shingle roofs; Little Dollie's waffle stand and the Snowsports building sit slopeside beside it. The resort calls it 'quaint but small' and planned a renovation in 2023.",
+   "model": "village_block_solitude",
+   "osm": "w130469745",
+   "note": "Which of the photographed Moonbeam-base facades is the lodge itself is not certain; renovation status unconfirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469745",
+    "https://www.solitudemountain.com/mountain-and-village/dining/moonbeam-lodge",
+    "https://www.solitudemountain.com/mountain-and-village/dining/argenta-pub",
+    "https://www.solitudemountain.com/mountain-and-village/dining/little-dollie-waffles",
+    "https://unofficialnetworks.com/2023/07/17/solitude-2023-town-hall/"
+   ]
+  },
+  {
+   "name": "The Inn at Solitude",
+   "kind": "hotel",
+   "lat": 40.618768,
+   "lon": -111.5924,
+   "footprint_m": {
+    "length": 30.6,
+    "width": 47.6,
+    "heading_deg": 55.7
+   },
+   "storeys": 5,
+   "style": "Village hotel (houses St. Bernard's and the Library Bar): terracotta/burnt-orange stucco, about five storeys, steep brown metal gable roofs with deep timber eaves and brackets, tall chimneys, white-trimmed windows with arched tops on the upper floor, stacked balconies with dark rails, a glazed single-storey pool/restaurant wing.",
+   "model": "village_block_inn",
+   "osm": "w130469746",
+   "note": "OSM says 3 levels; photos show about five.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469746",
+    "https://www.solitudemountain.com/plan-your-trip/lodging",
+    "https://www.solitudemountain.com/mountain-and-village/dining/st-bernards"
+   ]
+  },
+  {
+   "name": "Powderhorn Lodge",
+   "kind": "village_block",
+   "lat": 40.619208,
+   "lon": -111.591693,
+   "footprint_m": {
+    "length": 78.9,
+    "width": 67.4,
+    "heading_deg": 44.3
+   },
+   "storeys": 5,
+   "style": "Village condo-hotel block (79 x 67 m, OSM spells it 'Powederhorn'): split-stone base, cream/tan stucco, dark red-brown timber gables and balconies, green-framed windows, timber-framed porte-cochere with the 'Powderhorn Lodge' sign. The resort's Powderhorn photos also show the village plaza clock tower: a tall square tower with a white clock face and pyramid roof over a 4-storey cream-and-timber block with green shutters.",
+   "model": "village_block_solitude",
+   "osm": "w130469739",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469739",
+    "https://www.solitudemountain.com/plan-your-trip/lodging"
+   ]
+  },
+  {
+   "name": "Eagle Springs East",
+   "kind": "village_block",
+   "lat": 40.620155,
+   "lon": -111.591548,
+   "footprint_m": {
+    "length": 97.1,
+    "width": 56.1,
+    "heading_deg": 11.0
+   },
+   "storeys": 4,
+   "style": "Large village block (97 x 56 m), home of Club Solitude: tan stucco with dark timber half-timbering, stone base, many gables and dormers, brown metal roofs, timber balconies.",
+   "model": "village_block_solitude",
+   "osm": "w130469740",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469740",
+    "https://www.solitudemountain.com/plan-your-trip/lodging"
+   ]
+  },
+  {
+   "name": "Eagle Springs West",
+   "kind": "village_block",
+   "lat": 40.620036,
+   "lon": -111.59219,
+   "footprint_m": {
+    "length": 77.1,
+    "width": 43.9,
+    "heading_deg": 33.8
+   },
+   "storeys": 4,
+   "style": "Village block (77 x 44 m): stone lower floors, tan stucco and dark timber half-timbering in the upper gables, steep brown roofs with tall gable fronts, timber balconies.",
+   "model": "village_block_solitude",
+   "osm": "w130469753",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469753",
+    "https://www.solitudemountain.com/plan-your-trip/lodging"
+   ]
+  },
+  {
+   "name": "Creekside Condominiums",
+   "kind": "village_block",
+   "lat": 40.619235,
+   "lon": -111.592742,
+   "footprint_m": {
+    "length": 58.8,
+    "width": 26.8,
+    "heading_deg": 15.1
+   },
+   "storeys": 4,
+   "style": "Village block by the creek (59 x 27 m): cream stucco, red-brown timber trim and balconies, verdigris (green copper) roofs with round turret caps, stone retaining walls and stone base.",
+   "model": "village_block_solitude",
+   "osm": "w130459924",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130459924",
+    "https://www.solitudemountain.com/plan-your-trip/lodging"
+   ]
+  },
+  {
+   "name": "Honeycomb Grill",
+   "kind": "restaurant",
+   "lat": 40.619075,
+   "lon": -111.592609,
+   "style": "Slopeside restaurant on the ground floor of village Building 4 (Suite A); wood-fired oven. Not a separate building: model as the ground floor of the village block.",
+   "model": "restaurant",
+   "note": "lat/lon from the resort's dining map; OSM node 2372162405 is ~20 m away. Exterior not confirmed from a photo.",
+   "verified": false,
+   "sources": [
+    "https://www.solitudemountain.com/mountain-and-village/dining/honeycomb-grill",
+    "https://www.openstreetmap.org/node/2372162405"
+   ]
+  },
+  {
+   "name": "Solitude Village plaza",
+   "kind": "village_block",
+   "lat": 40.61915,
+   "lon": -111.59225,
+   "style": "Car-free plaza ringed by the Inn, Powderhorn, Eagle Springs and Creekside: European-alpine mix of terracotta and cream stucco, stone bases, dark timber, steep brown or green-copper roofs, a clock tower; Stone Haus pizzeria, Thirsty Squirrel bar and the village store open onto it; ice rink in winter.",
+   "model": "solitude_clock_tower",
+   "note": "Centre point approximate (between Stone Haus and the Inn).",
+   "verified": true,
+   "sources": [
+    "https://www.solitudemountain.com/plan-your-trip/lodging",
+    "https://www.solitudemountain.com/-/media/Solitude/Trail-Map-PDFs/Solitude_Winter_Village_Map_2425.pdf",
+    "https://kutv.com/features/road-trippin/winter-road-trippin-solitude-mountain-resort"
+   ]
+  },
+  {
+   "name": "Last Chance Lodge",
+   "kind": "restaurant",
+   "lat": 40.619586,
+   "lon": -111.594544,
+   "footprint_m": {
+    "length": 30.9,
+    "width": 24.0,
+    "heading_deg": 83.2
+   },
+   "storeys": 2,
+   "style": "Slopeside lodge at the base of Apex Express (31 x 24 m, 2 levels): lunch on the main floor, Sluice Box bar upstairs, outdoor deck. Exterior look not confirmed from a photo.",
+   "model": "restaurant",
+   "osm": "w130469743",
+   "note": "OSM name is the old 'Last Chance Southwest Grill'.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469743",
+    "https://www.solitudemountain.com/mountain-and-village/dining/last-chance-southwest-grill"
+   ]
+  },
+  {
+   "name": "The Roundhouse",
+   "kind": "restaurant",
+   "lat": 40.619129,
+   "lon": -111.603551,
+   "footprint_m": {
+    "length": 32.4,
+    "width": 26.1,
+    "heading_deg": 4.3
+   },
+   "storeys": 2,
+   "style": "Mid-mountain restaurant just above the Powderhorn II bottom, between Moonbeam and Eagle Express (32 x 26 m). Two-storey building on an original concrete core around a circular 360-degree fireplace; seen from the lifts it has cream/light walls, dark trim and a steep dark maroon-red faceted (multi-hip) roof, with a deck/patio. Part of it burned in April 2016 (the original core survived) and it was rebuilt/renovated; now a Himalayan-inspired cafe.",
+   "model": "roundhouse",
+   "osm": "w974788887",
+   "note": "Only distant liftblog photos from Powderhorn II, uploaded Sep 2015 (before the 2016 fire); the current exterior after the renovation is not confirmed. Roof colour approx #7a2e34.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/974788887",
+    "https://www.solitudemountain.com/mountain-and-village/dining/roundhouse",
+    "https://www.ksl.com/article/39568148/fire-engulfs-restaurant-at-solitude-mountain-resort",
+    "https://www.cottonwoodheightsjournal.com/2018/02/13/166969/ski-snowboard-news-solitudes-roundhouse-is-a-mid-mountain-retreat",
+    "https://liftblog.com/powderhorn-ii-solitude-ut/"
+   ]
+  },
+  {
+   "name": "The Yurt",
+   "kind": "restaurant",
+   "lat": 40.615859,
+   "lon": -111.593843,
+   "footprint_m": {
+    "length": 8.1,
+    "width": 8.1,
+    "heading_deg": 137.0
+   },
+   "storeys": 1,
+   "style": "8 m dinner yurt in the trees near the Sunrise line: round yurt with a teal-green band and white roof, plus a small timber entry cabin with a gable roof. Rebuilt in 2023.",
+   "model": "yurt",
+   "osm": "w660773895",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/660773895",
+    "https://www.solitudemountain.com/mountain-and-village/dining/the-yurt",
+    "https://skiutah.com/blog/solitude-mountain-completes-two"
+   ]
+  },
+  {
+   "name": "The Crossings Townhomes",
+   "kind": "village_block",
+   "lat": 40.619338,
+   "lon": -111.590968,
+   "footprint_m": {
+    "length": 22.0,
+    "width": 36.1,
+    "heading_deg": 86.3
+   },
+   "storeys": 3,
+   "style": "Townhome row at the village edge: cream stucco, stone, dark timber, arched windows and gables.",
+   "model": "village_block_a",
+   "osm": "w130469744",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/130469744",
+    "https://www.solitudemountain.com/plan-your-trip/lodging"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Royal-blue Doppelmayr terminals",
+   "description": "Every detachable at Solitude wears royal blue: Apex and Moonbeam Uni-GS hoods with silver-ribbed glass roofs and gold script names, Summit and the 2023 Eagle Express six with blue roofs and silver-grey ends, plus blue operator huts.",
+   "kit": "partial",
+   "kit_note": "terminal_detach exists; paint blue with silver-grey ends/ribs; gold lettering decal for Apex/Moonbeam.",
+   "refs": [
+    "137770105",
+    "137770107",
+    "400353161",
+    "137770106"
+   ]
+  },
+  {
+   "name": "Solitude Village",
+   "description": "Small car-free European-style village: terracotta Inn at Solitude, Creekside's green copper turrets, half-timbered Eagle Springs, the plaza clock tower.",
+   "kit": "no",
+   "kit_note": "Needs village_block models (4-5 storey stucco/timber blocks, clock tower); base_lodge is too small.",
+   "refs": []
+  },
+  {
+   "name": "Black CTEC fixed-grip terminals",
+   "description": "Link, Sunrise, Powderhorn II and Honeycomb Return use black terminals on splayed A-frame legs with glazed cabs.",
+   "kit": "partial",
+   "kit_note": "terminal_fixed painted black.",
+   "refs": [
+    "137770108",
+    "137735976",
+    "137770109",
+    "137770104"
+   ]
+  },
+  {
+   "name": "The Roundhouse",
+   "description": "Maroon-roofed mid-mountain restaurant built around a round fireplace at the base of Powderhorn II.",
+   "kit": "partial",
+   "kit_note": "Kit restaurant with a steep maroon faceted roof.",
+   "refs": [
+    "137770109"
+   ]
+  },
+  {
+   "name": "The Yurt",
+   "description": "Dinner yurt in the trees off Sunrise.",
+   "kit": "yes",
+   "kit_note": "Kit yurt.",
+   "refs": []
+  }
+ ]
+}

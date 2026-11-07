@@ -1,0 +1,598 @@
+{
+ "resort": "alta",
+ "name": "Alta Ski Area",
+ "researched": "2026-11-07",
+ "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as osm_alta.json). Buildings use lat/lon (the resort origin is not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "Sunnyside six-pack (Leitner-Poma, opened Jan 2023) replaced the Sunnyside triple and the Albion double; Albion lift is gone.",
+  "Supreme was realigned straight in summer 2025 (same LPA terminals and chairs); the OSM way 1374872808 is a recent edit and probably shows the new line, but OSM lacks the detachable tag.",
+  "Albion Day Lodge expansion (Albion Grill, new Alta Java) finishes for the 2026-27 season.",
+  "Lift photos: liftblog 2015-2018, remontees-mecaniques.net 2012-2023; Alta building photos from alta.com (2020, 2026).",
+  "No Alta lift is missing from OSM as far as I can tell; Wildcat Express, Flora, a Mt. Baldy tram and the Little Cottonwood gondola are planned only."
+ ],
+ "lifts": {
+  "10140309": {
+   "name": "Collins",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2004,
+   "terminal": "CTEC",
+   "color": {
+    "chair": "#5f666d",
+    "terminal": "#33544a",
+    "tower": "#9aa0a6",
+    "tower_base": "#2f3a36"
+   },
+   "color_verified": true,
+   "note": "Two-section detachable quad from Wildcat base: bottom at Wildcat base (by Goldminer's Daughter), an angle/mid-load station beside Watson Shelter (load only, both sections run together) and the top on the ridge above West Rustler. Garaventa CTEC Stealth-style terminals painted Alta's dark green with a row of small windows; the angle station is a long double hood. OSM station w1304972257 is the angle station, w232716841 the bottom, w1304972258 the top.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/collins-alta-ski-area-ut/",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsd4-collins-doppelmayr-ctec-4691.html"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "10136602": {
+   "name": "Sunnyside",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Leitner-Poma",
+   "year": 2022,
+   "terminal": "LPA",
+   "color": {
+    "chair": "#6b7178",
+    "terminal": "#33544a",
+    "terminal_band": "#2c3a36",
+    "tower": "#a7adb3",
+    "tower_base": "#a7adb3"
+   },
+   "color_verified": true,
+   "note": "Leitner-Poma (Multix line) six-pack out of Albion base, built 2022 and opened 21 Jan 2023; it replaced the Sunnyside triple and the Albion double. LPA terminals with dark green hood, dark glass roof panels, white SUNNYSIDE lettering and the red Alta snowflake logo. 66 chairs, 16 towers, drive at the bottom.",
+   "verified": true,
+   "sources": [
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsd6-sunnyside-leitner-poma-of-america-8297.html",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://liftblog.com/sunnyside-alta-ski-area-ut/",
+    "https://www.sltrib.com/sports/2022/04/13/alta-retires-abion-ski/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "1374872808": {
+   "name": "Supreme",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Leitner-Poma",
+   "year": 2017,
+   "terminal": "LPA",
+   "color": {
+    "chair": "#5c6168",
+    "terminal": "#33544a",
+    "terminal_band": "#2c3a36",
+    "tower": "#a7adb3",
+    "tower_base": "#a7adb3"
+   },
+   "color_verified": true,
+   "note": "LPA detachable quad (2017) from beside Alf's to the top of Supreme. Built with an 8-degree line bend that caused fatigue; in summer 2025 Alta realigned it straight (towers moved to new footings, terminals pivoted on their foundations), reopened 2025-26. Green LPA hood with white SUPREME lettering, same look as Sunnyside. OSM lacks the detachable tag.",
+   "verified": true,
+   "sources": [
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsd4-supreme-leitner-poma-of-america-6779.html",
+    "https://www.alta.com/stories/supreme-realignment",
+    "https://liftblog.com/2024/06/22/alta-plans-to-rebuild-supreme-lift/",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "137670512": {
+   "name": "Sugarloaf",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2001,
+   "terminal": "CTEC",
+   "color": {
+    "chair": "#5f666d",
+    "terminal": "#33544a",
+    "tower": "#c9cdd1",
+    "tower_base": "#2f3a36"
+   },
+   "color_verified": true,
+   "note": "Garaventa CTEC detachable quad (Stealth drive at the bottom with 90-degree loading, Stealth IV return on top near the Snowbird/Baldy saddle). Dark green hoods. Tower tubes reused from the old Yan triple.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/sugarloaf-alta-ski-area-ut/",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsd4-sugarloaf-garaventa-ctec-4694.html"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "10130257": {
+   "name": "Wildcat",
+   "type": "fixed_chair",
+   "seats": 2,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1980,
+   "color": {
+    "chair": "#2a2d2f",
+    "terminal": "#2f4a3e",
+    "tower": "#2a2d2f"
+   },
+   "color_verified": true,
+   "note": "Old Yan fixed-grip double from Wildcat base; height-adjustable tripod bottom drive with a CTEC lift shack, dark green steelwork, black tubular towers and chairs without restraint bars. A replacement (Wildcat Express) is listed as planned but not built as of 2026.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/wildcat-alta-ski-area-ut/",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsf2-wildcat-yan-lift-engineering-4690.html"
+   ]
+  },
+  "256078977": {
+   "name": "Transfer Tow",
+   "type": "rope_tow",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1992,
+   "color": {
+    "terminal": "#1e1f21",
+    "carrier": "#1e1f21"
+   },
+   "color_verified": true,
+   "note": "756 m two-way tow between Wildcat and Albion bases: Yan carriers hang ropes from the haul rope (skiresort.info calls it a J-bar). Black portal-frame terminals; drive at Albion, return at Wildcat; height-adjustable towers.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/transfer-tow-alta-ski-area-ut/",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://www.remontees-mecaniques.net/bdd/reportage-telecorde-transfer-tow-yan-lift-engineering-7111.html"
+   ]
+  },
+  "257809595": {
+   "name": "Alta Lodge Tow",
+   "type": "rope_tow",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Sunkid",
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Short low rope tow up to the Alta Lodge hotel; year unknown.",
+   "verified": true,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/"
+   ]
+  },
+  "257809596": {
+   "name": "Rustler Lift",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1999,
+   "color": {},
+   "color_verified": false,
+   "note": "Tiny on-demand triple (6 chairs, one tower) up to the Rustler Lodge hotel; unmanned top. Colours not checked.",
+   "verified": true,
+   "sources": [
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsf3-rustler-garaventa-ctec-4700.html"
+   ]
+  },
+  "257809597": {
+   "name": "Snowpine Lift",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Skytrac",
+   "year": 2018,
+   "color": {},
+   "color_verified": false,
+   "note": "Short fixed quad (3 towers) from near Albion base up to Snowpine Lodge; drive at the top. Colours not checked.",
+   "verified": true,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsf4-snow-pine-skytrac-6778.html"
+   ]
+  },
+  "973195478": {
+   "name": "Little GMZ",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Short beginner carpet at Albion base (OSM only). Maker, year and look not confirmed; skiresort.info lists two 'people movers' at Alta without names.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/973195478",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/"
+   ]
+  },
+  "1464462043": {
+   "name": "MG GMZ",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Second beginner carpet at Albion base (OSM only). Maker, year and look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1464462043",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/"
+   ]
+  }
+ },
+ "buildings": [
+  {
+   "name": "Albion Day Lodge (Albion Grill, Alta Java)",
+   "kind": "base_lodge",
+   "lat": 40.59081,
+   "lon": -111.628213,
+   "storeys": 3,
+   "style": "Albion base day lodge, rebuilt and expanded 2024-2026 (reopens for 2026-27): flat-roofed modern block with a hand-hewn granite base, vertical warm timber cladding on the upper wing, dark grey panel bands, big glass to the slope, glass breezeway to the 3,400 sq ft dining addition, pine avalanche shutters over windows, employee housing on the top floor. Albion Grill upstairs, Alta Java in the lower level.",
+   "model": "albion_lodge",
+   "osm": "n13477465301",
+   "note": "OSM has only a node for the Albion Grill; no footprint. Position is the node.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/node/13477465301",
+    "https://www.alta.com/stories/summer-2026-projects",
+    "https://www.alta.com/food-and-drink/albion-grill"
+   ]
+  },
+  {
+   "name": "Alf's Restaurant",
+   "kind": "restaurant",
+   "lat": 40.579981,
+   "lon": -111.619719,
+   "footprint_m": {
+    "length": 71.7,
+    "width": 36.8,
+    "heading_deg": 139.5
+   },
+   "storeys": 2,
+   "style": "Mid-mountain lodge at the bottom of Supreme and Sugarloaf: long low building with a light granite stone base and stone-clad end walls, standing-seam grey metal upper cladding, a glazed dining box with timber soffit cantilevered at the downhill end, flat roof.",
+   "model": "alfs",
+   "osm": "w328606382",
+   "note": "Look from Alta's photo dated Nov 2020.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/328606382",
+    "https://www.alta.com/food-and-drink/alfs-restaurant",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsd4-supreme-leitner-poma-of-america-6779.html"
+   ]
+  },
+  {
+   "name": "Watson Shelter (Collins Grill)",
+   "kind": "restaurant",
+   "lat": 40.580555,
+   "lon": -111.63722,
+   "footprint_m": {
+    "length": 26.2,
+    "width": 25.7,
+    "heading_deg": 118.3
+   },
+   "storeys": 2,
+   "style": "Mid-mountain shelter beside the Collins angle station: two-storey flat-roofed box with grey horizontal siding, large square windows on both floors, a long deck at slope level; Collins Grill (sit-down) upstairs, cafeteria below.",
+   "model": "watson_shelter",
+   "osm": "w987472524",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/987472524",
+    "https://liftblog.com/collins-alta-ski-area-ut/",
+    "https://www.alta.com/food-and-drink/collins-grill"
+   ]
+  },
+  {
+   "name": "Goldminer's Daughter Lodge",
+   "kind": "base_lodge",
+   "lat": 40.588964,
+   "lon": -111.638374,
+   "footprint_m": {
+    "length": 71.7,
+    "width": 74.8,
+    "heading_deg": 101.7
+   },
+   "storeys": 3,
+   "style": "Wildcat base lodge and hotel: a tall gabled glass atrium (dark mullioned greenhouse front) beside a rough stone chimney wall, a timber-fronted ground floor (Mother Lode ski shop), and a tan stucco three-storey hotel wing with small windows; glass-roofed sun porch on the slope side.",
+   "model": "goldminers_daughter",
+   "osm": "w232712891",
+   "note": "Look from a liftblog photo (c. 2015).",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/232712891",
+    "https://liftblog.com/collins-alta-ski-area-ut/"
+   ]
+  },
+  {
+   "name": "Peruvian Lodge",
+   "kind": "hotel",
+   "lat": 40.58842,
+   "lon": -111.642394,
+   "footprint_m": {
+    "length": 70.5,
+    "width": 31.6,
+    "heading_deg": 82.8
+   },
+   "storeys": null,
+   "style": "Hotel at the west end of the Wildcat base; exterior not checked from a photo.",
+   "model": "village_block_b",
+   "osm": "w232711109",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/232711109"
+   ]
+  },
+  {
+   "name": "Alta Lodge",
+   "kind": "hotel",
+   "lat": 40.58988,
+   "lon": -111.6372,
+   "storeys": null,
+   "style": "Historic hotel above the Wildcat base, reached by the Alta Lodge Tow; not mapped as a building in OSM. Position taken from the top of the Alta Lodge Tow.",
+   "model": "village_block_b",
+   "osm": null,
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/257809595",
+    "https://www.skiresort.info/ski-resort/alta/ski-lifts/"
+   ]
+  },
+  {
+   "name": "Rustler Lodge",
+   "kind": "hotel",
+   "lat": 40.590745,
+   "lon": -111.633278,
+   "footprint_m": {
+    "length": 90.5,
+    "width": 50.6,
+    "heading_deg": 73.6
+   },
+   "storeys": null,
+   "style": "Large hotel between the bases, served by the Rustler lift; exterior not checked from a photo.",
+   "model": "village_block_b",
+   "osm": "w475960160",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/475960160",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsf3-rustler-garaventa-ctec-4700.html"
+   ]
+  },
+  {
+   "name": "Snowpine Lodge",
+   "kind": "hotel",
+   "lat": 40.591132,
+   "lon": -111.632418,
+   "footprint_m": {
+    "length": 63.4,
+    "width": 62.3,
+    "heading_deg": 164.8
+   },
+   "storeys": null,
+   "style": "Large modern hotel (rebuilt c. 2018-2019) on the hillside above Albion base; in a distant 2023 photo it reads as a dark multi-storey timber-and-glass block. Details not checked.",
+   "model": "village_block_b",
+   "osm": "w951274606",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/951274606",
+    "https://www.remontees-mecaniques.net/bdd/reportage-tsf4-snow-pine-skytrac-6778.html"
+   ]
+  },
+  {
+   "name": "Alta Toll Booth",
+   "kind": "ticket",
+   "lat": 40.592061,
+   "lon": -111.628062,
+   "footprint_m": {
+    "length": 4.5,
+    "width": 3.0,
+    "heading_deg": 107.8
+   },
+   "storeys": 1,
+   "style": "Small booth on the road into the Albion base parking.",
+   "model": "ticket_office",
+   "osm": "w973195471",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/973195471"
+   ]
+  },
+  {
+   "name": "Alta Community Center",
+   "kind": "village_block",
+   "lat": 40.591093,
+   "lon": -111.633733,
+   "footprint_m": {
+    "length": 26.2,
+    "width": 12.0,
+    "heading_deg": 67.6
+   },
+   "storeys": null,
+   "style": "Town building near Rustler Lodge; look not checked.",
+   "model": "village_block_a",
+   "osm": "w730037295",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/730037295"
+   ]
+  },
+  {
+   "name": "Our Lady of the Snows Center",
+   "kind": "village_block",
+   "lat": 40.5904,
+   "lon": -111.636932,
+   "footprint_m": {
+    "length": 17.4,
+    "width": 10.4,
+    "heading_deg": 18.4
+   },
+   "storeys": null,
+   "style": "Small church/centre across the road from Alta Lodge; look not checked.",
+   "model": "village_block_a",
+   "osm": "w475960188",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/475960188"
+   ]
+  },
+  {
+   "name": "Restroom (Supreme area)",
+   "kind": "warming_hut",
+   "lat": 40.577846,
+   "lon": -111.614087,
+   "footprint_m": {
+    "length": 4.9,
+    "width": 4.6,
+    "heading_deg": 81.1
+   },
+   "storeys": 1,
+   "style": "Pit-latrine toilet hut.",
+   "model": "restroom",
+   "osm": "w659263336",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/659263336"
+   ]
+  },
+  {
+   "name": "Restroom (Sugarloaf area)",
+   "kind": "warming_hut",
+   "lat": 40.583005,
+   "lon": -111.618433,
+   "footprint_m": {
+    "length": 5.2,
+    "width": 3.7,
+    "heading_deg": 123.5
+   },
+   "storeys": 1,
+   "style": "Pit-latrine toilet hut.",
+   "model": "restroom",
+   "osm": "w1076136906",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1076136906"
+   ]
+  },
+  {
+   "name": "Restroom (upper Supreme)",
+   "kind": "warming_hut",
+   "lat": 40.577172,
+   "lon": -111.611091,
+   "footprint_m": {
+    "length": 5.2,
+    "width": 3.4,
+    "heading_deg": 99.0
+   },
+   "storeys": 1,
+   "style": "Pit-latrine toilet hut.",
+   "model": "restroom",
+   "osm": "w1188769130",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1188769130"
+   ]
+  },
+  {
+   "name": "Restroom (upper Supreme 2)",
+   "kind": "warming_hut",
+   "lat": 40.57643,
+   "lon": -111.613037,
+   "footprint_m": {
+    "length": 3.3,
+    "width": 3.0,
+    "heading_deg": 158.1
+   },
+   "storeys": 1,
+   "style": "Pit-latrine toilet hut.",
+   "model": "restroom",
+   "osm": "w1188769131",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1188769131"
+   ]
+  },
+  {
+   "name": "Restroom (top of Supreme)",
+   "kind": "warming_hut",
+   "lat": 40.574998,
+   "lon": -111.611658,
+   "footprint_m": {
+    "length": 4.4,
+    "width": 2.6,
+    "heading_deg": 47.3
+   },
+   "storeys": 1,
+   "style": "Pit-latrine toilet hut.",
+   "model": "restroom",
+   "osm": "w1188769132",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1188769132"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Alta green",
+   "description": "Every Alta lift terminal is dark forest green: the long CTEC Stealth hoods with a row of small windows (Collins, Sugarloaf) and the rounded LPA hoods with dark glass roof panels, white lettering and the red Alta snowflake (Sunnyside, Supreme).",
+   "kit": "partial",
+   "kit_note": "terminal_detach exists; paint dark green, add the LPA glass-roof variant and the window-row CTEC variant.",
+   "refs": [
+    "10140309",
+    "137670512",
+    "10136602",
+    "1374872808"
+   ]
+  },
+  {
+   "name": "Collins angle station by Watson Shelter",
+   "description": "A mid-mountain double-hood angle/load station with the two-storey Watson Shelter right behind it.",
+   "kit": "no",
+   "kit_note": "Needs an angle-station terminal (two hoods end to end).",
+   "refs": [
+    "10140309"
+   ]
+  },
+  {
+   "name": "Transfer Tow",
+   "description": "Long two-way rope tow linking Wildcat and Albion bases on black portal-frame terminals; skiers grab hanging ropes.",
+   "kit": "partial",
+   "kit_note": "rope tow/tbar exist; needs Yan carriers with hanging ropes.",
+   "refs": [
+    "256078977"
+   ]
+  },
+  {
+   "name": "Wildcat Yan double",
+   "description": "Vintage black Yan double with a green tripod drive at the Wildcat base.",
+   "kit": "partial",
+   "kit_note": "chair2 + terminal_fixed; paint black/green.",
+   "refs": [
+    "10130257"
+   ]
+  },
+  {
+   "name": "Albion Day Lodge",
+   "description": "Rebuilt 2026 base lodge of granite, timber and glass at Albion base.",
+   "kit": "partial",
+   "kit_note": "base_lodge with stone base + timber cladding.",
+   "refs": []
+  },
+  {
+   "name": "Skiers only",
+   "description": "No snowboards at Alta; the old wooden hotels (Alta Lodge, Goldminer's Daughter, Peruvian, Rustler) sit right on the slopes.",
+   "kit": "no",
+   "kit_note": "Flavour only.",
+   "refs": []
+  }
+ ]
+}

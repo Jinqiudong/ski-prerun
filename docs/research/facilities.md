@@ -311,3 +311,50 @@ Ranked by how much it matters for recognising the resort. Each line is a build b
   - Thunderbowl's colour.
   - The unnamed rope tow (OSM 1211521065) between Highlands and Buttermilk.
 - Photos up to 2026 show these lifts as they are now, but older lifts' colours come from photos taken in 2015–2017.
+
+# The Salt Lake City-area Ikon resorts (2026-11-07)
+
+Alta, Snowbird, Brighton, Solitude, Deer Valley and Snowbasin. These are every Utah destination on ikonpass.com for 26/27:
+- Deer Valley and Snowbasin: 7 days on the Ikon Pass only. Deer Valley needs reservations.
+- Alta: 7 days on the Ikon Pass.
+- Snowbird and Brighton: on the Base Pass too.
+- Solitude: unlimited.
+
+Powder Mountain and Park City Mountain are not on the Ikon Pass.
+
+The data is in `data/facilities/<id>.json`, in the same schema as the Colorado resorts, with three differences:
+- Buildings carry `lat`/`lon` (the resorts' terrain and origin come in a later step).
+- Lifts carry `terminal_model` (the maker's hood).
+- Buildings carry `model`, the kit or landmark model drawn there.
+
+Lift ids are OSM way ids from Overpass (Nov 2026), assigned to a resort by its `landuse=winter_sports` area. Deer Valley's East Village lifts are all Deer Valley's, none Park City's.
+
+**Models built from photos** (`models/facilities/blender/utah.py`, `glb/signature.json`):
+- Snowbird:
+  - the Aerial Tram's cabin (`tram_cabin`, 2022 CWA car: black glass, coloured band and roof edge), its lattice tower (`tower_tram`), the concrete A-frame bottom dock in the Snowbird Center (`tram_dock_bottom`) and the Hidden Peak top dock (`tram_dock_top`)
+  - the Cliff Lodge, The Summit, The Nest
+- Alta: Albion Day Lodge (2026), Alf's, Watson Shelter, Goldminer's Daughter
+- Brighton: Molly Green's, Snake Creek Lodge
+- Solitude: the village blocks (`village_block_solitude`), The Inn (`village_block_inn`), the plaza clock tower, the Roundhouse
+- Deer Valley: Snow Park Lodge, Silver Lake Lodge, Empire Canyon Lodge
+- Snowbasin: Earl's Lodge, Needles Lodge, John Paul Lodge
+
+**Two new hoods** (`stations.py`):
+- `terminal_detach_ctec`, the Garaventa CTEC Stealth: Deer Valley's green-and-cream stations, Alta's Collins and Sugarloaf, Snowbird's Gadzoom, Baldy and Mineral Basin, Brighton's Great Western and Snake Creek.
+- `terminal_detach_dline`, the Doppelmayr D-Line: Deer Valley's Keetley, Pinyon and the East Village lifts, and Brighton's Crest 6.
+
+**Gaps:**
+- The ride draws a `cable_car` as a looping gondola, so Snowbird's tram, and Snowbasin's little Allen Peak Tram, need a jig-back mode: two cabins running to and fro. The models are ready for it.
+- The East Village gondola's long D-Line station and the Big Dutch angle station have no model yet. They use `gondola_station`.
+- Deer Valley's Park Peak Lodge and East Village Lodge are under construction. Alta's Albion lodge is new for 2026-27; its photo is from construction.
+- No usable exterior photos for:
+  - Alpine Rose, Milly Chalet and Brighton Center beyond a sign
+  - Honeycomb Grill and Last Chance Lodge (Solitude)
+  - the Grizzly Center (Snowbasin)
+- Unidentified lifts:
+  - Alta's Little GMZ and MG GMZ carpets
+  - Snowbird's Conveyor #3
+  - Brighton's second carpet
+  - Solitude's carpet
+  - Deer Valley's unnamed OSM platter (1210150101)
+  - Snowbasin's two carpets, matched by length only

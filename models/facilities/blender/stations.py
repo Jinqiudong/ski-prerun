@@ -670,6 +670,45 @@ def terminal_detach_omega(): terminal_detach("terminal_detach_omega", _hood_omeg
 def terminal_detach_unig(): terminal_detach("terminal_detach_unig", _hood_unig)
 def terminal_detach_dopp90(): terminal_detach("terminal_detach_dopp90", _hood_dopp90)
 
-MODELS = {"terminal_detach_lpa": terminal_detach_lpa, "terminal_detach_omega": terminal_detach_omega,
+def _hood_ctec(yf, yc, z0, z1, M):
+    """Garaventa CTEC Stealth (Deer Valley, 1990s): a faceted hood, a cream band (`paint_band`) flaring out from
+    the skirt to carry the lift's name in script, a strip of dark windows above it in the dark green shell
+    (`paint_hood`), the top raked in to a flat roof; chamfered nose and back."""
+    hood_mats(M, "#1e3a30", "#e9e6dc", "#1c2226")
+    hw, y0, y1 = 4.3, yf - 0.3, yc + 4.3
+    prof = [(-0.25, 0.7, "band", "paint"), (0.95, 0.0, "paint", "paint"), (1.15, 0.0, "vault", "bake"), (1.7, 0.12, "paint", "paint"),
+            (2.15, 0.85, "paint", "paint"), (2.22, 1.0, None, None)]
+    rings = hood_profile(prof, hw, y0, y1, 2.2, 3.2, z0, M, seg=1)
+    lid(rings[-1], M["paint"])
+    for sx in (-1, 1):
+        L = y1 - y0 - 5.4
+        for i in range(1, 8): box((0.06, 0.08, 0.5), (sx * (hw + 0.03), y0 + 2.2 + i * L / 8, z0 + 1.42), M["paint"], kind="paint")
+        side_board(sx * (hw + 0.05), (y0 + y1) / 2 - 1.0, z0 + 0.45, 6.0, 0.55, M, sx)
+    face([(-1.6, -0.3), (1.6, -0.3), (1.6, 0.3), (-1.6, 0.3)], M["board"], "flat", loc=(0, y0 - 0.12, z0 + 0.45), rot=(math.pi / 2 + 0.5, 0, 0))
+    hood_snow(M, hw - 1.6, y0 + 2.0, y1, z0 + 2.22, 2.4)
+    machinery(yf, yc, z0, M)
+
+def _hood_dline(yf, yc, z0, z1, M):
+    """Doppelmayr D-Line (Deer Valley's 2024-26 lifts): a tall, crisp box hood with softly rounded edges in the
+    resort colour (`paint_hood`), a dark glazed strip high along each side, a darker roof cap (`paint_band`),
+    and a big screen on the nose."""
+    hood_mats(M, "#1f5a44", "#173f31", "#1a2329")
+    hw, y0, y1 = 4.4, yf - 0.4, yc + 4.6
+    prof = [(-0.35, 0.25, "paint", "paint"), (0.0, 0.0, "paint", "paint"), (3.1, 0.0, "band", "paint"), (3.4, 0.18, "band", "paint"), (3.5, 0.5, None, None)]
+    rings = hood_profile(prof, hw, y0, y1, 0.7, 0.9, z0, M, seg=4)
+    lid(rings[-1], M["band"])
+    for sx in (-1, 1):
+        box((0.06, y1 - y0 - 3.0, 0.7), (sx * (hw + 0.02), (y0 + y1) / 2 + 0.3, z0 + 2.45), M["vault"])
+        for i in range(9): box((0.08, 0.06, 0.72), (sx * (hw + 0.04), y0 + 1.5 + i * (y1 - y0 - 3.0) / 8, z0 + 2.45), M["paint"], kind="paint")
+        side_board(sx * (hw + 0.04), (y0 + y1) / 2 - 2.0, z0 + 1.0, 6.5, 0.7, M, sx)
+    box((7.2, 0.12, 2.3), (0, y0 - 0.02, z0 + 1.75), M["dark"])
+    face([(-3.4, -1.0), (3.4, -1.0), (3.4, 1.0), (-3.4, 1.0)], M["board"], "flat", loc=(0, y0 - 0.09, z0 + 1.75))
+    hood_snow(M, hw - 0.6, y0 + 0.9, y1, z0 + 3.5, 1.0)
+    machinery(yf, yc, z0, M)
+
+def terminal_detach_ctec(): terminal_detach("terminal_detach_ctec", _hood_ctec)
+def terminal_detach_dline(): terminal_detach("terminal_detach_dline", _hood_dline)
+
+MODELS = {"terminal_detach_ctec": terminal_detach_ctec, "terminal_detach_dline": terminal_detach_dline, "terminal_detach_lpa": terminal_detach_lpa, "terminal_detach_omega": terminal_detach_omega,
           "terminal_detach_unig": terminal_detach_unig, "terminal_detach_dopp90": terminal_detach_dopp90,
           "terminal_detach": terminal_detach, "terminal_detach_top": terminal_detach_top, "terminal_fixed": terminal_fixed, "gondola_station": gondola_station}
