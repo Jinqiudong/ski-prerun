@@ -6,7 +6,7 @@
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=12";
-import { myRiderLook } from "../core/look.js?v=4";
+import { myRiderLook } from "../core/look.js?v=5";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.
@@ -43,14 +43,15 @@ export function charOfLook(rider) {
   return ch;
 }
 
-// The rider saved on this phone (see start.js): its character, name, look and stance.
+// The rider saved on this phone (see start.js): what I wear (st.wear), else the outfit chosen before there was
+// one; its character, name, look and stance.
 export function myRider() {
   let st = {};
   try { st = JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { /* fresh */ }
   const mine = (st.riders || []).find((r) => r.id === st.rider), outfit = OUTFITS[st.rider];
   const id = mine?.id || (outfit ? st.rider : "o_pine"), look = myRiderLook(), ch = charOfLook(look);
-  const stance = (st.stances || {})[id] ?? (st.stances || {})[mine?.base || "rider_a"];
-  return { name: mine?.name || outfit?.zh || "Rider A", look, ch, colors: partColors(ch), stance: stance === "goofy" ? "goofy" : "regular" };
+  const stance = st.wear?.ch ? st.wear.stance : (st.stances || {})[id] ?? (st.stances || {})[mine?.base || "rider_a"];
+  return { name: (st.wear?.ch && st.wear.name) || mine?.name || outfit?.zh || "Rider A", look, ch, colors: partColors(ch), stance: stance === "goofy" ? "goofy" : "regular" };
 }
 
 // Start loading a template's light version and its clips (mine by default); boarderModel waits for it anyway.

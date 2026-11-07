@@ -28,4 +28,6 @@ Wanted (pets' emote bubbles on the map, `src/start/pets.js` `EMOTES` uses stand-
 
 Wanted (riding together, `src/ride/together-core.js` `QUICK` and the button in `together.js` use stand-ins until they arrive): `msg_chat` (a speech bubble: the quick-message button; `rider` stands in), `msg_wait` (a raised hand, "等我"; `rest`), `msg_meet` (a lift station with a pin, "缆车站见"; `lift`), `msg_good` (thumbs up on snow, "这条好滑"; `star`), `msg_down` (a rider dropping in, "我先下去了"; `snowboard`), `msg_coming` (footprints or a paper plane, "去找你" and the fly-over; `compass_rose`).
 
+Wanted (the rider page's wardrobe, `src/start/start.js` `NAV`): `look_mirror` (a hand mirror: the 外形 item, hair and build; `sliders` stands in).
+
 Wanted (voice while riding together, `src/ride/voice.js` uses Chinese text labels until they arrive): `voice_mic` (a microphone: the mic button, on), `voice_mic_off` (the microphone crossed out: off, and a muted friend), `voice_radio` (a walkie-talkie held up: the hold-to-talk button and a friend's tag while they're on it), `voice_speaking` (sound waves from a mouth or a small speaker: a friend speaking; a CSS ring stands in).
