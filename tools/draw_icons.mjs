@@ -157,6 +157,20 @@ const ICONS = {
       detail: [[100, 90, 2.6], [112, 88, 2.2], [107, 96, 1.8]].map(([x, y, r]) => ({ d: circ(x, y, r), fill: C.white, sw: 0 })) },
     ...flake(20, 24, 7), ...flake(52, 16, 5), { d: circ(38, 40, 2.4), fill: INK, sw: 0 },
   ],
+  // The bunny hill (宝宝坡, the practice): a gentle slope with an S of turns traced down it between two training
+  // cones, a little flag at the top.
+  practice: () => [
+    { d: "M4 110 Q4 100 18 96 Q60 84 92 70 Q112 61 120 58 Q125 57 125 64 V114 Q125 122 117 122 H12 Q4 122 4 114 Z", fill: C.white, shade: C.blue, sw: 5, hl: ["M14 104 Q34 96 52 92"] },
+    { d: "M98 70 C80 76 70 82 80 90 C92 98 70 106 46 108 C30 110 24 114 26 118", sw: 3.6, dash: "6 6.5", ink: C.dslate },
+    ...[[62, 92, 11, 18], [100, 98, 10, 16]].flatMap(([x, y, w, h]) => [
+      { d: ell(x, y + 1, w + 3, 3.2), fill: C.blue, sw: 0 },
+      { d: `M${x - w} ${y} L${x - 2.4} ${y - h} Q${x} ${y - h - 2.5} ${x + 2.4} ${y - h} L${x + w} ${y} Q${x} ${y + 3} ${x - w} ${y} Z`, fill: C.orange, shade: "#a86a3c", sw: 4,
+        detail: [{ d: line([x - w * 0.55, y - h * 0.42], [x + w * 0.55, y - h * 0.42]), sw: 4.2, ink: C.white, op: 0.95 }] },
+    ]),
+    { d: line([106, 64], [106, 26]), sw: 4.5 },
+    { d: "M106 26 Q118 24 124 32 Q116 36 106 40 Z", fill: C.pink, shade: "#b77d86", sw: 3.8 },
+    ...flake(22, 26, 7), ...flake(54, 16, 5), { d: circ(38, 44, 2.4), fill: INK, sw: 0 }, { d: circ(80, 34, 2.2), fill: INK, sw: 0 },
+  ],
 };
 
 // The trick wheel: the button (a board in the air with a sparkle) and one per trick. Grabs are the board from

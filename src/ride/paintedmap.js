@@ -5,7 +5,7 @@
 // run for its name and level. Skied runs are clean coloured ink on a thin paper casing, the rest a faint
 // pencil dash. People are their own avatars (assets/icons/av_*.png); ones that overlap gather into one
 // bubble with "+N" (tap it and they fan out; zoom in and they separate). You are always on top, ringed red.
-import { t, myAvatar } from "../core/i18n.js?v=40";
+import { t, myAvatar } from "../core/i18n.js?v=41";
 
 const INK = { easy: "#2e8b4f", intermediate: "#2a5db0", advanced: "#1c1f25", expert: "#1c1f25" };
 const LEVELS = [["easy", "绿道"], ["intermediate", "蓝道"], ["advanced", "黑道"], ["expert", "双黑"]];

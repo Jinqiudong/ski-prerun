@@ -179,6 +179,27 @@ const EN = {
   "要不要钻一下树林？": "Shall we duck into the trees?", "敢不敢试试蘑菇？": "Dare to try the moguls?", "那边有深粉，去不去？": "Deep powder over there, want to go?", "走！": "Go!", "不了": "Not now",
   "{run} 旁的松林": "The pines by {run}", "{run} 的蘑菇阵": "The bumps on {run}", "{run} 边的深粉": "The stash by {run}", "雪道": "the run",
   "解锁新地点": "NEW SPOT", "又来啦": "BACK AGAIN", "已发现 {n} 处秘密地点": "{n} secret spots found", "这趟 +{k}": "+{k} this run", "小狐狸": "Little fox",
+  // The bunny hill practice (src/ride/practice.js)
+  "宝宝坡": "Bunny hill", "{name} 宝宝坡": "{name} bunny hill", "{name} 旁的缓坡": "The gentle slope by {name}", "去宝宝坡练习": "Practise on the bunny hill", "去宝宝坡练习 ›": "Practise on the bunny hill ›",
+  "{len} 米 · 平均 {deg}°": "{len} m · {deg}° on average", "加速 · 立刃 · 换刃 · 刹车": "Speed · edges · linked turns · braking",
+  "握好手机": "Hold your phone", "怎么舒服怎么握，点「开始」，现在的角度就是「平」": "Hold it however feels right and tap Start: that angle is \"flat\"", "先站稳～手机怎么舒服怎么拿": "Stand steady~ hold the phone however's comfy",
+  "板头朝坡下放平，手机往前倾（或手指往下拖），滑到 {v} km/h": "Nose down the hill, board flat, tip the phone forward (or drag down): reach {v} km/h", "板头朝下，放平，冲～": "Nose down, flat base, go~",
+  "立刃转弯": "Edge turns", "手机左右倾就是立刃。先脚跟刃、再脚尖刃，各压住转过坡下那条线": "Tilting the phone sets an edge. A heel-side turn, then a toe-side one: hold each past the fall line", "压住刃别松，转过滚落线": "Hold the edge, round past the fall line",
+  "换刃": "Linked turns", "连着转：脚跟、脚尖、脚跟……连续换刃 {n} 次": "Link them: heel, toe, heel… {n} edge changes in a row", "左一下，右一下，像画 S": "Left, right, draw an S",
+  "减速刹车": "Slow down and stop", "滑到 {from} km/h 以上，手机往回倒（或手指往上拖）把板横过来，{m} 米内停住": "Get past {from} km/h, tip the phone back (or drag up) to swing the board across, stop within {m} m", "板子横过来，脚跟踩住": "Board across, weight on the heels",
+  "吃刃": "Catching an edge", "刹车横着滑时往脚尖猛压一下，感受吃刃；再用脚跟刃干净地停一次": "Sliding sideways, snap onto your toes to feel an edge catch; then stop cleanly on the heel edge", "下坡那条刃一插进雪里，就会绊一下": "Dig in the downhill edge and it trips you",
+  "自由练习": "Free practice", "想练什么练什么，滑到底会送你回坡顶": "Practise anything; at the bottom you're taken back up", "自己玩吧，我在这儿看着": "Your turn, I'm watching",
+  "步骤": "Steps", "开始": "Start", "平": "Flat", "脚跟": "Heel", "脚尖": "Toe", "脚跟刃": "Heel edge", "脚尖刃": "Toe edge", "感受吃刃": "Feel a catch", "干净停住": "Clean stop",
+  "滑行": "Gliding", "刹车 {k}%": "Braking {k}%", "急停": "Full stop", "回坡顶": "Back up", "再练一次": "Again", "练这个": "Practise", "去练": "Go", "接着练": "Keep going", "去滑雪道 ›": "To the runs ›", "坐 {lift} 上山 ›": "Ride {lift} up ›",
+  "{step} · 过关": "{step} · passed", "下一步：{step} ›": "Next: {step} ›", "刹车中 · {m} 米": "Braking · {m} m", "先滑到 {v} km/h": "Get up to {v} km/h first", "连续换刃 {k} / {n}": "Edge changes {k} / {n}",
+  "吃刃了！刹车时重心留在脚跟（上坡那条刃）": "Caught an edge! Braking, keep your weight on the heels (the uphill edge)", "板子再横一点：这次最多 {d}°": "Swing the board further across: {d}° at most this time",
+  "停住用了 {m} 米，要 {lim} 米内：早一点、狠一点": "Took {m} m to stop, aim for {lim}: earlier and harder", "{v} km/h！板头朝下、板放平，速度就上来了": "{v} km/h! Nose down and a flat base bring the speed",
+  "脚跟、脚尖都转过了滚落线。立刃越多，弯越急": "Heel and toe, both round past the fall line. More edge, tighter turn", "连续换刃 {n} 次：每个弯都压住，过了坡下再换": "{n} edge changes: hold each turn, change after the fall line",
+  "从 {v} km/h 停住只用了 {m} 米，板子横到 {d}°": "From {v} km/h to a stop in {m} m, the board {d}° across", "吃刃是下坡那条刃插进雪里。横着滑时，重心留在上坡那条刃上": "A catch is the downhill edge digging in. Sliding sideways, stay on the uphill edge",
+  "现在这样就是「平」。左右倾立刃，前倾加速，往回倒刹车": "That's flat now. Tilt sideways to edge, forward to speed up, back to brake", "没感应到手机倾斜：用手指拖，左右拖转弯，往下拖加速，往上拖刹车": "No phone tilt found: drag instead, across to turn, down to speed up, up to brake",
+  "还没感应到手机倾斜，也可以用手指拖": "No phone tilt yet: dragging works too", "看我：{line}": "Watch: {line}", "压住，转过去": "hold it, round we go", "绊了一下吧？这就是吃刃。再用脚跟刃停一次": "Felt that trip? That's a catch. Now stop on the heel edge",
+  "{name}：欢迎来宝宝坡！我来教你": "{name}: welcome to the bunny hill! I'll teach you", "漂亮！": "Nice!", "学会啦～": "Got it~", "再来一次～": "Once more~", "到底啦，回坡顶": "Bottom! Back up we go",
+  "真实的初学者坡：{len} 米，平均 {deg}°": "The real beginner slope: {len} m, {deg}° on average", "这个雪场没有宝宝坡，找了雪场底下最缓的一段": "No bunny hill here: the gentlest slope near the base",
 };
 export function t(zh, vars) {
   let s = EN_ON ? EN[zh] ?? zh : zh;
