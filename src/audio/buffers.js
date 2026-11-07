@@ -1,5 +1,5 @@
 // Sound material made from numbers (no files): textured noise for the snow, grit for a skid, crunches for
-// a step, a landing thump, the chair rolling over a tower's sheaves, a station clunk and a reverb tail.
+// a step, a landing thump, snow flumping off a tree, the chair rolling over a tower's sheaves, a station clunk and a reverb tail.
 // Pure functions: Float32Arrays at a sample rate, seeded so every phone (and the tests) makes the same ones.
 
 export function rng(seed = 1) { // mulberry32
@@ -112,6 +112,23 @@ export function thump(sr) {
   biquad(puff, sr, "lowpass", 1600); biquad(puff, sr, "highpass", 180);
   for (let i = 0; i < n; i++) { const t = i / sr; x[i] += puff[i] * 1.6 * Math.min(1, t / 0.004) * Math.exp(-t * 9); }
   return normalize(x, 0.85);
+}
+
+// Snow coming off a tree's branches and landing: a soft, heavy "flump" (a low, dull mass of snow settling,
+// no attack to speak of) and then the powder sifting down after it, quieter and brighter, thinning out.
+export function flump(sr, seed = 17) {
+  const r = rng(seed), n = Math.floor(sr * 1.3), x = new Float32Array(n);
+  const body = biquad(biquad(brown(sr, n / sr, seed + 1), sr, "lowpass", 380, 0.6), sr, "highpass", 55);
+  const sift = new Float32Array(n); for (let i = 0; i < n; i++) sift[i] = r() * 2 - 1;
+  biquad(sift, sr, "bandpass", 2400, 0.5); biquad(sift, sr, "lowpass", 3600);
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    const e = Math.min(1, t / 0.035) * Math.exp(-Math.max(0, t - 0.035) * 6.5); // the mass: in over 35 ms, settling
+    const grains = (t > 0.08 ? Math.exp(-(t - 0.08) * 3.2) : t / 0.08) * (0.55 + 0.45 * Math.sin(t * 37 + Math.sin(t * 11) * 3)); // the sift, in waves
+    x[i] = body[i] * 2.2 * e + sift[i] * 0.22 * grains;
+  }
+  for (let i = 0; i < 400; i++) x[n - 1 - i] *= i / 400; // no click at the end
+  return normalize(x, 0.8);
 }
 
 // The chair's grip rolling over a tower's sheave train: the rope's rumble swelling as the tower comes, then

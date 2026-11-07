@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles/ride.css?v=1">
+  <link rel="stylesheet" href="src/styles/ride.css?v=2">
   <!-- A plain cover from the first paint until the transition (src/core/transition.js) takes over. -->
   <style>html.trans-cover body::after { content: ""; position: fixed; inset: 0; z-index: 89; background: #dde3e9; }</style>
   <script>try { if (!navigator.webdriver && sessionStorage.getItem("prerunTicket")) { document.documentElement.classList.add("trans-cover"); setTimeout(() => document.documentElement.classList.remove("trans-cover"), 8000); } } catch { /* storage off */ }</script>
@@ -56,7 +56,7 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module">import { liftRide } from "./src/core/transition.js?v=6"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=20"></script>
+  <script type="module">import { liftRide } from "./src/core/transition.js?v=7"; liftRide();</script>
+  <script type="module" src="src/ride/ride.js?v=23"></script>
 </body>
 </html>

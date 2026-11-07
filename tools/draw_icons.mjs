@@ -141,6 +141,22 @@ const ICONS = {
     { d: poly([120, 12], [6, 56], [52, 74]), fill: C.white, shade: C.blue, hl: ["M24 56 L70 40"] },
     { d: poly([52, 74], [58, 90], [64, 110]), fill: "#7d93b3", sw: 4.5 },
   ],
+
+  // Moguls (蘑菇, "mushrooms" in Chinese ski slang): round snow bumps stepping down a slope, each a soft cap
+  // over a blue shadow in its trough, the nearest with a few pale spots; a tiny mushroom peeks out beside them.
+  moguls: () => [
+    { d: "M4 112 Q4 104 16 100 Q48 88 78 78 Q104 70 116 56 Q124 50 124 62 V114 Q124 122 116 122 H12 Q4 122 4 112 Z", fill: C.white, shade: C.blue, sw: 5, hl: ["M14 106 Q30 98 44 94"] },
+    ...[[99, 66, 16, 15], [68, 85, 20, 18], [33, 106, 26, 22]].flatMap(([cx, y, w, h], k) => [
+      { d: ell(cx + 3, y + 3, w * 0.85, 4), fill: C.blue, sw: 0 },
+      { d: `M${cx - w} ${y} Q${cx - w} ${y - h * 1.3} ${cx} ${y - h * 1.25} Q${cx + w} ${y - h * 1.3} ${cx + w} ${y} Q${cx} ${y + 5} ${cx - w} ${y} Z`,
+        fill: C.ice, shade: C.blue, sw: 4.5, hl: [`M${cx - w * 0.62} ${y - h * 0.5} Q${cx - w * 0.5} ${y - h * 0.95} ${cx - w * 0.12} ${y - h * 1.02}`],
+        detail: k === 2 ? [[cx + 7, y - 15, 3.4], [cx + 16, y - 7, 2.6], [cx - 3, y - 6, 2.2]].map(([x, yy, r]) => ({ d: circ(x, yy, r), fill: C.pink, sw: 0 })) : [] },
+    ]),
+    { d: rr(102, 96, 9, 17, 4), fill: C.cream, sw: 3.6 },
+    { d: "M91 99 Q91 81 106.5 81 Q122 81 122 99 Q106.5 103 91 99 Z", fill: C.red, shade: "#9b4c46", sw: 3.8,
+      detail: [[100, 90, 2.6], [112, 88, 2.2], [107, 96, 1.8]].map(([x, y, r]) => ({ d: circ(x, y, r), fill: C.white, sw: 0 })) },
+    ...flake(20, 24, 7), ...flake(52, 16, 5), { d: circ(38, 40, 2.4), fill: INK, sw: 0 },
+  ],
 };
 
 function mic(off) {

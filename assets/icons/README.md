@@ -18,6 +18,7 @@ All are 128×128 PNG with transparent backgrounds. Load as `assets/icons/<name>.
 | Wardrobe (drawn by the game agent in the house style) | `look_mirror` (hand mirror: the 外形 item, hair and build) |
 | Voice (drawn by the game agent in the house style) | `voice_mic` (mic on) `voice_mic_off` (mic crossed out: off, a muted friend) `voice_radio` (walkie-talkie: hold-to-talk, a friend on the radio) `voice_speaking` (bubble with sound waves: a friend speaking) |
 | Riding together (drawn by the game agent in the house style) | `msg_chat` (quick-message button) `msg_wait` (raised glove, 等我) `msg_meet` (lift station and map pin, 缆车站见) `msg_good` (thumbs up with snowflakes, 这条好滑) `msg_down` (a rider dropping in, 我先下去了) `msg_coming` (paper plane with a dashed trail, 去找你 and the fly-over) |
+| Snow (drawn by the game agent in the house style) | `moguls` (round snow bumps on a slope with a tiny red mushroom: 蘑菇道, a mogul run; the HUD's 前方蘑菇道 cue, the run cards, the roadbook, the resort page). Powder uses the owner's `powder`. |
 
 Icons marked "drawn by the game agent in the house style" were drawn with code, not painted by the owner:
 `node tools/draw_icons.mjs [name ...]` (needs `npm i --no-save puppeteer-core` and Chrome) redraws them and the

@@ -1,8 +1,8 @@
 // The ride's sound, as the ride (src/ride/ride.js) uses it: one RideSound with a call per frame for the
 // phase you're in. Also the music's "listen together" hooks (play, current) and duck() for voice chat.
-import { start, settings, set, duck, onState, context } from "./engine.js?v=4";
-import { BoardSound } from "./snow.js?v=3";
-import { Ambience } from "./ambience.js?v=3";
+import { start, settings, set, duck, onState, context } from "./engine.js?v=5";
+import { BoardSound } from "./snow.js?v=4";
+import { Ambience } from "./ambience.js?v=4";
 import { Music } from "./music.js?v=2";
 import { loadReal, RealSounds } from "./real.js?v=1";
 
@@ -96,6 +96,15 @@ export class RideSound {
     this._real(dt, t, { station, slope: 0.35, pass: v > 2 ? 1 : 0, passVol: 0.55 }); // riders passing now and then
   }
   bump(vol = 0.8) { if (this.live) this.board.hit(this.board.thumpB, vol, this.ctx.currentTime, 0.8); } // into a tree
+  // A crash into a tree: the body's thump, then the snow coming off its branches, a big flump and a smaller
+  // one after it.
+  crash(vol = 0.8, t = this.ctx.currentTime) {
+    if (!this.live) return;
+    const b = this.board;
+    b.hit(b.thumpB, vol, t, 0.72);
+    b.hit(b.flumpB, 0.55 + 0.35 * vol, t + 0.22, 0.95 + Math.random() * 0.1);
+    b.hit(b.flumpB, 0.3 + 0.2 * vol, t + 0.62, 1.15 + Math.random() * 0.1);
+  }
 }
 
 // The page's ride sound (one per page), made on first use. Null where there is no WebAudio.

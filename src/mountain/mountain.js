@@ -4,14 +4,15 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Terrain } from "../ride/world.js?v=5";
+import { markMoguls } from "../ride/snow-core.js?v=1";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
-import { addStep } from "../ride/roadbook.js?v=16";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=33";
-import { openNav } from "../core/nav.js?v=13";
-import { liftTicket } from "../core/transition.js?v=6";
-import { startParty } from "../core/party.js?v=1";
+import { addStep } from "../ride/roadbook.js?v=17";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=34";
+import { openNav } from "../core/nav.js?v=14";
+import { liftTicket } from "../core/transition.js?v=7";
+import { startParty } from "../core/party.js?v=4";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
@@ -97,6 +98,7 @@ async function main() {
 
   await status("生成山体、画雪道…");
   const T = new Terrain(R);
+  markMoguls(R.runs, (x, z) => T.heightAt(x, z)); // run.moguls (snow-core.js): the runs with bumps get the mogul icon
   // The whole resort from the air: whole around its runs, lifts and bases, fading into the paper past them.
   const villages = R.places.filter((p) => p.kind === "village");
   const reach = [...R.runs.flatMap((r) => r.pts), ...R.lifts.flatMap((l) => l.pts), ...villages.map((p) => [p.x, p.z])];
@@ -359,7 +361,8 @@ async function main() {
     const info = mini.info.get(mini.pick), l = info.l;
     const byLevel = LEVELS.map((k) => info.runs.filter((r) => r.level === k)).filter((g) => g.length);
     $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</h2>${chips(info)}
-      <h3><img src="${IC("layer_runs")}" alt="">山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
+      <h3><img src="${IC("layer_runs")}" alt="">山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}${r.moguls ? `<img class="mog" src="${IC("moguls")}" alt="蘑菇道" title="蘑菇道">` : ""}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
+      ${info.runs.some((r) => r.moguls) ? `<p class="hint"><img class="mog" src="${IC("moguls")}" alt="">蘑菇道：有雪包（猫跳）的雪道</p>` : ""}
       ${info.next.length ? `<h3><img src="${IC("lift")}" alt="">上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<div class="nx"><img class="pi" src="../assets/icons/lift.png?v=1" alt=""><b>${n.o.name}</b><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""}</small><span class="mins">滑 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</span></div>`).join("")}` : ""}
       <p class="hint">山上最亮的是从山顶直接出发的雪道，半亮的是滑下去还能接上的。</p>`;
     $("detailGo").textContent = `坐 ${l.name} 上山 ›`;

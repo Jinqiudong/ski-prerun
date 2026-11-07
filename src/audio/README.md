@@ -6,7 +6,7 @@ computed from seeds in `buffers.js`. Music files can be added later through the 
 | File | What |
 | --- | --- |
 | `engine.js` | One AudioContext per page. It starts on the first touch, click or key (iOS needs this) and pauses while the page is hidden. Buses `sfx`, `ambience`, `music` and `voice`, each through a duck gain, then a limiter. `voice` (friends talking, `src/ride/voice.js`) skips the master, so turning the game's sound off doesn't silence friends; `keepAwake(on)` keeps the context running for them. `duck(amount, seconds)` turns music and effects down under voice. On/off and volumes live in localStorage `prerunSound`. |
-| `buffers.js` | Pure functions, seeded: snow texture (smooth, no ticks), skid spray, soft crunches, landing thump, tower sheave passes, station clunk, reverb tail. |
+| `buffers.js` | Pure functions, seeded: snow texture (smooth, no ticks), skid spray, soft crunches, landing thump, the flump of snow off a tree, tower sheave passes, station clunk, reverb tail. |
 | `snow.js` | `BoardSound`: the board on snow, driven every frame by `board.js` `Rider`. `boardMix()` is the mapping, and it is pure and tested. |
 | `ambience.js` | Wind (speed plus gusts, cut by the bubble), the mountain bed, the lift's hum, tower passes, and station machinery. |
 | `music.js` | `Music`: the manifest player. It crossfades by mood and has `play(id, atSeconds)`, `current()` and `follow()`. It also writes the generated tracks. |
@@ -20,8 +20,9 @@ computed from seeds in `buffers.js`. Music files can be added later through the 
 - **Carve**: the edge pressing a line through the snow, a soft full "shhh". Band-passed texture. Its level follows `|lean|` (edge angle) and speed^1.5. Its centre is 480 + 45·v + 650·edge Hz. The texture plays faster with speed, so it breathes faster too.
 - **Scrape**: a skid (`rider.skid`, which is braking or pace −1). A deep, smooth spray of snow thrown off the edge, swelling a few times a second. It builds in about 0.2 s and eases out as the speed drops below 4 m/s. On ice it also chatters (a 23 Hz wobble).
 - **Rumble**: the board's low body. Louder in a skid and on ice.
-- **Crunches** while `pushing` or `walking`. A **thump** on landing that scales with the hop's height. In the air the snow layers cut out.
-- **Snow type**: `groomed` (default), or `powder` off the piste (more than 45 m from the route). `?surface=ice|powder|groomed` on look.html forces one type.
+- **Crunches** while `pushing` or `walking`. A **thump** on landing that scales with the hop's height (a trick's hop or a mogul's). In the air the snow layers cut out.
+- **A crash into a tree** (`RideSound.crash`): the body's thump, then the snow coming off the branches, a soft heavy **flump** with powder sifting after it, and a smaller one half a second later.
+- **Snow type**: `groomed` (default), or `powder` (the owner's powder carve) off the piste (more than 45 m from the route) and wherever a powder day's snow lies deep (`src/ride/snow-core.js`). `?surface=ice|powder|groomed` on look.html forces one type.
 
 Each update sets at most about 12 AudioParams, and only those that changed by more than 2 %. Nodes are made once. The only per-event nodes are one-shots (a crunch, a tower pass) and music notes, which are scheduled a bar ahead.
 

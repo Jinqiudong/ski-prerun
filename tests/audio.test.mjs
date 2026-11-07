@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { snowTexture, sprayTexture, crunch, thump, sheavePass, sheaveLead, rng } from "../src/audio/buffers.js";
+import { snowTexture, sprayTexture, crunch, thump, flump, sheavePass, sheaveLead, rng } from "../src/audio/buffers.js";
 import { boardMix, SURFACES } from "../src/audio/snow.js";
 import { STYLES } from "../src/audio/music.js";
 import { towerDue } from "../src/audio/index.js";
@@ -14,7 +14,7 @@ const peak = (x) => x.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 
 test("buffers are seeded, finite and at a sane level", () => {
   assert.deepEqual(snowTexture(SR, 1, 3).slice(0, 50), snowTexture(SR, 1, 3).slice(0, 50));
-  for (const x of [crunch(SR, 2), thump(SR), sheavePass(SR, 8, 0.15)]) { // one-shots: normalised below full scale
+  for (const x of [crunch(SR, 2), thump(SR), flump(SR), sheavePass(SR, 8, 0.15)]) { // one-shots: normalised below full scale
     assert.ok(x.every(Number.isFinite));
     assert.ok(peak(x) > 0.5 && peak(x) <= 1);
   }

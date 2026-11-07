@@ -1,5 +1,5 @@
 // The way home from the mountain page and the ride: the start page's four tabs, and the settings.
-import { t, openSettings } from "./i18n.js?v=33";
+import { t, openSettings } from "./i18n.js?v=34";
 
 // The owner's painted tab icons (assets/icons), relative to the start page.
 const ICONS = { rider: "rider", resort: "resorts", trip: "trips", log: "memory" };

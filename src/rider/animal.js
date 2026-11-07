@@ -168,10 +168,11 @@ export function startAnimalTrick(root, key) {
   return true;
 }
 // A tumble: over sideways (heel: the way it rolls), a moment lying in the snow, back up.
-export function fallAnimal(root, heel = null) {
+// hold: seconds more lying there (dazed after a crash). Returns how long it all takes (s).
+export function fallAnimal(root, heel = null, hold = 0) {
   const u = root.userData; if (u.fall) return false;
-  u.trick = null; u.fall = { t: 0, side: (heel ?? u.s.edge >= 0) ? 1 : -1 };
-  return true;
+  u.trick = null; u.fall = { t: 0, hold, side: (heel ?? u.s.edge >= 0) ? 1 : -1 };
+  return 2.1 + hold;
 }
 
 // The board and the animal from u.s (edge, skid, tuck, push: already eased) and a trick or a fall going on.
@@ -196,12 +197,12 @@ function ride(u, dt) {
   }
   let down = 0, roll = 0, rise = 0;
   if (u.fall) {
-    const fl = u.fall, T1 = 0.75, T2 = 1.45, T3 = 2.1; fl.t += dt;
+    const fl = u.fall, T1 = 0.75, T2 = 1.45 + (fl.hold || 0), T3 = 2.1 + (fl.hold || 0); fl.t += dt;
     if (fl.t >= T3) u.fall = null;
     else {
       down = Math.min(1, fl.t / 0.1, (T3 - fl.t) / 0.15);
       if (fl.t < T1) { const f = fl.t / T1; roll = ease(f) * Math.PI * 2.5; rise = Math.sin(f * Math.PI) * 0.45; }
-      else if (fl.t < T2) roll = Math.PI * 2.5;
+      else if (fl.t < T2) roll = Math.PI * 2.5 + (fl.hold ? Math.sin(fl.t * 5) * 0.06 : 0); // lying there, dazed: a slow wobble
       else { const f = (fl.t - T2) / (T3 - T2); roll = Math.PI * 2 + (Math.PI / 2) * (1 - ease(f)); rise = Math.sin(f * Math.PI) * 0.15; }
       roll *= fl.side; k = Math.max(k, down); lift = 0; spin = 0; press = 0; squat = 0;
     }
@@ -233,7 +234,7 @@ export function poseAnimal(root, r) {
   root.rotateY(r.heading);
   s.edge = damp(s.edge, clamp(g * r.lean, -0.9, 0.9), 8, dt);
   s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
-  s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
+  s.tuck = damp(s.tuck, Math.max(r.tuck ?? 0, r.absorb ?? 0), r.absorb ? 9 : 4, dt); // a tuck, or soaking up a bump
   s.push = damp(s.push, r.pushing || r.walking ? 1 : 0, 6, dt);
   const lift = ride(u, dt);
   root.updateMatrixWorld(true);
