@@ -21,7 +21,7 @@
 // startParty({ page: "home" | "resort" | "ride", root, resort, rn, sub, lift }) on every page; the ride
 // hands it its hooks with setRide({ state, find, follow, unfollow, voice }).
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "./i18n.js?v=41";
+import { t, myAvatar } from "./i18n.js?v=42";
 import { rideTrip } from "../ride/together-core.js?v=6";
 import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=1";
 
@@ -415,7 +415,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   const micOn = () => (page === "ride" ? !!S.ride?.voice?.micOn : !!voice?.micOn);
   async function wantVoice() {
     if (page === "ride" || voice || voiceLoading || !ch) return voice;
-    voiceLoading = import("../ride/voice.js?v=9").then(({ rideVoice }) => {
+    voiceLoading = import("../ride/voice.js?v=10").then(({ rideVoice }) => {
       voice = rideVoice({ ch, me, camera: null, myPos: (o) => o.set(0, 0, 0), talk: () => {}, nameOf: (id) => heard.get(id)?.name || t("朋友"), hud: false, onSay: (s) => s && note({ kind: "info", from: me, text: s }) });
       return voice;
     }).catch((e) => { console.warn("voice", e); return null; });
