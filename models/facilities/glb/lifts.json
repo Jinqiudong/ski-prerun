@@ -20,4 +20,6 @@
  {"name": "chondola_chair", "label": "混合缆车的 6 人敞开吊椅（铜山 American Eagle，黑色座椅）", "hang": true, "for": ["American Eagle"]},
  {"name": "tower_lattice", "label": "格构钢塔（Silver Queen 吊厢，40 米，可按塔高缩放）", "top": 40.0, "rope": [3.0, 41.5], "for": ["Silver Queen"]},
  {"name": "chair3_detach", "label": "3 人脱挂式吊椅（软垫，阿斯彭山 Ruthie's）", "hang": true, "for": ["Ruthie's"]},
- {"name": "chair2_riblet", "label": "Riblet 中心单杆 2 人吊椅（冬季公园 Looking Glass）", "hang": true, "for": ["Looking Glass"]}]
+ {"name": "chair2_riblet", "label": "Riblet 中心单杆 2 人吊椅（冬季公园 Looking Glass）", "hang": true, "for": ["Looking Glass"]},
+ {"name": "tram_cabin", "label": "雪鸟大索道车厢（125 人，蓝/红车身，长玻璃厢、高银色吊臂和四组走轮）", "hang": true, "for": ["Aerial Tram"]},
+ {"name": "tower_tram", "label": "雪鸟大索道支架（45 米格构钢塔，宽塔头两条承载索鞍座）", "top": 45.0, "rope": [6.0, 45.0], "for": ["Aerial Tram"]}]

@@ -17,4 +17,6 @@
  {"name": "sams", "label": "Sam's 山顶餐厅（雪团村 Sam's Knob）：陡峭炭灰金属人字顶、深色木桁架、整面玻璃山墙、石基和玻璃栏杆露台", "for": ["Sam's"]},
  {"name": "snoasis", "label": "Snoasis 山腰餐厅（冬季公园）：白墙、不对称大人字顶、古铜框通高玻璃山墙、混凝土露台", "for": ["Snoasis"]},
  {"name": "wild_blue_angle", "label": "Wild Blue 吊厢转角站（蒸汽船 Greenhorn Ranch）：深色玻璃轨道罩、宝蓝色边框、转 30 度、站台和炭灰站房", "rope": [3.0, 4.25], "turn_deg": 30, "for": ["Wild Blue Gondola I", "Wild Blue Gondola II"]},
- {"name": "greenhorn_ranch", "label": "Greenhorn Ranch 初学者中心（蒸汽船）：棕褐膜墙、白色拱顶、铝拱肋的 Sprung 张拉结构", "for": ["Greenhorn Ranch"]}]
+ {"name": "greenhorn_ranch", "label": "Greenhorn Ranch 初学者中心（蒸汽船）：棕褐膜墙、白色拱顶、铝拱肋的 Sprung 张拉结构", "for": ["Greenhorn Ranch"]},
+ {"name": "tram_dock_top", "label": "雪鸟大索道山顶站（Hidden Peak）：灰色波纹钢锚固塔楼、两侧弧形承载索鞍座、钢格栅站台", "rope": [6.0, 13.0], "stop": 5.5, "for": ["Aerial Tram"]},
+ {"name": "tram_dock_bottom", "label": "雪鸟大索道山脚站（Snowbird Center）：清水混凝土门式大厅、三层停靠、钢桁架和导索扇", "rope": [6.0, 18.4], "stop": -2.0, "for": ["Aerial Tram"]}]
