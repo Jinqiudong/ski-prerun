@@ -13,7 +13,7 @@ import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "../core/i18n.js?v=30";
 import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=2";
 import { ymd } from "../start/trip-intro.js?v=1";
-import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, whereOf, alongPts, QUICK } from "./together-core.js?v=2";
+import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, whereOf, alongPts, QUICK } from "./together-core.js?v=3";
 import { rideVoice } from "./voice.js?v=1";
 
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = 8000;

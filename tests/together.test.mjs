@@ -9,7 +9,9 @@ test("rideTrip: a shared trip on today that I'm in, this resort's day first", ()
   const a = trip({ id: "aaaaaa", days: { "2026-11-06": "winterpark" } }), b = trip({ id: "bbbbbb", days: { "2026-11-06": "copper" } });
   assert.equal(rideTrip([a, b], "2026-11-06", "copper", me), "bbbbbb");
   assert.equal(rideTrip([a], "2026-11-06", "copper", me), "aaaaaa");
-  assert.equal(rideTrip([a], "2026-11-10", "copper", me), null, "not on today");
+  assert.equal(rideTrip([a], "2026-11-10", "copper", me), "aaaaaa", "not on today: still the trip, to practise together");
+  const c = trip({ id: "cccccd", from: "2026-12-06", to: "2026-12-19" }), d = trip({ id: "dddddd", from: "2027-01-02", to: "2027-01-04" });
+  assert.equal(rideTrip([d, a, c], "2026-11-10", "copper", me), "cccccd", "the next trip coming up");
   assert.equal(rideTrip([{ ...a, shared: false }], "2026-11-06", "copper", me), null, "kept on this phone only");
   assert.equal(rideTrip([a], "2026-11-06", "copper", "mZ00000000"), null, "not a member");
   assert.equal(rideTrip([], "2026-11-06", "copper", me, "cccccc"), "cccccc", "opened from that trip");

@@ -6,15 +6,21 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[\w-]{4,40}$/;
 
 // The shared trip this ride belongs to: the one I opened the ride from (wanted), if I have it or nothing
-// else is known, else a shared trip I'm a member of that is on today (the one planned for this resort
-// today first). null: ride alone.
+// else is known, else a shared trip I'm a member of: the one on today (planned for this resort today first),
+// or, before or after the trip, the next one coming up or the latest. null: ride alone.
 export function rideTrip(list, today, resort, member, wanted = null) {
   const trips = (Array.isArray(list) ? list : []).filter((tr) => tr && tr.shared && typeof tr.id === "string");
   const mine = (tr) => !tr.srv?.members || tr.srv.members.some((m) => m.id === member);
   if (wanted && ID.test(wanted)) { const tr = trips.find((x) => x.id === wanted); return !tr || mine(tr) ? wanted : null; }
   const on = trips.filter((tr) => DATE.test(tr.from) && tr.from <= today && (DATE.test(tr.to) ? tr.to : tr.from) >= today && mine(tr));
   const here = on.find((tr) => tr.days && tr.days[today] === resort);
-  return (here || on[0])?.id || null;
+  if (here || on[0]) return (here || on[0]).id;
+  // Not on a trip today (practising before it): the next one coming up, else the latest one, so friends on the
+  // same trip still meet whatever the date. Every phone picks the same way, so they land on the same channel.
+  const dated = trips.filter((tr) => DATE.test(tr.from) && mine(tr));
+  const next = dated.filter((tr) => tr.from > today).sort((a, b) => a.from.localeCompare(b.from))[0];
+  const last = dated.filter((tr) => tr.from <= today).sort((a, b) => b.from.localeCompare(a.from))[0];
+  return (next || last || trips.find(mine))?.id || null;
 }
 
 // Messages on the channel ride:<trip>:<resort>:
