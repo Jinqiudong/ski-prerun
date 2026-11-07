@@ -1062,7 +1062,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The roadbook (roadbook-core.js): the way down picked at the top, as a step: what kind (a run you came for,
   // or a lift or base to get to), where to, the runs on it with their ids and stretches, the plan's path.
   const bookRoute = (P, changed = false) => addStep(RESORT, { k: "go", kind: P.kind, title: P.title, to: P.kind === "lift" || P.kind === "base" ? P.short : null,
-    first: P.kind === "run" && P.first ? String(P.first.id) : null, segs: segsOf(P.legs, (x, z) => T.heightAt(x, z)), path: thinPath(P.path), ...(changed ? { changed: 1 } : {}) });
+    first: P.kind === "run" && P.first ? String(P.first.id) : null, next: P.next?.name || null, segs: segsOf(P.legs, (x, z) => T.heightAt(x, z)), path: thinPath(P.path), ...(changed ? { changed: 1 } : {}) });
   // The book over the ride: the trail map for its ground, and the ride's own snow for the powder line.
   const bookHost = () => ({ name: R.name, map: tmap, snow: async () => (ctx.snowCm === undefined ? null : { cm: ctx.snowCm, amt: ctx.powder?.amt ?? 0, f: ctx.powder?.f }) });
   // Skipping ahead with a tap on the map: the way from here to there along the chosen route counts as

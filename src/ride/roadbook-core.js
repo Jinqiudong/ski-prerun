@@ -7,10 +7,11 @@ import { PACE } from "../core/route.js?v=6";
 // What is written while riding (src/ride/ride.js), per day in localStorage prerunBook:
 //   { k: "base", name }                      the base picked on the resort page
 //   { k: "up", lift, id }                    reached the top of a lift (the lift really was ridden)
-//   { k: "go", kind, title, to, first, segs, path, changed? }
+//   { k: "go", kind, title, to, first, next, segs, path, changed? }
 //                                            the way down picked at the top: kind "run" (a run you came for)
 //                                            or "lift" / "base" / "friend" (a place to get to); to: where;
-//                                            first: the run's id for "run"; segs: segsOf(); path: the plan
+//                                            first: the run's id for "run"; next: the lift the plan goes on by
+//                                            (this way down ends at its bottom); segs: segsOf(); path: the plan
 //   { k: "down", track }                     the bottom: the line really ridden, thinned
 //   { k: "jump", to }                        skipped ahead on the map (the stretch wasn't ridden)
 //   { k: "hike", name, mins, gain, gear }
@@ -98,6 +99,7 @@ export function legsOf(day) {
     if (!cur) { if (s.k === "hike") legs.push({ hike: true, name: s.name, mins: s.mins, gain: s.gain }); continue; }
     if (s.k === "go") {
       cur.go = { kind: s.kind, title: s.title, to: s.to ?? null, first: s.first ?? null };
+      cur.next = s.next || null; // the plan goes on by lift from here: this way down ends at that lift
       if (s.changed && cur.segs.length) cur.changed = true;
       cur.segs = (s.segs || []).map((g) => ({ ...g })); cur.path = s.path || null;
     } else if (s.k === "route") {
@@ -115,8 +117,8 @@ export function legsOf(day) {
   rides.forEach((l, i) => {
     for (const g of l.segs) g.real = isReal(l.go, g);
     const k = l.go?.kind;
-    if ((k === "lift" || k === "base") && l.go.to) l.end = { k, name: l.go.to };
-    else if (l.next) l.end = { k: "lift", name: l.next };
+    if (l.next) l.end = { k: "lift", name: l.next };
+    else if ((k === "lift" || k === "base") && l.go.to) l.end = { k, name: l.go.to };
     else if (rides[i + 1]) l.end = { k: "lift", name: rides[i + 1].lift };
     l.no = i + 1;
   });
