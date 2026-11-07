@@ -130,7 +130,7 @@ const EN = {
   "等我": "Wait for me", "缆车站见": "Meet at the lift", "这条好滑": "This run's great", "我先下去了": "Heading down", "去找你": "Coming to you",
   "{lift} 缆车上": "on {lift}", "{lift} 山顶": "top of {lift}", "在山顶": "at the top", "徒步上山": "hiking up", "在 {lift} 底站": "at the {lift} lift", "在 {run}": "on {run}",
   "和 {name} 一起坐 {lift}": "Riding {lift} with {name}", "和 {name} 一起坐 {lift} ›": "Ride {lift} with {name} ›", "{name} 坐上了 {lift}": "{name} got on {lift}",
-  "等 {name} 一起上": "Waiting for {name}", "先走": "Go now", "坐这": "Sit here", "{name} 在 {lift} 等你一起坐": "{name} is holding a chair on {lift} for you",
+  "等 {name} 一起上": "Waiting for {name}", "看我们": "See us", "先走": "Go now", "坐这": "Sit here", "{name} 在 {lift} 等你一起坐": "{name} is holding a chair on {lift} for you",
   "坐 {name} 后面那把": "In the chair behind {name}", "跟着 {name}": "Following {name}", "去找 {name}…": "Off to {name}…", "到 {name} 身边了": "Here with {name}",
   "已发送：{msg}": "Sent: {msg}", "{name} 也在山上": "{name} is on the mountain too", "{name} 不在线了，不跟了": "{name} went offline: stopped following",
   "滑起来就跟着 {name} 走": "Once you ski, you'll follow {name}", "{name} 在 {lift} 上，去底站": "{name} is on {lift}: to its bottom station", "跟着 {name}，重新规划": "Following {name}: route updated",

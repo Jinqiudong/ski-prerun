@@ -4,8 +4,9 @@
 // dressed on the rider page (their look) with a paper name tag; on a lift they sit in a chair. Boarding
 // together: the first of us at a lift holds the chair at the loading point while friends are on their way
 // (the party opening the same lift, following me, or waiting at its bottom; together-core's comingTo,
-// holdLeft), and whoever gets on within the wait sits down in it; the chair swings, the bar comes down, and
-// it goes. Each rider says their seat (k, and when they took it: kt); together-core's chairSeats settles
+// holdLeft), and whoever gets on within the wait sits down in it; the chair swings, a bubble stays up (we see
+// each other), and it goes. Riding together, the camera watches us from in front, three quarters on (our faces
+// button: behind, the way up). Each rider says their seat (k, and when they took it: kt); together-core's chairSeats settles
 // who sits where the same way on every phone, so two riders never share one. Tap the free seat beside you
 // to move over. The painted map shows them; "去找他" flies you over the mountain
 // to land beside them, "跟随" keeps your route on them; quick messages pop over their tags. Voice (voice.js):
@@ -68,7 +69,8 @@ const CSS = `
 #tgHold .faces img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fdfbf6; background: #e6ebee; } #tgHold .faces img + img { margin-left: -10px; }
 #tgHold b { font: 600 15px Oswald, sans-serif; color: #8a8278; min-width: 1.6em; text-align: right; }
 #tgHold button { font: inherit; font-size: 13px; color: #fdfbf6; background: #22344d; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
-#tgHold[hidden], .tgSeatGo[hidden] { display: none; }
+#tgHold[hidden], .tgSeatGo[hidden], #tgView[hidden] { display: none; }
+#tgView { left: 14px; top: calc(208px + env(safe-area-inset-top)); } #tgView .faces { display: flex; } #tgView .faces img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fdfbf6; background: #e6ebee; } #tgView .faces img + img { margin-left: -12px; }
 .tgSeatGo { position: fixed; left: 0; top: 0; z-index: 4; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px; border: 1.5px dashed #8a8278; background: rgba(253,251,246,.9); color: #22344d; font: 600 12px "Noto Serif SC", serif; white-space: nowrap; cursor: pointer; box-shadow: 0 3px 8px rgba(40,30,20,.18); will-change: transform; }
 .tgSeatGo:active { background: #22344d; color: #fdfbf6; }
 #tgFly { position: fixed; inset: 0; z-index: 30; pointer-events: auto; opacity: 0; transition: opacity .35s; background: radial-gradient(ellipse 70% 58% at 50% 48%, rgba(233,237,242,0) 48%, rgba(233,237,242,.6) 78%, rgba(226,232,238,.96) 100%); }
@@ -260,14 +262,14 @@ export function rideTogether(api) {
     api.d += diff * Math.min(1, dt * 3);
   }
   // The boarding moment: whoever just got on sits down (me: I got into their chair), the chair swings with
-  // the weight, the bar comes down, hello.
+  // the weight, the bubble up, hello.
   let meSitAt = -1e9, swingAt = -1e9, settleUntil = 0;
   function sitTogether(f, mine) {
     const now = performance.now();
     satWith.add(f.id);
     if (mine) meSitAt = now; else f.sitAt = now;
     swingAt = now; settleUntil = now + SETTLE;
-    setTimeout(() => { if (seatInfo().bubble && !top.phase && !api.arrived) api.setBubble(false); }, SIT * 0.8); // the bar comes down once seated
+    if (seatInfo().bubble) api.setBubble(true); // riding with friends the bubble stays up, so we see each other
     setTimeout(() => { gestureBoarder(ctx.rider, "wave"); if (f.model) gestureBoarder(f.model, "wave"); }, SIT + 150); // hello
     const box = document.createElement("div"); box.id = "tgSeat";
     box.innerHTML = `<span class="faces"><img src="assets/icons/${myAvatar()}.png?v=1" alt=""><img src="assets/icons/${f.avatar}.png?v=1" alt=""></span><span translate="no"></span>`;
@@ -281,7 +283,8 @@ export function rideTogether(api) {
   function boarding(now = performance.now()) {
     const ts = (now - swingAt) / 1000, tm = (now - meSitAt) / SIT;
     const swing = ts >= 0 && ts < 4 ? 0.11 * Math.exp(-ts / 1.1) * Math.sin(ts * Math.PI * 2 / 1.7) : 0;
-    return { swing, stand: tm >= 0 && tm < 1 ? 1 - tm : null, face: waiting || now < settleUntil }; // face: worth watching from in front (someone on their way, or getting on)
+    // face: worth watching from in front (someone on their way, getting on, or asked for); with: a friend in my chair
+    return { swing, stand: tm >= 0 && tm < 1 ? 1 - tm : null, face: waiting || now < settleUntil || (shared && !camBack), with: shared };
   }
 
   // ---- Boarding together: the first at the lift waits at the loading point for friends on their way
@@ -328,9 +331,21 @@ export function rideTogether(api) {
     return b;
   });
   const sv = new THREE.Vector3();
+  // Sharing my chair: the ride watches us from in front, three quarters on (it reads boarding()); a button
+  // with our two faces turns the camera back behind the chair, to see the way up, and round again.
+  let shared = false, camBack = false;
+  const viewBtn = document.createElement("button"); viewBtn.id = "tgView"; viewBtn.className = "rfab"; viewBtn.hidden = true; viewBtn.setAttribute("aria-label", t("看我们"));
+  viewBtn.innerHTML = `<span class="faces"><img alt=""><img alt=""></span>`;
+  viewBtn.onclick = (e) => { e.stopPropagation(); camBack = !camBack; viewBtn.classList.toggle("on", !camBack); };
+  viewBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+  document.body.append(viewBtn);
   function stepSeatGo(now) {
     const seats = !top.phase && !api.arrived && !held && now - meSitAt > SIT ? seatsIn(chairId) : null;
-    const shared = seats && [...seats].some(([id, k]) => id !== me && k >= 0);
+    const mates = seats ? [...seats].filter(([id, k]) => id !== me && k >= 0).map(([id]) => friends.get(id)).filter(Boolean) : [];
+    shared = mates.length > 0;
+    viewBtn.hidden = !shared || !!seatInfo().cabin;
+    viewBtn.classList.toggle("on", shared && !camBack);
+    if (shared) for (const [img, av] of [[viewBtn.querySelectorAll("img")[0], myAvatar()], [viewBtn.querySelectorAll("img")[1], mates[0].avatar]]) if (img.dataset.av !== av) { img.dataset.av = av; img.src = `assets/icons/${av}.png?v=1`; }
     for (const b of seatGo) {
       const k = shared ? seatToward(seats, xsOf().length, seat.k, +b.dataset.dir) : -1;
       b.hidden = k < 0; if (k < 0) continue;
@@ -656,7 +671,7 @@ export function rideTogether(api) {
   // ---- Every frame (called by the ride just before it draws)
   let lastFrame = performance.now();
   function frame(now) {
-    const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+    const dt = Math.max(0, Math.min(0.1, (now - lastFrame) / 1000)); lastFrame = now;
     stepHold(now);
     send(now);
     if (!friends.size) { voice.frame(now, []); return; }

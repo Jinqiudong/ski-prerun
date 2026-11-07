@@ -2321,7 +2321,7 @@ async function main() {
   for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
   $("skip").hidden = !TRIP;
   // Skip: the chair speeds up the line and glides into the top station (about two seconds).
-  let skipping = null, faceK = 0; // faceK: the chair camera in front of the chair (1) or behind it (0)
+  let skipping = null, faceK = 0, withK = 0; // the chair camera: in front of the chair (faceK 1) or behind it (0); placed for a friend beside me (withK)
   $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
   $("again").addEventListener("click", rideAgain);
   // The ride bar: tap the chair for ×1 ×2 ×4, tap the flag to pause, drag the dot to go back or ahead (to the end: the top).
@@ -2376,9 +2376,11 @@ async function main() {
   const together = rideTogether({ scene, camera, renderer, T, R, lift, line, ctx, top, along, resort: RESORT, trip: TRIP, d0, d1,
     get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,
     speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate)),
-    seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN }),
+    seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN, cabin: CABIN }),
     setSeat: (x, snap = false) => { MY_SEAT = x; if (snap) ctx.rider.position.x = x; }, setBubble, offLift, withResort, party }); // not snapped: the rider slides over (below)
   myChair.rotation.order = "YXZ"; // the boarding swing turns about the chair's own cross bar
+  // My bubble's glass, and a clearer copy for riding with a friend (the camera looks through it at us).
+  const glassMats = HAS_BUBBLE && !CABIN && myBubble.children[0]?.material ? [myBubble.children[0].material, Object.assign(myBubble.children[0].material.clone(), { opacity: 0.12, transparent: true })] : null;
   window.__together = together;
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
     rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel),
@@ -2387,7 +2389,7 @@ async function main() {
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
   setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
   renderer.setAnimationLoop((now) => {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); // the first frame's time can be before `last` (set after a long load step): never backwards
     last = now;
     sight.occOn.value = 0; // the trees go see-through only while skiing (stepSki turns it on)
     if (flakes.visible) flakes.userData.step(dt, camera.position);
@@ -2459,11 +2461,16 @@ async function main() {
       const tanH = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect, open = TRIP ? clamp(Math.min(d - d0, d1 - d) / 30, 0, 1) : 1; // 0 in a terminal: close in, under its roof
       const full = clamp((half * 1.12) / tanH, 5.5, 10.5), back = 4.5 + (full - 4.5) * open; // in front of the chair the station is open: always the full view
       const mid = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * cx, SEAT.top + 0.86, -Math.sin(yaw) * cx));
-      const faceTo = !arrived && brd?.face ? 1 : 0;
+      const faceTo = !arrived && brd?.face ? 1 : 0, withTo = !arrived && brd?.with ? 1 : 0;
       faceK += (faceTo - faceK) * Math.min(1, dt * (faceTo ? 2.5 : 0.7));
-      const f = faceK * faceK * (3 - 2 * faceK), rearUp = 1.1 + (back - 4.5) * 0.12; // heads and shoulders over the backrest
-      camera.position.copy(mid).addScaledVector(view.clone().applyAxisAngle(Y, f * Math.PI), -(back + (full * 0.75 - back) * f)).add(new THREE.Vector3(0, rearUp + (0.35 - rearUp) * f, 0));
-      aim.lerp(mid.clone().add(new THREE.Vector3(0, -0.4, 0)), 0.25 + 0.75 * Math.min(1, f * 6)); // the chair a little higher in the frame than the far snow alone would put it; coming round, kept in view
+      withK += (withTo - withK) * Math.min(1, dt * 1.2);
+      // A friend in my chair: the front view (together.js picks it by default then; our faces button turns
+      // back) is three quarters on and a little above, so both of us show whole on a portrait phone; the
+      // raised bubble's glass is cleared so it doesn't hide us from behind.
+      const f = faceK * faceK * (3 - 2 * faceK), w = withK * open, rearUp = 1.1 + (back - 4.5) * 0.12; // heads and shoulders over the backrest
+      camera.position.copy(mid).addScaledVector(view.clone().applyAxisAngle(Y, f * (Math.PI - 0.6 * w)), -(back + (full * (0.75 + 0.2 * w) - back) * f)).add(new THREE.Vector3(0, rearUp + (0.35 + 1.3 * w - rearUp) * f, 0));
+      aim.lerp(mid.clone().add(new THREE.Vector3(0, -0.4 - 0.2 * w, 0)), 0.25 + 0.75 * Math.min(1, f * 6)); // the chair a little higher in the frame than the far snow alone would put it; coming round, kept in view
+      if (glassMats) myBubble.children[0].material = glassMats[w > 0.05 ? 1 : 0];
     }
     camera.lookAt(aim);
     sun.position.copy(head).addScaledVector(sun.userData.dir, 400);
