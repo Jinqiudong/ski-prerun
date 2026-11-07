@@ -98,10 +98,18 @@ export function legsOf(day) {
     }
     if (!cur) { if (s.k === "hike") legs.push({ hike: true, name: s.name, mins: s.mins, gain: s.gain }); continue; }
     if (s.k === "go") {
-      cur.go = { kind: s.kind, title: s.title, to: s.to ?? null, first: s.first ?? null };
       cur.next = s.next || null; // the plan goes on by lift from here: this way down ends at that lift
-      if (s.changed && cur.segs.length) cur.changed = true;
-      cur.segs = (s.segs || []).map((g) => ({ ...g })); cur.path = s.path || null;
+      if (s.changed && cur.go) {
+        // replanned on the way (off the route, or a new place picked): the runs so far, then the new ones;
+        // what kind of way down it was stays what was picked at the top
+        cur.changed = true; cur.go.to = s.to ?? cur.go.to;
+        const add = (s.segs || []).map((g) => ({ ...g })), last = cur.segs[cur.segs.length - 1];
+        if (last && add[0] && last.id === add[0].id) { last.b = Math.max(last.b ?? 0, add[0].b ?? 0); last.len = Math.max(last.len || 0, add[0].len || 0); last.drop = Math.max(last.drop || 0, add[0].drop || 0); add.shift(); }
+        cur.segs.push(...add); cur.path = [...(cur.path || []), ...(s.path || [])];
+      } else {
+        cur.go = { kind: s.kind, title: s.title, to: s.to ?? null, first: s.first ?? null };
+        cur.segs = (s.segs || []).map((g) => ({ ...g })); cur.path = s.path || null;
+      }
     } else if (s.k === "route") {
       if (!cur.go) cur.go = { kind: "run", title: s.title };
       if (s.changed) cur.changed = true;

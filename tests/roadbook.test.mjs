@@ -44,6 +44,17 @@ test("a way to a base that goes on by lift ends, for this leg, at that lift", ()
   assert.deepEqual(legs[0].end, { k: "lift", name: "Lumberjack" });
 });
 
+test("replanned on the way: the runs so far and the new ones, the kind picked at the top, the new end", () => {
+  const { legs } = legsOf({ steps: [
+    { k: "up", lift: "Timberline", id: 4 },
+    { k: "go", kind: "run", title: "Windsong", first: "1", segs: [{ id: "1", n: "Windsong", l: "intermediate", a: 0, b: 50, len: 1490, drop: 340 }] },
+    { k: "go", changed: 1, kind: "run", title: "Windsong", first: "1", next: "Lumberjack", segs: [{ id: "1", n: "Windsong", l: "intermediate", a: 30, b: 50, len: 600, drop: 120 }, { id: "2", n: "Timber Road", l: "easy", a: 0, b: 9, len: 650, drop: 50 }] },
+  ] });
+  assert.equal(legs[0].changed, true);
+  assert.deepEqual(legs[0].segs.map((s) => [s.n, s.real, s.len]), [["Windsong", true, 1490], ["Timber Road", false, 650]]);
+  assert.deepEqual(legs[0].end, { k: "lift", name: "Lumberjack" });
+});
+
 test("kinds from old titles", () => {
   assert.deepEqual(kindOfTitle("接 Lumberjack 缆车"), { kind: "lift", to: "Lumberjack" });
   assert.deepEqual(kindOfTitle("再坐一趟 Super Gauge Express"), { kind: "lift", to: "Super Gauge Express" });

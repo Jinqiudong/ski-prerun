@@ -152,8 +152,10 @@ export function renderBook(box, resort, host) {
   };
   const rowHtml = (leg) => {
     if (leg.hike) return `<div class="lg hk"><span class="no">${ic("hike")}</span><span class="r">${esc(leg.name)}</span></div>`;
-    const real = leg.segs.filter((s) => s.real);
-    const runs = real.length ? real.map((s) => `<span>${MARK(s.l)}${esc(s.n)}</span>`).join(" ")
+    const real = leg.segs.filter((s) => s.real), going = leg.go && leg.go.kind !== "run" && leg.end;
+    // a way picked to get somewhere: where, after the runs skied on the way (grey)
+    const then = going ? ` <span class="lnk">${leg.end.k === "base" ? t("回 {x}", { x: esc(leg.end.name) }) : t("去接 {x}", { x: esc(leg.end.name) })}</span>` : "";
+    const runs = real.length ? real.map((s) => `<span>${MARK(s.l)}${esc(s.n)}</span>`).join(" ") + then
       : leg.end?.k === "base" ? `<span class="lnk">${t("回 {x}", { x: esc(leg.end.name) })}</span>`
         : leg.end ? `<span class="lnk">${t("去接 {x}", { x: esc(leg.end.name) })}</span>`
           : `<span class="lnk">${leg.segs.map((s) => esc(s.n)).join(" · ") || "…"}</span>`;

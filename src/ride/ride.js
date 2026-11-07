@@ -1140,6 +1140,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const Q = makePlan(legs, { kind, key, title, short, icon, to, base, lift: dLift, leads, first, end, seconds, harder });
     if (!Q) return false;
     chosen = Q; prog = 0;
+    bookRoute(Q, true); // the roadbook follows where you really went
     dress(Q);
     flashCue(`已改走 ${LEVEL_MARK[found.run.level]}${found.run.name}，重新规划到 ${P.short || P.title}`);
     return true;
@@ -2021,6 +2022,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
       card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
       card.querySelector(".go").onclick = async (e) => {
+        if (chosen !== P) select(P); // this card's way, even if another card was the one in focus
         bookRoute(P);
         await dropIn(P, RESORT, R); // the run's card, then DROP IN (src/core/transition.js)
         camera.clearViewOffset();
