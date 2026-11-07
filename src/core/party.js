@@ -21,7 +21,7 @@
 // startParty({ page: "home" | "resort" | "ride", root, resort, rn, sub, lift }) on every page; the ride
 // hands it its hooks with setRide({ state, find, follow, unfollow, voice }).
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "./i18n.js?v=35";
+import { t, myAvatar } from "./i18n.js?v=36";
 import { rideTrip } from "../ride/together-core.js?v=5";
 import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=1";
 
