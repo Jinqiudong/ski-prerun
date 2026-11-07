@@ -28,8 +28,8 @@ import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep }
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
 import { Guide } from "./guide.js?v=6";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=3";
-import { tiltRead } from "./tilt-core.js?v=1";
+import { startPractice, spotTitle } from "./practice.js?v=4";
+import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -1177,13 +1177,13 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   addEventListener("pointerup", touchEnd);
   addEventListener("pointercancel", touchEnd);
   st.setAuto = (on) => { auto = on; };
-  // The phone's tilt as riding input, relative to how it was held when the run started (tilt-core.js).
+  // The phone's tilt as riding input, from a reference pose that follows how you hold the phone (tilt-core.js).
   let tiltAt = 0, tiltOff = 9;
   const tiltNow = () => {
     if (!tilt.ok) return null;
-    tilt.zero ||= { side: tilt.side, fwd: tilt.fwd };
+    tilt.zero ||= {};
     const now = clock(), dt = Math.min(0.1, (now - (tiltAt || now)) / 1000); tiltAt = now;
-    return tiltRead(tilt.zero, tilt.side, tilt.fwd, dt, 0.1);
+    return tiltRead(tilt.zero, tilt.up, dt, 0.1);
   };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   // Starting again somewhere else: a white flash, the camera dropping from high above, the rider
@@ -2217,7 +2217,6 @@ const look = { yaw: 0, pitch: 0, dragYaw: 0, dragPitch: 0, base: null, phone: nu
 const tilt = { side: 0, fwd: 0, ok: false, zero: null };
 const D = Math.PI / 180;
 let gyroAt = 0, gyroYaw = 0;
-const upInPhone = (b, g) => ({ x: -Math.cos(b * D) * Math.sin(g * D), y: Math.sin(b * D), z: Math.cos(b * D) * Math.cos(g * D) });
 addEventListener("deviceorientation", (e) => {
   if (e.beta == null) return;
   const up = upInPhone(e.beta, e.gamma);

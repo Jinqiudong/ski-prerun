@@ -14,7 +14,7 @@ import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
 import { t } from "../core/i18n.js?v=41";
 import { fallLine } from "./edge-core.js?v=1";
-import { tiltRead } from "./tilt-core.js?v=1";
+import { tiltRead, tiltZero } from "./tilt-core.js?v=2";
 import { sight } from "./snowfx.js?v=1";
 import { STEPS, stepOf, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress, saveProgress, nextStep, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM } from "./practice-core.js?v=1";
 
@@ -175,7 +175,7 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
     return "";
   }
   function calibrate() {
-    zero = tilt.ok ? { side: tilt.side, fwd: tilt.fwd } : null;
+    zero = tilt.ok ? tiltZero(tilt.up) : null;
     done({ text: tilt.ok ? t("现在这样就是「平」。左右倾立刃，前倾加速，往回倒刹车") : t("没感应到手机倾斜：用手指拖，左右拖转弯，往下拖加速，往上拖刹车") });
   }
 
@@ -257,8 +257,8 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
   function input(dt) {
     if (sdrag) return { steer: tSteer, pace: tPace };
     if (!tilt.ok) return { steer: 0, pace: 0 };
-    zero ||= { side: tilt.side, fwd: tilt.fwd };
-    return tiltRead(zero, tilt.side, tilt.fwd, dt, 0.05); // a new grip is caught up with, never read as braking
+    zero ||= {};
+    return tiltRead(zero, tilt.up, dt, 0.05); // a new posture is caught up with, never read as braking
   }
 
   // ---- One frame.
