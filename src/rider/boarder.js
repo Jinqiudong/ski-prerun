@@ -6,7 +6,7 @@
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=12";
-import { myRiderLook } from "../core/look.js?v=5";
+import { myRiderLook } from "../core/look.js?v=6";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.

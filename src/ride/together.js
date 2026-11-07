@@ -8,13 +8,17 @@
 // the same channel.
 // Riding alone, or on a trip that isn't shared: nothing is built and nothing is sent.
 // The rules with no DOM (which trip, seats, what a message may hold) are in together-core.js.
+// In a party (src/core/party.js), the party picks the trip, and the ride is its hands: where I am for the
+// party's presence, 去找他 and 跟着他 here, and the address the party opens the ride with: ?find= (land beside
+// them), ?with= (into their chair), ?sync=&host=&crew= (一起坐: everyone in the caller's chair, boarded at
+// the same moment, seats by id).
 import * as THREE from "three";
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "../core/i18n.js?v=31";
-import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=3";
+import { t, myAvatar } from "../core/i18n.js?v=32";
+import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=4";
 import { ymd } from "../start/trip-intro.js?v=1";
-import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, whereOf, alongPts, QUICK } from "./together-core.js?v=3";
-import { rideVoice } from "./voice.js?v=1";
+import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, whereOf, alongPts, QUICK } from "./together-core.js?v=4";
+import { rideVoice } from "./voice.js?v=2";
 
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = 8000;
 const LAND = "prerunTogetherLand", TRIP = "prerunRideTrip";
@@ -80,7 +84,8 @@ export function rideTogether(api) {
   const none = { frame() {}, mate: () => 0, active: false };
   const params = new URLSearchParams(location.search);
   if (params.get("trip")) store(sessionStorage, TRIP, params.get("trip"));
-  const wanted = store(sessionStorage, TRIP);
+  const party = api.party || null;
+  const wanted = store(sessionStorage, TRIP) || party?.trip || null;
   let trips = []; try { trips = JSON.parse(localStorage.getItem("prerunTrips") || "[]"); } catch { /* none */ }
   if (!wanted && !trips.some((tr) => tr?.shared)) return none; // alone: nothing at all
   landingCover();
@@ -94,10 +99,12 @@ export function rideTogether(api) {
   // A friend's rider: as they say in their "hi", else as the trip has their look.
   const lookOf = (id) => trip?.srv?.members?.find((m) => m.id === id)?.look?.rider || null;
   // Boarding: now, unless the ride was resumed part way up (then not "with" anyone by time).
-  const at0 = Number(params.get("at")) || 0, want = params.get("with");
-  const boardAt = Date.now() - (api.trip && at0 === 0 ? 0 : 60000);
+  const at0 = Number(params.get("at")) || 0, want = params.get("with"), findId = params.get("find");
+  // 一起坐 (party.js): boarded at the call's moment, in the caller's chair.
+  const sync = Number(params.get("sync")) || 0, host = sync ? params.get("host") : null, crew = (params.get("crew") || "").split(",").filter((x) => /^[\w-]{4,40}$/.test(x));
+  const boardAt = sync || Date.now() - (api.trip && at0 === 0 ? 0 : 60000);
   const ownChair = `${me}@${boardAt}`;
-  let chairId = ownChair, joinedChair = false, satWith = new Set();
+  let chairId = host ? `${host}@${sync}` : ownChair, joinedChair = !!host, satWith = new Set(), found = false, pendingFollow = null;
   const friends = new Map(); // id → friend
   const style = document.createElement("style"); style.textContent = CSS; document.head.append(style);
   const tags = Object.assign(document.createElement("div"), { id: "tgTags" }), toasts = Object.assign(document.createElement("div"), { id: "tgToasts" });
@@ -142,11 +149,13 @@ export function rideTogether(api) {
       if (!f.disp || !was || was.ph !== s.ph || was.l !== s.l) f.disp = null; // jump, don't glide, to a new place
       if (s.ph === "lift" && s.c === chairId && !satWith.has(f.id)) sitTogether(f);
       offerChair(f);
+      if (findId && s.id === findId && !found) { found = true; setTimeout(() => goFind(findId), 400); } // opened to land beside them
+      if (pendingFollow === s.id) { pendingFollow = null; startFollow(s.id, true); }
     } else if (ev === "m") {
       const f = friends.get(p.id), q = quick(p.k); if (!f || !q) return;
       say(f, q); toast(q.icon, `<b>${esc(f.name)}</b>：${esc(t(q.zh))}`);
       if (f.model && f.s?.ph === "lift") gestureBoarder(f.model, q.k === "good" || q.k === "meet" ? "point" : "wave"); // on a chair, with a hand too
-      navigator.vibrate?.(30);
+      if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(30);
     } else if (ev === "bye") {
       const f = friends.get(p.id); if (f) f.gone = now;
       voice.drop(p.id, false);
@@ -195,6 +204,17 @@ export function rideTogether(api) {
     else { api.d = Math.max(api.d0, d - api.step()); toast(f.avatar, t("坐 {name} 后面那把", { name: esc(f.name) })); }
     last = null;
   }
+  // 一起坐: my seat in the shared chair, by id among everyone in it: first from the call's crew, then from
+  // who is really there (their states), so a crew member who never came leaves no gap that two people fill.
+  let seatAt = 0;
+  function syncSeat(now) {
+    if (!host || top.phase || api.arrived || chairId !== `${host}@${sync}` || now - seatAt < 1000 || Date.now() - sync > 60000) return;
+    seatAt = now;
+    const there = chairMembers(chairId).map((m) => m.id), ids = there.length > 1 ? there : [...new Set([...crew, host, me])];
+    const seats = seatsOf(ids.map((id) => ({ id, b: sync })), seatInfo().xs.length), k = seats.get(me);
+    if (k >= 0) { if (seatInfo().xs[k] !== seatInfo().x) { api.setSeat(seatInfo().xs[k]); last = null; } }
+    else { chairId = ownChair; api.d = Math.max(api.d0, api.d - api.step()); last = null; toast("lift", t("这把坐满了，坐后面那把")); }
+  }
   // Riding in a friend's chair: their chair's speed is ours; jump away (skip, seek) and you leave it.
   function keepChair(dt) {
     if (chairId === ownChair || top.phase || api.arrived) return;
@@ -212,7 +232,7 @@ export function rideTogether(api) {
     box.innerHTML = `<span class="faces"><img src="assets/icons/${myAvatar()}.png?v=1" alt=""><img src="assets/icons/${f.avatar}.png?v=1" alt=""></span><span translate="no"></span>`;
     box.lastChild.textContent = t("和 {name} 一起坐 {lift}", { name: f.name || t("朋友"), lift: lift.name });
     document.getElementById("tgSeat")?.remove(); document.body.append(box);
-    navigator.vibrate?.([30, 40, 30]);
+    if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.([30, 40, 30]);
     setTimeout(() => box.classList.add("out"), 3600); setTimeout(() => box.remove(), 4300);
   }
   // Waiting at the bottom of a lift a friend just got on: "ride with them" (into their chair).
@@ -259,11 +279,16 @@ export function rideTogether(api) {
     }
     if (!f.tag) { f.tag = document.createElement("button"); f.tag.className = "tgTag"; f.tag.onclick = () => openPop(f); tags.append(f.tag); fillTag(f); }
   }
-  function fillTag(f) { f.tag.innerHTML = `<img src="assets/icons/${f.avatar}.png?v=1" alt=""><span translate="no"></span>`; f.tag.querySelector("span").textContent = f.name || "…"; f.sayEl = null; f.vcKey = null; }
+  function fillTag(f) { f.tag.innerHTML = `<img src="assets/icons/${f.avatar}.png?v=1" alt=""><span translate="no"></span>`; f.tag.querySelector("span").textContent = f.name || "…"; f.sayEl = null; f.vcKey = null; f.spkIcon = null; }
   // Voice on a tag: a ring while they speak, "对讲中" while their walkie-talkie is up, "已静音" if I muted them.
   function voiceTag(f) {
     const vs = voice.stateOf(f.id), key = vs.muted ? "已静音" : vs.radio ? "对讲中" : "";
     f.tag.classList.toggle("talk", vs.speaking && !vs.radio); f.tag.classList.toggle("radio", vs.radio && !vs.muted); f.tag.classList.toggle("muted", vs.muted);
+    const spk = vs.speaking && !vs.muted ? (vs.radio ? "voice_radio" : "voice_speaking") : vs.muted ? "voice_mic_off" : "";
+    if (spk !== f.spkIcon) {
+      f.spkIcon = spk; f.tag.querySelector(".spk")?.remove();
+      if (spk) { const i = document.createElement("img"); i.className = "spk"; i.alt = ""; i.src = `assets/icons/${spk}.png?v=1`; f.tag.querySelector("span").after(i); }
+    }
     if (key === f.vcKey) return;
     f.vcKey = key; f.tag.querySelector(".vc")?.remove();
     if (key) { const b = document.createElement("span"); b.className = "vc"; b.textContent = t(key); f.tag.querySelector("span").after(b); }
@@ -390,7 +415,7 @@ export function rideTogether(api) {
 
   // ---- Quick messages: a button with the chips
   const fab = document.createElement("button"); fab.id = "tgFab"; fab.className = "rfab"; fab.hidden = true; fab.setAttribute("aria-label", t("传话"));
-  fab.innerHTML = `<img src="assets/icons/rider.png?v=1" alt=""><span class="n"></span>`;
+  fab.innerHTML = `<img src="assets/icons/msg_chat.png?v=1" alt=""><span class="n"></span>`;
   const qbox = document.createElement("div"); qbox.id = "tgQuick"; qbox.hidden = true;
   qbox.innerHTML = QUICK.map((q, i) => `<button data-k="${q.k}" style="animation-delay:${i * 30}ms"><img src="assets/icons/${q.icon}.png?v=1" alt=""><span>${t(q.zh)}</span></button>`).join("");
   document.body.append(fab, qbox);
@@ -422,21 +447,26 @@ export function rideTogether(api) {
   // ---- Follow
   let follow = null;
   const chip = document.createElement("div"); chip.id = "tgChip"; chip.hidden = true; document.body.append(chip);
-  function startFollow(id) {
-    const f = friends.get(id); if (!f) return;
+  function startFollow(id, fromParty = false) {
+    if (!fromParty && party?.in) { party.setFollow(id); return; } // the party keeps it, and calls back
+    const f = friends.get(id); if (!f) { pendingFollow = id; return; }
+    if (follow?.id === id) return;
     follow = { id, at: -1e9, planned: -1e9, to: null };
     chip.innerHTML = `<img src="assets/icons/${f.avatar}.png?v=1" alt=""><span translate="no"></span><button>${t("取消")}</button>`;
     chip.querySelector("span").textContent = t("跟着 {name}", { name: f.name });
-    chip.querySelector("button").onclick = stopFollow;
+    chip.querySelector("button").onclick = () => stopFollow();
     chip.hidden = false;
     top.pmap?.close();
     if (top.phase !== "ski") toast(f.avatar, t("滑起来就跟着 {name} 走", { name: esc(f.name) }));
   }
-  function stopFollow() { follow = null; chip.hidden = true; }
+  function stopFollow(fromParty = false) { pendingFollow = null; if (!fromParty && party?.in && party.fol) { party.setFollow(null); return; } follow = null; chip.hidden = true; }
   function stepFollow(now) {
     if (!follow || now - follow.at < 1000) return;
     const f = friends.get(follow.id);
-    if (!f?.s || f.gone || now - f.at > STALE) { toast(f?.avatar || "rider", t("{name} 不在线了，不跟了", { name: esc(f?.name || "") })); stopFollow(); return; }
+    if (!f?.s || f.gone || now - f.at > STALE) { // off the slopes: the party (if any) keeps following them, from page to page
+      if (!party?.fol) toast(f?.avatar || "rider", t("{name} 不在线了，不跟了", { name: esc(f?.name || "") }));
+      follow = null; chip.hidden = true; if (party?.fol) pendingFollow = f?.id || null; return;
+    }
     if (top.phase !== "ski" || !top.live().phys) return;
     const P = top.live().phys, onLift = f.s.ph === "lift";
     const target = onLift ? { lift: f.s.l } : { x: f.mapXZ?.[0] ?? f.s.x, z: f.mapXZ?.[1] ?? f.s.z };
@@ -522,8 +552,9 @@ export function rideTogether(api) {
   function frame(now) {
     const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
     send(now);
+    if (host && !friends.size) syncSeat(now);
     if (!friends.size) { voice.frame(now, []); return; }
-    tryJoin(now); keepChair(dt);
+    tryJoin(now); keepChair(dt); syncSeat(now);
     const picking = top.phase === "pick";
     const live = [];
     for (const f of friends.values()) {
@@ -550,6 +581,24 @@ export function rideTogether(api) {
     stepFollow(now);
     if (fly) stepFly(now);
   }
+  // ---- The party: where I am, for its presence; its 去找他 and 跟着他, done here.
+  function partyState() {
+    const ph = top.phase;
+    if (!ph && !api.arrived) return { ph: "lift", lift: lift.name, b: boardAt, c: chairId };
+    if (ph === "ski") {
+      const L = top.live?.() || {}, o = { ph: "ski", lift: lift.name, run: L.run || null };
+      if (L.dest) { o.e = [Math.round(L.dest.x), Math.round(L.dest.z)]; o.en = L.dest.name; }
+      return o;
+    }
+    if (ph === "hike") return { ph: "hike", lift: lift.name };
+    return { ph: ph === "pick" ? "pick" : "top", lift: lift.name };
+  }
+  party?.setRide({
+    state: partyState, voice,
+    callable: () => top.live?.()?.wait || lift.name, // 一起坐: the lift I wait at the bottom of, else this one again
+    find: (id) => { const f = friends.get(id); if (!f?.s || f.gone || performance.now() - f.at > STALE) return false; goFind(id); return true; },
+    follow: (id) => startFollow(id, true), unfollow: () => stopFollow(true),
+  });
   window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, voice }; // testing
   // A friend beside me in my chair, for the ride to pose me talking to them: +1 on my left (+x), -1 on my right, 0 none.
   function mate() {

@@ -141,6 +141,20 @@ const EN = {
   "没有麦克风权限。点地址栏左边的「大小」›「网站设置」›「麦克风」选「允许」，再点一次麦克风": "No mic permission. Tap \"aA\" in the address bar › Website Settings › Microphone › Allow, then tap the mic again",
   "没找到麦克风": "No microphone found", "麦克风被占用了（比如正在打电话），挂断后再试": "The mic is busy (a phone call?): try again after it ends",
   "这个页面用不了麦克风（需要 https）": "This page can't use the mic (it needs https)", "麦克风打不开，再试一次": "Couldn't open the mic: try again",
+  "按住对讲": "Hold to talk", "对讲中，松开结束": "Talking: let go to end", "麦克风开了：一起滑的朋友能听到你": "Mic on: your party can hear you", "这把坐满了，坐后面那把": "That chair's full: you're in the one behind",
+  // The party (src/core/party.js): the pet, its sign, the panel
+  "一起滑": "Ride together", "加入": "Join", "加入一起滑": "Join the party", "离开": "Leave", "＋邀请": "＋ Invite", "发邀请": "Send invites", "在线": "online", "哪个行程": "Which trip",
+  "先在行程里分享给朋友": "Share a trip with friends first", "行程里的人都在了": "Everyone on the trip is here", "还没有人在一起滑": "Nobody's riding together yet",
+  "还没有别人。点＋邀请，叫上一起去的朋友": "Nobody else yet. Tap ＋ Invite to ask your friends on the trip",
+  "去找他": "Go to them", "跟着他": "Follow", "跟着中": "Following", "叫他来": "Call them over", "自由滑": "Ride free", "跟队": "Stay with the group", "跟着你": "following you", "麦克风开着": "mic on",
+  "{name} 约你一起滑": "{name} asks you to ride together", "{name} 叫你过去": "{name} wants you over", "{name} 加入了": "{name} joined", "等会儿": "Later",
+  "邀请已发出": "Invites sent", "叫过了，等他来": "Called: wait for them",
+  "一起坐": "Ride with them", "这次不坐": "Not this time", "等大家…": "Waiting…", "约你一起坐 {lift}": "asks you to ride {lift} together", "约大家一起坐": "Asking everyone to ride",
+  "约大家一起坐 {lift}": "Ask everyone to ride {lift}", "约大家一起坐 ›": "Ride it with everyone ›",
+  "在行程里": "on the trip", "还在主页 · {what}": "On the home page · {what}", "选衣服": "picking clothes", "看地图": "on the map", "看行程": "planning", "翻记录": "looking back",
+  "{rn} · 看全山": "{rn} · looking at the mountain", "{rn} · 在山脚选缆车": "{rn} · picking a lift at the base", "{rn} · 坐 {lift} 上山中": "{rn} · riding {lift} up",
+  "{rn} · 在 {lift} 山顶": "{rn} · at the top of {lift}", "{rn} · 在山顶": "{rn} · at the top", "{rn} · 徒步上山": "{rn} · hiking up", "{rn} · 滑向 {to}": "{rn} · skiing to {to}",
+  "{rn} · 在滑 {run}": "{rn} · skiing {run}", "{rn} · 滑行中": "{rn} · skiing",
 };
 export function t(zh, vars) {
   let s = EN_ON ? EN[zh] ?? zh : zh;

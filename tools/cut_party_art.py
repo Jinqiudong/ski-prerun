@@ -9,7 +9,8 @@ from the extra seed points listed with it. The sign's lettering is painted out (
 around it), so the page writes its own words on it.
 
 usage: python3 tools/cut_party_art.py [path/to/peek_reference.png]   → assets/party/<name>.png
-       add --preview=<file.png> for a check sheet: every piece on paper, on navy and on a checkerboard
+       add --preview=<file.png> for a check sheet (docs/art/party/sprites.png): each piece's crop of the sheet
+       next to the cut on paper, on navy and on a checkerboard
 Other animals later: the same set of names, as assets/party/<animal>/<name>.png (src/core/party.js PETS).
 """
 import math, os, random, sys
@@ -129,22 +130,31 @@ def main():
             ang = math.degrees(math.atan2(q[1][1] - q[0][1], q[1][0] - q[0][0]))
             print(f"  face: x {min(fx)}..{max(fx)}, y {min(fy)}..{max(fy)}, centre ({sum(fx) / 4:.3f}, {sum(fy) / 4:.3f}), tilt {ang:.1f} deg")
     prev = next((a.split("=", 1)[1] for a in sys.argv[1:] if a.startswith("--preview=")), None)
-    if prev:  # every piece on paper, on dark and on a checkerboard, to look for halos
-        W = sum(im.width + 10 for im in made.values()); H = max(im.height for im in made.values())
-        sheetp = Image.new("RGB", (W, H * 3 + 20), (244, 239, 230))
-        dark = Image.new("RGB", (W, H), (40, 52, 77)); sheetp.paste(dark, (0, H + 10))
-        x = 0
-        for im in made.values():
-            for k in range(3):
-                if k == 2:
-                    ck = Image.new("RGB", im.size, (255, 255, 255)); cp = ck.load()
+    if prev:  # a row a piece: the sheet's own crop, then the cut on paper, on navy, on a checkerboard (halos show)
+        from PIL import ImageDraw
+        rows, cols = [], []
+        for name, P in PIECES.items():
+            ref = sheet.crop(P.get("canvas") or P["box"]); im = made[name]
+            tiles = [ref.convert("RGB")]
+            for bg in ((244, 239, 230), (40, 52, 77), None):
+                t = Image.new("RGB", im.size, bg or (255, 255, 255))
+                if bg is None:
+                    tp = t.load()
                     for yy in range(im.height):
                         for xx in range(im.width):
-                            if (xx // 8 + yy // 8) % 2: cp[xx, yy] = (200, 205, 210)
-                    sheetp.paste(ck, (x, (H + 10) * 2))
-                sheetp.paste(im, (x, (H + 10) * k), im)
-            x += im.width + 10
-        sheetp.save(prev); print("preview:", prev)
+                            if (xx // 8 + yy // 8) % 2: tp[xx, yy] = (200, 205, 210)
+                t.paste(im, (0, 0), im); tiles.append(t)
+            rows.append((name, tiles))
+        W = 110 + sum(max(r[1][k].width for r in rows) + 14 for k in range(4)); H = sum(max(t.height for t in r[1]) + 14 for r in rows) + 34
+        out = Image.new("RGB", (W, H), (250, 247, 241)); d = ImageDraw.Draw(out)
+        colx = [110]; [colx.append(colx[-1] + max(r[1][k].width for r in rows) + 14) for k in range(3)]
+        for k, lab in enumerate(["the owner's sheet", "cut, on paper", "on navy", "on a checkerboard"]): d.text((colx[k], 10), lab, fill=(60, 60, 60))
+        y = 34
+        for name, tiles in rows:
+            d.text((10, y + 8), name, fill=(30, 40, 60))
+            for k, t in enumerate(tiles): out.paste(t, (colx[k], y))
+            y += max(t.height for t in tiles) + 14
+        out.quantize(256, dither=Image.Dither.NONE).save(prev, optimize=True); print("preview:", prev)
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,7 @@
 // The rules with no DOM are in voice-core.js; the ICE servers (STUN, an optional TURN) in voice-config.js.
 import * as THREE from "three";
 import { start as audioStart, duck, keepAwake } from "../audio/engine.js?v=4";
-import { t } from "../core/i18n.js?v=31";
+import { t } from "../core/i18n.js?v=32";
 import { VOICE, gainAt, sendTo, wantPeers, offerer, retryAfter, cleanSignal, cleanVoiceState, RADIO_HOLD, speaking, duckFor, micProblem } from "./voice-core.js?v=1";
 import { ICE_SERVERS } from "./voice-config.js?v=1";
 
@@ -26,27 +26,29 @@ const HINTS = {
   other: "麦克风打不开，再试一次",
 };
 const CSS = `
-#vcMic { right: 14px; top: calc(278px + env(safe-area-inset-top)); flex-direction: column; gap: 0; color: #22344d; font: 600 12px/1.15 "Noto Serif SC", serif; display: flex; align-items: center; justify-content: center; }
-#vcMic small { font: 600 15px/1.1 "Noto Serif SC", serif; color: #6f685f; }
+#vcMic { right: 14px; top: calc(278px + env(safe-area-inset-top)); flex-direction: column; gap: 0; color: #22344d; font: 600 10px/1.1 "Noto Serif SC", serif; display: flex; align-items: center; justify-content: center; }
+#vcMic img { width: 34px; height: 34px; } #vcMic small { font: 600 10px/1.1 "Noto Serif SC", serif; color: #6f685f; }
 #vcMic.on small { color: #bfe3cb; }
 #vcMic.on { background: #22344d; color: #fdfbf6; }
 #vcTalk { position: fixed; z-index: 12; left: 14px; bottom: calc(172px + env(safe-area-inset-bottom)); width: 66px; height: 66px; padding: 0; border: 2px solid #cbbfa9; border-radius: 50%; background: rgba(253,251,246,.96); color: #22344d; box-shadow: 0 6px 14px rgba(40,50,70,.22); font: 600 13px/1.2 "Noto Serif SC", serif; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; transition: transform .12s, background .15s; }
-#vcTalk small { color: inherit; opacity: .85; font-size: 11px; }
+#vcTalk small { color: inherit; opacity: .85; font-size: 11px; } #vcTalk img { width: 34px; height: 34px; pointer-events: none; }
 #vcTalk.on { background: #b6463b; border-color: #fdfbf6; color: #fdfbf6; transform: scale(1.08); }
 #vcMic[hidden], #vcTalk[hidden], #vcNote[hidden] { display: none; }
 #vcNote { position: fixed; z-index: 13; right: 84px; top: calc(286px + env(safe-area-inset-top)); max-width: min(62vw, 270px); padding: 6px 12px; border-radius: 12px; background: rgba(253,251,246,.97); color: #22344d; box-shadow: 0 6px 14px rgba(40,30,20,.22); font: 13px/1.45 "Noto Serif SC", serif; animation: tg-in .3s ease-out; }
-.tgTag.talk img { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #3f7d5c; animation: vc-ring .9s ease-in-out infinite alternate; }
-.tgTag.radio img { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #b6463b; }
+.tgTag .spk { width: 18px !important; height: 18px !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; animation: none !important; margin-left: 2px; }
+.tgTag.talk img:first-child { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #3f7d5c; animation: vc-ring .9s ease-in-out infinite alternate; }
+.tgTag.radio img:first-child { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #b6463b; }
 .tgTag .vc { margin-left: 2px; padding: 0 6px; border-radius: 8px; background: #22344d; color: #fdfbf6; font: 600 11px/17px "Noto Serif SC", serif; }
 .tgTag.radio .vc { background: #b6463b; }
-.tgTag.muted img { filter: grayscale(1); opacity: .6; } .tgTag.muted .vc { background: #8a8278; }
+.tgTag.muted img:first-child { filter: grayscale(1); opacity: .6; } .tgTag.muted .vc { background: #8a8278; }
 @keyframes vc-ring { to { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 6px rgba(63,125,92,.55); } }
 `;
 const loadMuted = () => { try { return new Set(JSON.parse(localStorage.getItem(MUTE) || "[]")); } catch { return new Set(); } };
 
 // api: { ch (the ride channel), me (my member id), camera, myPos(out) (where I am, world), talk(on) (my
-// rider's radio), nameOf(id) }.
-export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
+// rider's radio), nameOf(id) }. hud false: no buttons of its own (the party panel's mic drives it, through
+// setMic), and what it has to say goes to onSay instead of its own line (src/core/party.js, off the slopes).
+export function rideVoice({ ch, me, camera, myPos, talk, nameOf, hud = true, onSay = null }) {
   const peers = new Map(); // id → peer
   const said = new Map(); // id → { mic, r, at } from their "vs"
   const muted = loadMuted();
@@ -63,15 +65,18 @@ export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
   const holder = document.createElement("div"); holder.hidden = true; // the friends' <audio> elements
   document.body.append(micBtn, talkBtn, note, holder);
   const paint = () => {
-    micBtn.innerHTML = `<span>${t("麦克风")}</span><small>${micOn ? t("开") : t("关")}</small>`;
+    if (!hud) return;
+    micBtn.innerHTML = `<img src="assets/icons/${micOn ? "voice_mic" : "voice_mic_off"}.png?v=1" alt=""><small>${t("麦克风")} ${micOn ? t("开") : t("关")}</small>`;
     micBtn.classList.toggle("on", micOn); micBtn.setAttribute("aria-pressed", micOn);
     micBtn.setAttribute("aria-label", micOn ? t("麦克风开着，点一下关掉") : t("麦克风关着，点一下打开"));
-    talkBtn.innerHTML = radio ? `<span>${t("对讲中")}</span><small>${t("松开结束")}</small>` : `<span>${t("按住")}</span><span>${t("对讲")}</span>`;
+    talkBtn.innerHTML = `<img src="assets/icons/voice_radio.png?v=1" alt=""><small>${radio ? t("松开结束") : t("按住对讲")}</small>`;
+    talkBtn.setAttribute("aria-label", radio ? t("对讲中，松开结束") : t("按住对讲"));
     talkBtn.classList.toggle("on", radio);
   };
   paint();
   let noteT = 0;
   function say(text, ms = 5000) {
+    if (!hud) { onSay?.(text); return; }
     note.textContent = text; note.hidden = !text;
     clearTimeout(noteT); if (text && ms) noteT = setTimeout(() => (note.hidden = true), ms);
   }
@@ -107,13 +112,16 @@ export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
   }
   const track = () => stream?.getAudioTracks()[0] || null;
 
-  micBtn.onclick = async (e) => {
-    e.stopPropagation();
-    if (micOn) { micOn = false; if (!radio) dropMic(); paint(); sendState(); say(t("麦克风关了"), 2500); return; }
-    if (!(await getMic())) return;
+  // The mic on or off (the button, or the party panel). true if it's now as asked.
+  async function setMic(on) {
+    if (!on) { if (!micOn) return true; micOn = false; if (!radio) dropMic(); paint(); sendState(); say(t("麦克风关了"), 2500); return true; }
+    if (micOn) return true;
+    if (!(await getMic())) return false;
     micOn = true; wasMic = false; paint(); sendState();
-    say(t("麦克风开了：附近的朋友能听到你"), 3500);
-  };
+    say(hud ? t("麦克风开了：附近的朋友能听到你") : t("麦克风开了：一起滑的朋友能听到你"), 3500);
+    return true;
+  }
+  micBtn.onclick = (e) => { e.stopPropagation(); setMic(!micOn); };
   // The walkie-talkie: while the finger is down. The first press may only ask for the mic.
   async function press(on) {
     if (on === radio) return;
@@ -258,7 +266,7 @@ export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
   // ---- Every frame (together.js, with the friends live on the channel: { id, pos, inMine, at, gone }).
   function frame(now, live) {
     const any = live.length > 0;
-    if (any !== shown) { shown = any; micBtn.hidden = talkBtn.hidden = !any; if (!any && radio) { down = false; press(false); } }
+    if (any !== shown) { shown = any; micBtn.hidden = talkBtn.hidden = !any || !hud; if (!any && radio) { down = false; press(false); } }
     if (radio && now - sentAt > 1000) sendState(now);
     if (stream && !micOn && !radio && dropAt && now > dropAt) dropMic();
     if (away) return;
@@ -288,7 +296,7 @@ export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
         const c = P.nodes.near.context, k = r ? 1 : 0;
         P.nodes.near.gain.setTargetAtTime(r ? 0 : P.gain, c.currentTime, 0.08);
         P.nodes.far.gain.setTargetAtTime(k * P.gain, c.currentTime, 0.03);
-        if (f.pos && !r) { // where they are as I look: in the camera's frame, at one metre (the gain does distance)
+        if (f.pos && !r && camera) { // where they are as I look: in the camera's frame, at one metre (the gain does distance)
           v.copy(f.pos).applyMatrix4(camera.matrixWorldInverse); if (v.lengthSq() < 1e-6) v.set(0, 0, -1); v.normalize();
           const pn = P.nodes.pan;
           if (pn.positionX) { pn.positionX.setTargetAtTime(v.x, c.currentTime, 0.05); pn.positionY.setTargetAtTime(v.y, c.currentTime, 0.05); pn.positionZ.setTargetAtTime(v.z, c.currentTime, 0.05); }
@@ -351,7 +359,7 @@ export function rideVoice({ ch, me, camera, myPos, talk, nameOf }) {
 
   window.__voice = { peers, said, muted, get micOn() { return micOn; }, get radio() { return radio; }, get stream() { return stream; }, get away() { return away; }, get ducked() { return ducked; }, press, stateOf, hide, show,
     async stats() { const out = {}; for (const [id, P] of peers) { let bytes = 0, sent = 0; if (P.pc) (await P.pc.getStats()).forEach((r) => { if (r.type === "inbound-rtp" && r.kind === "audio") bytes += r.bytesReceived || 0; if (r.type === "outbound-rtp" && r.kind === "audio") sent += r.bytesSent || 0; }); out[id] = { state: P.pc?.connectionState || null, live: P.live, bytesIn: bytes, bytesOut: sent, sending: P.sending, gain: +P.gain.toFixed(3), level: +P.level.toFixed(4), speaking: !!P.spk?.on, radio: radioOf(id), farGain: P.nodes ? +P.nodes.far.gain.value.toFixed(3) : null, nearGain: P.nodes ? +P.nodes.near.gain.value.toFixed(3) : null }; } return out; } }; // testing
-  return { onMessage, hello, frame, stateOf, radioOf, mute, drop };
+  return { onMessage, hello, frame, stateOf, radioOf, mute, drop, setMic, get micOn() { return micOn; } };
 }
 
 function softClip(k = 4, n = 1024) {
