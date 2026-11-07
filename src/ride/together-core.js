@@ -1,6 +1,7 @@
 // Riding together, the parts with no DOM and no three.js (tested in node: tests/together.test.mjs): which
 // shared trip the ride belongs to, what a friend's state message may hold, who shares which chair and in
 // which seat, when my own state is worth sending again, and the words for where a friend is.
+import { animalOf } from "../rider/animal-core.js?v=1";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[\w-]{4,40}$/;
@@ -69,8 +70,8 @@ export function cleanHi(p) {
   return { id: p.id, name: str(p.name, 20) || "", avatar: AV.test(p.avatar) ? p.avatar : "av_rider", colors, rider: cleanRider(p.rider), stance: p.stance === "goofy" ? "goofy" : "regular", ask: !!p.ask };
 }
 // The rider in someone's look (core/look.js): { ch } (a character: template, sizes, parts, colours by
-// material, board), { preset, colors } or { preset }; only the right kinds of value (the ride keeps the
-// sizes inside the template's ranges). null if it isn't one.
+// material, board, and animal if they ride as one of the resort animals), { preset, colors } or { preset }; only
+// the right kinds of value (the ride keeps the sizes inside the template's ranges). null if it isn't one.
 export function cleanRider(r) {
   if (!r || typeof r !== "object") return null;
   if (r.ch && typeof r.ch === "object") {
@@ -81,6 +82,7 @@ export function cleanRider(r) {
     if (c.colors && typeof c.colors === "object") for (const [k, v] of Object.entries(c.colors).slice(0, 40)) if (/^MAT_\w{1,30}$/.test(k) && HEX.test(v)) ch.colors[k] = v;
     if (/^[A-D]$/.test(c.board)) ch.board = c.board;
     if (c.glossyHelmet === true) ch.glossyHelmet = true;
+    if (animalOf(c.animal)) ch.animal = c.animal;
     return { ch };
   }
   const out = {};

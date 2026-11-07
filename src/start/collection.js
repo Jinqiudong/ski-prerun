@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "../core/i18n.js?v=31";
+import { EN_ON } from "../core/i18n.js?v=32";
 import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=4";
 import { Pets } from "./pets.js?v=4";
 

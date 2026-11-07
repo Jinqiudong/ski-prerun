@@ -7,6 +7,8 @@
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=12";
 import { myRiderLook } from "../core/look.js?v=5";
+import { animalOf } from "./animal-core.js?v=1";
+import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=1";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.
@@ -36,6 +38,7 @@ export function charOfLook(rider) {
     for (const s of CFG.sliders) ch[s.key] = clamp(c[s.key], s.lo, s.hi, base[s.key]);
     for (const k of Object.keys(ch.parts)) if (k in (c.parts || {})) ch.parts[k] = !!c.parts[k];
     for (const [m, v] of Object.entries(c.colors || {})) if (/^MAT_\w+$/.test(m) && HEX.test(v)) ch.colors[m] = v;
+    if (animalOf(c.animal)) ch.animal = c.animal; // riding as one of the resort animals (animal.js)
     return ch;
   }
   const ch = presetChar(CFG.presets[rider?.preset] ? rider.preset : "A");
@@ -54,8 +57,9 @@ export function myRider() {
   return { name: (st.wear?.ch && st.wear.name) || mine?.name || outfit?.zh || "Rider A", look, ch, colors: partColors(ch), stance: stance === "goofy" ? "goofy" : "regular" };
 }
 
-// Start loading a template's light version and its clips (mine by default); boarderModel waits for it anyway.
-export const loadBoarder = (tpl = myRider().ch.tpl) => loadTemplate(tpl, { lod: true });
+// Start loading a template's light version and its clips (mine by default; or my animal's file, if I ride as
+// one); boarderModel waits for it anyway.
+export const loadBoarder = (tpl = null) => { const ch = myRider().ch; return !tpl && ch.animal ? loadAnimal(ch.animal) : loadTemplate(tpl || ch.tpl, { lod: true }); };
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 // The clips the ride plays, by what it calls them. Held at their peak, except the ones marked played.
@@ -78,6 +82,8 @@ const RADIO_BONES = ["ShoulderR", "UpperArmR", "ForearmR", "HandR", "Neck", "Hea
 // own colours), posed by the same functions; without it, the one rider on the mountain: you.
 export async function boarderModel(friend = null) {
   const me = friend ? { ch: charOfLook(friend.rider), stance: friend.stance === "goofy" ? "goofy" : "regular" } : myRider();
+  // An animal on its board instead (animal.js): every pose function below hands it on.
+  if (me.ch.animal) return animalRider({ animal: me.ch.animal, board: me.ch.board, stance: me.stance });
   const C = await makeCharacter(me.ch.tpl, { lod: true });
   C.set(me.ch);
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group(), model = C.root;
@@ -130,6 +136,7 @@ export async function boarderModel(friend = null) {
 }
 // A friend's rider gone: its own materials, skeleton and mixer go too (the geometry and textures are shared).
 export function disposeBoarder(root) {
+  if (root?.userData?.kind === "animal") return disposeAnimal(root);
   const u = root?.userData; if (!u?.C) return;
   root.removeFromParent();
   holdProp(u.C, null);
@@ -178,6 +185,7 @@ const A_ = (u, k) => !!u.A[k];
 // To slow down the board swings across the way you move and the rider sits back onto the heel edge:
 // Skid_Stop_Heel, which brings its own edge.
 export function poseBoarder(root, r) {
+  if (root.userData.kind === "animal") return poseAnimal(root, r);
   const u = root.userData, s = u.s, dt = r.dt || 0.016, tx = u.toeX, g = u.goofy ? -1 : 1;
   u.at = performance.now(); u.flip = u.goofy;
   start(root);
@@ -276,8 +284,9 @@ export const TRICKS = [
   { key: "nose", name: "Nose Press", air: 0, dur: 1.4 },
   { key: "tailPress", name: "Tail Press", air: 0, dur: 1.4 },
 ];
-export const tricksOf = (root) => (root?.userData?.A ? TRICKS.filter((t) => root.userData.A[t.key]) : []);
+export const tricksOf = (root) => (root?.userData?.kind === "animal" ? ANIMAL_TRICKS : root?.userData?.A ? TRICKS.filter((t) => root.userData.A[t.key]) : []);
 export function startTrick(root, key) {
+  if (root.userData.kind === "animal") return startAnimalTrick(root, key);
   const t = TRICKS.find((x) => x.key === key), u = root.userData;
   if (!t || !u.A?.[key] || u.trick || u.fall) return false;
   u.trick = { ...t, t: 0 };
@@ -286,6 +295,7 @@ export function startTrick(root, key) {
 // A fall (into a tree, say): on the heel side, sitting back, or the toe side, onto the knees; then up again.
 // heel: which side, else the edge the rider is on.
 export function fallBoarder(root, heel = null) {
+  if (root.userData.kind === "animal") return fallAnimal(root, heel);
   const u = root.userData;
   if (!u.A?.fallHeel || !u.A.upHeel || u.fall) return false;
   u.trick = null;
@@ -316,6 +326,7 @@ function faceForward(u) {
   u.lean.rotation.set(0, 0, 0); u.lean.position.set(0, 0, 0);
 }
 export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
+  if (root.userData.kind === "animal") return sitAnimal(root, lookYaw, seat);
   const u = root.userData, B = u.B, F = u.yaw, dt = tick(u);
   start(root);
   // The talk clip leans to the left; to talk to a friend on the right, the rider is mirrored.
@@ -355,6 +366,7 @@ export function gestureBoarder(root, key = "wave") {
 }
 // Getting off (k 0..1 down the ramp): Lift_Exit, settling into standing on the board.
 export function standBoarder(root, k = 1) {
+  if (root.userData.kind === "animal") return idleAnimal(root);
   const u = root.userData, dt = tick(u);
   faceForward(u); u.yaw.position.y = 0; u.flip = u.goofy;
   u.yaw.rotation.y = 0; // gliding off: the board along the ramp
@@ -365,6 +377,7 @@ export function standBoarder(root, k = 1) {
 }
 // Standing on the board, as on the start screen.
 export function idleBoarder(root) {
+  if (root.userData.kind === "animal") return idleAnimal(root);
   const u = root.userData, dt = tick(u);
   start(root); u.flip = u.goofy;
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
@@ -375,6 +388,7 @@ export function idleBoarder(root) {
 // On foot, the board carried (a hike-to): Board_Carry's walk at its own pace, bobbing a little with each
 // step (phase in steps).
 export function hikeBoarder(root, phase) {
+  if (root.userData.kind === "animal") return hikeAnimal(root, phase);
   const u = root.userData, dt = tick(u);
   start(root); u.flip = u.goofy;
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0.08, 0, 0); u.yaw.rotation.set(0, Math.sin(phase * Math.PI) * 0.04, 0); u.model.position.x = u.model.position.z = 0;

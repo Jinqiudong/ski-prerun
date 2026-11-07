@@ -103,6 +103,7 @@ export function makeEntrance(scene) {
   kg.translate(0, 0, -0.9);
   const kick = new THREE.Mesh(kg, new THREE.MeshStandardMaterial({ color: 0xdfe5ec, emissive: 0x8d949c, roughness: 1, transparent: true, side: THREE.DoubleSide }));
   kick.receiveShadow = true; // (its shadow falls outside the small shadow camera and smears)
+  kick.visible = false; // out until an entrance with a kicker puts it down (an animal on the stage never runs one)
   // Snow thrown off the board's edge (more the harder it turns; a sheet of it in the stop; a puff on
   // landing), and a few flakes drifting on the wind.
   const SP = 700, spPos = new Float32Array(SP * 3), spVel = new Float32Array(SP * 3), spLife = new Float32Array(SP), spAlpha = new Float32Array(SP);
