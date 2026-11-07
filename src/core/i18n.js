@@ -128,6 +128,15 @@ const EN = {
   "已发送：{msg}": "Sent: {msg}", "{name} 也在山上": "{name} is on the mountain too", "{name} 不在线了，不跟了": "{name} went offline: stopped following",
   "滑起来就跟着 {name} 走": "Once you ski, you'll follow {name}", "{name} 在 {lift} 上，去底站": "{name} is on {lift}: to its bottom station", "跟着 {name}，重新规划": "Following {name}: route updated",
   "找不到去 {name} 那儿的路": "No way to {name} from here", "{name} 那里附近没有雪道": "No run near {name}", "传话": "Quick message", "和 {name} 去 {dest}": "With {name} to {dest}", "朋友": "Friend",
+  // Voice (src/ride/voice.js)
+  "麦克风": "Mic", "开": "on", "关": "off", "麦克风开着，点一下关掉": "Mic on: tap to turn it off", "麦克风关着，点一下打开": "Mic off: tap to turn it on",
+  "按住": "Hold", "对讲": "to talk", "对讲中": "Talking", "松开结束": "let go to end", "静音": "Mute", "取消静音": "Unmute", "能听到 {name} 了": "You can hear {name} again", "已静音 {name}": "{name} muted", "已静音": "Muted",
+  "麦克风关了": "Mic off", "麦克风开了：附近的朋友能听到你": "Mic on: friends near you can hear you", "麦克风好了，按住说话": "Mic ready: hold to talk",
+  "和 {name} 的语音连不上：可能是网络挡住了": "Can't reach {name} for voice: the network may be blocking it",
+  "语音已断开，回到页面后重新连接": "Voice disconnected: it reconnects when you come back to the page", "语音重新连接了": "Voice reconnected", "语音重新连接了。麦克风关着，点一下再打开": "Voice reconnected. Your mic is off: tap it to turn it back on",
+  "没有麦克风权限。点地址栏左边的「大小」›「网站设置」›「麦克风」选「允许」，再点一次麦克风": "No mic permission. Tap \"aA\" in the address bar › Website Settings › Microphone › Allow, then tap the mic again",
+  "没找到麦克风": "No microphone found", "麦克风被占用了（比如正在打电话），挂断后再试": "The mic is busy (a phone call?): try again after it ends",
+  "这个页面用不了麦克风（需要 https）": "This page can't use the mic (it needs https)", "麦克风打不开，再试一次": "Couldn't open the mic: try again",
 };
 export function t(zh, vars) {
   let s = EN_ON ? EN[zh] ?? zh : zh;

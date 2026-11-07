@@ -291,9 +291,16 @@ export function fallBoarder(root, heel = null) {
   u.fall = { t: 0, heel: heel ?? (u.s.edge * u.toeX >= 0 || !u.A.fallToe || !u.A.upToe) };
   return true;
 }
-// The radio raised to the mouth while riding (on), or put away. Nothing in the ride talks yet: this is ready
-// for push-to-talk with far-away friends (docs/BACKLOG.md).
-export function talkBoarder(root, on = true) { root.userData.talking = !!on; }
+// The radio raised to the mouth (on), or put away: the walkie-talkie in voice chat (src/ride/voice.js), for
+// me and for a friend holding theirs. Riding, sitting on the chair and standing at the top all show it.
+export function talkBoarder(root, on = true) { if (root?.userData) root.userData.talking = !!on; }
+// The radio over a pose that isn't riding (the chair, standing): Radio_Talk_Ride's arm and head eased in,
+// the radio in the hand; without it, the hand is empty.
+function radioOver(u, dt) {
+  const s = u.s; s.radio = damp(s.radio, u.talking ? 1 : 0, 6, dt);
+  if (s.radio > 0.01) for (const [b, q] of u.radio) b.quaternion.slerp(q, s.radio);
+  holdProp(u.C, s.radio > 0.5 ? "Radio_Talk_Ride" : null);
+}
 
 // Riding the lift and getting off: the rider faces the way the chair goes (root +z), not the board.
 // On the chair: seated (Chairlift_Sit, the whole clip), the leading foot still strapped in so the board
@@ -330,7 +337,7 @@ export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
   weights(u, w);
   mix(u);
   if (!A_(u, "lookL")) { turn(B.spine, F, Y, lookYaw * 0.25); turn(B.head, F, Y, Math.max(-1, Math.min(1, lookYaw * 0.75))); }
-  holdProp(u.C, null);
+  radioOver(u, dt);
   root.updateMatrixWorld(true);
   // Hips onto the seat.
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
@@ -347,23 +354,21 @@ export function gestureBoarder(root, key = "wave") {
 }
 // Getting off (k 0..1 down the ramp): Lift_Exit, settling into standing on the board.
 export function standBoarder(root, k = 1) {
-  const u = root.userData;
-  faceForward(u); u.yaw.position.y = 0; u.flip = u.goofy; u.at = performance.now();
+  const u = root.userData, dt = tick(u);
+  faceForward(u); u.yaw.position.y = 0; u.flip = u.goofy;
   u.yaw.rotation.y = 0; // gliding off: the board along the ramp
   u.model.position.x = u.model.position.z = 0;
   const exit = A_(u, "exit") ? 1 - k : 0;
   weights(u, A_(u, "idle") ? { exit, idle: 1 - exit } : { stance: 0.6, knee: 0.4 });
-  holdProp(u.C, null);
-  start(root); mix(u); finish(root);
+  start(root); mix(u); radioOver(u, dt); finish(root);
 }
 // Standing on the board, as on the start screen.
 export function idleBoarder(root) {
-  const u = root.userData;
-  start(root); u.flip = u.goofy; u.at = performance.now();
+  const u = root.userData, dt = tick(u);
+  start(root); u.flip = u.goofy;
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
   weights(u, A_(u, "idle") ? { idle: 1 } : { stance: 1 });
-  holdProp(u.C, null);
-  mix(u); finish(root);
+  mix(u); radioOver(u, dt); finish(root);
 }
 
 // On foot, the board carried (a hike-to): Board_Carry's walk at its own pace, bobbing a little with each

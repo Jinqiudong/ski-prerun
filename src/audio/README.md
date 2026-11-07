@@ -5,7 +5,7 @@ computed from seeds in `buffers.js`. Music files can be added later through the 
 
 | File | What |
 | --- | --- |
-| `engine.js` | One AudioContext per page. It starts on the first touch, click or key (iOS needs this) and pauses while the page is hidden. Buses `sfx`, `ambience`, `music` and `voice` (kept for voice chat), each through a duck gain, then a limiter. `duck(amount, seconds)` turns music and effects down under voice. On/off and volumes live in localStorage `prerunSound`. |
+| `engine.js` | One AudioContext per page. It starts on the first touch, click or key (iOS needs this) and pauses while the page is hidden. Buses `sfx`, `ambience`, `music` and `voice`, each through a duck gain, then a limiter. `voice` (friends talking, `src/ride/voice.js`) skips the master, so turning the game's sound off doesn't silence friends; `keepAwake(on)` keeps the context running for them. `duck(amount, seconds)` turns music and effects down under voice. On/off and volumes live in localStorage `prerunSound`. |
 | `buffers.js` | Pure functions, seeded: snow texture (smooth, no ticks), skid spray, soft crunches, landing thump, tower sheave passes, station clunk, reverb tail. |
 | `snow.js` | `BoardSound`: the board on snow, driven every frame by `board.js` `Rider`. `boardMix()` is the mapping, and it is pure and tested. |
 | `ambience.js` | Wind (speed plus gusts, cut by the bubble), the mountain bed, the lift's hum, tower passes, and station machinery. |
