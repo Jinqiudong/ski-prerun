@@ -13,26 +13,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles/start.css?v=6">
+  <link rel="stylesheet" href="src/styles/start.css?v=7">
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute"><defs><filter id="wct" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="1.2" result="d"/><feGaussianBlur in="d" stdDeviation=".25"/></filter></defs></svg>
-  <!-- The rider on a card at the top: turn her round, tap a part of her to change it, strike a pose, go. -->
+  <!-- The rider in the snow, the whole screen: turn her round, tap a part of her to change it, strike a pose,
+       watch an entrance. 换装 (or a tap on her) opens the wardrobe round her. -->
   <div id="stage">
     <canvas id="c"></canvas>
-    <div id="head"><div><b id="headTitle">选你的穿搭</b><small id="headSub">先选一套穿搭，再选雪场</small></div><button id="setBtn" aria-label="设置"><img alt=""><i>⚙</i></button></div>
+    <div id="head"><div><b id="headTitle">选你的穿搭</b><small id="headSub">先选一套穿搭，再选雪场</small><button id="resumeBtn" class="pill" hidden></button></div>
+      <div class="side"><button id="setBtn" aria-label="设置"><img alt=""><i>⚙</i></button><button id="dressBtn" class="pill"><img src="assets/icons/hanger.png?v=1" alt="">换装</button></div></div>
     <div id="status">穿搭加载中…</div>
-    <div id="who"></div>
-    <div id="poses"></div><div id="morePoses" hidden></div>
-    <button class="go" id="useBtn" aria-label="穿这套去滑"><svg viewBox="0 0 40 40"><g filter="url(#wct)"><path d="M9 29 L29 11" stroke="#fdfbf6" stroke-width="6" stroke-linecap="round"/><circle cx="16" cy="23" r="1.6" fill="#22344d"/><circle cx="22" cy="17" r="1.6" fill="#22344d"/><path d="M6 19 L13 12 M4 13 L9 8 M14 34 L19 29" stroke="#b9cfe0" stroke-width="2" stroke-linecap="round"/><path d="M27 9 L33 7 L31 13" fill="none" stroke="#fdfbf6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
-  </div>
-  <!-- The wardrobe: one row of icons (outfits, jacket, pants, gear, then the look), and what the chosen one
-       changes below it. Every change is live on the rider and is what you ride in. -->
-  <div id="sheet">
-    <nav id="wnav"></nav>
-    <div id="wsub"></div>
-    <div id="wbody"></div>
+    <div id="dock">
+      <div id="posePane"><small class="lbl">摆姿势</small><div id="poses"></div></div>
+      <div id="entryPane" hidden><small class="lbl"><span>出场 · 点一下从头看，再点一下设成最爱 ★</span><button id="entryClose">‹ 收起</button></small><div id="entries"></div></div>
+      <button id="goBtn" aria-label="出场"><i><img src="assets/icons/ride_crayon_0.png?v=2" alt=""></i><span>出场</span></button>
+    </div>
+    <!-- The wardrobe: a rail of icons (outfits, jacket, pants, gear, then the look), and what the chosen one
+         changes on a sheet below. Every change is live on the rider and is what you ride in. -->
+    <div id="dressTop"><button id="dressBack" class="pill">‹ 人物</button><button id="dressDone">完成</button></div>
+    <nav id="rail"></nav>
+    <div id="sheet"><i class="grab"></i><div id="wsub"></div><div id="wbody"></div></div>
   </div>
   <div id="world" hidden><canvas></canvas><div id="ctags"></div>
     <div id="worldHead"><b>去哪座山？</b><small></small></div><button id="worldHome">全图</button>
@@ -40,6 +42,6 @@
   <div id="records" hidden><div id="memory"></div></div>
   <div id="trips" hidden></div>
   <nav id="tabs"><button data-tab="rider"><img src="assets/icons/rider.png?v=1" alt="">人物</button><button data-tab="resort"><img src="assets/icons/resorts.png?v=1" alt="">雪场</button><button data-tab="trip"><img src="assets/icons/trips.png?v=1" alt="">行程</button><button data-tab="log"><img src="assets/icons/memory.png?v=1" alt="">记录</button></nav>
-  <script type="module" src="src/start/start.js?v=30"></script>
+  <script type="module" src="src/start/start.js?v=31"></script>
 </body>
 </html>

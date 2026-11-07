@@ -1,6 +1,7 @@
-// Each friend's entrance on the rider page: they come down out of the painted mountains, far to near,
-// doing their signature move on a snow slope, leaving their track in the snow (a carve's line, a spin's
-// circle, an S; D flies a kicker into a Method), and pull up in front of you.
+// The rider page's snow world and its entrances: the slope under the rider running into the painted
+// mountains all round, and the rider coming down out of them, far to near, doing a move on the slope,
+// leaving their track in the snow (a carve's line, a spin's circle, an S, a pop; D flies a kicker into a
+// Method), and pulling up in front of you.
 import * as THREE from "three";
 import { Lensflare, LensflareElement } from "three/addons/objects/Lensflare.js";
 
@@ -23,6 +24,41 @@ function fadeTex() {
   g.fillStyle = v; g.fillRect(0, 0, 64, 256); g.globalCompositeOperation = "multiply"; g.fillStyle = h; g.fillRect(0, 0, 64, 256);
   return new THREE.CanvasTexture(c);
 }
+// The painted mountains' ring: radius, bottom and top (m), copies of the painting round it, and the band of
+// heights the painting itself fills (its foot just under the horizon, its sky well over the top of the view).
+const RING = { r: 50, y0: -10, y1: 24, n: 12, foot: -0.5, top: 17 };
+const SNOW = "#eceff2"; // the snow far off, where the slope fades into the painting's foot
+// The painting made into the ring's picture: its torn paper edges cut off, its foot washed into the snow and
+// on down in snow, its sky fading out into the dome. Drawn mirrored (the ring is seen from inside). Small:
+// one 1024 × 768 canvas.
+function backdrop(url) {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 768;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(RING.n, 1);
+  const row = (y) => (1 - (y - RING.y0) / (RING.y1 - RING.y0)) * c.height;
+  const img = new Image();
+  img.onload = () => {
+    const g = c.getContext("2d"), top = row(RING.top), foot = row(RING.foot), h = foot - top;
+    g.fillStyle = SNOW; g.fillRect(0, foot - h * 0.3, c.width, c.height);
+    // the painting inside its torn edges (4% in at the sides and top, 4% up from the bottom); its last fifth
+    // eased into its first, so copy after copy round the ring runs on with no seam
+    const sx = img.width * 0.045, sy = img.height * 0.055, sw = img.width * 0.91, sh = img.height * 0.9, b = Math.round(c.width * 0.2);
+    const p = document.createElement("canvas"); p.width = c.width; p.height = Math.ceil(h); const pg = p.getContext("2d");
+    pg.drawImage(img, sx, sy, sw, sh, 0, 0, p.width, p.height);
+    const e = document.createElement("canvas"); e.width = b; e.height = p.height; const eg = e.getContext("2d");
+    eg.drawImage(p, 0, 0, b, p.height, 0, 0, b, p.height); eg.globalCompositeOperation = "destination-in";
+    const ramp = eg.createLinearGradient(0, 0, b, 0); ramp.addColorStop(0, "rgba(0,0,0,0)"); ramp.addColorStop(1, "#000"); eg.fillStyle = ramp; eg.fillRect(0, 0, b, p.height);
+    pg.drawImage(e, p.width - b, 0); // (the copy starts where that fifth came from)
+    g.save(); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(p, b, 0, p.width - b, p.height, 0, top, c.width, h); g.restore();
+    let f = g.createLinearGradient(0, foot - h * 0.3, 0, foot); f.addColorStop(0, "rgba(236,239,242,0)"); f.addColorStop(1, SNOW);
+    g.fillStyle = f; g.fillRect(0, foot - h * 0.3, c.width, h * 0.3);
+    g.globalCompositeOperation = "destination-out";
+    f = g.createLinearGradient(0, top, 0, top + h * 0.12); f.addColorStop(0, "#000"); f.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = f; g.fillRect(0, 0, c.width, top + h * 0.12);
+    tex.needsUpdate = true;
+  };
+  img.src = url;
+  return tex;
+}
 // A soft round flake, for the spray and the falling snow.
 function flakeTex() {
   const c = document.createElement("canvas"); c.width = c.height = 32; const g = c.getContext("2d");
@@ -30,28 +66,68 @@ function flakeTex() {
   g.fillStyle = r; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c);
 }
 
-// What each friend does on the way down: one whole clip by the character AI (Entrance_A ... D, 30 fps), ridden
-// along the line its own board implies (character.js trace), turned to come at you out of the mountains and
-// end at your feet. Frames are the clip's (rider_templates.json, HANDOFF): air is [take-off, landing], the
-// board off the snow (C pops on the slope; D leaves a kicker's lip at the take-off); end is where the skid
-// stop may begin (after the move, so it never cuts into it).
+// What each entrance does on the way down: one whole clip by the character AI (Entrance_A ... D, 30 fps), or
+// a few of the template's clips one after another (seq: [clip, times]), ridden along the line its own board
+// implies (character.js trace), turned to come at you out of the mountains and end at your feet. Frames are
+// the line's (rider_templates.json, HANDOFF): air is [take-off, landing], the board off the snow (C pops on
+// the slope; D leaves a kicker's lip at the take-off; pop: found in the clip, where its board leaves the
+// snow); end is where the skid stop may begin (after the move, so it never cuts into it). cam: whose shots.
 const ROUTES = {
   A: { clip: "Entrance_A", v: 5.5 },                                                     // two euro carves
   B: { clip: "Entrance_B", v: 6.5, spin: [125, 242], end: 242 },                         // carves, lower each time, into the carved spin
-  C: { clip: "Entrance_C", v: 5.5, air: [233, 276], end: 281 },                          // S turns, then a pop (230), peak 259
-  D: { clip: "Entrance_D", v: 7, air: [207, 240], end: 245, kicker: { at: 207 / 250, peak: 0.6 } }, // the run-in, a kicker (lip 207), a Method (peak 220)
+  C: { clip: "Entrance_C", v: 5.5, air: [233, 276], end: 281, peakEnd: 261 },            // S turns, then a pop (230), peak 259
+  D: { clip: "Entrance_D", v: 7, air: [207, 240], end: 245, peakEnd: 222, kicker: { at: 207 / 250, peak: 0.6 } }, // the run-in, a kicker (lip 207), a Method (peak 220)
+  E: { seq: [["Anim_Chill_Cruise", 1], ["Anim_Skid_S", 2, 1.3]], v: 5, cam: "A" },       // a cruise, then two skidded S turns
+  F: { seq: [["Anim_Chill_Cruise", 2], ["Anim_Pop_Ref", 1]], v: 6, pop: true, cam: "C" }, // a cruise, then a pop off the slope
+  G: { seq: [["Anim_Chill_Cruise", 1], ["Anim_Toe_Slide_Ref", 1]], v: 5.5, cam: "A" },  // a cruise into a toe-side slide
+  // an animal (no clips of its own to trace): a gentle S down the slope on its board, standing
+  P: { path: true, v: 5, cam: "rest" },
 };
 const STOP = 30; // the skid stop, in line frames
 const LONG = 30; // the longest way in (m): longer lines are drawn in to this
 const rotY = (x, z, a) => [x * Math.cos(a) + z * Math.sin(a), -x * Math.sin(a) + z * Math.cos(a)];
+// A route's clips traced one after another into one line, each going on from where the last one ended:
+// { pts, hd, by, fps, segs: [{ clip, reps, at: its first frame }] }.
+function traceSeq(char, r) {
+  const pts = [], hd = [], by = [], segs = [];
+  let fps = 30;
+  for (const [clip, reps, sway = 0] of r.seq || [[r.clip, 1]]) {
+    const T = char.trace(clip, reps, r.v); if (!T) return null;
+    // skidded turns barely steer by the board's edge (it's across the line): their S laid on, a wave of
+    // sway metres to each side, one each way per play of the clip
+    if (sway) { const P = T.pts.length / reps, st = r.v / T.fps;
+      for (let i = 0; i < T.pts.length; i++) { const w = (2 * Math.PI * i) / P, h = T.hd[i], s = sway * Math.sin(w);
+        T.pts[i] = [T.pts[i][0] + Math.sin(h) * s, T.pts[i][1] + Math.cos(h) * s]; T.hd[i] = h - Math.atan((sway * 2 * Math.PI / P) * Math.cos(w) / st); } }
+    const [ox, oz] = pts.length ? pts[pts.length - 1] : [0, 0], oh = hd.length ? hd[hd.length - 1] : 0, skip = pts.length ? 1 : 0;
+    fps = T.fps; segs.push({ clip, reps, at: Math.max(0, pts.length - skip) });
+    for (let i = skip; i < T.pts.length; i++) { const [x, z] = rotY(T.pts[i][0], T.pts[i][1], oh); pts.push([ox + x, oz + z]); hd.push(T.hd[i] + oh); by.push(T.by[i]); }
+  }
+  return { pts, hd, by, fps, segs };
+}
+// An animal's way down: a gentle S from far up the slope, easing out straight at you.
+function pathLine(r) {
+  const fps = 30, L = 26, N = Math.round((L / r.v) * fps), pts = [], hd = [];
+  for (let i = 0; i <= N; i++) { const u = i / N; pts.push([2.4 * Math.sin(u * Math.PI * 2.5) * (1 - u) ** 1.5 - 0.6 * (1 - u), -L * (1 - u)]); }
+  for (let i = 0; i <= N; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(N, i + 1)]; hd.push(Math.atan2(-(b[1] - a[1]), b[0] - a[0])); }
+  return { pts, hd, by: pts.map(() => 0), n: pts.length, fps, segs: [] };
+}
 // Goofy (mirror < 0: the rider is drawn mirrored, so the board's nose points the other way): the line is
 // mirrored sideways, so a carve still turns toward the toe edge, and the rider is turned half round on it
 // (step), so the nose leads.
 function lineOf(char, r, mirror = 1) {
-  const T = char.trace(r.clip, 1, r.v); if (!T) return null;
+  if (r.path) return pathLine(r);
+  const T = traceSeq(char, r); if (!T) return null;
   const pts = T.pts.map(([x, z]) => [x, z * mirror]), hd = T.hd.map((h) => h * mirror), n = pts.length;
+  // a pop found in its clip: the frames its board is clear of the snow
+  let air = null;
+  if (r.pop) {
+    const s = T.segs[T.segs.length - 1], base = T.by[s.at]; let i0 = -1, i1 = -1;
+    for (let i = s.at; i < n; i++) if (T.by[i] - base > 0.04) { if (i0 < 0) i0 = i; i1 = i; }
+    if (i0 > 0) air = [i0, i1 + 1];
+  }
   // run on past the clip's end, if its move runs late, so the stop comes after it (straight on, the clip held)
-  const tail = Math.max(0, (r.end ?? 0) + STOP - (n - 1)), [lx, lz] = pts[n - 1], lh = hd[n - 1], st = r.v / T.fps;
+  // (a line of clips one after another: its last clip's last half second may go into the stop)
+  const tail = Math.max(0, (r.end ?? (r.seq ? n - 16 : 0)) + STOP - (n - 1)), [lx, lz] = pts[n - 1], lh = hd[n - 1], st = r.v / T.fps;
   for (let i = 1; i <= tail; i++) { pts.push([lx + Math.cos(lh) * st * i, lz - Math.sin(lh) * st * i]); hd.push(lh); }
   // end at the origin; the start out toward the mountains (-z), a little to one side
   const [ex, ez] = pts[pts.length - 1], [sx, sz] = [pts[0][0] - ex, pts[0][1] - ez], L = Math.hypot(sx, sz), k = Math.min(1, LONG / L);
@@ -62,7 +138,7 @@ function lineOf(char, r, mirror = 1) {
   if (rotY(sx, sz, alpha)[1] * k > -LONG * 0.5) alpha = ang(-0.12, -1) - ang(sx, sz);
   const P = pts.map(([x, z]) => rotY((x - ex) * k, (z - ez) * k, alpha));
   let H = hd.map((h) => h + alpha);
-  const by = T.by.map((y) => y * char.root.scale.x), out = { pts: P, hd: H, by, n, fps: T.fps };
+  const by = T.by.map((y) => y * char.root.scale.x), out = { pts: P, hd: H, by, n, fps: T.fps, segs: T.segs, air };
   // keep it in view: a line wandering out past the sides is drawn in sideways (and its headings follow)
   const wide = Math.max(...P.map(([x, z]) => Math.abs(x) / (0.5 + 0.22 * Math.abs(z))));
   if (wide > 1) {
@@ -76,7 +152,7 @@ function lineOf(char, r, mirror = 1) {
 
 export function makeEntrance(scene) {
   // the slope
-  const geo = new THREE.PlaneGeometry(30, -FAR + 8, 150, 240); geo.rotateX(-Math.PI / 2); geo.translate(0, 0, (FAR - 8) / 2 + 4);
+  const geo = new THREE.PlaneGeometry(30, -FAR + 12, 150, 250); geo.rotateX(-Math.PI / 2); geo.translate(0, 0, (FAR - 12) / 2 + 8); // on past the camera's feet
   const pos = geo.attributes.position, col = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) pos.setY(i, groundAt(pos.getX(i), pos.getZ(i)));
   geo.computeVertexNormals();
@@ -131,24 +207,26 @@ export function makeEntrance(scene) {
       if (flPos[o + 1] < 0) { flPos[o + 1] = 6; flPos[o] = (Math.random() - 0.5) * 12; } if (flPos[o] > 6) flPos[o] = -6; }
     flGeo.attributes.position.needsUpdate = true;
   };
-  // For the moving shots: a sky (pale at the horizon, deep overhead, glowing round the sun), the painted
-  // mountains as a ring all round, and the sun's flare. They fade in when the camera leaves the
-  // painting's view, and out as it comes back.
+  // The world round the slope, always there: a sky (pale at the horizon, deep overhead, glowing round the
+  // sun), and the painted mountains on a ring all round (the painting, its torn paper edges cut off, its
+  // foot washed into the snow's own colour, its sky into the dome), both centred on the camera so they keep
+  // still and far however it moves; the slope fades into the painting's foot. The sun's flare only on the
+  // moving shots.
   const SUN = new THREE.Vector3(3, 6, 4).normalize();
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(70, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, transparent: true, depthWrite: false,
-    uniforms: { sun: { value: SUN }, op: { value: 0 } },
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(70, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
+    uniforms: { sun: { value: SUN } },
     vertexShader: "varying vec3 vD; void main() { vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: "uniform vec3 sun; uniform float op; varying vec3 vD; void main() { float h = clamp(vD.y, 0.0, 1.0); vec3 c = mix(vec3(0.93, 0.95, 0.98), vec3(0.40, 0.60, 0.86), pow(h, 0.6)); float s = max(dot(vD, sun), 0.0); c += vec3(1.0, 0.93, 0.78) * (pow(s, 12.0) * 0.45 + pow(s, 400.0) * 1.5); gl_FragColor = vec4(c, op); }" }));
+    fragmentShader: "uniform vec3 sun; varying vec3 vD; void main() { float h = clamp(vD.y, 0.0, 1.0); vec3 c = mix(vec3(0.93, 0.95, 0.98), vec3(0.47, 0.65, 0.88), pow(h, 0.6)); if (vD.y < 0.0) c = vec3(0.925, 0.937, 0.95); float s = max(dot(vD, sun), 0.0); c += vec3(1.0, 0.93, 0.78) * (pow(s, 12.0) * 0.45 + pow(s, 400.0) * 1.5); gl_FragColor = vec4(c, 1.0); }" }));
   sky.renderOrder = -3;
-  const wc = new THREE.TextureLoader().load("assets/wc/copper.jpg?v=1"); wc.colorSpace = THREE.SRGBColorSpace; wc.wrapS = THREE.MirroredRepeatWrapping; wc.repeat.set(4, 1);
-  const ring = new THREE.Mesh(new THREE.CylinderGeometry(60, 60, 22, 64, 1, true), new THREE.MeshBasicMaterial({ map: wc, side: THREE.BackSide, transparent: true, opacity: 0, depthWrite: false, fog: false }));
-  { const g = ring.geometry, uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, 0.12 + uv.getY(i) * 0.5); } // the mountains' band of the painting, not its paper edges
-  ring.position.y = 6; ring.renderOrder = -2;
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(RING.r, RING.r, RING.y1 - RING.y0, 96, 1, true), new THREE.MeshBasicMaterial({ map: backdrop("assets/wc/copper.jpg?v=1"), side: THREE.BackSide, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+  ring.position.y = (RING.y0 + RING.y1) / 2; ring.renderOrder = -2;
+  ring.rotation.y = -1.4 * Math.PI / RING.n; // the middle of the painting straight ahead (-z)
   const flareTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, "rgba(255,250,235,1)"); r.addColorStop(0.3, "rgba(255,236,200,.5)"); r.addColorStop(1, "rgba(255,236,200,0)"); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
   const flare = new Lensflare(); flare.addElement(new LensflareElement(flareTex, 380, 0, new THREE.Color(1, 0.96, 0.88))); flare.addElement(new LensflareElement(flareTex, 60, 0.5, new THREE.Color(0.8, 0.9, 1))); flare.addElement(new LensflareElement(flareTex, 90, 0.8, new THREE.Color(1, 0.9, 0.8)));
   flare.position.copy(SUN).multiplyScalar(60); flare.visible = false;
   const group = new THREE.Group(); group.add(sky, ring, ground, track, kick, spray, flakes, flare); scene.add(group);
-  const setSky = (w) => { sky.material.uniforms.op.value = w; ring.material.opacity = w; sky.visible = ring.visible = w > 0.01; flare.visible = w > 0.6; };
+  const setSky = (w) => { flare.visible = w > 0.6; };
+  const follow = (camera) => { sky.position.copy(camera.position); ring.position.x = camera.position.x; ring.position.z = camera.position.z; };
 
   let run = null, n = 0;
   const lay = (x, y, z, h) => { // across the board's line, a little above the snow
@@ -171,7 +249,8 @@ export function makeEntrance(scene) {
       const key = char.root.uuid + k + char.root.scale.x + mirror; if (!cache.has(key)) cache.set(key, lineOf(char, r, mirror));
       const line = cache.get(key); if (!line) return false;
       n = 0; tGeo.setDrawRange(0, 0); kick.visible = false; kick.material.opacity = 1;
-      let air = r.air ? { i0: r.air[0], i1: r.air[1], peak: 0, y0: 0, ramp: null } : null;
+      const ra = r.air || line.air;
+      let air = ra ? { i0: ra[0], i1: ra[1], peak: 0, y0: 0, ramp: null } : null;
       if (r.kicker) { // the kicker's lip where the board leaves the snow; the board rides up its face to there
         const i0 = Math.round((line.n - 1) * r.kicker.at), [x, z] = line.pts[i0], h = line.hd[i0], back = KL / 2 - 0.15, kx = x - Math.cos(h) * back, kz = z + Math.sin(h) * back;
         kick.position.set(kx, groundAt(kx, kz), kz); kick.rotation.y = h; kick.visible = true; kick.updateMatrixWorld(true);
@@ -184,8 +263,16 @@ export function makeEntrance(scene) {
         for (const [j, y] of ramp) ramp.set(j, y - Math.max(0, line.by[j] - ref));
         air = { ...air, i0, peak: r.kicker.peak, y0: ramp.get(i0) ?? groundAt(x, z), ramp }; E.kicker = { lip: i0, ramp: [...ramp.keys()].sort((a, b) => a - b) }; // (for tests)
       }
-      char.play(r.clip, { once: true, fade: 0.3 });
-      run = { line, char, mover, t: 0, air, r, done: 0, k, cam: null, look: null, shot: null, flip: mirror < 0 ? Math.PI : 0 };
+      run = { line, char, mover, t: 0, air, r, done: 0, k, cam: null, look: null, shot: null, flip: mirror < 0 ? Math.PI : 0, seg: -1 };
+      if (r.path) char.play("Stand_Idle", { fade: 0.3 }); else E.clipAt(0);
+      return true;
+    },
+    // The clip for line frame f (a line of several: each one as the line reaches it).
+    clipAt(f) {
+      const { line, char, r } = run, segs = line.segs?.length ? line.segs : [{ clip: r.clip, reps: 1, at: 0 }];
+      let s = 0; while (s + 1 < segs.length && segs[s + 1].at <= f) s++;
+      if (s === run.seg) return;
+      run.seg = s; char.play(segs[s].clip, { once: segs[s].reps === 1, fade: s ? 0.2 : 0.3 });
       return true;
     },
     get running() { return !!run && !run.done; },
@@ -195,6 +282,7 @@ export function makeEntrance(scene) {
     // so it reads; eases back to the resting view (rest: the camera's position and target there) through
     // the stop. A cut jumps; a follow shot glides. Returns false when it isn't driving.
     shoot(camera, dt, rest) {
+      follow(camera);
       if (!run || !run.now) { setSky(0); lens(camera, 30); return false; }
       const { x, y, z, h, i, f } = run.now, P = new THREE.Vector3(x, y, z), line = run.line, r = run.r;
       // the travel direction, smoothed (a carve's swing or a spin shouldn't swing the camera through the rider)
@@ -202,12 +290,12 @@ export function makeEntrance(scene) {
       const S = (run.S ||= new THREE.Vector3(F.z, 0, -F.x).multiplyScalar(F.x > 0 ? -1 : 1)); // one side for the whole shot, toward the viewer
       const up = (v) => new THREE.Vector3(0, v, 0);
       // aim at the hips, not the board: in a laid-out carve or a spin the body is well off the board's line
-      const Hp = run.char.bones.Hips.getWorldPosition(new THREE.Vector3()), aim = (v) => Hp.clone().add(up(v - 0.75)), G = (p) => new THREE.Vector3(p[0], groundAt(p[0], p[1]), p[1]);
+      const Hp = run.char.bones.Hips?.getWorldPosition(new THREE.Vector3()) || P.clone().add(new THREE.Vector3(0, 0.75, 0)), aim = (v) => Hp.clone().add(up(v - 0.75)), G = (p) => new THREE.Vector3(p[0], groundAt(p[0], p[1]), p[1]);
       // a still camera, set up once when its shot begins (from the line's own direction there, not the smoothed one)
       const still = (id, mk) => (run.still?.id === id ? run.still.pos : (run.still = { id, pos: mk() }).pos);
       let shot, pos, lookAt, wide = 1, snap = 6;
       let fov = 30;
-      const key = run.k, air = run.air, chase = () => { pos = P.clone().addScaledVector(F, -8).add(up(2.5)); lookAt = P.clone().addScaledVector(F, 3).add(up(0.5)); snap = 9; };
+      const key = r.cam || run.k, air = run.air, chase = () => { pos = P.clone().addScaledVector(F, -8).add(up(2.5)); lookAt = P.clone().addScaledVector(F, 3).add(up(0.5)); snap = 9; };
       // in front of where they land, low, looking back up the line at them
       const front = (j, far = 5.5) => { const d = dirAt(line, j), s = new THREE.Vector3(d.z, 0, -d.x).multiplyScalar(d.x > 0 ? -1 : 1); return G(at(line, j + 6)).addScaledVector(d, far).addScaledVector(s, 1.4).add(up(0.7)); };
       // low behind the take-off, a little to the side, looking up past them at the sky
@@ -223,7 +311,7 @@ export function makeEntrance(scene) {
           shot = "b1"; pos = still("b1", () => { const d = dirAt(line, mid), s = new THREE.Vector3(d.z, 0, -d.x).multiplyScalar(d.x > 0 ? -1 : 1); return G(at(line, mid)).addScaledVector(s, 7).addScaledVector(d, 2.5).add(up(2)); });
           lookAt = aim(0.6); }
       } else if ((key === "C" || key === "D") && air) {
-        const lip = air.i0, land = air.i1, low = lip - (key === "D" ? 8 : 6), peakEnd = key === "D" ? 222 : 261;
+        const lip = air.i0, land = air.i1, low = lip - (key === "D" ? 8 : 6), peakEnd = r.peakEnd ?? Math.round(lip + (land - lip) * 0.65);
         if (i < low) { shot = "c0"; chase(); }
         else if (i < peakEnd) { // a wider lens, so the sky (and the sun) are round them as they go up
           shot = "up"; pos = still("up", () => lowBack(lip, key === "D" ? 5.5 : 6.5, 1)); lookAt = aim(run.now.flying ? 1.2 : 0.9); fov = 42; }
@@ -231,7 +319,8 @@ export function makeEntrance(scene) {
       } else { pos = rest.pos.clone(); lookAt = rest.at.clone(); wide = 0; }
       // the stop: back to the resting view
       const F0 = line.pts.length - 1 - STOP - 6, b = Math.min(1, Math.max(0, (f - F0) / (STOP + 6))), e = b * b * (3 - 2 * b);
-      pos.lerp(rest.pos, e); lookAt.lerp(rest.at, e * e); // the aim stays on them a little longer wide *= 1 - e; lens(camera, fov + (30 - fov) * e);
+      pos.lerp(rest.pos, e); lookAt.lerp(rest.at, e * e); // the aim stays on them a little longer
+      wide *= 1 - e; lens(camera, fov + (30 - fov) * e);
       if (!run.cam) { run.cam = camera.position.clone(); run.look = rest.at.clone(); }
       if (shot !== run.shot) { const cut = run.shot && run.still?.id === shot; run.shot = shot; if (cut) { run.cam.copy(pos); run.look.copy(lookAt); } }
       run.cam.lerp(pos, 1 - Math.exp(-dt * snap)); run.look.lerp(lookAt, 1 - Math.exp(-dt * 12)); // aim quicker than the camera moves, so the rider stays in frame
@@ -244,7 +333,7 @@ export function makeEntrance(scene) {
     step(dt) {
       particles(dt);
       if (!run) return false;
-      const { line, char, mover, air } = run;
+      const { line, char, mover, air, r } = run;
       if (run.done) { run = null; setSky(0); return false; }
       // The last stretch is a skid stop: the board swings across the line (the rider ends facing you), the
       // slide slows over about two seconds, and they rise out of the move into standing.
@@ -258,6 +347,7 @@ export function makeEntrance(scene) {
         const q = (f - air.i0) / (air.i1 - air.i0); if (air.ramp) y = air.y0 * (1 - q) + y * q + air.peak * 4 * q * (1 - q); flying = true; }
       // the rider's yaw on the line: the board's nose along it (turned half round for goofy, see lineOf); the stop ends facing you
       const yaw = h + run.flip, stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(yaw / (2 * Math.PI)) * 2 * Math.PI;
+      if (!r.path && !run.stopping) E.clipAt(f);
       if (stopW > 0 && !run.stopping) { run.stopping = true; char.play("Stand_Idle", { fade: 1.2 }); }
       mover.position.set(x, y, z); mover.rotation.y = yaw + (end - yaw) * sw;
       run.now = { x, y, z, h, u: f / F, i, f, flying };

@@ -1,73 +1,100 @@
-    :root { --paper: #f6f1e7; --card: #fdfbf6; --ink: #33302c; --navy: #22344d; --muted: #8a8278; --line: #d9cdb9; --red: #b6463b; }
-    html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); font-family: "Noto Serif SC", serif;
-      background: linear-gradient(rgba(246,241,231,0) 18%, rgba(246,241,231,.65) 40%, var(--paper) 56%), url(../../assets/wc/copper.jpg?v=1) center top / 100% auto no-repeat, var(--paper); }
-    #stage { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; height: 56vh; overflow: hidden; box-shadow: 0 8px 18px rgba(90,70,40,.18);
-      background: linear-gradient(rgba(246,241,231,0) 50%, #eef0ee 78%), url(../../assets/wc/copper.jpg?v=1) 50% 0 / auto 82% no-repeat, #eef0ee; }
+    :root { --paper: #f6f1e7; --card: #fdfbf6; --ink: #33302c; --navy: #22344d; --muted: #8a8278; --line: #d9cdb9; --red: #b6463b; --snow: #eceff2; }
+    /* no page zoom: no double-tap zoom anywhere (and no pinch, start.js) */
+    html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); font-family: "Noto Serif SC", serif; background: var(--snow); touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    /* The snow world: the whole screen, one 3D picture (the slope running into the painted mountains, entrance.js). */
+    #stage { position: fixed; inset: 0; overflow: hidden; background: var(--snow); }
     #c { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-    #head { position: absolute; top: 12px; left: 14px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 0 10px rgba(253,251,246,.95), 0 0 3px rgba(253,251,246,.9); pointer-events: none; }
-    #head button { pointer-events: auto; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; font: 14px "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 999px; padding: 7px 13px; box-shadow: 0 3px 8px rgba(40,30,20,.14); cursor: pointer; white-space: nowrap; }
+    .pill img { width: 22px; height: 22px; object-fit: contain; }
+    .lbl { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+    #head { position: absolute; top: calc(14px + env(safe-area-inset-top)); left: 18px; right: 14px; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 0 10px rgba(253,251,246,.95), 0 0 3px rgba(253,251,246,.9); pointer-events: none; transition: opacity .3s, transform .35s; }
+    #head button { pointer-events: auto; text-shadow: none; }
+    #head b { font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 3px; }
+    #head .side { display: grid; justify-items: end; gap: 14px; }
     /* your avatar, top right: tap for settings (pick another avatar there) */
     #setBtn { position: relative; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 3px solid #fffdf8; background: #e6ebee; box-shadow: 0 4px 10px rgba(40,30,20,.2); cursor: pointer; }
     #setBtn img { width: 100%; height: 100%; border-radius: 50%; display: block; }
     #setBtn i { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; background: #fdfbf6; font: 13px/20px sans-serif; font-style: normal; color: #22344d; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
-    #head b { font: 600 24px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 2px; }
-    #status { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 14px; }
-    #who { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center; color: var(--navy); font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; text-shadow: 0 0 8px rgba(253,251,246,.95); pointer-events: none; }
-    #who small { margin-left: 6px; font: 12px "Noto Serif SC", serif; color: var(--muted); vertical-align: 3px; }
-    /* Poses: small pills along the card's bottom edge, clear of the go button; "…" opens the rest above them. */
-    #poses { position: absolute; left: 12px; right: 84px; bottom: 16px; display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; scrollbar-width: none; }
-    #poses::-webkit-scrollbar { display: none; }
-    #poses button, #morePoses button { flex: none; font: 13px "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.94); border: 0; border-radius: 999px; padding: 6px 12px; box-shadow: 0 3px 8px rgba(40,30,20,.15); cursor: pointer; }
-    #poses button.on, #morePoses button.on { background: var(--navy); color: #fdfbf6; }
-    #morePoses { position: absolute; left: 12px; right: 12px; bottom: 60px; padding: 10px; border-radius: 16px; background: rgba(253,251,246,.94); box-shadow: 0 8px 20px rgba(40,30,20,.18); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-    #morePoses .chips { display: flex; flex-wrap: wrap; gap: 6px; } #morePoses .chips + .chips { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e6dccb; }
-    #morePoses button { box-shadow: inset 0 0 0 1px #ddd2bf; padding: 5px 11px; } #morePoses button.on { box-shadow: none; }
-    #morePoses i { font-style: normal; color: var(--red); margin-right: 3px; } #morePoses button.on i { color: #f3c9c4; }
-    #morePoses p { margin: 8px 2px 0; font-size: 11px; color: var(--muted); }
-    #useBtn { position: absolute; right: 12px; bottom: 10px; width: 58px; height: 58px; padding: 9px; background: var(--navy); border: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(34,52,77,.3); cursor: pointer; }
-    #useBtn svg { width: 100%; height: 100%; display: block; }
-    /* A pre-run to go back to: the crayon rider crouches, springs up, cheers at the top, lands. */
-    #useBtn.resume { width: 74px; height: 74px; padding: 0; background: #fbf7ef; box-shadow: 0 4px 12px rgba(40,30,20,.28), 0 0 0 3px #22344d; }
-    #useBtn.resume .hop { position: absolute; inset: 4px; border-radius: 50%; overflow: hidden; }
-    #useBtn.resume .hop span { position: absolute; inset: 0; animation: bounce 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
-    #useBtn.resume img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: 1.6s steps(1) infinite; }
-    #useBtn.resume .f0 { animation-name: hop0; } #useBtn.resume .f1 { animation-name: hop1; } #useBtn.resume .f2 { animation-name: hop2; }
+    /* A pre-run left half way: the crayon rider hopping, under the title; a tap goes back to it. */
+    #resumeBtn { margin-top: 10px; padding: 3px 12px 3px 4px; font-size: 13px; }
+    #resumeBtn b { font: 600 14px "Cormorant Garamond", serif; }
+    #resumeBtn .hop { position: relative; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: #fbf7ef; box-shadow: inset 0 0 0 1.5px var(--navy); }
+    #resumeBtn .hop span { position: absolute; inset: 0; animation: bounce 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+    #resumeBtn img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: 1.6s steps(1) infinite; }
+    #resumeBtn .f0 { animation-name: hop0; } #resumeBtn .f1 { animation-name: hop1; } #resumeBtn .f2 { animation-name: hop2; }
     @keyframes hop0 { 0%, 34% { opacity: 1; } 35%, 84% { opacity: 0; } 85%, 100% { opacity: 1; } }
     @keyframes hop1 { 0%, 34% { opacity: 0; } 35%, 49% { opacity: 1; } 50%, 71% { opacity: 0; } 72%, 84% { opacity: 1; } 85%, 100% { opacity: 0; } }
     @keyframes hop2 { 0%, 49% { opacity: 0; } 50%, 71% { opacity: 1; } 72%, 100% { opacity: 0; } }
     @keyframes bounce { 0% { transform: none; } 25% { transform: scale(1.04, .94); } 34% { transform: scale(1.05, .92); } 42% { transform: translateY(-6%) scale(.97, 1.04); }
       60% { transform: translateY(-10%); } 78% { transform: translateY(-4%); } 86% { transform: scale(1.05, .93); } 94%, 100% { transform: none; } }
-    #useBtn.resume::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: #22344d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M2 1l7 5-7 5z' fill='%23fdfbf6'/%3E%3C/svg%3E") 55% 50% / 9px no-repeat; box-shadow: 0 0 0 2px #fbf7ef; }
-    @media (prefers-reduced-motion: reduce) { #useBtn.resume img, #useBtn.resume .hop span { animation: none; } #useBtn.resume .f0 { opacity: 1; } }
-    #sheet { position: fixed; left: 0; right: 0; bottom: 0; padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; top: calc(56vh + 22px + env(safe-area-inset-top)); padding: 4px 16px 16px; overflow-y: auto; background: transparent; }
-    /* The wardrobe: icons with their names under them, the open one on a paper tag; the gear's own row under it. */
-    #wnav, #wsub { display: flex; align-items: center; justify-content: space-around; }
-    #wnav { padding: 0 4px 8px; border-bottom: 1px solid #e2d8c6; }
-    #wnav button, #wsub button { flex: none; width: 54px; padding: 5px 0 4px; border: 0; border-radius: 14px; background: none; font: 12px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; display: grid; justify-items: center; gap: 2px; }
-    #wnav img { width: 30px; height: 30px; object-fit: contain; } #wsub img { width: 24px; height: 24px; object-fit: contain; }
-    #wnav button.on, #wsub button.on { background: #f1e4cc; color: var(--navy); font-weight: 600; box-shadow: inset 0 0 0 1.5px #d9bf8f; }
-    #wnav .vr { width: 1px; height: 44px; background: #e2d8c6; }
-    #wsub { justify-content: flex-start; gap: 4px; padding: 6px 0 0; } #wsub button { width: 50px; padding: 4px 0 3px; font-size: 11px; gap: 1px; }
-    #wbody { padding: 6px 0 0; }
+    @media (prefers-reduced-motion: reduce) { #resumeBtn img, #resumeBtn .hop span { animation: none; } #resumeBtn .f0 { opacity: 1; } }
+    #status { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 14px; }
+    /* Along the bottom, over the tabs: the poses, or the entrances' cards; the round 出场 button beside the poses. */
+    #dock { position: absolute; left: 0; right: 0; bottom: calc(108px + env(safe-area-inset-bottom)); padding: 0 16px; transition: opacity .3s, transform .35s; }
+    #posePane { margin-right: 86px; } #posePane .lbl, #entryPane .lbl { margin: 0 2px 6px; text-shadow: 0 0 6px rgba(253,251,246,.9); }
+    #poses { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 6px; scrollbar-width: none; }
+    #poses::-webkit-scrollbar, #entries::-webkit-scrollbar { display: none; }
+    #poses button { flex: none; font: 14px "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 999px; padding: 7px 14px; box-shadow: 0 3px 8px rgba(40,30,20,.14); cursor: pointer; }
+    #poses button.on { background: var(--navy); color: #fdfbf6; }
+    #entryClose { border: 0; background: none; padding: 2px 0 2px 8px; font: 12px "Noto Serif SC", serif; color: var(--navy); cursor: pointer; letter-spacing: 0; }
+    #entries { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+    #entries .ecard { flex: none; position: relative; width: 98px; padding: 8px 6px; border: 0; border-radius: 14px; background: rgba(253,251,246,.97); box-shadow: 0 4px 12px rgba(40,30,20,.15); display: grid; justify-items: center; gap: 2px; font: 13px "Noto Serif SC", serif; color: var(--navy); cursor: pointer; }
+    #entries .ecard.on { box-shadow: 0 0 0 2.5px var(--navy), 0 4px 12px rgba(40,30,20,.15); }
+    #entries svg { width: 78px; height: 52px; fill: none; stroke: var(--navy); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    #entries .st { position: absolute; top: 4px; right: 7px; font-style: normal; color: var(--red); font-size: 14px; }
+    #goBtn { position: absolute; right: 14px; bottom: -4px; width: 72px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; justify-items: center; gap: 2px; font: 12px "Noto Serif SC", serif; color: var(--muted); letter-spacing: 1px; text-shadow: 0 0 6px rgba(253,251,246,.9); }
+    #goBtn i { display: block; width: 66px; height: 66px; border-radius: 50%; background: #fbf7ef; box-shadow: 0 4px 12px rgba(40,30,20,.28), 0 0 0 3px var(--navy); overflow: hidden; }
+    #goBtn img { width: 100%; height: 100%; display: block; transform: scale(.92); }
+    #goBtn:active i { transform: scale(.95); }
+    /* The wardrobe (body.dressing): ‹ 人物 and 完成 on top, the rail down the left, the sheet at the bottom;
+       the title, the dock and the tabs step aside. */
+    #dressTop { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 16px; right: 16px; display: flex; justify-content: space-between; }
+    #dressBack { font-size: 15px; padding: 8px 14px; }
+    #dressDone { font: 15px "Noto Serif SC", serif; padding: 8px 18px; border: 0; border-radius: 999px; background: var(--navy); color: #fdfbf6; box-shadow: 0 4px 10px rgba(34,52,77,.3); cursor: pointer; }
+    #rail { position: absolute; left: 10px; top: calc(66px + env(safe-area-inset-top)); width: 64px; padding: 6px 0; border-radius: 32px; background: rgba(253,251,246,.95); box-shadow: 0 6px 18px rgba(40,30,20,.16); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    #rail button, #wsub button { flex: none; width: 54px; padding: 5px 0 4px; border: 0; border-radius: 18px; background: none; font: 12px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; display: grid; justify-items: center; gap: 1px; }
+    #rail img { width: 30px; height: 30px; object-fit: contain; } #wsub img { width: 24px; height: 24px; object-fit: contain; }
+    #rail button.on, #wsub button.on { background: #efe3c9; color: var(--navy); font-weight: 600; box-shadow: inset 0 0 0 1.5px #d9c39a; }
+    #rail button.off { opacity: .4; }
+    #rail hr { width: 34px; border: 0; border-top: 1px solid #e6dccb; margin: 2px 0; }
+    #sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 54vh; overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 10px 16px calc(22px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: rgba(253,251,246,.97); box-shadow: 0 -8px 24px rgba(40,30,20,.14); }
+    #sheet .grab { display: block; width: 40px; height: 5px; border-radius: 3px; background: #d8cdbb; margin: 0 auto 8px; }
+    #dressTop, #rail, #sheet { transition: transform .35s cubic-bezier(.3,1.1,.5,1), opacity .25s; }
+    body:not(.dressing) #dressTop { transform: translateY(-140%); opacity: 0; pointer-events: none; }
+    body:not(.dressing) #rail { transform: translateX(-130%); opacity: 0; pointer-events: none; }
+    body:not(.dressing) #sheet { transform: translateY(105%); opacity: 0; pointer-events: none; }
+    body.dressing #head, body.dressing #dock { opacity: 0; pointer-events: none !important; }
+    body.dressing #head { transform: translateY(-30px); } body.dressing #head button { pointer-events: none; } body.dressing #dock { transform: translateY(60px); }
+    body.dressing #tabs { transform: translateY(calc(100% + 40px)); pointer-events: none; }
+    /* the party pet (party.js) moves off the rail to the right edge, by the rider's head */
+    body.dressing #ptPet { left: auto !important; right: -16px !important; top: calc(60px + env(safe-area-inset-top)) !important; }
+    body.dressing #ptPet .cap { left: -7px !important; }
+    #wsub { display: flex; justify-content: space-between; gap: 2px; margin: 0 -4px 6px; padding-bottom: 6px; border-bottom: 1px solid #ece3d3; } #wsub button { width: 58px; font-size: 11px; }
+    #wbody { padding: 0; }
+    #wbody .lbl { margin: 8px 0 2px; }
     /* rows that scroll sideways, padded so a selected ring is never cut */
-    #wbody .swrow { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding: 6px 6px; margin: 0 -6px; scrollbar-width: none; }
+    #wbody .swrow { position: relative; display: flex; align-items: center; gap: 9px; overflow-x: auto; padding: 6px 6px; margin: 0 -6px; scrollbar-width: none; }
     #wbody .swrow::-webkit-scrollbar { display: none; }
-    #wbody .sw { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); cursor: pointer; }
-    #wbody .sw.on { box-shadow: 0 0 0 2px #f6f1e7, 0 0 0 4px var(--navy); }
-    #wbody .sw.more { position: relative; overflow: hidden; background: conic-gradient(#b6463b, #c9a86a, #5d8f68, #4a72a8, #6a4f63, #b6463b); opacity: .85; }
-    #wbody .sw.more input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
-    #wbody .gap { flex: none; width: 4px; }
-    #wbody .lrow { display: flex; align-items: center; gap: 10px; margin-top: 4px; } #wbody .lrow > span { flex: none; font-size: 13px; color: var(--navy); } #wbody .lrow .swrow { flex: 1; min-width: 0; }
-    #wbody .lrow .sw { width: 28px; height: 28px; }
+    #wbody .swrow[data-paint] { gap: 6px; }
+    #wbody .sw { flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); cursor: pointer; }
+    #wbody .sw.on { box-shadow: 0 0 0 3px #fdfbf6, 0 0 0 5px var(--navy); }
+    #wbody .sw.more { background: #fdfbf6; box-shadow: inset 0 0 0 1px #d8ccb6; display: grid; place-items: center; }
+    #wbody .sw.more img { width: 26px; height: 26px; }
+    /* the palette: a heading, four rows of eight, the recent ones */
+    #wbody .phead { display: flex; justify-content: space-between; align-items: center; margin: 2px 0 10px; } #wbody .phead b { font: 600 17px "Noto Serif SC", serif; color: var(--navy); }
+    #wbody .back { border: 0; background: none; font: 13px "Noto Serif SC", serif; color: var(--muted); cursor: pointer; padding: 4px 0 4px 8px; }
+    #wbody .pgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 9px; justify-items: center; margin-bottom: 8px; }
+    #wbody .pgrid .sw { width: min(36px, 9vw); height: min(36px, 9vw); }
     #wbody .chip { flex: none; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd2bf; background: #fdfbf6; font: 13px "Noto Serif SC", serif; color: #8a8278; cursor: pointer; }
     #wbody .chip.on { background: var(--navy); border-color: var(--navy); color: #fdfbf6; }
-    /* parts on and off: little pictures of them, ticked when on */
-    #wbody .tiles { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-    #wbody .tile { flex: none; width: 62px; padding: 0; border: 0; background: none; font: 12px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; }
-    #wbody .tile i { display: block; position: relative; width: 62px; height: 62px; margin-bottom: 2px; box-sizing: border-box; border-radius: 14px; border: 1px solid #ddd2bf; background: #fdfbf6 center / cover no-repeat; }
-    #wbody .tile.on { color: var(--navy); font-weight: 600; } #wbody .tile.on i { border: 2px solid var(--navy); }
-    #wbody .tile.on i::after { content: ""; position: absolute; right: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--navy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='%23fdfbf6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
-    #wbody .tiles .chip { align-self: flex-start; margin: 16px 0 0 4px; }
+    /* parts on and off: pictures of them (tools/render_thumbs.mjs), ringed when on */
+    #wbody .tiles { display: flex; align-items: flex-start; gap: 14px; margin-top: 6px; }
+    #wbody .tile { flex: none; width: 92px; padding: 0; border: 0; background: none; font: 13px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; display: grid; justify-items: center; gap: 5px; }
+    #wbody .tile i { display: block; position: relative; width: 92px; height: 92px; box-sizing: border-box; border-radius: 14px; background: #f1ece2 center / cover no-repeat; box-shadow: inset 0 0 0 1px #e6dccb; }
+    #wbody .tile.on { color: var(--navy); font-weight: 600; } #wbody .tile.on i { box-shadow: 0 0 0 2.5px var(--navy); }
+    #wbody .tiles .chip { align-self: center; margin: 0 0 18px; }
+    #wbody .who { gap: 10px; padding: 6px 6px 4px; } #wbody .who .tile { width: 62px; } #wbody .who .tile i { width: 62px; height: 62px; }
     /* outfits: overlapping colour dots and a name */
     #wbody .cards { gap: 8px; padding: 6px 6px 8px; }
     #wbody .combo { flex: none; position: relative; min-width: 78px; padding: 10px 12px 8px; border: 1px solid #ddd2bf; border-radius: 14px; background: #fdfbf6; cursor: pointer; display: grid; justify-items: center; gap: 6px; font: 13px "Noto Serif SC", serif; color: var(--navy); }
@@ -86,15 +113,15 @@
     #wbody .boards { display: flex; gap: 8px; } #wbody .boards button { width: 34px; height: 116px; padding: 2px; border: 2px solid transparent; border-radius: 20px; background: none; cursor: pointer; }
     #wbody .boards button.on { border-color: var(--navy); } #wbody .boards img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
     #wbody .stance { display: grid; gap: 8px; justify-items: start; } #wbody .stance small { font-size: 11px; color: var(--muted); }
-    /* the look: hair, build, height, and the rest behind "更多" */
-    #wbody .sl { display: block; margin: 8px 2px 4px; } #wbody .sl span { display: flex; justify-content: space-between; font-size: 13px; color: var(--navy); } #wbody .sl b { font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--muted); }
-    #wbody input[type=range] { width: 100%; margin: 6px 0 0; accent-color: #22344d; }
-    #wbody .sl2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; } #wbody .sl2 .sl { margin-top: 4px; }
-    #wbody .morebtn { display: block; margin: 2px auto 0; padding: 4px 10px; border: 0; background: none; font: 12px "Noto Serif SC", serif; color: var(--muted); cursor: pointer; }
-    /* the animals: a row of their pictures; riding one, the clothes tabs fade and say why */
-    #wbody .pets .swrow { gap: 8px; padding: 4px 6px 6px; } #wbody .pets .tile { width: 58px; } #wbody .pets .tile i { width: 58px; height: 58px; }
+    /* the look: who, hair, height, build, fit; three-way choices as segments */
+    #wbody .sec { display: block; margin-top: 12px; } #wbody .sec .t { display: flex; justify-content: space-between; font-size: 14px; color: var(--navy); margin-bottom: 8px; }
+    #wbody .sec .t em { font: 13px "Noto Serif SC", serif; font-style: normal; color: var(--muted); }
+    #wbody .seg { display: flex; gap: 8px; } #wbody .seg button { flex: 1; font: 14px "Noto Serif SC", serif; color: var(--navy); background: #f3eee4; border: 0; border-radius: 12px; padding: 9px 0; box-shadow: inset 0 0 0 1px #e6dccb; cursor: pointer; }
+    #wbody .seg button.on { background: var(--navy); color: #fdfbf6; box-shadow: none; }
+    #wbody .hairc { margin-top: 4px; } #wbody .hairc .sw { width: 28px; height: 28px; }
+    #wbody input[type=range] { width: 100%; margin: 4px 0 0; accent-color: #22344d; }
+    /* the animals: riding one, the clothes tabs fade and say why */
     #wbody .pethint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 2px 8px; font-size: 13px; color: var(--muted); }
-    #wnav button.off { opacity: .4; }
     #wbody .combo .dots.pet i { width: 38px; height: 38px; margin: -10px 0 -9px; border-radius: 0; box-shadow: none; background: center / contain no-repeat; }
     h3 { display: flex; align-items: center; gap: 10px; margin: 8px 0 8px; font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; font-weight: 400; letter-spacing: .04em; }
     h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
@@ -120,7 +147,7 @@
        (where, and ▶ to go back). It sits beside the tabs' round button when they fold. */
     #tabs { position: fixed; left: 14px; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20; display: flex; padding: 7px; border-radius: 40px;
       background: rgba(253,251,246,.8); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1); box-shadow: 0 10px 26px rgba(40,50,70,.18), inset 0 0 0 1px rgba(255,255,255,.7);
-      transition: left .35s cubic-bezier(.3,1.3,.5,1), width .35s, border-radius .35s, padding .35s; }
+      transition: left .35s cubic-bezier(.3,1.3,.5,1), width .35s, border-radius .35s, padding .35s, transform .35s cubic-bezier(.3,1.1,.5,1); }
     #tabs button { flex: 1; font: 12px "Cormorant Garamond", "Noto Serif SC", serif; color: #4a453f; background: none; border: 0; border-radius: 32px; padding: 6px 0 5px; cursor: pointer; display: grid; justify-items: center; gap: 1px; transition: background .25s, color .25s; }
     #tabs button img { width: 30px; height: 30px; transition: transform .2s; }
     #tabs button.on { background: #6f879c; color: #fdfbf6; font-weight: 600; box-shadow: inset 0 2px 6px rgba(20,30,45,.25); } #tabs button.on img { transform: translateY(-1px); filter: drop-shadow(0 0 1.5px rgba(255,255,255,.9)); }
