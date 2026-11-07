@@ -64,7 +64,7 @@ export class TrailMap {
     }
     // Lodges.
     for (const b of this.bases) this.hut(g, ...P(b.x, b.z), 26 * s * 2, "#c9563f", "#f1e6d2");
-    // Names: runs along their middle, lifts and lodges by their huts.
+    // Names: runs along their middle, lifts and lodges by their huts (the huts say which is which).
     const label = (text, u, v, size, fg, bg) => {
       g.font = `700 ${size}px "Avenir Next Rounded", "Arial Rounded MT Bold", -apple-system, "PingFang SC", sans-serif`;
       g.textAlign = "center"; g.textBaseline = "middle";
@@ -77,8 +77,8 @@ export class TrailMap {
       const p = r.pts[Math.floor(r.pts.length / 2)];
       label(r.name, ...P(...p), Math.max(9, 13 * s * 2.2), "#2d3440", "rgba(255,255,255,.9)");
     }
-    for (const l of R.lifts) if (l.kind !== "magic_carpet") { const [u, v] = P(...l.pts[0]); label(`🚡 ${l.name}`, u, v + 16 * s * 2.2, Math.max(9, 12 * s * 2.2), "#ffffff", "rgba(58,63,74,.95)"); }
-    for (const b of this.bases) { const [u, v] = P(b.x, b.z); label(`🏠 ${b.name}`, u, v + 24 * s * 2.2, Math.max(10, 14 * s * 2.2), "#7a2e1d", "rgba(255,248,235,.95)"); }
+    for (const l of R.lifts) if (l.kind !== "magic_carpet") { const [u, v] = P(...l.pts[0]); label(l.name, u, v + 16 * s * 2.2, Math.max(9, 12 * s * 2.2), "#ffffff", "rgba(58,63,74,.95)"); }
+    for (const b of this.bases) { const [u, v] = P(b.x, b.z); label(b.name, u, v + 24 * s * 2.2, Math.max(10, 14 * s * 2.2), "#7a2e1d", "rgba(255,248,235,.95)"); }
   }
 
   hut(g, u, v, w, roof, wall) {
@@ -161,7 +161,7 @@ export class TrailMap {
       const w = h * (this.avatar.width / this.avatar.height);
       g.drawImage(this.avatar, u - w / 2, v - h - hop + h * 0.04, w, h);
     } else {
-      g.font = `${h * 0.7}px sans-serif`; g.textAlign = "center"; g.textBaseline = "bottom"; g.fillText("🏂", u, v - hop);
+      g.fillStyle = "#22344d"; g.strokeStyle = "#fdfbf6"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(u, v - h * 0.3 - hop, h * 0.18, 0, Math.PI * 2); g.fill(); g.stroke(); // no figure yet: a dot
     }
   }
 }

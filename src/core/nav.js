@@ -15,7 +15,7 @@ export function openNav(base = "") {
   const el = document.createElement("div");
   el.style.cssText = "position:fixed;inset:0;z-index:50;background:rgba(40,34,28,.3);display:flex;align-items:flex-end";
   el.innerHTML = `<div style="width:100%;background:#fdfbf6;padding:16px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(40,25,10,.25)">${navRow(base)}
-    <button data-set style="width:100%;font:16px 'Cormorant Garamond','Noto Serif SC',serif;padding:9px;border-radius:999px;border:1px solid #cbbfa9;background:#fdfbf6;color:#22344d">${t("⚙ 设置")}</button></div>`;
+    <button data-set style="width:100%;font:16px 'Cormorant Garamond','Noto Serif SC',serif;padding:9px;border-radius:999px;border:1px solid #cbbfa9;background:#fdfbf6;color:#22344d"><img src="${base}assets/icons/sliders.png?v=1" alt="" style="width:22px;height:22px;vertical-align:-5px;margin-right:6px">${t("设置")}</button></div>`;
   document.body.append(el);
   el.onclick = (e) => { if (e.target.closest("[data-set]")) { el.remove(); openSettings(); } else if (e.target === el) el.remove(); };
 }

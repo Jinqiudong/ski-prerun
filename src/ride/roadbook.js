@@ -6,7 +6,9 @@ import { t, EN_ON } from "../core/i18n.js?v=38";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const MARK = { easy: "🟢", intermediate: "🟦", advanced: "◆", expert: "◆◆" };
+const MARK = { easy: '<i class="lv easy"></i>', intermediate: '<i class="lv intermediate"></i>', advanced: '<i class="lv advanced"></i>', expert: '<i class="lv expert"></i>' };
+// A painted icon inline (assets/icons, relative to the page: the book opens on the ride, the resort and the start page).
+const ic = (n) => `<img class="ic" src="${location.pathname.includes("/mountain/") ? "../" : ""}assets/icons/${n}.png?v=1" alt="">`;
 
 // step: { k: "base" | "lift" | "top" | "route" | "jump" | "arrive", ... } (see render for the fields).
 export function addStep(resort, step) {
@@ -54,7 +56,9 @@ const CSS = `
 .book .fork div.took::before { content: "➜"; color: #b6463b; }
 .book .fork div.took::after { content: "${EN_ON ? "took this" : "走了这条"}"; margin-left: 8px; font: 12px "Noto Serif SC", serif; color: #b6463b; border: 1px solid #b6463b; border-radius: 999px; padding: 0 7px; }
 .book .runs { margin-top: 2px; font: 15px ${SERIF}; color: #4a453f; } .book .runs span { white-space: nowrap; }
-.book .runs .ic, .book .heads .ic { width: 20px; height: 20px; vertical-align: -5px; } .book .runs em { font: 12px "Noto Serif SC", serif; color: #8a6a4a; margin-left: 2px; font-style: normal; }
+.book .ic { width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px; } .book .runs .ic, .book .heads .ic { margin-right: 0; vertical-align: -5px; }
+.book .lv { display: inline-block; width: 10px; height: 10px; margin: 0 3px 1px 0; } .book .lv.easy { background: #22b35a; border-radius: 50%; } .book .lv.intermediate { background: #1f6fe5; }
+.book .lv.advanced, .book .lv.expert { background: #111; transform: rotate(45deg) scale(.85); } .book .lv.expert { box-shadow: 6px -6px 0 #111; margin-right: 9px; } .book .runs em { font: 12px "Noto Serif SC", serif; color: #8a6a4a; margin-left: 2px; font-style: normal; }
 .book .heads { margin-top: 4px; padding: 3px 8px; background: #fbf1dc; border-left: 3px solid #c9a24a; font-size: 13px; color: #5b4a2e; }
 .book .gear { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; } .book .gear span { font-size: 12px; padding: 1px 8px; border: 1px solid #cbbfa9; border-radius: 999px; color: #22344d; }
 .book .empty { font: 16px ${SERIF}; color: #8a8278; line-height: 1.5; }
@@ -75,34 +79,33 @@ export function renderBook(box, resort, host) {
     let n = 0;
     const steps = day.steps.map((s) => {
       n++;
-      if (s.k === "base") return `<li data-n="${n}"><b><img src="${location.pathname.includes("/mountain/") ? "../" : ""}assets/icons/lodge.png?v=1" alt="" style="width:20px;height:20px;vertical-align:-4px;margin-right:4px">${t("从 {x} 出发", { x: esc(s.name) })}</b></li>`;
-      if (s.k === "lift") return `<li data-n="${n}"><b>🚡 ${t("坐 {x} 上山", { x: esc(s.name) })}</b></li>`;
+      if (s.k === "base") return `<li data-n="${n}"><b>${ic("lodge")}${t("从 {x} 出发", { x: esc(s.name) })}</b></li>`;
+      if (s.k === "lift") return `<li data-n="${n}"><b>${ic("lift")}${t("坐 {x} 上山", { x: esc(s.name) })}</b></li>`;
       if (s.k === "top") {
         const opts = s.options.slice(0, 7), more = s.options.length - opts.length;
         if (!opts.includes(s.chose)) opts.unshift(s.chose);
-        return `<li data-n="${n}"><b>🏔 ${t("到 {x} 山顶", { x: esc(s.at) })}</b><small>${t("这里可以：")}</small><div class="fork">${opts.map((o) => `<div class="${o === s.chose ? "took" : ""}">${esc(o)}</div>`).join("")}${more > 0 ? `<div>${t("…还有 {n} 条", { n: more })}</div>` : ""}</div></li>`;
+        return `<li data-n="${n}"><b>${ic("alpine")}${t("到 {x} 山顶", { x: esc(s.at) })}</b><small>${t("这里可以：")}</small><div class="fork">${opts.map((o) => `<div class="${o === s.chose ? "took" : ""}">${esc(o)}</div>`).join("")}${more > 0 ? `<div>${t("…还有 {n} 条", { n: more })}</div>` : ""}</div></li>`;
       }
       if (s.k === "route") {
         // the run's conditions: moguls (蘑菇道) on it, powder that day
-        const ic = (n) => `<img class="ic" src="${location.pathname.includes("/mountain/") ? "../" : ""}assets/icons/${n}.png?v=1" alt="">`;
         const runs = s.segs.map((g) => `<span>${MARK[g.l] || ""} ${esc(g.n)}${g.m ? ` ${ic("moguls")}<em>${t("蘑菇道")}</em>` : ""}</span>`).join(" › ");
         const pw = s.pw ? `<div class="heads">${ic("powder")} ${t("那天有粉雪：雪道边上、树林里和背风坡最深，重心稍微靠后")}</div>` : "";
         const flats = (s.flats || []).map((f) => `<div class="heads">${f.k === "flat" ? (EN_ON ? `Flat, ${f.m} m on ${esc(f.n)} (about ${f.at} m in): carry speed, board flat` : `${esc(f.n)} 有 ${f.m} 米平路（出发后约 ${f.at} 米）：带速度、板放平`) : (EN_ON ? `Uphill, ${f.m} m on ${esc(f.n)}: you'll walk` : `${esc(f.n)} 有 ${f.m} 米上坡：要走上去`)}</div>`).join("");
-        return `<li data-n="${n}"><b>${t(s.changed ? "↩ 改路线" : "⛷ 滑下去")}</b><div class="runs">${runs}</div>${pw}${flats}${s.next ? `<small>${t("到底坐 🚡 {x}", { x: esc(s.next) })} · ${t("快到底放慢，别滑过站")}</small>` : ""}</li>`;
+        return `<li data-n="${n}"><b>${ic(s.changed ? "refresh" : "snowboard")}${t(s.changed ? "改路线" : "滑下去")}</b><div class="runs">${runs}</div>${pw}${flats}${s.next ? `<small>${t("到底坐缆车 {x}", { x: esc(s.next) })} · ${t("快到底放慢，别滑过站")}</small>` : ""}</li>`;
       }
-      if (s.k === "jump") return `<li data-n="${n}"><b>⏭ ${t("跳到 {x}", { x: esc(s.to) })}</b><small>${t("中间这段算看过了")}</small></li>`;
-      if (s.k === "hike") return `<li data-n="${n}"><b>🥾 ${esc(s.name)}</b><small>${EN_ON ? `about ${s.mins[0]}–${s.mins[1]} min on foot${s.gain ? `, +${s.gain} m` : ""}` : `走路约 ${s.mins[0]}–${s.mins[1]} 分钟${s.gain ? `，爬升约 ${s.gain} 米` : ""}`}</small>${s.gear ? `<div class="gear">${s.gear.map((g) => `<span>${esc(g)}</span>`).join("")}</div>` : ""}</li>`;
-      if (s.k === "arrive") return `<li data-n="${n}"><b>📍 ${esc(s.title)}</b></li>`;
+      if (s.k === "jump") return `<li data-n="${n}"><b>${t("跳到 {x}", { x: esc(s.to) })}</b><small>${t("中间这段算看过了")}</small></li>`;
+      if (s.k === "hike") return `<li data-n="${n}"><b>${ic("hike")}${esc(s.name)}</b><small>${EN_ON ? `about ${s.mins[0]}–${s.mins[1]} min on foot${s.gain ? `, +${s.gain} m` : ""}` : `走路约 ${s.mins[0]}–${s.mins[1]} 分钟${s.gain ? `，爬升约 ${s.gain} 米` : ""}`}</small>${s.gear ? `<div class="gear">${s.gear.map((g) => `<span>${esc(g)}</span>`).join("")}</div>` : ""}</li>`;
+      if (s.k === "arrive") return `<li data-n="${n}"><b>${ic("challenge")}${esc(String(s.title).replace(/\s*\p{Extended_Pictographic}/gu, ""))}</b></li>`;
       n--; return "";
     }).join("");
     box.innerHTML = `<div class="bk">ROADBOOK</div><div class="bh">${t("预滑路书")}</div><div class="bs">${esc(host.name)} · ${EN_ON ? `pre-run ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()} · follow it on the day` : `${d.getMonth() + 1} 月 ${d.getDate()} 日预滑 · 明天照着走`}</div>
       ${days.length > 1 ? `<div class="days">${days.map((x, i) => { const t = new Date(x.t0); return `<button data-i="${i}" class="${i === pick ? "on" : ""}">${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}</button>`; }).reverse().join("")}</div>` : ""}
-      <div class="photo"><canvas></canvas><span class="cap">${t("金色是这一趟的路线")}</span>${host.locate ? `<button class="me">${t(me ? "📍 我在这" : "📍 显示我在哪")}</button>` : ""}</div>
+      <div class="photo"><canvas></canvas><span class="cap">${t("金色是这一趟的路线")}</span>${host.locate ? `<button class="me">${t(me ? "我在这" : "显示我在哪")}</button>` : ""}</div>
       <ol>${steps}</ol>`;
     for (const b of box.querySelectorAll(".days button")) b.onclick = () => { pick = +b.dataset.i; draw(); };
     const cv = box.querySelector("canvas");
     requestAnimationFrame(() => host.drawMap(cv, day, me));
-    box.querySelector(".me")?.addEventListener("click", () => host.locate((p) => { me = p; host.drawMap(cv, day, me); box.querySelector(".me").textContent = t(p ? "📍 我在这" : "📍 找不到位置"); }));
+    box.querySelector(".me")?.addEventListener("click", () => host.locate((p) => { me = p; host.drawMap(cv, day, me); box.querySelector(".me").textContent = t(p ? "我在这" : "找不到位置"); }));
   };
   draw();
 }

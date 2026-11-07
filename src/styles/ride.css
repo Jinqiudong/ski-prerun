@@ -39,7 +39,7 @@
     #bigMap .pickCard .two { display: flex; gap: 8px; } #bigMap .pickCard .two button { flex: 1; padding: 10px; }
     #bigMap .pickCard .go { background: #7a4b25; color: #fff8ea; border-color: #7a4b25; font-weight: 600; }
     #runTags .rtag.me { background: none; border: 0; box-shadow: none; padding: 0; }
-    #runTags .rtag.me img, #runTags .rtag.me span { height: 72px; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); animation: hop 0.9s ease-in-out infinite; font-size: 40px; line-height: 72px; text-align: center; }
+    #runTags .rtag.me > img { height: 72px; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); animation: hop 0.9s ease-in-out infinite; font-size: 40px; line-height: 72px; text-align: center; }
     @keyframes hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-9px); } }
     body.picking #credit { display: none; }
     #runTags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
@@ -129,7 +129,7 @@
     #trickWheel .opt { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; display: grid; place-items: center; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.15; color: #fff; background: rgba(14,22,34,.78); border: 2px solid rgba(255,255,255,.55); box-shadow: 0 4px 12px rgba(0,0,0,.35); transform: scale(.4); opacity: 0; transition: transform .16s, opacity .16s, background .1s; pointer-events: auto; }
     #trickWheel.open .opt { transform: scale(1); opacity: 1; }
     #trickWheel .opt.hot { background: #f2b632; color: #1d1606; border-color: #fff; transform: scale(1.15); }
-    #trickWheel .opt span { font-size: 20px; display: block; }
+    #trickWheel .opt img, #trickBtn img { width: 30px; height: 30px; display: block; margin: 0 auto 1px; border-radius: 50%; background: #fdfbf6; } /* a paper disc: the ink stays readable on the dark hot / on state */
     #flash { position: fixed; inset: 0; background: #f4f6f9; opacity: 0; pointer-events: none; }
     #flash.go { animation: flash .7s ease-out; }
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -137,6 +137,8 @@
   
     /* The snow's cues and conditions: the moguls and powder icons in the HUD's line and on the run cards. */
     .cueIco { width: 24px; height: 24px; vertical-align: -6px; margin-right: 4px; }
+    .rtag .cueIco, .rcard .cueIco, #pickTabs .cueIco, #arrive .cueIco, #desc .cueIco { width: 20px; height: 20px; vertical-align: -5px; margin-right: 3px; }
+    .rcard .r1 .cueIco { width: 26px; height: 26px; vertical-align: middle; }
     .rcard .chips { display: flex; flex-wrap: wrap; gap: 4px 8px; }
     .rcard .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: inherit; background: rgba(140,160,190,.16); border-radius: 999px; padding: 1px 10px 1px 3px; }
     .rcard .chip img { width: 22px; height: 22px; }

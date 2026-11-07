@@ -8,7 +8,7 @@
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
 import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=38";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
-import { daysOf } from "../ride/roadbook.js?v=19";
+import { daysOf } from "../ride/roadbook.js?v=20";
 import { myLook, sameLook } from "../core/look.js?v=10";
 
 const KEY = "prerunTrips";
@@ -96,9 +96,9 @@ async function forecast(r, from, to) {
 }
 const kindOf = (w) => (!w ? null : w.cm >= 0.5 || [71, 73, 75, 77, 85, 86].includes(w.code) ? "snow" : w.code <= 1 ? "sun" : "cloud");
 const WX = {
-  snow: { icon: "🌨", word: (w) => (w.cm >= 1 ? `${Math.round(w.cm)} cm` : t("小雪")), over: '<i class="snowfall"></i>', filter: "saturate(.8) brightness(.97)" },
-  sun: { icon: "☀", word: () => t("晴"), over: '<i class="sky"></i><i class="glint"></i>', filter: "saturate(1.7) contrast(1.06) brightness(1.06)" },
-  cloud: { icon: "☁", word: () => t("阴"), over: '<i class="fog"></i>', filter: "saturate(.45) brightness(1.05)" },
+  snow: { word: (w) => (w.cm >= 1 ? `${Math.round(w.cm)} cm` : t("小雪")), over: '<i class="snowfall"></i>', filter: "saturate(.8) brightness(.97)" },
+  sun: { word: () => t("晴"), over: '<i class="sky"></i><i class="glint"></i>', filter: "saturate(1.7) contrast(1.06) brightness(1.06)" },
+  cloud: { word: () => t("阴"), over: '<i class="fog"></i>', filter: "saturate(.45) brightness(1.05)" },
 };
 
 // The owner's painted icons (assets/icons/README.md): the day's weather, the stamps, the crew's faces.
@@ -341,11 +341,11 @@ export class Trips {
     const names = esc(g.names.map((x) => (x === this.me && EN_ON ? t("我") : x)).join(" · "));
     const unknown = g.from === "?", pass = tr.passes.map((p) => ({ ikon: "IKON", epic: "EPIC", day: "DAY" })[p] || "—").join("/");
     return `<div style="flex:1;min-width:0;display:flex;flex-direction:column">
-        <div class="band" style="background:${band}"><span>✈ PRE-RUN AIR</span><span>${unknown ? "" : `${g.from} → `}DEN · ${names}</span></div>
+        <div class="band" style="background:${band}"><span>✈\uFE0E PRE-RUN AIR</span><span>${unknown ? "" : `${g.from} → `}DEN · ${names}</span></div>
         <div style="flex:1;padding:5px 10px 6px;display:flex;flex-direction:column;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:6px">
             <div><div class="code">${unknown ? "???" : g.from}</div><div class="city">${unknown ? t("在「改一改」里填从哪飞") : esc(CITY[g.from] || "")}</div></div>
-            <div style="flex:1;display:flex;align-items:center;margin-bottom:12px;color:${band}"><i style="flex:1;border-top:1px dashed #b9b0a3"></i><span style="font-size:12px;margin:0 3px">✈</span><i style="flex:1;border-top:1px dashed #b9b0a3"></i></div>
+            <div style="flex:1;display:flex;align-items:center;margin-bottom:12px;color:${band}"><i style="flex:1;border-top:1px dashed #b9b0a3"></i><span style="font-size:12px;margin:0 3px">✈\uFE0E</span><i style="flex:1;border-top:1px dashed #b9b0a3"></i></div>
             <div style="text-align:right"><div class="code" style="color:${C.red}">DEN</div><div class="city">Denver</div></div></div>
           <div class="grid">${[["PASSENGER", names], ["FLIGHT", `PR ${1118 + k * 7}`], ["DATE", short(tr.from)], ["SEAT", seat], ["PASS", pass]].map(([a, v]) => `<div><div class="lab">${a}</div><b translate="no">${v}</b></div>`).join("")}</div>
           <div class="bars"></div></div></div>
@@ -728,7 +728,7 @@ export class Trips {
     this.box.innerHTML = `<button class="back">${t("‹ 我的行程")}</button><div class="inv">
       <div class="from">${maker ? this.face(tr, maker.id) : ""}<span>${maker ? `<span translate="no">${esc(maker.name)}</span> ` : ""}${t("邀请你一起去滑雪")}</span></div>
       <div class="h1" translate="no">${esc(tr.name)}</div><div class="lead">${fmt(tr.from)} – ${fmt(tr.to)}${maybe.length ? `<i>·</i>${esc(maybe.join(" · "))}` : ""}</div>
-      <div class="ipass"><div class="top">✈ PRE-RUN AIR · BOARDING</div><div class="row"><div>PASSENGER<b>${t("你")}</b></div><div>FROM<b class="jfrom">?</b></div><div>CREW<b>${t("{n} 人", { n: tr.people.length })}</b></div><div>PASS<b>${tr.passes.map((p) => ({ ikon: "IKON", epic: "EPIC", day: "DAY" })[p] || "—").join("/")}</b></div></div></div>
+      <div class="ipass"><div class="top">✈\uFE0E PRE-RUN AIR · BOARDING</div><div class="row"><div>PASSENGER<b>${t("你")}</b></div><div>FROM<b class="jfrom">?</b></div><div>CREW<b>${t("{n} 人", { n: tr.people.length })}</b></div><div>PASS<b>${tr.passes.map((p) => ({ ikon: "IKON", epic: "EPIC", day: "DAY" })[p] || "—").join("/")}</b></div></div></div>
       <form><label class="jfield"><span>${t("名字")}</span><input class="f-name" maxlength="20" value="${esc(myName())}" placeholder="${t("朋友看到的名字")}"></label>
       <label class="jfield"><span>${t("从哪里出发")}</span><input class="f-from" maxlength="3" style="text-transform:uppercase;font-family:Oswald,sans-serif;letter-spacing:.1em" placeholder="${t("比如 SFO")}"><small class="city"></small></label>
       <button class="big join">${t("加入行程")}</button></form>
@@ -753,7 +753,7 @@ export class Trips {
   ticketHTML(id) {
     const a = ABOUT[id] || { words: "" }, r = this.byId[id], runs = daysOf(id).length, rot = [-0.8, 0.9, -0.5][this.resorts.indexOf(r) % 3];
     return `<div class="lt" data-id="${id}" style="transform:rotate(${rot}deg)"><div class="tk">
-      <div class="art"><div class="pic"><div class="pan"><b style="left:0;width:100%;background-image:url(${paintUrl(id)});filter:grayscale(1) brightness(1.04) contrast(.92)"></b></div><div class="wish">Manifest for big snow ❄</div></div></div>
+      <div class="art"><div class="pic"><div class="pan"><b style="left:0;width:100%;background-image:url(${paintUrl(id)});filter:grayscale(1) brightness(1.04) contrast(.92)"></b></div><div class="wish">Manifest for big snow</div></div></div>
       <div class="txt"><div><div class="k">LIFT TICKET${r.stats ? ` · ${r.stats.top.toLocaleString("en-US")} m` : ""}</div><div class="n">${esc(this.name(id))}</div></div><div class="w">${esc(a.words)}</div></div>
       <div class="stub"><button class="pill">Pre-run</button></div></div>
       ${runs ? stamp(runs) : ghost()}</div>`;
@@ -792,13 +792,13 @@ export class Trips {
     const log = (() => { try { return JSON.parse(localStorage.getItem("prerunLog") || "{}")[id]?.stats; } catch { return null; } })();
     const el = document.createElement("div");
     el.className = "plsheet pl";
-    const lv = st ? [["🟢", "初级", st.runs.easy, "#39a34a"], ["🟦", "中级", st.runs.intermediate, "#2f6fd6"], ["◆", "高级", st.runs.advanced, "#2b2b2b"], ["◆◆", "专家", st.runs.expert, "#111"]] : [];
+    const lv = st ? [["●", "初级", st.runs.easy, "#39a34a"], ["■", "中级", st.runs.intermediate, "#2f6fd6"], ["◆", "高级", st.runs.advanced, "#2b2b2b"], ["◆◆", "专家", st.runs.expert, "#111"]] : [];
     const total = lv.reduce((s, x) => s + x[2], 0);
     const m = (v) => `${v.toLocaleString("en-US")} m`;
     el.innerHTML = `<div class="s"><button class="x" aria-label="close">×</button><div class="hero" style="background-image:url(${paintUrl(id)})"><div class="t"><div class="kicker">RESORT GUIDE</div><div class="h1" style="margin:0;font-size:28px">${esc(r.name)}</div></div></div>
       <div class="b"><div class="quote">“${esc(EN_ON ? a.en : a.zh)}”</div>
-        ${SEC("snowreport", t("这几天的雪"))}<div class="wxbox"><div class="wish">Manifest for big snow ❄<small>${t("还太远，天气预报出来（出发前 2 周内）就会写在这里")}</small></div></div>
-        ${st ? `${SEC("difficulty", t("适合谁"))}<div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span>${x[0]} ${t(x[1])} ${x[2]}</span>`).join("")}</div>
+        ${SEC("snowreport", t("这几天的雪"))}<div class="wxbox"><div class="wish">Manifest for big snow<small>${t("还太远，天气预报出来（出发前 2 周内）就会写在这里")}</small></div></div>
+        ${st ? `${SEC("difficulty", t("适合谁"))}<div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span><b style="color:${x[3]}">${x[0]}</b> ${t(x[1])} ${x[2]}</span>`).join("")}</div>
           <div class="note" style="font-size:15px;color:#4a453f">${EN_ON ? `${st.runs.easy + st.runs.intermediate} of ${total} named runs are green or blue.` : `${total} 条有名字的雪道里，绿道和蓝道有 ${st.runs.easy + st.runs.intermediate} 条。`}</div>
         ${SEC("alpine", t("数字"))}<div class="nums">${[["山顶", m(st.top), "alpine"], ["山脚", m(st.base), "lodge"], ["落差", m(st.top - st.base), "difficulty"], ["雪道", total, "trailmap"], ["缆车", st.lifts, "lift"], ["从 Denver", EN_ON ? `~${a.drive} h drive` : `开车约 ${a.drive} 小时`, "trees"]].map(([k, v, ic]) => `<div>${ICON(ic, "ni")}<small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
         ${st?.flats?.length ? `${SEC("groomed", t("单板注意"))}<div class="note" style="font-size:15px;color:#4a453f;margin-top:0">${EN_ON ? "Flats where a board slows (carry speed into them):" : "这些地方比较平，单板容易减速，要提前带速度："}</div>
@@ -845,14 +845,14 @@ export class Trips {
         <div class="sec">③ ${t("可能去哪些山")}</div>
         <div class="tiles">${this.resorts.map((r) => { const ok = open.includes(r.id); return `<button class="tile ${!ok ? "no" : d.maybe.includes(r.id) ? "on" : d.maybe.length ? "off" : ""}" data-id="${r.id}" style="background-image:url(${paintUrl(r.id)})" ${ok ? "" : "disabled"}><span>${esc(this.name(r.id))}</span></button>`; }).join("")}</div>
         ${d.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
-        <div class="chips" style="margin-top:10px"><button class="chip ${d.maybe.length ? "" : "on"}" data-any>${t("🌨 还没想好，都行")}</button></div>
+        <div class="chips" style="margin-top:10px"><button class="chip ${d.maybe.length ? "" : "on"}" data-any>${t("还没想好，都行")}</button></div>
         <div class="sec">④ ${t("你从哪飞（印在机票上）")}</div>
-        <div style="display:flex;gap:8px"><input class="field f-from" maxlength="3" style="flex:1;text-transform:uppercase;font-family:Oswald,sans-serif;letter-spacing:.1em" value="${esc(meP().from)}" placeholder="${t("比如 SFO")}"><button class="ghostbtn locate" style="flex:none">${t("📍 用我的位置")}</button></div>
+        <div style="display:flex;gap:8px"><input class="field f-from" maxlength="3" style="flex:1;text-transform:uppercase;font-family:Oswald,sans-serif;letter-spacing:.1em" value="${esc(meP().from)}" placeholder="${t("比如 SFO")}"><button class="ghostbtn locate" style="flex:none">${t("用我的位置")}</button></div>
         <div class="note fromnote">${meP().from && CITY[meP().from] ? CITY[meP().from] : ""}</div>
         <div class="sec">${t("叫什么（可以不填）")}</div><input class="field f-name" maxlength="30" value="${esc(d.name)}" placeholder="${EN_ON ? "e.g. First Tracks 2026" : "比如：2026 开板！"}">
         ${tr ? "" : `<div class="sec">${t("你的名字（朋友看到的）")}</div><input class="field f-me" maxlength="20" value="${esc(meName)}" placeholder="${t("比如 阿北")}">`}
         ${tr?.shared ? `<div class="note">${t("别人负责的部分，改了会变成提议，等负责人确认。")}</div>` : ""}
-        <div class="acts"><button class="ghostbtn main save">${t("保存，发给朋友 ✈")}</button></div>`;
+        <div class="acts"><button class="ghostbtn main save">${t("保存，发给朋友")}</button></div>`;
       const keepName = () => { d.name = this.box.querySelector(".f-name").value; meName = this.box.querySelector(".f-me")?.value ?? meName; const f = this.box.querySelector(".f-from").value.trim().toUpperCase(); meP().from = /^[A-Z]{3}$/.test(f) ? f : ""; };
       const locate = (ask) => {
         if (!navigator.geolocation) return;

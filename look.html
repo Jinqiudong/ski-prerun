@@ -13,7 +13,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles/ride.css?v=2">
+  <link rel="stylesheet" href="src/styles/ride.css?v=3">
   <!-- A plain cover from the first paint until the transition (src/core/transition.js) takes over. -->
   <style>html.trans-cover body::after { content: ""; position: fixed; inset: 0; z-index: 89; background: #dde3e9; }</style>
   <script>try { if (!navigator.webdriver && sessionStorage.getItem("prerunTicket")) { document.documentElement.classList.add("trans-cover"); setTimeout(() => document.documentElement.classList.remove("trans-cover"), 8000); } } catch { /* storage off */ }</script>
@@ -40,14 +40,14 @@
       <button id="rbPause" aria-label="暂停"><img src="assets/icons/challenge.png?v=1" alt=""><svg viewBox="0 0 24 24" width="16" height="16"><path class="ps" d="M7 5h3.5v14H7z M13.5 5H17v14h-3.5z" fill="#fdfbf6"/><path class="pl" d="M8 5 L19 12 L8 19Z" fill="#fdfbf6"/></svg></button></div>
   </div>
   <button id="bubbleHint" hidden aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span hidden></span></button>
-  <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ⏭</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
+  <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ›</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
-  <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回沙盘</a><a class="again" href="look.html">再坐一次</a></div></div>
+  <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回雪场</a><a class="again" href="look.html">再坐一次</a></div></div>
   <div id="skiHud" class="glass" hidden><div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
   <div id="turnCue" hidden></div>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
-    <div class="row" id="arriveRow"><a class="btn" href="mountain/">回沙盘选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
-  <button id="trickBtn" hidden>🤸<br>动作</button>
+    <div class="row" id="arriveRow"><a class="btn" href="mountain/">回雪场选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
+  <button id="trickBtn" hidden><img src="assets/icons/trick.png?v=1" alt="">动作</button>
   <div id="trickWheel" hidden></div>
   <div id="liftOffer" class="glass" hidden></div>
   <div id="rePlan" class="glass sheet" hidden></div>
@@ -57,6 +57,6 @@
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { liftRide } from "./src/core/transition.js?v=9"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=28"></script>
+  <script type="module" src="src/ride/ride.js?v=29"></script>
 </body>
 </html>

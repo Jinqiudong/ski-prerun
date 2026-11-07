@@ -5,22 +5,22 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=19";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=20";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=8";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=8";
+import { TrailMap } from "./mapview.js?v=9";
 import { PaintedMap } from "./paintedmap.js?v=8";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
 import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=38";
-import { navRow } from "../core/nav.js?v=16";
+import { navRow } from "../core/nav.js?v=17";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=12";
 import { dropIn } from "../core/transition.js?v=9";
-import { Facilities } from "./kitworld.js?v=3";
+import { Facilities } from "./kitworld.js?v=4";
 import { rideTogether } from "./together.js?v=12";
 import { startParty } from "../core/party.js?v=8";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
@@ -321,7 +321,7 @@ async function weather(params, flakes, at, applySky, onPowder) {
   onPowder?.(powder);
   if (now && sun) setSnowyAir();
   const cell = (icon, big, small) => `<div class="cell"><img src="assets/icons/${icon}.png?v=1" alt=""><b>${big}</b>${small}</div>`;
-  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "❄", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
+  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
 }
 
 function plant(spots, geo, mat, scaleOf) {
@@ -694,6 +694,8 @@ function build(ctx) {
 const ease = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
 const LEVEL_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
 const LEVEL_MARK = { easy: '<i class="lv easy"></i>', intermediate: '<i class="lv intermediate"></i>', advanced: '<i class="lv advanced"></i>', expert: '<i class="lv expert"></i>' };
+// A painted icon inline with text (assets/icons; no emoji anywhere).
+const ICO = (n) => (n ? `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">` : "");
 const LEVEL_ZH = { easy: "绿道", intermediate: "蓝道", advanced: "黑道", expert: "双黑" };
 const ROUTE_GOLD = 0xf2b632;
 const fmtLen = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} 公里` : `${Math.round(m)} 米`);
@@ -766,7 +768,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const dests = [];
   for (const b of bases) {
     const to = nodesNear(graph, b.x, b.z, 220), r = plan(to);
-    const p = r && makePlan(r.rt.legs, { to, kind: "base", key: `base:${b.name}`, title: `回 ${b.name}`, short: b.name, icon: "🏠", seconds: r.rt.seconds, harder: r.harder, end: [b.x, b.z], base: b });
+    const p = r && makePlan(r.rt.legs, { to, kind: "base", key: `base:${b.name}`, title: `回 ${b.name}`, short: b.name, icon: "lodge", seconds: r.rt.seconds, harder: r.harder, end: [b.x, b.z], base: b });
     if (p) dests.push(p);
   }
   const liftDests = [];
@@ -774,7 +776,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (!bigLift(l)) continue;
     const r = plan([graph.liftNodes.get(l).bottom]);
     if (!r || r.rt.legs.some((g) => g.type === "lift") || r.rt.seconds > 20 * 60) continue;
-    const p = makePlan(r.rt.legs, { to: [graph.liftNodes.get(l).bottom], kind: "lift", key: `lift:${l.name}`, title: l === lift ? `再坐一趟 ${l.name}` : `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: r.rt.seconds, harder: r.harder, end: l.pts[0], lift: l });
+    const p = makePlan(r.rt.legs, { to: [graph.liftNodes.get(l).bottom], kind: "lift", key: `lift:${l.name}`, title: l === lift ? `再坐一趟 ${l.name}` : `接 ${l.name} 缆车`, short: l.name, icon: "lift", seconds: r.rt.seconds, harder: r.harder, end: l.pts[0], lift: l });
     if (p) liftDests.push(p);
   }
   // A lift that leaves from a base is the same place as that base: one option, "there you can ride X".
@@ -863,7 +865,6 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The guide (guide.js): a little animal riding the way ahead of you; now and then it leads you off through the trees.
   const buddy = new Guide({ scene, camera, T, trees: { grid: treeGrid, cell: TG }, resort: RESORT, rider: ctx.rider, force: params.get("detour"),
     ground: (x, z) => T.heightAt(x, z) + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE });
-  const ICO = (n) => `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">`;
   // ---- Skiing the chosen plan: real slope physics, guided along the route. You choose where on the piste
   // to ride (slide a finger left or right) and how fast (drag up to slow, down to let it run); the way
   // itself is always the route's, so you can't get lost. Leave it alone and the rider links easy turns.
@@ -934,7 +935,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
     ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz]) => Math.hypot(rx - x, rz - z) < 700)));
     $("pick").hidden = true;
-    $("liftName").textContent = `🥾 ${hike.zh}`;
+    $("liftIco").src = "assets/icons/hike.png?v=1"; $("liftName").textContent = hike.zh;
     st.phase = "hike";
     flash();
   }
@@ -1007,13 +1008,13 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     st.phase = "ski";
     $("skiHud").hidden = false;
     pmap.show(true);
-    $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : `${P.icon} ${P.title}`;
+    $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : P.title;
     tilt.zero = null; // the way you hold the phone now is "straight on"
     $("desc").textContent = tilt.ok ? "沿路线带你滑 · 手机左右倾转弯 · 往前倾加速、往回倒减速" : "沿路线自动带你滑 · 左右滑动换位置 · 往上拖减速、往下拖加速";
     if (ctx.night > 0.5) { // at night: say where the lights are
       const lit = [...new Set(R.runs.filter((x) => x.lit && x.name).map((x) => x.name))];
       const onRoute = P.segs.some((g) => g.run.lit);
-      $("desc").textContent = "🌙 " + (lit.length ? (onRoute ? "夜场：这条路线上有亮灯的雪道" : `夜场只开 ${lit.slice(0, 4).join("、")}，这条路线没有灯`) : "现在是夜里，这个雪场没有夜场灯光");
+      $("desc").innerHTML = ICO("nightski") + (lit.length ? (onRoute ? "夜场：这条路线上有亮灯的雪道" : `夜场只开 ${lit.slice(0, 4).join("、")}，这条路线没有灯`) : "现在是夜里，这个雪场没有夜场灯光");
     }
   }
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
@@ -1244,7 +1245,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
-  const ICON = { ollie: "⬆️", spin: "🌀", indy: "🤙", melon: "🍈", tailGrab: "✋", nose: "👇", tailPress: "👆" };
+  // Each trick's painted icon (assets/icons/trick_*.png; tools/draw_icons.mjs); the animals' own tricks get the wheel's.
+  const ICON = { ollie: "trick_ollie", spin: "trick_spin", indy: "trick_indy", melon: "trick_melon", tailGrab: "trick_tailgrab", nose: "trick_nose", tailPress: "trick_tailpress" };
+  const trickIco = (key) => `assets/icons/${ICON[key] || "trick"}.png?v=1`;
   const wheel = $("trickWheel"), tbtn = $("trickBtn");
   let wheelOpen = null;
   function showTrickBtn() { tbtn.hidden = !(st.phase === "ski" && tricksOf(ctx.rider).length); }
@@ -1258,7 +1261,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const a = Math.PI * (0.45 + (i / Math.max(1, list.length - 1)) * 0.65), el = document.createElement("div");
       el.className = "opt"; el.dataset.key = t.key;
       el.style.left = `${cx + Math.cos(a) * R}px`; el.style.top = `${cy - Math.sin(a) * R}px`;
-      el.innerHTML = `<div><span>${ICON[t.key] || "★"}</span>${t.name}</div>`;
+      el.innerHTML = `<div><img src="${trickIco(t.key)}" alt="">${t.name}</div>`;
       el.onclick = () => { doTrick(t.key); closeWheel(); };
       wheel.append(el);
     });
@@ -1271,7 +1274,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function doTrick(key) {
     if (!startTrick(ctx.rider, key)) return;
     const t = tricksOf(ctx.rider).find((x) => x.key === key);
-    flashCue(`${ICON[key] || "★"} ${t.name}!`); navigator.vibrate?.(25);
+    flashCue(`<img class="cueIco" src="${trickIco(key)}" alt="">${t.name}!`); navigator.vibrate?.(25);
   }
   tbtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (wheelOpen) { closeWheel(); return; } openWheel(e); tbtn.setPointerCapture?.(e.pointerId); });
   tbtn.addEventListener("pointermove", (e) => {
@@ -1449,7 +1452,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const way = J.options.find((o) => o.route);
       cue = `<b>前方 ${Math.round(toJ)} 米岔口 · ${way ? `${arrowText(way.bearing)} ${turnWord(way.bearing)}进 ${nameR(way.run)}` : ""}</b><br><small>${J.options.filter((o) => o !== way).map((o) => `${arrowText(o.bearing)} ${nameR(o.run)}`).join("　")}</small>`;
     } else if (left < 220) cue = `<b>快到了</b> · ${P.next ? `${P.next.name} 底站` : P.short || "雪道尽头"}还有 ${Math.round(left)} 米`;
-    else cue = `沿 ${name(seg)} 滑${nextSeg ? ` · 接着进 ${name(nextSeg)}` : P.next ? ` · 到底坐 🚡${P.next.name}` : P.kind === "base" ? ` · 到底就是 🏠${P.short}` : ""}`;
+    else cue = `沿 ${name(seg)} 滑${nextSeg ? ` · 接着进 ${name(nextSeg)}` : P.next ? ` · 到底坐 ${ICO("lift")}${P.next.name}` : P.kind === "base" ? ` · 到底就是 ${ICO("lodge")}${P.short}` : ""}`;
     $("skiCue").innerHTML = cue;
     // The next turn-off, big at the top of the screen, with a buzz as it comes up and again close to it.
     const way = J && toJ < 160 ? J.options.find((o) => o.route) : null;
@@ -1481,7 +1484,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const l = R.lifts.find((l) => rideable(l) && !offered.has(l) && l !== P.lift && l !== P.next && ahead(l));
     if (!l) return;
     offered.add(l); offer = l;
-    box.innerHTML = `<b>🚡 前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`;
+    box.innerHTML = `<b>${ICO("lift")}前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`;
     box.querySelector(".go").onclick = () => { location.href = withResort(`look.html?lift=${encodeURIComponent(l.name)}`); };
     box.querySelector(".no").onclick = () => { box.hidden = true; };
     box.hidden = false;
@@ -1498,7 +1501,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     chosen = Q; prog = 0; ended = false; alerted = null;
     bookRoute(Q, true);
     dress(Q);
-    $("liftName").innerHTML = `${Q.icon || ""} ${Q.title}`;
+    $("liftName").textContent = Q.title;
     $("rePlan").hidden = true;
     flashCue(note);
   }
@@ -1518,7 +1521,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     }
     near.sort((a, b) => a.rt.seconds - b.rt.seconds);
     for (const { l, rt, to } of near.slice(0, 3)) {
-      const Q = makePlan(rt.legs, { to, kind: "lift", key: `lift:${l.name}`, title: `接 ${l.name} 缆车`, short: l.name, icon: "🚡", seconds: rt.seconds, end: l.pts[0], lift: l });
+      const Q = makePlan(rt.legs, { to, kind: "lift", key: `lift:${l.name}`, title: `接 ${l.name} 缆车`, short: l.name, icon: "lift", seconds: rt.seconds, end: l.pts[0], lift: l });
       if (Q) opts.push({ label: `去坐 ${l.name}`, sub: `滑过去约 ${fmtMin(rt.seconds)}`, act: () => rideInstead(Q, `改去坐 ${l.name}`) });
     }
     if (origPlan) opts.push({ label: "回到起点，重滑这条路线", sub: origPlan.title, act: () => { $("rePlan").hidden = true; chosen = origPlan; startSki(); } });
@@ -1539,11 +1542,11 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
 
   // The route written out, to read before a real day: each run, each junction (which way, which not),
   // where it's easy to go wrong, and other ways to the same place. Copy or share it.
-  const LV_TXT = { easy: "🟢", intermediate: "🟦", advanced: "◆", expert: "◆◆" };
+  const LV_TXT = { easy: "●", intermediate: "■", advanced: "◆", expert: "◆◆" };
   function routeGuide(P) {
     const runName = (run) => `${LV_TXT[run.level]}${run.name || "无名雪道"}`;
     const lines = [], html = [];
-    const head = `${P.icon || ""} ${P.title}：先滑 ${fmtLen(P.length)}，约 ${fmtMin(P.seconds || P.length / 7)}，最难 ${LV_TXT[P.hardest]}${LEVEL_ZH[P.hardest]}${P.next ? `，中途坐 🚡${P.next.name}` : ""}`;
+    const head = `${P.title}：先滑 ${fmtLen(P.length)}，约 ${fmtMin(P.seconds || P.length / 7)}，最难 ${LV_TXT[P.hardest]}${LEVEL_ZH[P.hardest]}${P.next ? `，中途坐缆车 ${P.next.name}` : ""}`;
     lines.push(`从 ${lift.name} 山顶出发`, head, "", "怎么滑：");
     html.push(`<p>从 ${lift.name} 山顶出发</p><p><b>${head}</b></p><h3>怎么滑</h3><ol>`);
     P.segs.forEach((g, k) => {
@@ -1551,7 +1554,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const t = `${runName(g.run)}，约 ${fmtLen(b - a)}`;
       lines.push(`${k + 1}. ${t}`); html.push(`<li>${t}</li>`);
     });
-    if (P.next) { lines.push(`${P.segs.length + 1}. 到底坐 🚡${P.next.name}`); html.push(`<li>到底坐 🚡${P.next.name}</li>`); }
+    if (P.next) { lines.push(`${P.segs.length + 1}. 到底坐缆车 ${P.next.name}`); html.push(`<li>到底坐 ${ICO("lift")}${P.next.name}</li>`); }
     html.push("</ol>");
     const js = junctions(P.path, P.segs, R);
     if (js.length) { lines.push("", "岔口："); html.push("<h3>岔口（按顺序）</h3><ol>"); }
@@ -1565,7 +1568,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const along = P.dist[j.i] - (on ? P.dist[on.at] : 0), atEnd = on && on.at < j.i && P.segs.some((g) => g.at === j.i || Math.abs(P.dist[g.at] - P.dist[j.i]) < 25);
       const t = `${on ? (atEnd ? `${runName(on.run)} 滑到头（约 ${fmtLen(along)}）` : `在 ${runName(on.run)} 上约 ${fmtLen(along)} 处`) : "开头"}：${arrowText(way.bearing)} ${Math.abs(way.bearing) > 0.18 ? turnWord(way.bearing) + "进" : "直行"} ${runName(way.run)}`
         + (others.length ? `；别走 ${others.map((o) => `${arrowText(o.bearing)} ${runName(o.run)}`).join("、")}` : "");
-      const warn = tricky ? "⚠️ 容易走错：岔路方向很接近，或者是更难的雪道，看清路牌再走" : "";
+      const warn = tricky ? "容易走错：岔路方向很接近，或者是更难的雪道，看清路牌再走" : "";
       lines.push(`- ${t}${warn ? `\n  ${warn}` : ""}`);
       html.push(`<li>${t}${warn ? `<br><span class="warn">${warn}</span>` : ""}</li>`);
     });
@@ -1579,7 +1582,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       }
       html.push("</ol>");
     }
-    if (P.next) { const t = `到底要坐 🚡${P.next.name}：快到底时放慢，看路牌，别滑过站`; lines.push("", t); html.push(`<p class="warn">${t}</p>`); }
+    if (P.next) { const t = `${P.next.name}：快到底时放慢，看路牌，别滑过站`; lines.push("", `到底要坐缆车 ${t}`); html.push(`<p class="warn">到底要坐 ${ICO("lift")}${t}</p>`); }
     // Other ways to the same place, at other levels.
     const alt = [];
     if (P.to?.length) for (const lv of LEVELS) {
@@ -1636,7 +1639,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       row = link(P.next.name, P.key, `坐 ${P.next.name} 继续去 ${P.short} ›`);
     } else if (P.kind === "base") {
       const ls = R.lifts.filter((l) => bigLift(l) && Math.hypot(l.pts[0][0] - P.base.x, l.pts[0][1] - P.base.z) < 350);
-      title = `到 ${P.short} 了 🎉`;
+      title = `到 ${P.short} 了`;
       note = ls.length ? `从这里还能坐：${ls.map((l) => l.name).join("、")}` : "今天的路线滑完了";
       row = ls.slice(0, 3).map((l) => link(l.name, null, `坐 ${l.name} 上山 ›`)).join("");
     } else if (P.kind === "friend") {
@@ -1657,7 +1660,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("arriveNote").textContent = note;
     buddy.arrive($("arriveNote"));
     skiLog.save(true);
-    $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">📜 预滑路书</button><button class="btn" id="seeLog">📖 我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">回沙盘</a><button class="btn" id="againDown">再来一次</button>`;
+    $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">${ICO("packing")}预滑路书</button><button class="btn" id="seeLog">${ICO("memory")}我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">${ICO("resorts")}回雪场</a><button class="btn" id="againDown">再来一次</button>`;
     $("againDown").onclick = rideAgain;
     $("seeLog").onclick = openJournal;
     $("seeBook").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
@@ -1912,7 +1915,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     here.position.set(g1.x, aerial.Y(g1.x, g1.z) + 4, g1.z);
     here.renderOrder = 3;
     aerial.root.add(here);
-    $("pickTabs").innerHTML = `<button data-m="dest">去哪儿 · ${dests.length}</button><button data-m="runs">选一条雪道 · ${runs.length}</button>${hike ? `<button data-m="hike">🥾 徒步</button>` : ""}`;
+    $("pickTabs").innerHTML = `<button data-m="dest">去哪儿 · ${dests.length}</button><button data-m="runs">选一条雪道 · ${runs.length}</button>${hike ? `<button data-m="hike">${ICO("hike")}徒步</button>` : ""}`;
     for (const b of $("pickTabs").children) b.onclick = () => setMode(b.dataset.m);
     setMode(mode, [...dests, ...runs].find((P) => P.key === wantKey));
   }
@@ -1975,10 +1978,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (const b of $("pickTabs").children) b.classList.toggle("on", b.dataset.m === m);
     if (m === "hike") {
       $("desc").textContent = `从 ${lift.name} 山顶走上去，再滑下来`;
-      cards.innerHTML = `<div class="rcard on"><div class="r1"><span>🥾</span><b>${hike.zh}</b><span class="t">约 ${hike.mins[0]}–${hike.mins[1]} 分钟</span></div>
+      cards.innerHTML = `<div class="rcard on"><div class="r1">${ICO("hike")}<b>${hike.zh}</b><span class="t">约 ${hike.mins[0]}–${hike.mins[1]} 分钟</span></div>
         <div class="steps">${hike.zhWhy}</div>
         <small>爬升约 ${hike.gain} 米 · 山顶 ${hike.summit[0].toLocaleString("en-US")} 米 · 下来可以滑 ${hike.down.slice(0, 4).join("、")} 等</small>
-        ${hike.snowcat ? `<small class="to">🚜 ${hike.snowcat}</small>` : ""}
+        ${hike.snowcat ? `<small class="to">${ICO("groomed")}${hike.snowcat}</small>` : ""}
         <small>要带：${HIKE_GEAR.join("、")}</small>
         <small class="warn">${hike.tips[0]} · 以雪场当天公告为准</small>
         <button class="go">背上板走上去 ›</button></div>`;
@@ -1991,7 +1994,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (const P of list()) {
       const card = document.createElement("div");
       card.className = "rcard";
-      const steps = P.steps.map((s) => (s.type === "lift" ? `<span class="lift">🚡 ${s.name}</span>` : `${LEVEL_MARK[s.level]}${s.name}`)).join(" › ");
+      const steps = P.steps.map((s) => (s.type === "lift" ? `<span class="lift">${ICO("lift")}${s.name}</span>` : `${LEVEL_MARK[s.level]}${s.name}`)).join(" › ");
       // The snow on the way: moguls on a run (the icon and 蘑菇道), and powder today off the groomed middles.
       const bumps = P.segs.filter((g) => g.run.moguls).map((g) => g.run.name).filter((n, i, a) => n && a.indexOf(n) === i);
       const snowChips = (bumps.length ? `<span class="chip"><img src="assets/icons/moguls.png?v=1" alt="">${P.kind === "run" && bumps.length === 1 && bumps[0] === P.title ? t("蘑菇道") : t("蘑菇道：{runs}", { runs: bumps.slice(0, 2).join("、") })}</span>` : "")
@@ -2000,15 +2003,15 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
         ? `<div class="r1">${LEVEL_MARK[P.first.level]}<b>${P.title}</b></div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
           <small>${fmtLen(P.first.length)} · 落差 ${P.first.drop} 米 · 最陡约 ${P.steep}°</small>
           <canvas width="300" height="40"></canvas>
-          <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `🚡 ${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `🏠 ${P.leads.base}` : "雪道尽头"}</small>
-          <button class="doc">📜 路书 · 怎么滑、哪里容易错</button>
+          <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `${ICO("lift")}${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `${ICO("lodge")}${P.leads.base}` : "雪道尽头"}</small>
+          <button class="doc">${ICO("packing")}路书 · 怎么滑、哪里容易错</button>
           <button class="go">从这条滑下去 ›</button>`
-        : `<div class="r1"><span>${P.icon}</span><b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
+        : `<div class="r1">${ICO(P.icon)}<b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
           <div class="steps">${steps}</div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
-          <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 🚡${P.next.name}` : ""}</small>
-          ${P.lifts ? `<small class="to">到了能坐 🚡 ${P.lifts.join("、")}</small>` : ""}
+          <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 ${ICO("lift")}${P.next.name}` : ""}</small>
+          ${P.lifts ? `<small class="to">到了能坐 ${ICO("lift")}${P.lifts.join("、")}</small>` : ""}
           <canvas width="300" height="34"></canvas>
-          <button class="doc">📜 路书 · 怎么滑、哪里容易错</button>
+          <button class="doc">${ICO("packing")}路书 · 怎么滑、哪里容易错</button>
           <button class="go">按这条路线滑 ›</button>`;
       drawProfile(card.querySelector("canvas"), P);
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
@@ -2065,10 +2068,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     });
     // You are here: your own rider, a little full-body figure, hopping.
     const ava = sprite || (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
-    addTag(ava ? `<img src="${ava}" alt="你在这里">` : "<span>🏂</span>", "me", g1.x, g1.z, 34);
-    for (const l of P.legs) if (l.type === "lift" && P.kind !== "run") addTag(`🚡 坐 ${l.lift.name}`, "via", l.lift.pts[0][0], l.lift.pts[0][1], 10);
-    if (mode === "dest") for (const o of [P, ...dests.filter((d) => d !== P)]) addTag(o === P ? `🏁 ${o.short} <small>${fmtMin(o.seconds)}</small>` : `${o.icon} ${o.short}`, o === P ? "dest" : "pin", o.end[0], o.end[1], 10, () => select(o, true));
-    else addTag(P.leads.lifts.length ? `→ 🚡 ${P.leads.lifts.slice(0, 2).join("、")}` : P.leads.base ? `→ 🏠 ${P.leads.base}` : "雪道尽头", "dest", P.end[0], P.end[1], 10);
+    addTag(ava ? `<img src="${ava}" alt="你在这里">` : `<img src="assets/icons/rider.png?v=1" alt="你在这里">`, "me", g1.x, g1.z, 34);
+    for (const l of P.legs) if (l.type === "lift" && P.kind !== "run") addTag(`${ICO("lift")}坐 ${l.lift.name}`, "via", l.lift.pts[0][0], l.lift.pts[0][1], 10);
+    if (mode === "dest") for (const o of [P, ...dests.filter((d) => d !== P)]) addTag(o === P ? `${ICO("challenge")}${o.short} <small>${fmtMin(o.seconds)}</small>` : `${ICO(o.icon)}${o.short}`, o === P ? "dest" : "pin", o.end[0], o.end[1], 10, () => select(o, true));
+    else addTag(P.leads.lifts.length ? `→ ${ICO("lift")}${P.leads.lifts.slice(0, 2).join("、")}` : P.leads.base ? `→ ${ICO("lodge")}${P.leads.base}` : "雪道尽头", "dest", P.end[0], P.end[1], 10);
     navigator.vibrate?.(8);
     if (scroll) P.card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }
@@ -2273,7 +2276,7 @@ $("fanDim").onclick = fold;
 const SESSION = "prerunSession";
 const saveSession = (s) => { try { localStorage.setItem(SESSION, JSON.stringify({ ...s, t: Date.now() })); } catch {} };
 function endToday() { try { localStorage.removeItem(SESSION); } catch {} location.href = "start.html?tab=log"; }
-// The mountain, bottom left: the app's pages pop up over it; the mountain itself is this resort's sandbox.
+// The mountain, bottom left: the app's pages pop up over it; the mountain itself is this resort's page.
 $("tabFab").onclick = () => {
   if (!$("fanUp").hidden) { location.href = withResort("mountain/"); return; }
   fan("fanUp", $("tabFab"), [["memory", "记录", () => (location.href = "start.html?tab=log")], ["trips", "行程", () => (location.href = "start.html?tab=trip")], ["rider", "人物", () => (location.href = "start.html?tab=rider")]]);
