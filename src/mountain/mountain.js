@@ -9,7 +9,7 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
 import { addStep } from "../ride/roadbook.js?v=22";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=41";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=42";
 import { openNav } from "../core/nav.js?v=19";
 import { liftTicket } from "../core/transition.js?v=12";
 import { startParty } from "../core/party.js?v=11";
@@ -198,21 +198,32 @@ async function main() {
     item.base = base;
     return item;
   });
-  // The bunny hill (宝宝坡, practice-core.js): a pin on the mountain where it really is, and a card in its base's
-  // lifts; both go to the practice (look.html?practice=1).
+  // The bunny hill (宝宝坡, practice-core.js). No pin of its own: the map has only the bases. Its lift is a card in
+  // a base's lift list under its real name, and riding it is going to practise there (look.html?practice=1).
+  // A bunny lift whose bottom is past BASE_RADIUS of every base (Copper's Pitchfork, Snowmass's Assay Hill, a
+  // carpet or tow further out) joins the nearest base's list. A hill with no lift at all (Aspen Mountain) gets a
+  // card of its own there under its place's name.
   const bunny = bunnySpot(R, (x, z) => T.heightAt(x, z));
+  const bunnyLift = bunny.kind === "lift" ? R.lifts.find((l) => l.name === bunny.lift) || null : null;
+  const villages0 = R.places.filter((p) => p.kind === "village");
+  const nearestBase = (x, z) => villages0.reduce((best, b) => (!best || Math.hypot(b.x - x, b.z - z) < Math.hypot(best.x - x, best.z - z) ? b : best), null);
+  const bunnyBase = bunnyLift ? nearestBase(...bunnyLift.pts[0]) : nearestBase(bunny.x, bunny.z);
   const goPractice = () => {
+    if (mini?.base) addStep(RESORT_ID, { k: "base", name: mini.base.name });
     const go = () => (location.href = `../look.html?practice=1&resort=${RESORT_ID}`);
     if (typeof DeviceOrientationEvent?.requestPermission === "function") DeviceOrientationEvent.requestPermission().catch(() => "denied").finally(go); // iOS: tilt to ride
     else go();
   };
-  pin(`<b><img class="pi" src="../assets/icons/practice.png?v=1" alt="">${tr("去宝宝坡练习")}</b><i></i>`, "pin bunny", new THREE.Vector3(bunny.x, T.heightAt(bunny.x, bunny.z) * EXAG + 60, bunny.z), goPractice);
-  const bunnyCard = (base) => {
-    if (Math.hypot(bunny.x - base.x, bunny.z - base.z) > 1500) return;
+  // Unnamed lifts in OSM come through as "Lift": say what kind it is instead.
+  const KIND_ZH = { magic_carpet: "魔毯", rope_tow: "拖牵", "t-bar": "拖牵", platter: "拖牵", drag_lift: "拖牵", chair_lift: "缆车" };
+  const liftName = (l) => (!l.name || l.name === "Lift" ? tr(KIND_ZH[l.kind] || "缆车") : l.name);
+  const slopeCard = (base) => {
+    if (bunnyLift || base !== bunnyBase) return;
+    const name = bunny.kind === "run" ? tr("{name} 宝宝坡", { name: bunny.name || tr("绿道") }) : tr("{name} 旁的缓坡", { name: bunny.name });
     const card = document.createElement("div");
-    card.className = "liftCard bunny";
-    card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/practice.png?v=1" alt="">${tr("宝宝坡")}</b><span class="lvls">${bunny.name && bunny.name !== "Lift" ? bunny.name : ""}</span></div>
-      <div class="chips"><span><img src="../assets/icons/ski.png?v=1" alt="">${tr("{len} 米 · 平均 {deg}°", { len: Math.round(bunny.L), deg: bunny.mean })}</span><span><img src="../assets/icons/challenge.png?v=1" alt="">${tr("加速 · 立刃 · 换刃 · 刹车")}</span></div>
+    card.className = "liftCard";
+    card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/practice.png?v=1" alt="">${name}</b></div>
+      <div class="chips"><span><img src="../assets/icons/ski.png?v=1" alt="">${tr("{len} 米 · 平均 {deg}°", { len: Math.round(bunny.L), deg: bunny.mean })}</span></div>
       <div class="acts"><button class="go">${tr("去宝宝坡练习 ›")}</button></div>`;
     card.querySelector(".go").addEventListener("click", goPractice);
     cards.append(card);
@@ -254,12 +265,14 @@ async function main() {
   };
   const SYMBOL = { easy: '<span class="lv easy"></span>', intermediate: '<span class="lv intermediate"></span>', advanced: '<span class="lv advanced"></span>', expert: '<span class="lv expert"></span>' };
   const LEVEL_ZH = { easy: "绿", intermediate: "蓝", advanced: "黑", expert: "双黑" };
+  // A lift's length: the bake has no `length`, so along its line.
+  const liftLen = (l) => l.length || l.pts.reduce((a, p, i) => (i ? a + Math.hypot(p[0] - l.pts[i - 1][0], p[1] - l.pts[i - 1][1]) : 0), 0);
   // Lift facts used by the tags, the cards and the detail sheet.
   function liftInfo(l) {
     const top = l.pts[l.pts.length - 1], runs = runsFromTop(l);
     const count = {};
     runs.forEach((r) => (count[r.level] = (count[r.level] || 0) + 1));
-    const len = l.length || 0, mins = Math.max(1, Math.round(len / 4.5 / 60));
+    const len = liftLen(l), mins = Math.max(1, Math.round(len / 4.5 / 60));
     const next = [];
     for (const o of R.lifts) {
       if (o === l || o.rise < 40) continue;
@@ -281,9 +294,12 @@ async function main() {
   const tagBox = $("liftTags"), cards = $("liftCards");
   // In a party with someone else in it, "坐这条上山" becomes "约大家一起坐".
   const together = () => party.in && party.members().length > 0;
-  setInterval(() => { const k = together() ? "约大家一起坐 ›" : "坐这条上山 ›"; for (const b of cards.querySelectorAll(".liftCard:not(.bunny) .go")) if (b.dataset.k !== k) { b.dataset.k = k; b.textContent = tr(k); } }, 1000);
+  // The bunny lift's card goes to the practice: "坐这条上宝宝坡", alone.
+  const goLabel = (l) => (l === bunnyLift ? "坐这条上宝宝坡 ›" : together() ? "约大家一起坐 ›" : "坐这条上山 ›");
+  setInterval(() => { if (mini) for (const [l, info] of mini.info) { const b = info.card.querySelector(".go"), k = goLabel(l); if (b.dataset.k !== k) { b.dataset.k = k; b.textContent = tr(k); } } }, 1000);
   function openBase(base) {
     const ls = liftsAt(base).filter((l) => RIDEABLE.includes(l.kind)); // carpets and drag lifts aren't ridden in the game
+    if (bunnyLift && base === bunnyBase && !ls.includes(bunnyLift)) ls.push(bunnyLift); // the bunny lift: practised on, not ridden
     // Seen from the base looking up its main lift: the camera flies down from the whole mountain to there,
     // then the turn starts and ends there.
     const main = [...ls].sort((a, b) => b.rise - a.rise)[0];
@@ -311,22 +327,23 @@ async function main() {
       const info = mini.info.get(l);
       const tag = document.createElement("button");
       tag.className = "ltag" + (info.beginner ? " small" : "");
-      tag.innerHTML = `<b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · ${info.alt} 米`}</small><i></i>`;
+      tag.innerHTML = `<b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${liftName(l)}</b><small>${info.beginner ? "初学者" : `${info.mins} 分钟 · ${info.alt} 米`}</small><i></i>`;
       tag.addEventListener("click", () => pickLift(l, { scroll: true }));
       tagBox.append(tag);
       info.tag = tag;
       const card = document.createElement("div");
       card.className = "liftCard";
-      card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</b><span class="lvls">${info.can}</span></div>
-        ${chips(info, info.next.length ? `<span><img src="${IC("lift")}" alt="">能接 ${info.next.length} 条缆车</span>` : "")}
-        <div class="acts"><button class="more">详情</button><button class="go">坐这条上山 ›</button></div>`;
+      const far = Math.min(...villages0.map((b) => Math.hypot(l.pts[0][0] - b.x, l.pts[0][1] - b.z)));
+      card.innerHTML = `<div class="row1"><b><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${liftName(l)}</b><span class="lvls">${info.can}</span></div>
+        ${chips(info, info.next.length ? `<span><img src="${IC("lift")}" alt="">能接 ${info.next.length} 条缆车</span>` : "", far > BASE_RADIUS ? `<span><img src="${IC("hike")}" alt="">${tr("离基地 {km} 公里", { km: (far / 1000).toFixed(1) })}</span>` : "")}
+        <div class="acts"><button class="more">详情</button><button class="go">${tr(goLabel(l))}</button></div>`;
       card.addEventListener("click", (e) => { if (!e.target.closest("button")) pickLift(l, { scroll: true }); });
       card.querySelector(".more").addEventListener("click", () => { pickLift(l, { scroll: true }); openDetail(true); });
-      card.querySelector(".go").addEventListener("click", () => { if (together()) party.callLift(l.name, RESORT_ID, R.name); else go(l); });
+      card.querySelector(".go").addEventListener("click", () => { if (together() && l !== bunnyLift) party.callLift(l.name, RESORT_ID, R.name); else go(l); });
       cards.append(card);
       info.card = card;
     }
-    bunnyCard(base);
+    slopeCard(base);
   }
   function endIntro() {
     if (!mini) return;
@@ -376,17 +393,17 @@ async function main() {
 
   // Small paper chips, each with the owner's icon: how long, how far up, and so on.
   const IC = (n) => `../assets/icons/${n}.png?v=1`;
-  const chips = (info, more) => info.beginner ? `<div class="chips"><span><img src="${IC("ski")}" alt="">初学者短缆车</span></div>` : `<div class="chips"><span><img src="${IC("trailmap")}" alt="">${info.km} 公里</span><span><img src="${IC("season")}" alt="">约 ${info.mins} 分钟</span><span><img src="${IC("alpine")}" alt="">到 ${info.alt} 米</span>${more || ""}</div>`;
+  const chips = (info, more, far = "") => info.beginner ? `<div class="chips"><span><img src="${IC("ski")}" alt="">${info.l.kind === "magic_carpet" ? "初学者魔毯" : RIDEABLE.includes(info.l.kind) ? "初学者短缆车" : "初学者拖牵"}</span>${far}</div>` : `<div class="chips"><span><img src="${IC("trailmap")}" alt="">${info.km} 公里</span><span><img src="${IC("season")}" alt="">约 ${info.mins} 分钟</span><span><img src="${IC("alpine")}" alt="">到 ${info.alt} 米</span>${more || ""}${far}</div>`;
   // Detail: the card grows into a sheet; the model dims and moves up a little but keeps its size.
   function fillDetail() {
     const info = mini.info.get(mini.pick), l = info.l;
     const byLevel = LEVELS.map((k) => info.runs.filter((r) => r.level === k)).filter((g) => g.length);
-    $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${l.name}</h2>${chips(info)}
+    $("detailBody").innerHTML = `<h2><img class="pi" src="../assets/icons/lift.png?v=1" alt="">${liftName(l)}</h2>${chips(info)}
       <h3><img src="${IC("layer_runs")}" alt="">山顶直接出发的雪道</h3>${byLevel.length ? byLevel.map((g) => `<p class="runs">${g.map((r) => `<span>${SYMBOL[r.level]}${r.name}${r.moguls ? `<img class="mog" src="${IC("moguls")}" alt="蘑菇道" title="蘑菇道">` : ""}</span>`).join("")}</p>`).join("") : "<p class=meta>没有直接出发的雪道</p>"}
       ${info.runs.some((r) => r.moguls) ? `<p class="hint"><img class="mog" src="${IC("moguls")}" alt="">蘑菇道：有雪包（猫跳）的雪道</p>` : ""}
       ${info.next.length ? `<h3><img src="${IC("lift")}" alt="">上去后能接 ${info.next.length} 条缆车（蓝道以内）</h3>${info.next.map((n) => `<div class="nx"><img class="pi" src="../assets/icons/lift.png?v=1" alt=""><b>${n.o.name}</b><small>滑 ${n.via.slice(0, 3).join(" → ")}${n.via.length > 3 ? " …" : ""}</small><span class="mins">滑 ${Math.max(1, Math.round(n.rt.seconds / 60))} 分钟</span></div>`).join("")}` : ""}
       <p class="hint">山上最亮的是从山顶直接出发的雪道，半亮的是滑下去还能接上的。</p>`;
-    $("detailGo").textContent = `坐 ${l.name} 上山 ›`;
+    $("detailGo").textContent = l === bunnyLift ? tr("坐 {name} 上宝宝坡 ›", { name: liftName(l) }) : `坐 ${l.name} 上山 ›`;
   }
   function openDetail(on) {
     if (on) fillDetail();
@@ -396,6 +413,7 @@ async function main() {
   $("dim").addEventListener("click", () => openDetail(false));
   $("detailGo").addEventListener("click", () => go(mini.pick));
   function go(l) {
+    if (l === bunnyLift) return goPractice(); // its hill is the practice
     // Ask for motion access on this tap (iOS), so turning the phone looks around on the chair.
     if (typeof DeviceOrientationEvent?.requestPermission === "function") {
       DeviceOrientationEvent.requestPermission().catch(() => "denied").finally(() => go2(l));
@@ -406,7 +424,7 @@ async function main() {
   function go2(l) {
     if (mini?.base) addStep(RESORT_ID, { k: "base", name: mini.base.name });
     const info = mini?.info?.get(l); // the lift ticket the ride page punches while it loads
-    liftTicket({ resort: RESORT_ID, name: l.name, kind: l.kind, seats: l.seats || 4, bubble: !!l.bubble, km: l.length ? (l.length / 1000).toFixed(1) : 0, mins: info?.mins || Math.max(1, Math.round((l.length || 0) / 270)) });
+    liftTicket({ resort: RESORT_ID, name: l.name, kind: l.kind, seats: l.seats || 4, bubble: !!l.bubble, km: (liftLen(l) / 1000).toFixed(1), mins: info?.mins || Math.max(1, Math.round(liftLen(l) / 270)) });
     location.href = `../look.html?lift=${encodeURIComponent(l.name)}&resort=${RESORT_ID}`; }
 
   // Quick plans along the top: a loop from this base at a level, lit run by run.

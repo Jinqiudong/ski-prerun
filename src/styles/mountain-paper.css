@@ -129,8 +129,3 @@
     #detailBody .hint { color: #8a8278 !important; }
   
     #detailBody .mog { width: 20px; height: 20px; margin-left: 2px; vertical-align: -4px; }
-    /* The bunny hill (宝宝坡): its pin in paper, its card with a pine edge. */
-    .pin.bunny b { background: #fdfbf6 !important; color: #22344d !important; border: 1px solid #cbbfa9 !important; font-family: "Noto Serif SC", serif; }
-    .pin.bunny b .pi { width: 30px !important; height: 30px !important; }
-    .liftCard.bunny { box-shadow: 0 10px 24px rgba(40,50,70,.18), inset 4px 0 0 #2f5446 !important; }
-    .liftCard.bunny .row1 .lvls { font: 14px "Noto Serif SC", serif; color: #6f675e; }
