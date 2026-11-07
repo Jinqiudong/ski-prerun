@@ -6,7 +6,7 @@
 // Phones only let sound start from a tap, so the context is resumed on the first touch, click or key.
 // On / off and the volumes are kept on this phone (localStorage "prerunSound").
 
-import { impulse } from "./buffers.js?v=3";
+import { impulse } from "./buffers.js?v=4";
 
 const KEY = "prerunSound";
 // Music sits well under the snow and wind; the whole mix is gentle for a phone's speaker. v: the mix these

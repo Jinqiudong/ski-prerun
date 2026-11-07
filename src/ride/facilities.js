@@ -431,6 +431,19 @@ export function liftSignMat(name, alt, renderer) {
   g.fillStyle = "#fff"; g.font = `600 36px -apple-system, "PingFang SC", sans-serif`; g.fillText(`准备下缆车 · 海拔 ${alt.toLocaleString("en-US")} 米`, 256, 210);
   return new THREE.MeshStandardMaterial({ map: canvasTex(c, renderer), roughness: 0.6 });
 }
+// The mogul mark on a run sign: a small round red mushroom cap with white spots on a cream stem, sitting on
+// two snow bumps, MOGULS under it. (cx, cy): the cap's middle; r: its radius in px.
+export function mushroomMark(g, cx, cy, r) {
+  g.save(); g.lineJoin = g.lineCap = "round"; g.lineWidth = 3; g.strokeStyle = "#20262c";
+  for (const [bx, br] of [[-r * 0.75, r * 0.62], [r * 0.7, r * 0.5]]) { g.beginPath(); g.ellipse(cx + bx, cy + r * 1.25, br, br * 0.62, 0, Math.PI, 0); g.closePath(); g.fillStyle = "#e7eef7"; g.fill(); g.stroke(); }
+  g.beginPath(); g.roundRect(cx - r * 0.24, cy - r * 0.05, r * 0.48, r * 1.0, r * 0.2); g.fillStyle = "#f4ead0"; g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(cx - r, cy + r * 0.1); g.quadraticCurveTo(cx - r, cy - r * 0.95, cx, cy - r * 0.95); g.quadraticCurveTo(cx + r, cy - r * 0.95, cx + r, cy + r * 0.1);
+  g.quadraticCurveTo(cx, cy + r * 0.32, cx - r, cy + r * 0.1); g.closePath(); g.fillStyle = "#c0675c"; g.fill(); g.stroke();
+  g.fillStyle = "#fffaf0"; for (const [dx, dy, rr] of [[-0.42, -0.38, 0.17], [0.3, -0.52, 0.13], [0.5, -0.08, 0.11], [-0.05, -0.12, 0.1]]) { g.beginPath(); g.arc(cx + dx * r, cy + dy * r, rr * r, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = "#20262c"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = `800 ${Math.round(r * 0.5)}px -apple-system, "Helvetica Neue", sans-serif`;
+  g.fillText("MOGULS", cx, cy + r * 2.05);
+  g.restore();
+}
 // Run sign faces in one atlas, so all the run signs draw as one mesh. Cells are 256 × 116 (1.1 × 0.5 m).
 export function runFaceAtlas(runs, renderer) {
   const CW = 256, CH = 116, cols = 8, rows = Math.max(1, Math.ceil(runs.length / cols));
@@ -440,12 +453,15 @@ export function runFaceAtlas(runs, renderer) {
     g.fillStyle = "#f1ead8"; g.fillRect(x, y, CW, CH);
     g.strokeStyle = "#20262c"; g.lineWidth = 5; g.strokeRect(x + 5, y + 5, CW - 10, CH - 10);
     diffMark(g, r.level, x + 44, y + CH / 2, 26);
+    // A mogul run (snow-core.js marks run.moguls): a little mushroom by the name, MOGULS under it.
+    const room = r.moguls ? CW - 98 - 52 : CW - 98;
+    if (r.moguls) mushroomMark(g, x + CW - 36, y + CH / 2 - 8, 22);
     g.fillStyle = "#1a1f24"; g.textAlign = "left"; g.textBaseline = "middle";
     const words = r.name.toUpperCase();
-    fit(g, words, CW - 98, 40, 800);
-    if (g.measureText(words).width > CW - 98 && words.includes(" ")) { // two lines
+    fit(g, words, room, 40, 800);
+    if (g.measureText(words).width > room && words.includes(" ")) { // two lines
       const k = words.lastIndexOf(" ", Math.ceil(words.length / 2) + 2) > 0 ? words.lastIndexOf(" ", Math.ceil(words.length / 2) + 2) : words.indexOf(" ");
-      const a = words.slice(0, k), b = words.slice(k + 1); fit(g, a.length > b.length ? a : b, CW - 98, 30, 800);
+      const a = words.slice(0, k), b = words.slice(k + 1); fit(g, a.length > b.length ? a : b, room, 30, 800);
       g.fillText(a, x + 82, y + CH / 2 - 17); g.fillText(b, x + 82, y + CH / 2 + 17);
     } else g.fillText(words, x + 82, y + CH / 2 + 2);
   });

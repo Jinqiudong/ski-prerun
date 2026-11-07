@@ -7,7 +7,7 @@
 // - crunches when pushing or walking, a thump on landing; in the air the snow goes quiet.
 // The snow under you (groomed, powder, ice) changes how bright, loud and gritty each layer is.
 // Nodes are made once; each update only moves a dozen params (and only when they change).
-import { snowTexture, sprayTexture, brown, crunch, thump } from "./buffers.js?v=3";
+import { snowTexture, sprayTexture, brown, crunch, thump, flump } from "./buffers.js?v=4";
 
 export const SURFACES = {
   //        loudness of each layer                          brightness  chatter
@@ -60,6 +60,7 @@ export class BoardSound {
     for (const s of [this.tex, this.scr, this.rum, this.lfo]) s.start();
     this.crunches = [0, 1, 2, 3].map((i) => buf(crunch(this.sr, i)));
     this.thumpB = buf(thump(this.sr));
+    this.flumpB = buf(flump(this.sr));
     this.last = {}; this.wasAir = false; this.airPeak = 0; this.stepT = 0; this.stepK = 0;
   }
 

@@ -6,9 +6,9 @@
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=12";
-import { myRiderLook } from "../core/look.js?v=7";
+import { myRiderLook } from "../core/look.js?v=8";
 import { animalOf } from "./animal-core.js?v=1";
-import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=1";
+import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=2";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.
@@ -197,7 +197,7 @@ export function poseBoarder(root, r) {
   // Goofy: posed as the mirror turn (g), then mirrored back.
   s.edge = damp(s.edge, Math.max(-0.9, Math.min(0.9, g * r.lean)), 8, dt);
   s.skid = damp(s.skid, r.skid ?? (r.braking ? 1 : 0), 5, dt);
-  s.tuck = damp(s.tuck, r.tuck ?? 0, 4, dt);
+  s.tuck = damp(s.tuck, Math.max(r.tuck ?? 0, r.absorb ?? 0), r.absorb ? 9 : 4, dt); // a tuck, or the knees soaking up a bump
   s.push = damp(s.push || 0, r.pushing || r.walking ? 1 : 0, 6, dt);
   s.radio = damp(s.radio, u.talking ? 1 : 0, 6, dt);
   // How far onto each edge, 0..1 (full at about 30° of inclination). A shallow turn is the model's Turn
@@ -237,9 +237,9 @@ export function poseBoarder(root, r) {
   }
   // A fall takes over everything: down (Fall_Heel or Fall_Toe), a moment on the snow, back up (Get_Up,
   // Get_Up_Toe), each starting where the other ends.
-  let down = 0;
+  let down = 0, daze = 0;
   if (u.fall) {
-    const fl = u.fall, T1 = 1.0, T2 = 1.4, T3 = 2.4, side = fl.heel ? "Heel" : "Toe";
+    const fl = u.fall, T1 = 1.0, T2 = 1.4 + fl.hold, T3 = 2.4 + fl.hold, side = fl.heel ? "Heel" : "Toe";
     fl.t += dt;
     if (fl.t >= T3) u.fall = null;
     else {
@@ -247,6 +247,7 @@ export function poseBoarder(root, r) {
       for (const key of Object.keys(w)) w[key] *= 1 - down;
       const up = fl.t > T2;
       if (up) at(u.A["up" + side], (fl.t - T2) / (T3 - T2)); else at(u.A["fall" + side], fl.t / T1);
+      if (fl.hold && fl.t > T1 && !up) daze = Math.sin(fl.t * 5) * 0.14 * Math.min(1, (fl.t - T1) * 3); // dazed: the head lolls
       w[(up ? "up" : "fall") + side] = down;
       k = Math.max(k, down); lift = 0;
     }
@@ -266,6 +267,7 @@ export function poseBoarder(root, r) {
   // flat board; the inclination comes from tilting the whole rider).
   turn(u.B.spine, u.lean, Z, -tilt * 0.18);
   turn(u.B.chest, u.lean, Z, -tilt * 0.14);
+  if (daze) turn(u.B.head, u.lean, Y, daze);
   // The radio to the mouth (talkBoarder): its arm and head over the riding pose, the radio in the hand.
   const rk = s.radio * (1 - down);
   if (rk > 0.01) for (const [b, q] of u.radio) b.quaternion.slerp(q, rk);
@@ -293,14 +295,26 @@ export function startTrick(root, key) {
   return true;
 }
 // A fall (into a tree, say): on the heel side, sitting back, or the toe side, onto the knees; then up again.
-// heel: which side, else the edge the rider is on.
-export function fallBoarder(root, heel = null) {
-  if (root.userData.kind === "animal") return fallAnimal(root, heel);
+// heel: which side, else the edge the rider is on. hold: seconds more lying in the snow (dazed after a
+// crash). Returns how long it all takes (s), or false. fallState(root): { t, down, dazed } while it lasts.
+export function fallBoarder(root, heel = null, hold = 0) {
+  if (root.userData.kind === "animal") return fallAnimal(root, heel, hold);
   const u = root.userData;
   if (!u.A?.fallHeel || !u.A.upHeel || u.fall) return false;
   u.trick = null;
-  u.fall = { t: 0, heel: heel ?? (u.s.edge * u.toeX >= 0 || !u.A.fallToe || !u.A.upToe) };
-  return true;
+  u.fall = { t: 0, hold, heel: heel ?? (u.s.edge * u.toeX >= 0 || !u.A.fallToe || !u.A.upToe) };
+  return 2.4 + hold;
+}
+export function fallState(root) {
+  const f = root?.userData?.fall; if (!f) return null;
+  const down = root.userData.kind === "animal" ? 0.75 : 1.0, lie = (root.userData.kind === "animal" ? 1.45 : 1.4) + f.hold;
+  return { t: f.t, dazed: f.t > down * 0.8 && f.t < lie + 0.2 ? Math.min(1, (f.t - down * 0.8) * 3, (lie + 0.2 - f.t) * 3) : 0 };
+}
+// Where the rider's head is now (world), for the stars over a dazed rider and the like.
+export function headOf(root, out) {
+  const u = root.userData, h = u.kind === "animal" ? u.head : u.B?.head;
+  if (h) return h.getWorldPosition(out);
+  return root.localToWorld(out.set(0, (u.tall || 1.7) * 0.85, 0));
 }
 // The radio raised to the mouth (on), or put away: the walkie-talkie in voice chat (src/ride/voice.js), for
 // me and for a friend holding theirs. Riding, sitting on the chair and standing at the top all show it.

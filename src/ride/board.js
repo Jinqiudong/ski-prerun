@@ -22,10 +22,12 @@ export class Rider {
   // across the way you are going to slow down, +1 tucks for speed (brake is pace -1). push: skate or
   // walk on the flat. offPiste adds deep-snow drag.
   // guided: the route does the steering, so don't swing round to the fall line when stopped.
-  step(dt, { steer, pace = 0, brake, push, offPiste, guided }) {
+  // soft 0..1: deep powder underfoot (slower, and the board floats into and out of turns); rough: extra
+  // friction (moguls).
+  step(dt, { steer, pace = 0, brake, push, offPiste, guided, soft = 0, rough = 0 }) {
     const t = this.terrain, n = t.normalAt(this.x, this.z, this.n);
     if (brake) pace = -1;
-    this.steer = damp(this.steer, steer, 5, dt);
+    this.steer = damp(this.steer, steer, 5 - 2.6 * soft, dt);
     this.pace = damp(this.pace ?? 0, pace, 4, dt);
     const skid = Math.max(0, -this.pace), tuck = Math.max(0, this.pace);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
@@ -36,7 +38,7 @@ export class Rider {
     const pull = Math.abs(this.steer) * 9.8 * Math.tan((50 * Math.PI) / 180) * (1 - 0.4 * skid);
     const rate = Math.min(1.6, pull / Math.max(this.speed, 2.5));
     // Snow friction grows as the base turns across the way you move (a skid); a tuck cuts the air drag.
-    const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 : 0);
+    const mu = 0.045 + 0.65 * skid + (offPiste ? 0.1 - 0.05 * soft : 0) + 0.035 * soft + rough; // the board floats in powder: less drag than off-piste crud
     let a = along - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - (this.speed * rate * Math.abs(this.steer)) * 0.05;
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
     // Only where gravity won't do it (a flat, at a crawl): going downhill you ride, both feet strapped in.
@@ -61,7 +63,7 @@ export class Rider {
     this.z = Math.min(Math.max(this.z, t.z0 + 30), t.z1 - 30);
     this.y = t.heightAt(this.x, this.z);
     // Inclination that balances the turn's pull: tan(lean) = speed · turn rate / g.
-    this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6, dt);
+    this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6 - 3 * soft, dt);
     this.skid = skid; this.tuck = tuck;
     this.braking = skid > 0.35;
     this.dt = dt;
@@ -94,18 +96,19 @@ export class Tracks {
 
   dispose(scene) { for (const s of this.strips) { scene.remove(s.mesh); s.geo.dispose(); } }
 
+  // r.surf: the snow's surface over the terrain where the board is (moguls, powder), if any.
   add(r) {
     const last = this.points[this.points.length - 1];
     if (last && Math.hypot(last.x - r.x, last.z - r.z) < 0.6) return;
     if (this.points.length === this.max) this.points.shift();
-    this.points.push({ x: r.x, z: r.z, h: r.heading });
+    this.points.push({ x: r.x, z: r.z, h: r.heading, dy: r.surf || 0 });
     const n = this.points.length;
     for (const s of this.strips) {
       for (let i = 0; i < n; i++) {
         const p = this.points[i], cx = Math.cos(p.h), sx = -Math.sin(p.h);
         for (const [k, w] of [[0, -s.width], [1, s.width]]) {
           const x = p.x + cx * (s.offset + w), z = p.z + sx * (s.offset + w);
-          s.pos.set([x, this.terrain.heightAt(x, z) + 0.04, z], (i * 2 + k) * 3);
+          s.pos.set([x, this.terrain.heightAt(x, z) + p.dy + 0.04, z], (i * 2 + k) * 3);
         }
       }
       s.geo.attributes.position.needsUpdate = true;
@@ -114,10 +117,11 @@ export class Tracks {
   }
 }
 
-// Snow spray kicked up when carving hard or braking.
+// Snow spray kicked up when carving hard or braking; with { size, opacity }, the bigger, softer plumes
+// thrown out of powder.
 export class Spray {
-  constructor(scene) {
-    this.n = 900;
+  constructor(scene, { n = 900, size = 0.2, opacity = 0.9, color = 0xffffff } = {}) {
+    this.n = n;
     this.life = new Float32Array(this.n);
     this.vel = new Float32Array(this.n * 3);
     const geo = new THREE.BufferGeometry();
@@ -129,25 +133,26 @@ export class Spray {
     const g = dot.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
     grad.addColorStop(0, "#fff"); grad.addColorStop(1, "#000");
     g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, alphaMap: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.9, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, alphaMap: new THREE.CanvasTexture(dot), transparent: true, opacity, depthWrite: false }));
     this.points.frustumCulled = false;
     this.next = 0;
     scene.add(this.points);
   }
 
   // Snow leaves the edge toward the outside of the turn; in a skid it sprays ahead of the board, the way
-  // you are sliding. Then it falls under gravity and air drag.
-  emit(r, rate, dt) {
+  // you are sliding. Then it falls under gravity and air drag. plume 0..1: out of powder, thrown higher and
+  // hanging longer.
+  emit(r, rate, dt, plume = 0) {
     const count = Math.min(80, Math.floor(rate * dt + Math.random()));
     const skid = r.skid || 0, fx = Math.sin(r.heading), fz = Math.cos(r.heading);
     for (let c = 0; c < count; c++) {
       const i = this.next = (this.next + 1) % this.n;
       const side = Math.sign(r.steer || 1);
       const sx = Math.cos(r.heading) * side, sz = -Math.sin(r.heading) * side;
-      const out = 1.5 + Math.random() * 3, fwd = r.speed * (0.3 + skid * 0.5) * (0.6 + Math.random() * 0.6);
-      this.pos.set([r.x + (Math.random() - 0.5) * 0.8, r.y + 0.08, r.z + (Math.random() - 0.5) * 0.8], i * 3);
-      this.vel.set([sx * out * (1 - skid * 0.6) + fx * fwd + (Math.random() - 0.5) * 2, 1 + Math.random() * (2 + skid * 2.5), sz * out * (1 - skid * 0.6) + fz * fwd + (Math.random() - 0.5) * 2], i * 3);
-      this.life[i] = 0.5 + Math.random() * (0.5 + skid * 0.5);
+      const out = (1.5 + Math.random() * 3) * (1 + plume * 0.4), fwd = r.speed * (0.3 + skid * 0.5) * (0.6 + Math.random() * 0.6);
+      this.pos.set([r.x + (Math.random() - 0.5) * 0.8, r.y + 0.08 + plume * 0.2, r.z + (Math.random() - 0.5) * 0.8], i * 3); // powder: from its surface
+      this.vel.set([sx * out * (1 - skid * 0.6) + fx * fwd + (Math.random() - 0.5) * 2, (1 + Math.random() * (2 + skid * 2.5)) * (1 + plume * 1.5), sz * out * (1 - skid * 0.6) + fz * fwd + (Math.random() - 0.5) * 2], i * 3);
+      this.life[i] = (0.5 + Math.random() * (0.5 + skid * 0.5)) * (1 + plume * 1.1);
     }
   }
 

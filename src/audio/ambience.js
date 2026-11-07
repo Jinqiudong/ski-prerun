@@ -1,7 +1,7 @@
 // The air around you: wind (rising with speed, gusting on its own), the mountain's quiet bed, and the lift
 // (the rope's hum, the ka-thunk of the grip rolling over each tower's sheaves, the station's machinery).
 // Everything is built once; update() moves a few params a frame.
-import { pink, brown, sheavePass, sheaveLead, clunk, rng } from "./buffers.js?v=3";
+import { pink, brown, sheavePass, sheaveLead, clunk, rng } from "./buffers.js?v=4";
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 

@@ -135,3 +135,8 @@
     @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
     #credit { position: fixed; right: 6px; bottom: 2px; font-size: 9px; color: rgba(30, 40, 55, .6); pointer-events: none; }
   
+    /* The snow's cues and conditions: the moguls and powder icons in the HUD's line and on the run cards. */
+    .cueIco { width: 24px; height: 24px; vertical-align: -6px; margin-right: 4px; }
+    .rcard .chips { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+    .rcard .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: inherit; background: rgba(140,160,190,.16); border-radius: 999px; padding: 1px 10px 1px 3px; }
+    .rcard .chip img { width: 22px; height: 22px; }

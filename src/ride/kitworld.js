@@ -3,7 +3,7 @@
 // a few props. Everything instanced is pooled (facilities.js Pool): full models near the camera, a plain
 // stand-in further out, nothing beyond. GLBs load lazily, only those this resort and this ride need.
 import * as THREE from "three";
-import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=2";
+import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=3";
 
 const GRAPHITE = "#2c3138";
 // Packed snow banked under a deck or building where the ground falls away: a mound whose sides slope out.
@@ -412,6 +412,7 @@ export class Facilities {
       spots.push({ x: at[0], z: at[1], yaw: Math.atan2(-dx, -dz), run: r });
     }
     if (!spots.length) return;
+    this.runSignSpots = spots; // where each run's sign stands (the mogul runs' carry a mushroom)
     const atlas = runFaceAtlas(spots.map((s) => s.run), this.renderer);
     const pool = this.propPool("sign_run", { parts: Object.fromEntries(Object.entries(k.parts).filter(([kk]) => kk !== "paint")) }, { nearR: 420 });
     // The faces: one instanced quad, each instance offset into the atlas.

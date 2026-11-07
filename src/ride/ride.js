@@ -4,26 +4,28 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { Rider, Tracks, Spray } from "./board.js?v=11";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=16";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=5";
+import { Rider, Tracks, Spray } from "./board.js?v=12";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=17";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=6";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=8";
-import { PaintedMap } from "./paintedmap.js?v=5";
+import { PaintedMap } from "./paintedmap.js?v=6";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=33";
-import { navRow } from "../core/nav.js?v=13";
-import { rideSound } from "../audio/index.js?v=5";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=9";
-import { dropIn } from "../core/transition.js?v=6";
-import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=8";
-import { startParty } from "../core/party.js?v=3";
-import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=35";
+import { navRow } from "../core/nav.js?v=14";
+import { rideSound } from "../audio/index.js?v=6";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=10";
+import { dropIn } from "../core/transition.js?v=7";
+import { Facilities } from "./kitworld.js?v=3";
+import { rideTogether } from "./together.js?v=9";
+import { startParty } from "../core/party.js?v=5";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
+import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
+import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -265,6 +267,7 @@ function foliageMat(map, snowMap, upFacing) {
         float cover = max(smoothstep(edge, edge + 0.18, sm), up * treeSnow * treeSnow * 0.45);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.95, 1.0), cover);`);
   };
+  mat.customProgramCacheKey = () => `foliage${upFacing}`; // the two foliage shaders differ only inside onBeforeCompile
   return mat;
 }
 
@@ -297,7 +300,9 @@ function snowfall() {
 
 // The resort's weather: snow in the last three days whitens the trees; snowing now makes it fall.
 // ?snow=0..1 and ?falling=1 override it for previews.
-async function weather(params, flakes, at, applySky) {
+// After heavy snow, powder (snow-core.js): onPowder(amount 0..1) once it is known; ?powder=1 (0..1, or map
+// for the field itself painted on the snow) forces it.
+async function weather(params, flakes, at, applySky, onPowder) {
   let recent = null, now = false;
   try {
     const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${at.lat.toFixed(4)}&longitude=${at.lon.toFixed(4)}&current=weather_code,snowfall,cloud_cover&daily=snowfall_sum&past_days=3&forecast_days=1&timezone=auto`)).json();
@@ -311,9 +316,11 @@ async function weather(params, flakes, at, applySky) {
   if (params.has("falling")) now = params.get("falling") === "1";
   flakes.visible = now;
   snowing = now;
+  const powder = powderAmount(recent, params.get("powder"));
+  onPowder?.(powder);
   if (now && sun) setSnowyAir();
   const cell = (icon, big, small) => `<div class="cell"><img src="assets/icons/${icon}.png?v=1" alt=""><b>${big}</b>${small}</div>`;
-  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "❄", "正在下雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
+  $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "❄", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
 }
 
 function plant(spots, geo, mat, scaleOf) {
@@ -331,6 +338,7 @@ function plant(spots, geo, mat, scaleOf) {
       m.compose(p.set(s.x, s.y - 0.3, s.z), q.setFromAxisAngle(Y, s.v * 40), sc.set(h * (0.85 + s.v * 0.3), h, h * (0.85 + s.v * 0.3)));
       mesh.setMatrixAt(i, m);
       mesh.setColorAt(i, c.setScalar(0.85 + ((s.v * 7.3) % 1) * 0.3));
+      s.h = h; (s.inst ||= []).push([mesh, i]); // the tree's instances, to shake it when it's hit
     });
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -363,12 +371,17 @@ function terrainGeometry(T) {
 function snowA(tex, vertexColors = false) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, vertexColors });
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { snowD: { value: tex.snowD }, snowN: { value: tex.snowN }, rockD: { value: tex.rockD } });
+    Object.assign(sh.uniforms, { snowD: { value: tex.snowD }, snowN: { value: tex.snowN }, rockD: { value: tex.rockD } }, powderU);
+    // Powder (snowfx.js powderU): the field raises the snow a little where it lies, so the board sinks in.
     sh.vertexShader = sh.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vWP; varying vec3 vWN;")
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWP; varying vec3 vWN; varying float vPow; uniform sampler2D powderMap; uniform vec4 powderBox; uniform float powderAmt, powderRaise;")
+      .replace("#include <begin_vertex>", `#include <begin_vertex>
+        { vec2 puv = ((modelMatrix * vec4(transformed, 1.0)).xz - powderBox.xy) / (powderBox.zw - powderBox.xy);
+          vPow = puv.x < 0.0 || puv.y < 0.0 || puv.x > 1.0 || puv.y > 1.0 ? 0.0 : texture2D(powderMap, puv).r;
+          transformed.y += vPow * powderAmt * powderRaise; }`)
       .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);");
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform sampler2D snowD, snowN, rockD; varying vec3 vWP; varying vec3 vWN;")
+      .replace("#include <common>", "#include <common>\nuniform sampler2D snowD, snowN, rockD, powderMap; varying vec3 vWP; varying vec3 vWN; varying float vPow; uniform float powderAmt, powderDebug; uniform vec4 powderBox;")
       .replace("#include <color_fragment>", `#include <color_fragment>
         float d = length(vWP - cameraPosition);
         float fade = smoothstep(300.0, 3000.0, d);
@@ -378,11 +391,20 @@ function snowA(tex, vertexColors = false) {
         float steep = 1.0 - vWN.y;
         float rockW = smoothstep(0.55, 0.7, steep + (texture2D(rockD, vWP.xz / 300.0).r - 0.5) * 0.12);
         vec3 rk = texture2D(rockD, vWP.xz / 40.0).rgb;
-        diffuseColor.rgb *= mix(sn, rk * 1.2, rockW);`)
+        diffuseColor.rgb *= mix(sn, rk * 1.2, rockW);
+        // Fresh powder: a touch brighter and creamier, the grain smoothed out (below). The field read here, per
+        // pixel (the raise above is per vertex, every 14 m).
+        vec2 puv = (vWP.xz - powderBox.xy) / (powderBox.zw - powderBox.xy);
+        float pf = puv.x < 0.0 || puv.y < 0.0 || puv.x > 1.0 || puv.y > 1.0 ? 0.0 : texture2D(powderMap, puv).r;
+        float pw = pf * powderAmt * (1.0 - rockW);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.99, 0.97), pw * 0.45);
+        if (powderDebug > 0.5) diffuseColor.rgb = mix(vec3(0.97, 0.95, 0.9), mix(vec3(0.55, 0.75, 1.0), vec3(0.32, 0.18, 0.75), smoothstep(0.45, 0.95, pf)), smoothstep(0.12, 0.5, pf));`)
       .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
         vec3 nt = texture2D(snowN, vWP.xz / 6.0).xyz * 2.0 - 1.0;
         vec3 nt2 = texture2D(snowN, vWP.xz / 80.0).xyz * 2.0 - 1.0;
-        vec3 wp = vec3(nt.x, 0.0, -nt.y) * 0.6 * (1.0 - fade) + vec3(nt2.x, 0.0, -nt2.y) * 0.35;
+        float soft = 1.0 - 0.65 * pw; // powder: smoother, with soft pillows (nt3)
+        vec3 nt3 = texture2D(snowN, vWP.xz / 23.0).xyz * 2.0 - 1.0;
+        vec3 wp = vec3(nt.x, 0.0, -nt.y) * 0.6 * (1.0 - fade) * soft + vec3(nt2.x, 0.0, -nt2.y) * 0.35 + vec3(nt3.x, 0.0, -nt3.y) * 0.5 * (1.0 - soft);
         normal = normalize(normal + (viewMatrix * vec4(wp, 0.0)).xyz);`)
       // Sparkle: tiny ice crystals catching the light up close.
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
@@ -626,8 +648,9 @@ function build(ctx) {
   // Forest: detailed spruce near the lift, simpler further out.
   const height = (s) => 13 + s.v * 13;
   {
-    const branchMat = foliageMat(tex.branch, tex.branchSnow, true), crownMat = foliageMat(tex.crown, tex.crownSnow, false);
-    const bark = new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.95 });
+    // All of them see-through where they stand between the camera and the rider (snowfx.js).
+    const branchMat = seeThrough(foliageMat(tex.branch, tex.branchSnow, true)), crownMat = seeThrough(foliageMat(tex.crown, tex.crownSnow, false), 0.12);
+    const bark = seeThrough(new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.95 }), 0.05);
     // Detailed trees near the line, simpler ones further out. Reused for the forest along a run.
     ctx.forest = (spots, near = 380) => {
       const g = new THREE.Group();
@@ -807,6 +830,36 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     }
     return best;
   };
+  // How wooded it is right around (x, z), 0..1: trees within 10 m (the camera comes in closer and lower).
+  const woodsNear = (x, z) => {
+    let n = 0;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const t of treeGrid.get(`${Math.floor(x / TG) + i},${Math.floor(z / TG) + j}`) || []) if ((t.x - x) ** 2 + (t.z - z) ** 2 < 100) n++;
+    return Math.min(1, n / 3);
+  };
+  // ---- The snow's fun (snow-core.js, snowfx.js): a crash into a tree, powder, moguls.
+  // crash: { t, len } while the rider lies dazed and gets up; shake: the camera's, after a hit.
+  let crash = null, shake = 0, inWoods = 0, pspray = null, powderTold = false, onMogul = false;
+  const mogTold = new Set(), bump = {}, mogN = new THREE.Vector3(0, 1, 0), _mn = new THREE.Vector3(), _head = new THREE.Vector3(), _back = new THREE.Vector3(), _want = new THREE.Vector3(), _cw = new THREE.Vector3(), _side = new THREE.Vector3(), _look = new THREE.Vector3();
+  const fx = new CrashFX(scene, (x, z) => T.heightAt(x, z) + powderDepth(x, z) * POWDER_RAISE);
+  const powderDepth = (x, z) => (ctx.powder ? powderAt(ctx.powder.f, x, z) * ctx.powder.amt : 0);
+  // Moguls on the runs near the way down: their bumps in the physics (mogF) and drawn (one mesh each).
+  const mogF = new MogulField(), mogMat = mogulMaterial(ctx.tex.snowN);
+  let mogBuilt = 0;
+  function addMoguls(path) {
+    for (const run of R.runs) {
+      if (!run.moguls || mogF.has(run) || mogBuilt > 3000) continue; // at most ~3 km of bumps drawn at once
+      if (!run.pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.abs(rx - x) < 260 && Math.abs(rz - z) < 260))) continue;
+      const line = mogF.add(run); if (!line) continue;
+      // only the stretch within ~250 m of the way down is bumped and drawn (a long run elsewhere costs nothing)
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < line.xs.length; i += 5) if (path.some(([rx, rz], k) => k % 2 === 0 && (rx - line.xs[i]) ** 2 + (rz - line.zs[i]) ** 2 < 250 * 250)) { lo = Math.min(lo, line.ss[i]); hi = Math.max(hi, line.ss[i]); }
+      if (!(hi > lo)) { mogF.clip(line, 0, 0); continue; }
+      mogF.clip(line, lo - 30, hi + 30);
+      world.add(mogulMesh(T, line, mogMat));
+      mogBuilt += line.hi - line.lo;
+    }
+  }
+  const ICO = (n) => `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">`;
   // ---- Skiing the chosen plan: real slope physics, guided along the route. You choose where on the piste
   // to ride (slide a finger left or right) and how fast (drag up to slow, down to let it run); the way
   // itself is always the route's, so you can't get lost. Leave it alone and the rider links easy turns.
@@ -942,6 +995,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     tracks?.dispose(scene);
     tracks = new Tracks(scene, T);
     spray ||= new Spray(scene);
+    pspray ||= new Spray(scene, { n: 900, size: 0.85, opacity: 0.6, color: 0xd6e0f0 }); // powder's plumes, a little blue so they read on the snow
+    crash = null; shake = 0; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
     st.phase = "ski";
@@ -995,7 +1050,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const openJournal = () => { skiLog.save(); pmap.openSheet({ browse: true }); };
   st.journal = openJournal;
   // The roadbook: each way down as a step (the runs in order, the lift at the bottom, the path for its map).
-  const bookRoute = (P, changed = false) => addStep(RESORT, { k: "route", changed, title: P.title, segs: P.segs.map((g) => ({ n: g.run.name || "无名雪道", l: g.run.level })), next: P.next?.name || null, path: thinPath(P.path),
+  // Moguls on a run (m) and a powder day (pw) go in too, with their icons.
+  const bookRoute = (P, changed = false) => addStep(RESORT, { k: "route", changed, title: P.title, segs: P.segs.map((g) => ({ n: g.run.name || "无名雪道", l: g.run.level, ...(g.run.moguls ? { m: 1 } : {}) })), ...(ctx.powder?.amt > 0 ? { pw: 1 } : {}), next: P.next?.name || null, path: thinPath(P.path),
     flats: P.flats.map((f) => ({ n: f.run.name || "无名雪道", m: f.m, k: f.kind, at: f.at })) });
   // Skipping ahead with a tap on the map: the way from here to there along the chosen route counts as
   // seen, so it goes in the log as skied.
@@ -1042,6 +1098,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
     ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
+    addMoguls(path);
     if (nav) { scene.remove(nav.group); nav.group.traverse((o) => o.geometry?.dispose()); }
     const group = new THREE.Group(), js = junctions(path, P.segs, R);
     for (const j of js) {
@@ -1173,7 +1230,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const x = ax + (bx - ax) * t, z = az + (bz - az) * t, h = Math.atan2(bx - ax, bz - az);
       q.setFromUnitVectors(up, T.normalAt(x, z, v)).multiply(q2.setFromAxisAngle(up, h));
       const fade = 1 - Math.max(0, (want - d0 - 70) / 70); // full for the first 70 m, gone by 140 m
-      m.compose(new THREE.Vector3(x, T.heightAt(x, z) + 0.12, z), q, new THREE.Vector3(2.8, 1, 3.2).multiplyScalar(0.75 + 0.25 * fade));
+      m.compose(new THREE.Vector3(x, T.heightAt(x, z) + 0.12 + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE, z), q, new THREE.Vector3(2.8, 1, 3.2).multiplyScalar(0.75 + 0.25 * fade));
       guide.setMatrixAt(k, m);
       guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
     }
@@ -1262,9 +1319,13 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const flatAhead = P.flats.find((f) => f.kind === "flat" && f.a > prog && P.dist[f.a] - P.dist[prog] < 140);
     const rise = P.flats.find((f) => f.kind === "up" && f.a > prog && P.dist[f.a] - P.dist[prog] < 80);
     for (const f of [flatAhead, rise]) if (f && !f.told) { f.told = true; flashCue(f.kind === "flat" ? `前面 ${fmtLen(f.m)} 平路 · 别刹车，带速度，板放平` : `前面 ${fmtLen(f.m)} 上坡 · 要走上去`); }
+    // Moguls ahead on the way (蘑菇道): once for each mogul run, as it comes up.
+    const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
+    if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Speed: held to an easy pace for the run's level unless you drag for more or less.
-    const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1);
+    // (slower through moguls: you pick a line through the bumps; ask for more and you get some air)
+    const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1) * (onMogul || seg.run.moguls ? 0.62 : 1);
     const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
     let pace = asked ? (asked > 0 && r.speed > cap * 1.6 ? -0.5 : asked) : r.speed > cap ? -1 : 0;
     if (flat && pace > -0.6) pace = Math.max(pace, 0.8); // tucked through a flat unless you really brake
@@ -1272,22 +1333,50 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     // nothing pulls you uphill.
     // Stopped on purpose (holding the brake): stand still rather than pivot on the spot.
     const parked = pace < -0.2 && r.speed < 0.8;
-    r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true });
-    // Into a tree: stopped short and put back beside it (the route then leads you on).
-    const tree = treeAt(r.x, r.z, 1.6);
+    const pw = powderDepth(r.x, r.z); // how deep the powder is here (0..1)
+    if (crash) { // down in the snow after a tree: lying there dazed, then up (boarder.js), the run waits
+      crash.t += dt; r.speed = 0; r.dt = dt; r.steer = 0; r.skid = 0; r.tuck = 0; r.lean *= Math.exp(-dt * 6); r.pushing = r.walking = false;
+      if (crash.t >= crash.len) crash = null;
+    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0 });
+    // Into a tree: stopped short and put back beside it (the route then leads you on). Hard enough and it's a
+    // crash: down, a dazed moment with stars round your head, the tree's snow coming down on you, up again.
+    const tree = crash ? null : treeAt(r.x, r.z, 1.6);
     if (tree) {
       const dx = r.x - tree.x, dz = r.z - tree.z, L = Math.hypot(dx, dz) || 1;
       r.x = tree.x + (dx / L) * 1.65; r.z = tree.z + (dz / L) * 1.65; r.y = T.heightAt(r.x, r.z);
-      if (r.speed > 2.5) { flashCue("💥 撞到树了"); navigator.vibrate?.(120); snd?.bump(Math.min(1, r.speed / 10)); fallBoarder(ctx.rider); }
+      if (r.speed > 2.5) {
+        const hard = clamp(r.speed / 10, 0.3, 1);
+        flashCue(t("撞到树了")); navigator.vibrate?.([90, 40, 60]); snd?.crash(hard);
+        fx.hitTree(tree, Math.sin(r.heading), Math.cos(r.heading), hard);
+        const len = fallBoarder(ctx.rider, null, 1.1 + hard * 0.5);
+        if (len) crash = { t: 0, len, ax: dx / L, az: dz / L, tx: tree.x, tz: tree.z }; // ax, az: away from the tree
+        shake = Math.max(shake, 0.4 + hard * 0.6);
+      }
       r.speed *= 0.15;
     }
+    // The bumps under the board (moguls): up and over each one, knees soaking it up, a little air when fast;
+    // the board pitched with the snow under it.
+    const hs = mogF.size ? mogF.height(r.x, r.z) : 0;
+    onMogul = hs > 0.02;
+    if (hs > 0 || bump.air || bump.y > 1e-3) {
+      bumpStep(bump, hs, r.speed, dt);
+      r.y += bump.y; r.absorb = bump.absorb; r.bumpAir = bump.air ? bump.y - hs : 0;
+      const e = 0.45, gx = (mogF.height(r.x + e, r.z) - mogF.height(r.x - e, r.z)) / (2 * e), gz = (mogF.height(r.x, r.z + e) - mogF.height(r.x, r.z - e)) / (2 * e);
+      if (!bump.air) mogN.lerp(_mn.set(r.n.x - gx * r.n.y, r.n.y, r.n.z - gz * r.n.y).normalize(), Math.min(1, dt * 14)).normalize();
+      r.n.copy(mogN);
+    } else { r.absorb = 0; r.bumpAir = 0; mogN.copy(r.n); }
+    r.surf = (bump.air ? hs : bump.y || 0) + pw * POWDER_RAISE; // the snow's surface here, for the track
+    if (onMogul && !mogTold.has(seg.run) && !mogTold.has("any")) { mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("蘑菇道")}</b> · ${t("膝盖放软，看着下一个蘑菇")}`); }
+    if (pw > 0.4 && r.speed > 3 && !powderTold) { powderTold = true; flashCue(`${ICO("powder")}<b>${t("粉雪！")}</b> · ${t("重心靠后，板头浮起来")}`); }
     poseBoarder(ctx.rider, r);
+    if (crash || fx.stars) fx.dizzy(fallState(ctx.rider)?.dazed || 0, headOf(ctx.rider, _head));
+    fx.update(dt, camera, renderer);
     // The board's sound: the physics as it is now, how high a trick's hop is, off the piste is powder
     // (?surface=ice|powder|groomed sets the snow), the top station fading behind.
     if (snd) {
-      const tr = ctx.rider.userData.trick, f = tr ? tr.t / tr.dur : 0, air = tr && tr.air > 0 && f < 1 ? tr.air * 4 * f * (1 - f) : 0;
+      const tr = ctx.rider.userData.trick, f = tr ? tr.t / tr.dur : 0, air = Math.max(r.bumpAir || 0, tr && tr.air > 0 && f < 1 ? tr.air * 4 * f * (1 - f) : 0);
       const topP = line.towers[line.towers.length - 1].p;
-      snd.setSurface(SURFACE || (near.d > 45 ? "powder" : "groomed"));
+      snd.setSurface(SURFACE || (near.d > 45 || pw > 0.35 ? "powder" : "groomed")); // the powder carve the owner picked
       snd.ski(r, { air, station: clamp(1 - Math.hypot(r.x - topP.x, r.z - topP.z) / 120, 0, 1), dt });
     }
     tracks.add(r);
@@ -1303,13 +1392,29 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const carve = Math.abs(r.lean) * r.speed;
     spray.emit(r, (r.skid || 0) * r.speed * 55 + (carve > 2 ? carve * 9 : 0), dt);
     spray.update(dt);
-    // Chase camera, like the game's.
-    const back = new THREE.Vector3(-Math.sin(r.heading), 0, -Math.cos(r.heading));
-    // Higher and a little further back than before, looking well ahead: more of the slope and the valley.
-    const want = new THREE.Vector3(r.x, r.y, r.z).addScaledVector(back, 7.5 + r.speed * 0.1);
-    want.y = Math.max(T.heightAt(want.x, want.z) + 1.6, r.y + 3.4);
+    // In powder the board throws it up in plumes, riding straight as well as turning.
+    if (pw > 0.12 && r.speed > 1.5 && !bump.air) pspray.emit(r, pw * r.speed * (40 + carve * 12) + (r.skid || 0) * r.speed * 50 * pw, dt, 1);
+    pspray.update(dt);
+    // Chase camera, like the game's. Higher and a little further back than before, looking well ahead: more
+    // of the slope and the valley. In the woods it comes in closer and lower, under the branches (and the
+    // trees between it and the rider are see-through: snowfx.js seeThrough).
+    inWoods += (woodsNear(r.x, r.z) - inWoods) * Math.min(1, dt * 1.5);
+    const back = _back.set(-Math.sin(r.heading), 0, -Math.cos(r.heading));
+    const want = _want.set(r.x, r.y, r.z).addScaledVector(back, (7.5 + r.speed * 0.1) * (1 - inWoods) + (4.6 + r.speed * 0.05) * inWoods);
+    // In a crash it swings round to the open side, away from the tree and out from under its branches, and
+    // looks at the rider down in the snow with the tree behind, its snow coming down.
+    const ck = crash?.ax != null ? Math.max(0, Math.min(1, crash.t / 0.5, (crash.len - crash.t) / 0.7)) : 0;
+    if (ck > 0) want.lerp(_cw.set(r.x + crash.ax * 7 - crash.az * 1.8, r.y, r.z + crash.az * 7 + crash.ax * 1.8), ck);
+    want.y = Math.max(T.heightAt(want.x, want.z) + 1.6, r.y + 3.4 - 1.1 * inWoods * (1 - ck) + 0.4 * ck);
     camera.position.lerp(want, Math.min(1, dt * 4));
-    camera.lookAt(r.x + Math.sin(r.heading) * 9, r.y + 0.6, r.z + Math.cos(r.heading) * 9);
+    camera.lookAt(_look.set(r.x + Math.sin(r.heading) * 9, r.y + 0.6 - 0.3 * inWoods, r.z + Math.cos(r.heading) * 9).lerp(_cw.set(r.x - crash?.ax * 0.4 || r.x, r.y + 0.9, r.z - crash?.az * 0.4 || r.z), ck));
+    if (shake > 0.01) { // the hit, felt: a short shake that dies away
+      const k = clock() / 1000;
+      camera.position.x += Math.sin(k * 41) * shake * 0.09; camera.position.y += Math.sin(k * 53 + 1) * shake * 0.07;
+      camera.rotateZ(Math.sin(k * 37 + 2) * shake * 0.025);
+      shake *= Math.exp(-dt * 4.5);
+    }
+    sight.occA.value.copy(camera.position); sight.occB.value.set(r.x, r.y + Math.min(0.9, (ctx.rider.userData.tall || 1.7) * 0.55) - 0.4 * ck, r.z); sight.occOn.value = 1;
     const left = Math.max(0, P.dist[last] - P.dist[prog]);
     $("skiSpeed").textContent = Math.round(r.speed * 3.6);
     $("skiLeft").textContent = fmtLen(left);
@@ -1874,15 +1979,19 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const card = document.createElement("div");
       card.className = "rcard";
       const steps = P.steps.map((s) => (s.type === "lift" ? `<span class="lift">🚡 ${s.name}</span>` : `${LEVEL_MARK[s.level]}${s.name}`)).join(" › ");
+      // The snow on the way: moguls on a run (the icon and 蘑菇道), and powder today off the groomed middles.
+      const bumps = P.segs.filter((g) => g.run.moguls).map((g) => g.run.name).filter((n, i, a) => n && a.indexOf(n) === i);
+      const snowChips = (bumps.length ? `<span class="chip"><img src="assets/icons/moguls.png?v=1" alt="">${P.kind === "run" && bumps.length === 1 && bumps[0] === P.title ? t("蘑菇道") : t("蘑菇道：{runs}", { runs: bumps.slice(0, 2).join("、") })}</span>` : "")
+        + (ctx.powder?.amt > 0 ? `<span class="chip"><img src="assets/icons/powder.png?v=1" alt="">${t("今天有粉雪")}</span>` : "");
       card.innerHTML = P.kind === "run"
-        ? `<div class="r1">${LEVEL_MARK[P.first.level]}<b>${P.title}</b></div>
+        ? `<div class="r1">${LEVEL_MARK[P.first.level]}<b>${P.title}</b></div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
           <small>${fmtLen(P.first.length)} · 落差 ${P.first.drop} 米 · 最陡约 ${P.steep}°</small>
           <canvas width="300" height="40"></canvas>
           <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `🚡 ${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `🏠 ${P.leads.base}` : "雪道尽头"}</small>
           <button class="doc">📜 路书 · 怎么滑、哪里容易错</button>
           <button class="go">从这条滑下去 ›</button>`
         : `<div class="r1"><span>${P.icon}</span><b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
-          <div class="steps">${steps}</div>
+          <div class="steps">${steps}</div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
           <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 🚡${P.next.name}` : ""}</small>
           ${P.lifts ? `<small class="to">到了能坐 🚡 ${P.lifts.join("、")}</small>` : ""}
           <canvas width="300" height="34"></canvas>
@@ -2027,6 +2136,34 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const P = chosen; let i = 0; while (i < P.path.length - 2 && P.dist[i] < m) i++;
     phys.place(P.path[i][0], P.path[i][1], pathDir(P.path, i), 8); prog = i;
   };
+  // Testing: aim the rider at the nearest tree from `back` m away at `speed`; or set them down in the woods
+  // nearby (the densest spot within 300 m with no trunk in the way), heading down the fall line.
+  st.toTree = (speed = 8, back = 3, lone = false) => {
+    const n = T.normalAt(phys.x, phys.z), fl = Math.hypot(n.x, n.z) || 1;
+    let best = null; for (const list of treeGrid.values()) for (const tr of list) { const dx = tr.x - phys.x, dz = tr.z - phys.z, d = dx * dx + dz * dz; if (d > 25 && (dx * n.x + dz * n.z) / fl > Math.sqrt(d) * 0.5 && (!lone || woodsNear(tr.x, tr.z) < 0.5) && (!best || d < best.d)) best = { tr, d }; } // downhill of you (lone: at the edge of the woods)
+    const tr = best.tr, h = Math.atan2(tr.x - phys.x, tr.z - phys.z); phys.place(tr.x - Math.sin(h) * back, tr.z - Math.cos(h) * back, h, speed); return { x: Math.round(tr.x), z: Math.round(tr.z) };
+  };
+  st.woods = () => {
+    let best = null;
+    for (let dx = -300; dx <= 300; dx += 12) for (let dz = -300; dz <= 300; dz += 12) {
+      const x = phys.x + dx, z = phys.z + dz; if (treeAt(x, z, 3)) continue;
+      const w = woodsNear(x, z) + (ctx.mask(x, z) ? 0.5 : 0); if (!best || w > best.w) best = { x, z, w };
+    }
+    const n = T.normalAt(best.x, best.z); phys.place(best.x, best.z, Math.atan2(n.x, n.z), 5); inWoods = 1;
+    camera.position.set(best.x - n.x * 4, T.heightAt(best.x, best.z) + 2.5, best.z - n.z * 4);
+    return { x: Math.round(best.x), z: Math.round(best.z), w: +best.w.toFixed(2) };
+  };
+  st.fx = fx; // testing
+  st.deepPowder = (R0 = 250) => { // testing: onto the deepest powder near here, no tree in the way, down the fall line
+    let best = null;
+    for (let dx = -R0; dx <= R0; dx += 10) for (let dz = -R0; dz <= R0; dz += 10) {
+      const x = phys.x + dx, z = phys.z + dz, n = T.normalAt(x, z), deg = Math.acos(n.y) * 57.3, p = powderDepth(x, z) * (deg > 14 && deg < 32 ? 1 : 0.5);
+      if (p > (best?.p ?? 0) && !treeAt(x, z, 12) && woodsNear(x, z) === 0) best = { x, z, p };
+    }
+    const n = T.normalAt(best.x, best.z); phys.place(best.x, best.z, Math.atan2(n.x, n.z), 9); return { x: Math.round(best.x), z: Math.round(best.z), p: +best.p.toFixed(2) };
+  };
+  st.snow = () => ({ powder: ctx.powder?.amt ?? 0, here: phys ? +powderDepth(phys.x, phys.z).toFixed(2) : 0, moguls: mogF.lines.map((l) => `${l.run.name}:${Math.round(l.lo)}-${Math.round(l.hi)}`), onMogul, bump: { ...bump }, crash: crash && +crash.t.toFixed(2), woods: +inWoods.toFixed(2) });
+  st.mogulAt = (name) => { const l = mogF.lines.find((x) => x.run.name === name) || mogF.lines[0]; if (!l) return null; let i = 0; while (i < l.ss.length - 2 && l.ss[i] < l.lo + 40) i++; return { x: l.xs[i], z: l.zs[i], h: Math.atan2(l.tx[i], l.tz[i]), name: l.run.name }; };
   // Testing: ski `secs` seconds at 30 fps without drawing; report where the rider went.
   st.sim = (secs, every = 5, guided = false) => {
     const out = []; simClock = performance.now(); if (!sdrag) st.setAuto(!guided);
@@ -2143,6 +2280,7 @@ async function main() {
   for (const t of [branch, branchSnow, crown, crownSnow]) t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   await riderLoad;
   const T = new Terrain(R), mask = treeMaskFn(R, T);
+  markMoguls(R.runs, (x, z) => T.heightAt(x, z)); // run.moguls: which runs have bumps (snow-core.js MOGULS), for the signs, cards and the run
   // The lift asked for, else the chairlift that climbs highest.
   const chairs = R.lifts.filter((l) => l.kind === "chair_lift" || l.kind === "gondola" || l.kind === "mixed_lift");
   const lift = R.lifts.find((l) => l.name === params.get("lift")) || R.lifts.find((l) => l.name === "American Flyer") || [...(chairs.length ? chairs : R.lifts)].sort((a, b) => b.rise - a.rise)[0];
@@ -2164,7 +2302,16 @@ async function main() {
   scene.add(trailSigns(T, R, lift, g1.x - g0.x, g1.z - g0.z, renderer));
   const flakes = snowfall();
   scene.add(flakes);
-  weather(params, flakes, R.origin, ctx.applySky);
+  // Powder after heavy snow: the field (where it lies) is worked out once, when the weather says so.
+  weather(params, flakes, R.origin, ctx.applySky, (amt) => {
+    if (amt <= 0 && params.get("powder") !== "map") return;
+    setTimeout(() => {
+      const f = powderField(T, mask, R.runs, mask.grid[0], mask.grid[1]);
+      ctx.powder = { f, amt: params.get("powder") === "map" ? 0 : amt };
+      setPowderField(f, ctx.powder.amt);
+      powderU.powderDebug.value = params.get("powder") === "map" ? 1 : 0;
+    }, 50);
+  });
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
   const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - (TERMINAL[SPEC.top].unload || 9) : line.total * 0.66; // from the loading point to the unload ramp
@@ -2233,13 +2380,15 @@ async function main() {
     setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort, party });
   window.__together = together;
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
-    rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel) }; // testing (the walkie-talkie in voice.js raises the radio for real)
+    rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel),
+    powder: (on) => { powderU.powderDebug.value = on ? 1 : 0; }, ctx, sight, scene }; // testing (the walkie-talkie in voice.js raises the radio for real)
   // The lifts around this one, seen from the chair; then the buildings, signs and props.
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
   setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
+    sight.occOn.value = 0; // the trees go see-through only while skiing (stepSki turns it on)
     if (flakes.visible) flakes.userData.step(dt, camera.position);
     if (skipping && !arrived) { const u = Math.min(1, (now - skipping.t0) / 2200); d = skipping.from + (d1 - skipping.from) * ease(u) + (u >= 1 ? 1 : 0); }
     else if (!params.has("still") && !arrived && !paused) d += SPEED * (fast ? 20 : 3 * rate) * dt;

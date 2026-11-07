@@ -2,7 +2,7 @@
 // you can follow it. The base you set out from, each lift, at each top the ways you could have gone and the
 // one you took, the runs in order, where you came out. Steps a few hours apart start a new day.
 // Drawn as a page of the journal: a map of the day's way at the top, then the steps as a path with forks.
-import { t, EN_ON } from "../core/i18n.js?v=33";
+import { t, EN_ON } from "../core/i18n.js?v=35";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -54,6 +54,7 @@ const CSS = `
 .book .fork div.took::before { content: "➜"; color: #b6463b; }
 .book .fork div.took::after { content: "${EN_ON ? "took this" : "走了这条"}"; margin-left: 8px; font: 12px "Noto Serif SC", serif; color: #b6463b; border: 1px solid #b6463b; border-radius: 999px; padding: 0 7px; }
 .book .runs { margin-top: 2px; font: 15px ${SERIF}; color: #4a453f; } .book .runs span { white-space: nowrap; }
+.book .runs .ic, .book .heads .ic { width: 20px; height: 20px; vertical-align: -5px; } .book .runs em { font: 12px "Noto Serif SC", serif; color: #8a6a4a; margin-left: 2px; font-style: normal; }
 .book .heads { margin-top: 4px; padding: 3px 8px; background: #fbf1dc; border-left: 3px solid #c9a24a; font-size: 13px; color: #5b4a2e; }
 .book .gear { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; } .book .gear span { font-size: 12px; padding: 1px 8px; border: 1px solid #cbbfa9; border-radius: 999px; color: #22344d; }
 .book .empty { font: 16px ${SERIF}; color: #8a8278; line-height: 1.5; }
@@ -82,9 +83,12 @@ export function renderBook(box, resort, host) {
         return `<li data-n="${n}"><b>🏔 ${t("到 {x} 山顶", { x: esc(s.at) })}</b><small>${t("这里可以：")}</small><div class="fork">${opts.map((o) => `<div class="${o === s.chose ? "took" : ""}">${esc(o)}</div>`).join("")}${more > 0 ? `<div>${t("…还有 {n} 条", { n: more })}</div>` : ""}</div></li>`;
       }
       if (s.k === "route") {
-        const runs = s.segs.map((g) => `<span>${MARK[g.l] || ""} ${esc(g.n)}</span>`).join(" › ");
+        // the run's conditions: moguls (蘑菇道) on it, powder that day
+        const ic = (n) => `<img class="ic" src="${location.pathname.includes("/mountain/") ? "../" : ""}assets/icons/${n}.png?v=1" alt="">`;
+        const runs = s.segs.map((g) => `<span>${MARK[g.l] || ""} ${esc(g.n)}${g.m ? ` ${ic("moguls")}<em>${t("蘑菇道")}</em>` : ""}</span>`).join(" › ");
+        const pw = s.pw ? `<div class="heads">${ic("powder")} ${t("那天有粉雪：雪道边上、树林里和背风坡最深，重心稍微靠后")}</div>` : "";
         const flats = (s.flats || []).map((f) => `<div class="heads">${f.k === "flat" ? (EN_ON ? `Flat, ${f.m} m on ${esc(f.n)} (about ${f.at} m in): carry speed, board flat` : `${esc(f.n)} 有 ${f.m} 米平路（出发后约 ${f.at} 米）：带速度、板放平`) : (EN_ON ? `Uphill, ${f.m} m on ${esc(f.n)}: you'll walk` : `${esc(f.n)} 有 ${f.m} 米上坡：要走上去`)}</div>`).join("");
-        return `<li data-n="${n}"><b>${t(s.changed ? "↩ 改路线" : "⛷ 滑下去")}</b><div class="runs">${runs}</div>${flats}${s.next ? `<small>${t("到底坐 🚡 {x}", { x: esc(s.next) })} · ${t("快到底放慢，别滑过站")}</small>` : ""}</li>`;
+        return `<li data-n="${n}"><b>${t(s.changed ? "↩ 改路线" : "⛷ 滑下去")}</b><div class="runs">${runs}</div>${pw}${flats}${s.next ? `<small>${t("到底坐 🚡 {x}", { x: esc(s.next) })} · ${t("快到底放慢，别滑过站")}</small>` : ""}</li>`;
       }
       if (s.k === "jump") return `<li data-n="${n}"><b>⏭ ${t("跳到 {x}", { x: esc(s.to) })}</b><small>${t("中间这段算看过了")}</small></li>`;
       if (s.k === "hike") return `<li data-n="${n}"><b>🥾 ${esc(s.name)}</b><small>${EN_ON ? `about ${s.mins[0]}–${s.mins[1]} min on foot${s.gain ? `, +${s.gain} m` : ""}` : `走路约 ${s.mins[0]}–${s.mins[1]} 分钟${s.gain ? `，爬升约 ${s.gain} 米` : ""}`}</small>${s.gear ? `<div class="gear">${s.gear.map((g) => `<span>${esc(g)}</span>`).join("")}</div>` : ""}</li>`;
