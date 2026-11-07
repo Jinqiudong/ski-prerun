@@ -2,7 +2,7 @@
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. With a trip near (on now, coming up, or just over), the opening is
 // about that trip instead: its crew's little planes on their way to Denver (see tripIntro).
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=30";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=31";
 import { pickTrip, progress, resortsOf, resortOn, crewOf, spread, bearing, ymd, between, LOOK_BACK } from "./trip-intro.js?v=1";
 
 const CSS = `
@@ -178,7 +178,7 @@ function stage(box, st, mood, still) {
 //   during  "day 2 · Copper today", the planes parked at Denver, a tap straight to the mountain
 //   after   the week after: the planes fly home over the whole way, a tap to the Memory tab
 async function tripData(P) {
-  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=32"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
+  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=33"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
   const tr = P.trip, today = ymd(new Date()), byId = Object.fromEntries((Array.isArray(resorts) ? resorts : []).map((r) => [r.id, r]));
   const crew = crewOf(tr, { mine: myAvatar(), avatars: AVATARS }).slice(0, 6);
   if (!crew.length) crew.push({ name: "", from: "", face: myAvatar(), me: true, note: "" });

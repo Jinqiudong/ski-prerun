@@ -1,42 +1,66 @@
-// The first screen: pick a rider (a default one, or one you dressed and named before), recolour its
-// jacket, pants, helmet and goggles, then pick a resort. Riders are saved on this phone only.
+// The first screen: your rider on a watercolour card, and the wardrobe under it: outfits (four suggestions and
+// the ones you saved), the jacket, the pants, the gear, and the look (hair, body). Every change shows on the
+// rider at once and is what you ride in; an outfit you like can be saved by name. All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, PART_ZH, OUTFITS } from "../rider/boarder.js?v=2";
-import { CFG, PART_LABEL, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=3";
+import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
 import { makeEntrance } from "./entrance.js?v=23";
 import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=14";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=30";
-import { playIntro } from "./intro.js?v=19";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=31";
+import { playIntro } from "./intro.js?v=20";
 import { flyTo } from "../core/transition.js?v=4";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
-// mountain, or the Memory tab.
+// mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
 
 const $ = (id) => document.getElementById(id);
-// A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together.
+// A muted outdoor palette (stone, sage, slate, clay...): nothing loud, and any mix of them goes together. Eight a
+// part; the round rainbow one after them opens the phone's own colour picker for anything else.
 const SWATCHES = {
-  jacket: ["#464e3f", "#6f7a62", "#8e9681", "#4a5a6e", "#2f3a4c", "#7b8a96", "#a39d8f", "#c2b49a", "#a8674f", "#8e4a36", "#a88584", "#6e5f6e", "#3b3d40", "#dcd7cc"],
-  pants: ["#c5c4b6", "#dcd7cc", "#a39d8f", "#8f8670", "#4f5645", "#4a5a6e", "#2f3a4c", "#9c6a55", "#3b3d40", "#222326"],
-  helmet: ["#161819", "#3b3d40", "#d9d6ce", "#8f8b82", "#4a5a6e", "#55604b", "#b8a98c", "#9a5f4a"],
-  gloves: ["#3b3d40", "#222326", "#a8674f", "#4a5a6e", "#55604b", "#dcd7cc", "#b6463b"],
-  boots: ["#3b3d40", "#222326", "#8f8670", "#a39d8f", "#4a5a6e", "#9c6a55"],
-  lens: ["#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
+  jacket: ["#525a42", "#dcd7cc", "#2b2c30", "#2f3a4c", "#7b8a96", "#a8674f", "#c2b49a", "#6e5f6e"],
+  pants: ["#c9bfac", "#dcd7cc", "#8f8670", "#4f5645", "#4a5a6e", "#2f3a4c", "#9c6a55", "#222326"],
+  helmet: ["#2b2b2e", "#d9d6ce", "#8f8b82", "#4a5a6e", "#55604b", "#b8a98c", "#9a5f4a", "#f0eee8"],
+  gloves: ["#e3dccb", "#3b3d40", "#222326", "#a8674f", "#4a5a6e", "#55604b", "#b6463b", "#c2b49a"],
+  lens: ["#4d5ce0", "#ad5599", "#3a3c42", "#b8873e", "#b78473", "#7f9fb8", "#6f8f7a", "#9aa1a8"],
+  boots: ["#1d1d20", "#3b3d40", "#8f8670", "#a39d8f", "#4a5a6e", "#9c6a55", "#dcd7cc", "#7f9fb8"],
+  vest: ["#17171a", "#3b3d40", "#4f5645", "#2f3a4c", "#a8674f", "#c2b49a", "#dcd7cc", "#6e5f6e"],
+  hair: ["#3f2a1f", "#1d1a18", "#6b4a2e", "#a07850", "#c9a66b"],
 };
+// The materials each colour sets: the game's six parts (character.js), the vest and the hair.
+const MATS = { ...COLOR_MATS, vest: ["MAT_vest"], hair: ["MAT_hair"] };
+const colorOf = (ch, part) => (ch.colors[MATS[part][0]] || "#888888").toLowerCase();
+const paint = (ch, part, c) => { for (const m of MATS[part]) ch.colors[m] = c; };
 
-// ---- Saved state: { rider (one of your outfits' ids or a template's key), riders: [{ id, base, name, colors }] (your
-// outfits), stances, resort }
+// ---- Saved state ("prerun"): { wear: { ch, from, name, stance, dirty } (what I wear: a character, the outfit it
+// started as, that outfit's name, regular or goofy, and whether it was changed since), riders: [{ id, base, name,
+// colors, ch }] (my saved outfits), rider (wear.from again, for pages from before wear), resort }.
 const load = () => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } };
 const st = load();
 st.riders = (st.riders || []).filter((r) => r.base in RIDERS); // riders on a base model since removed are dropped
 delete st.kind; // everyone snowboards now
-const save = () => localStorage.setItem("prerun", JSON.stringify(st));
+const save = () => { st.rider = st.wear.from || undefined; try { localStorage.setItem("prerun", JSON.stringify(st)); } catch { /* full or private */ } };
+const deep = (o) => JSON.parse(JSON.stringify(o));
 const template = (k) => ({ id: k, base: "rider_a", name: EN_ON ? OUTFITS[k].en : OUTFITS[k].zh, colors: { ...OUTFITS[k].colors }, ch: presetChar(OUTFITS[k].ch), isDefault: true });
 // Every rider is a character (template, body, fit, parts, colours); outfits saved before that get one from A, in their colours.
 const charOf = (r) => { if (r.ch) return r.ch; const ch = presetChar("A"); for (const [p, c] of Object.entries(r.colors || {})) setPartColor(ch, p, c); return ch; };
-const chosen = () => st.riders.find((r) => r.id === st.rider) || template(OUTFITS[st.rider] ? st.rider : "o_pine");
+const outfitOf = (id) => st.riders.find((r) => r.id === id) || (OUTFITS[id] ? template(id) : null);
+// Saved before there was a wear: the outfit chosen then (st.rider), in its stance (st.stances, per outfit), is worn.
+if (!CFG.templates[st.wear?.ch?.tpl] || !st.wear.ch.parts || !st.wear.ch.colors) {
+  const r = outfitOf(st.rider) || template("o_pine");
+  st.wear = { ch: deep(charOf(r)), from: r.id, name: r.name, stance: (st.stances || {})[r.id] === "goofy" ? "goofy" : "regular", dirty: false };
+  save();
+}
+const wear = st.wear;
+const wearName = () => { const r = outfitOf(wear.from); return r ? r.name : wear.name || t("我的穿搭"); };
+// Something changed: shown at once, kept at once (there is no "wear this" step), and the outfit is now changed.
+function changed({ body = false } = {}) {
+  if (!wear.dirty) { wear.dirty = true; if (wtab === "outfits") render(); }
+  if (body) render();
+  save(); show();
+}
 
-// ---- The 3D preview: the rider on a little snow disc, turning slowly; drag to turn it yourself.
+// ---- The 3D preview: the rider on the snow, turning when dragged.
 const canvas = $("c");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -54,196 +78,255 @@ sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.
 Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 30 });
 scene.add(sun, sun.target);
 const rim = new THREE.DirectionalLight(0xdfe9ff, 1.3); rim.position.set(-3, 3, -6); scene.add(rim);
-const disc = new THREE.Mesh(new THREE.CircleGeometry(1.3, 48), new THREE.MeshStandardMaterial({ color: 0xf6f8fb, roughness: 0.9 }));
-disc.rotation.x = -Math.PI / 2; disc.receiveShadow = true;
-disc.visible = false; // the slope below is the ground now
-scene.add(disc);
 const entrance = makeEntrance(scene);
 const turntable = new THREE.Group();
 scene.add(turntable);
-let rider = null, spin = 0, drag = null;
+let rider = null, drag = null, spinTo = null;
 function resize() {
   const w = canvas.clientWidth || innerWidth, h = canvas.clientHeight || innerHeight * 0.56;
   renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  camera.position.set(0, 1.3, 5.6); camera.lookAt(0, 0.88, 0);
 }
 addEventListener("resize", resize); resize();
-// Drag to turn the rider round; on the pick page a quick swipe goes to the next friend and a tap runs their
-// entrance again.
-canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, a: turntable.rotation.y, t: performance.now() }; });
+// Drag to turn the rider round; a tap on a part of them (the jacket, the helmet...) opens that part below, and a
+// tap beside them, on the outfits or the look, runs their entrance again.
+canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, a: turntable.rotation.y }; spinTo = null; });
 addEventListener("pointermove", (e) => { if (drag && !entrance.running) turntable.rotation.y = drag.a + (e.clientX - drag.x) / 120; });
 addEventListener("pointerup", (e) => {
-  if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y, quick = performance.now() - drag.t < 400; drag = null;
-  if (editing || $("pickView").hidden) return;
-  if (quick && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { nextRider(dx < 0 ? 1 : -1); return; }
-  if (quick && Math.hypot(dx, dy) < 8) enter();
+  if (!drag) return; const moved = Math.hypot(e.clientX - drag.x, e.clientY - drag.y); drag = null;
+  if (moved > 8) return;
+  $("morePoses").hidden = true;
+  const hit = partAt(e);
+  if (hit) open(...hit); else if (focus === "full") enter();
 });
-// Swipe: the next (or previous) of the suggestions and your own.
-function nextRider(d) {
-  const ids = [...Object.keys(OUTFITS), ...st.riders.map((r) => r.id)], i = ids.indexOf(chosen().id);
-  st.rider = ids[(i + d + ids.length) % ids.length]; save(); renderPick(); show(chosen());
+// Which wardrobe item a point on the rider is, by the material under it.
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const PART_OF = [[/^MAT_(jacket|vest|zip|seam|cord)/, ["top"]], [/^MAT_pants/, ["pants"]], [/^MAT_(helmet|sticker)/, ["gear", "helmet"]], [/^MAT_mitten/, ["gear", "gloves"]],
+  [/^MAT_(goggle|lens|face_mask)/, ["gear", "lens"]], [/^MAT_boot/, ["gear", "boots"]], [/^MAT_(board|binding)/, ["gear", "board"]], [/^MAT_hair/, ["look"]]];
+const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+function partAt(e) {
+  if (!rider || entrance.running) return null;
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  // a skinned mesh's bounds are kept from its first pose: drop them so they follow this one
+  rider.root.traverse((o) => { if (o.isSkinnedMesh) o.boundingSphere = o.boundingBox = null; });
+  const hit = ray.intersectObject(rider.root, true).find((h) => shown(h.object));
+  if (!hit) return null;
+  const m = [].concat(hit.object.material)[hit.face?.materialIndex || 0] || [].concat(hit.object.material)[0];
+  return PART_OF.find(([re]) => re.test(m?.name || ""))?.[1] || null;
 }
 const ROUTE_OF = Object.fromEntries(Object.entries(SIGNATURE).map(([k, c]) => [c, k]));
-// The shown rider's entrance: their favourite move's route (a carve's, a spin's, an S, a kicker), else the carve.
+// The rider's entrance: their favourite move's route (a carve's, a spin's, an S, a kicker), else the carve.
 function enter() {
-  if (!rider || editing) return;
-  entrance.start(ROUTE_OF[shownChar?.fav] || "A", rider, turntable);
+  if (!rider) return;
+  pose = "Stand_Idle"; renderPoses();
+  entrance.start(ROUTE_OF[wear.ch.fav] || "A", rider, turntable);
 }
-const look = new THREE.Vector3(0, 0.88, 0), REST = { pos: new THREE.Vector3(0, 1.3, 5.6), at: new THREE.Vector3(0, 0.88, 0) };
-window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; } };
+// Back on the spot, facing you (for a close look at a part, or a pose).
+function center() {
+  entrance.stop(); turntable.position.set(0, 0, 0);
+  turntable.rotation.y = Math.atan2(Math.sin(turntable.rotation.y), Math.cos(turntable.rotation.y)); spinTo = 0;
+}
+// The camera: the whole rider, or close on the part being changed (the upper body for the jacket, the legs for
+// the pants, the head for the helmet and goggles...). [bone(s) to look at, distance, how far above, look lower by]
+const REST = { pos: new THREE.Vector3(0, 1.3, 5.6), at: new THREE.Vector3(0, 0.88, 0) };
+const view = { pos: REST.pos.clone(), at: REST.at.clone() }, look = REST.at.clone();
+const SHOTS = { upper: [["Chest"], 3.6, 0.12, 0.08], legs: [["ShinL", "ShinR"], 3.9, 0.15, 0.05], head: [["Head"], 2, 0.08, 0.04],
+  hands: [["HandL", "HandR"], 3, 0.15, 0.06], feet: [["FootL", "FootR"], 2.7, 0.35, -0.02], board: [["FootL", "FootR"], 5.4, 0.55, -0.45] };
+const FOCUS = { top: "upper", pants: "legs", gloves: "hands", lens: "head", helmet: "head", boots: "feet", board: "board" };
+let focus = "full";
+const v3 = new THREE.Vector3();
+function aim() {
+  const s = SHOTS[focus];
+  if (!s || !rider) { view.pos.copy(REST.pos); view.at.copy(REST.at); return; }
+  const [bones, d, up, low] = s;
+  view.at.set(0, 0, 0); for (const b of bones) view.at.add(rider.bones[b].getWorldPosition(v3)); view.at.divideScalar(bones.length);
+  view.at.x *= 0.5; view.at.z *= 0.5; view.at.y -= low; // keep near the middle, a little below the part (the pose buttons sit at the bottom)
+  view.pos.set(view.at.x, view.at.y + d * up, view.at.z + d);
+}
+window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; }, get focus() { return focus; } }; // testing
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (rider) { rider.step(dt); entrance.step(dt); }
+  if (spinTo !== null) { turntable.rotation.y += (spinTo - turntable.rotation.y) * (1 - Math.exp(-dt * 6)); if (Math.abs(turntable.rotation.y - spinTo) < 1e-3) spinTo = null; }
   // the sun and its shadow camera ride along with the rider
   const at = turntable.position; sun.position.set(at.x + 3, at.y + 6, at.z + 4); sun.target.position.copy(at);
-  // the camera leans a little toward the rider while they come in, and settles back on them
-  // the camera: the entrance's shots while it runs, else resting on the rider
-  if (!entrance.shoot(camera, dt, REST)) { camera.position.lerp(REST.pos, 1 - Math.exp(-dt * 4)); look.lerp(REST.at, 1 - Math.exp(-dt * 4)); camera.lookAt(look); }
+  // the camera: the entrance's shots while it runs, else easing to the rider (or the part being changed)
+  if (!entrance.shoot(camera, dt, REST)) { aim(); const k = 1 - Math.exp(-dt * 4); camera.position.lerp(view.pos, k); look.lerp(view.at, k); camera.lookAt(look); }
   renderer.render(scene, camera);
 });
 
-// Regular (left foot forward) or goofy, per rider: the character is mirrored.
-const stanceOf = (r) => ((st.stances || {})[r.id] === "goofy" ? "goofy" : "regular");
-const chars = {}; let shownChar = null, editing = false;
+// Dress the rider in what I wear. { enter }: and run their entrance (a new outfit).
+const chars = {};
 const holder = new THREE.Group(); turntable.add(holder);
-async function show(r, pose) {
-  const ch = r.ch || charOf(r);
+async function show({ enter: go = false } = {}) {
+  const ch = wear.ch;
   const c = await (chars[ch.tpl] ||= makeCharacter(ch.tpl));
-  const changed = rider !== c || shownChar?.board !== ch.board || shownChar?.fav !== ch.fav || shownChar !== ch && !editing;
-  if (rider !== c) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); }
-  c.set(ch); shownChar = ch;
-  // the stance before the entrance starts: it rides goofy's line mirrored (entrance.js)
-  holder.scale.x = stanceOf(r) === "goofy" ? -1 : 1;
+  if (ch !== wear.ch) return; // something else was put on meanwhile
+  const swapped = rider !== c;
+  if (swapped) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); }
+  c.set(ch);
+  // regular or goofy: the character is mirrored (the entrance rides goofy's line mirrored, entrance.js)
+  holder.scale.x = wear.stance === "goofy" ? -1 : 1;
   holder.position.y = 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
-  if (editing) { entrance.stop(); turntable.position.set(0, 0, 0); turntable.rotation.y = 0; if (pose || !rider.current || rider.current === "Anim_Idle") rider.play(pose || "Board_Hold"); }
-  else if (pose === "enter" || changed) enter();
+  if (go && focus === "full") enter();
+  else if (swapped || !c.current) { if (entrance.running) center(); c.play(pose, { fade: 0 }); }
   $("status").hidden = true;
-  $("who").textContent = r.name;
+  $("who").innerHTML = `${escape(wearName())}${wear.dirty ? `<small>${t("改过")}</small>` : ""}`;
 }
+const escape = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// ---- Picking
-// The owner's painted icons (assets/icons), one per part, in place of the words.
+// ---- Poses: a row of them on the card, the rest (and the tricks) behind "…".
+const PILLS = ["Stand_Idle", "Board_Hold", "Pose_Wave", "Pose_Cheer"];
+const LABEL = Object.fromEntries([...POSES, ...TRICKS]);
+let pose = "Stand_Idle";
+function playPose(k) {
+  if (!rider) return;
+  if (pose === k && TRICKS.some(([n]) => n === k)) { wear.ch.fav = wear.ch.fav === k ? null : k; save(); } // a playing trick tapped again: your favourite
+  else { if (entrance.running) center(); pose = k; rider.play(k); }
+  renderPoses();
+}
+function renderPoses() {
+  const more = !PILLS.includes(pose);
+  $("poses").innerHTML = PILLS.map((k) => `<button class="${k === pose ? "on" : ""}" data-pose="${k}">${t(LABEL[k])}</button>`).join("")
+    + `<button class="${more ? "on" : ""}" data-pose="more" aria-label="${t("更多动作")}">…</button>`;
+  $("morePoses").innerHTML = `<div class="chips">${POSES.filter(([k]) => !PILLS.includes(k)).map(([k, l]) => `<button class="${k === pose ? "on" : ""}" data-pose="${k}">${t(l)}</button>`).join("")}</div>
+    <div class="chips">${TRICKS.map(([k, l]) => `<button class="${k === pose ? "on" : ""}" data-pose="${k}">${wear.ch.fav === k ? "<i>★</i>" : ""}${t(l)}</button>`).join("")}</div>
+    <p>${t("再点一次正在做的 trick，设成最爱（出场时会做）")}</p>`;
+}
+for (const id of ["poses", "morePoses"]) $(id).addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pose]"); if (!b) return;
+  if (b.dataset.pose === "more") { $("morePoses").hidden = !$("morePoses").hidden; return; }
+  playPose(b.dataset.pose);
+});
+
+// ---- The wardrobe: a row of icons, and what the chosen one changes below it.
 const ICON = (n) => `assets/icons/${n}.png?v=1`;
-const dots = (r) => `<span class="dots">${Object.keys(RIDERS[r.base].parts).map((p) => `<i style="background:${r.colors?.[p] || RIDERS[r.base].parts[p].color}"></i>`).join("")}</span>`;
-function renderPick() {
-  const cur = chosen();
-  $("defaults").innerHTML = "";
-  for (const key of Object.keys(OUTFITS)) {
-    const o = template(key), b = document.createElement("button");
-    b.className = "card" + (cur.id === key ? " on" : "");
-    b.innerHTML = `<b>${o.name}</b>${dots(o)}<small>${t("单板")} · ${stanceOf(o) === "goofy" ? "Goofy" : "Regular"}</small>`;
-    b.onclick = () => { st.rider = key; save(); renderPick(); show(chosen()); };
-    $("defaults").append(b);
-  }
-  $("mine").innerHTML = st.riders.length ? "" : `<div class="card" style="flex-basis:100%;height:auto;cursor:default"><small>${t("还没有。选一套模版，点「改颜色」换几样、取个名字，就存到这里。")}</small></div>`;
-  for (const r of st.riders) {
-    const b = document.createElement("div");
-    b.className = "card" + (r.id === cur.id ? " on" : "");
-    b.innerHTML = `<b>${escape(r.name)}</b>${dots(r)}<small>${t("单板")} · ${stanceOf(r) === "goofy" ? "Goofy" : "Regular"}</small><button class="del" aria-label="删除">🗑</button>`;
-    b.onclick = (e) => {
-      if (e.target.closest(".del")) {
-        if (!confirm(`${t("删除")}「${r.name}」？`)) return;
-        st.riders = st.riders.filter((x) => x !== r);
-        if (st.rider === r.id) st.rider = "o_pine";
-        save(); renderPick(); show(chosen()); return;
-      }
-      st.rider = r.id; save(); renderPick(); show(r);
-    };
-    $("mine").append(b);
-  }
-  for (const b of $("stance").children) b.classList.toggle("on", b.dataset.s === stanceOf(cur));
-  $("editBtn").innerHTML = `<img src="${ICON("palette")}" alt="">${t("捏人")}${cur.isDefault ? `<br>${t("存成我的")}` : ""}`;
-  // The characters: the base bodies outfits go on. Rider A for now; the man's is still being made.
-  const tplNow = charOf(cur).tpl;
-  $("chars").innerHTML = ["F", "M"].map((k) => `<button class="card${k === tplNow ? " on" : ""}" data-t="${k}"><b>${t(k === "F" ? "女" : "男")}</b></button>`).join("");
-  for (const b of $("chars").children) b.onclick = () => { const k = Object.keys(OUTFITS).find((o) => OUTFITS[o].ch && CFG.presets[OUTFITS[o].ch].tpl === b.dataset.t); st.rider = k; save(); renderPick(); show(chosen()); };
+const NAV = [["outfits", "hanger", "穿搭"], ["top", "jacket", "上衣"], ["pants", "pants", "裤子"], ["gear", "helmet", "装备"], null, ["look", "sliders", "外形"]];
+const GEAR = [["gloves", "gloves", "手套"], ["lens", "lens", "雪镜"], ["helmet", "helmet", "头盔"], ["boots", "boots", "雪鞋"], ["board", "board", "雪板"]];
+let wtab = "outfits", gear = "helmet", naming = false, more = false;
+// Open a wardrobe item (and a gear's own sub-item): the camera goes close on that part, or back out.
+function open(k, sub) {
+  wtab = k; if (sub) gear = sub; naming = false;
+  focus = (k === "gear" ? FOCUS[gear] : FOCUS[k]) || "full";
+  if (focus !== "full") { const was = entrance.running; center(); if (was && rider) { pose = "Stand_Idle"; rider.play(pose); renderPoses(); } }
+  $("who").hidden = focus !== "full";
+  render();
 }
-const escape = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-
-// ---- Dressing: a draft copy, previewed live; saving a default's draft makes a new rider of yours.
-let draft = null, marks = [];
-function openEdit() {
-  const cur = chosen();
-  draft = { id: cur.isDefault ? null : cur.id, base: cur.base, name: cur.isDefault ? "" : cur.name, colors: { ...cur.colors }, ch: JSON.parse(JSON.stringify(charOf(cur))) };
-  const fromCh = JSON.parse(JSON.stringify(draft.ch));
-  const parts = RIDERS[draft.base].parts, from = { ...cur.colors }; marks = [];
-  // shuffle: a colour from each part's list; reset: back to what you started from
-  $("shuffleBtn").onclick = () => { for (const [part, p] of Object.entries(parts)) { const l = [p.color, ...(SWATCHES[part] || [])]; draft.colors[part] = l[Math.floor(Math.random() * l.length)]; setPartColor(draft.ch, part, draft.colors[part]); } marks.forEach((m) => m()); show(draft); };
-  $("resetBtn").onclick = () => { draft.colors = { ...from }; draft.ch = JSON.parse(JSON.stringify(fromCh)); paneTab(curTab); marks.forEach((m) => m()); show(draft); };
-  $("parts").innerHTML = "";
-  for (const [part, p] of Object.entries(parts)) {
-    const wrap = document.createElement("div");
-    wrap.className = "part";
-    wrap.innerHTML = `<img class="ico" src="${ICON(part)}" alt="${t(PART_ZH[part])}"><div class="row"></div>`;
-    const row = wrap.querySelector(".row");
-    const list = [...new Set([p.color, ...(SWATCHES[part] || [])])];
-    const mark = () => { for (const s of row.children) s.classList.toggle("on", s.dataset.c === (draft.colors[part] || p.color)); };
-    for (const c of list) {
-      const s = document.createElement("button");
-      s.className = "sw"; s.style.background = c; s.dataset.c = c;
-      s.onclick = () => { draft.colors[part] = c; setPartColor(draft.ch, part, c); mark(); show(draft); };
-      row.append(s);
-    }
-    mark(); marks.push(mark);
-    $("parts").append(wrap);
-  }
-  $("name").value = draft.name;
-  editing = true; paneTab("身材"); show(draft, "Board_Hold");
-  view("edit");
+const nav = ([k, ic, l], cur) => `<button class="${k === cur ? "on" : ""}" data-k="${k}"><img src="${ICON(ic)}" alt="">${t(l)}</button>`;
+const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+// One row of swatches for a part; the colour worn now leads it when it isn't one of them; the last opens a picker.
+function swatches(part) {
+  const cur = colorOf(wear.ch, part), list = SWATCHES[part].some((c) => same(c, cur)) ? SWATCHES[part] : [cur, ...SWATCHES[part]];
+  return `<div class="swrow" data-paint="${part}">${list.map((c) => `<button class="sw${same(c, cur) ? " on" : ""}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}`
+    + `<label class="sw more" aria-label="${t("更多颜色")}"><input type="color" value="${cur}"></label></div>`;
 }
-// The edit page's four tabs: body, clothes, colours (the swatches above), and moves.
-let curTab = "身材";
-const TABS_E = ["身材", "衣服", "颜色", "动作"];
+// A part on or off, as a little picture of it (tools/render_thumbs.mjs).
+const tile = (k, l) => `<button class="tile${wear.ch.parts[k] ? " on" : ""}" data-part="${k}"><i style="background-image:url(assets/riders/thumbs/${k}_${wear.ch.tpl.toLowerCase()}.png?v=1)"></i>${t(l)}</button>`;
+const dots = (ch) => `<span class="dots">${["jacket", "pants", "helmet", "lens", "boots"].map((p) => `<i style="background:${colorOf(ch, p)}"></i>`).join("")}</span>`;
 const fmts = {};
-const slider = (key, label, lo, hi, step, fmt) => (fmts[key] = fmt, `<label class="sl"><span>${t(label)}<b data-v="${key}">${fmt(draft.ch[key])}</b></span><input type="range" data-k="${key}" min="${lo}" max="${hi}" step="${step}" value="${draft.ch[key]}"></label>`);
+const slider = (key, label, lo, hi, step, fmt) => (fmts[key] = fmt, `<label class="sl"><span>${t(label)}<b data-v="${key}">${fmt(wear.ch[key])}</b></span><input type="range" data-k="${key}" min="${lo}" max="${hi}" step="${step}" value="${wear.ch[key]}"></label>`);
 const word = (lo, hi, a, b, c) => (v) => t(v < lo + (hi - lo) / 3 ? a : v > hi - (hi - lo) / 3 ? c : b);
-function paneTab(name) {
-  curTab = name;
-  $("etabs").innerHTML = TABS_E.map((k) => `<button class="${k === name ? "on" : ""}">${t(k)}</button>`).join("");
-  for (const b of $("etabs").children) b.onclick = () => paneTab(TABS_E[[...$("etabs").children].indexOf(b)]);
-  const colours = name === "颜色"; $("parts").hidden = $("etools").hidden = !colours; $("epane").hidden = colours;
-  const ch = draft.ch, T = CFG.templates[ch.tpl], S = Object.fromEntries(CFG.sliders.map((x) => [x.key, x]));
-  const pane = $("epane");
-  if (name === "身材") pane.innerHTML = `<div class="chips">${["F", "M"].map((k) => `<button class="chip${ch.tpl === k ? " on" : ""}" data-tpl="${k}">${t(k === "F" ? "女" : "男")}</button>`).join("")}</div>
-    ${slider("height", "身高", T.hmin, T.hmax, 1, (v) => `${v} cm`)}
-    ${slider("weight", "体重", S.weight.lo, S.weight.hi, 1, word(S.weight.lo, S.weight.hi, "偏瘦", "适中", "偏壮"))}
-    ${slider("muscle", "肌肉", S.muscle.lo, S.muscle.hi, 1, word(S.muscle.lo, S.muscle.hi, "柔和", "普通", "结实"))}`;
-  if (name === "衣服") pane.innerHTML = `${slider("jease", "外套宽松", S.jease.lo, S.jease.hi, 1, word(S.jease.lo, S.jease.hi, "合身", "适中", "宽松"))}
-    ${slider("jlen", "外套长度", S.jlen.lo, S.jlen.hi, 0.5, word(S.jlen.lo, S.jlen.hi, "短", "适中", "长"))}
-    ${slider("pease", "裤子宽松", S.pease.lo, S.pease.hi, 1, word(S.pease.lo, S.pease.hi, "合身", "适中", "宽松"))}
-    ${ch.tpl === "F" ? `<h4>${t("头发")}</h4><div class="chips">${HAIR.map(([k, l]) => `<button class="chip${hairOf(ch) === k ? " on" : ""}" data-hair="${k}">${t(l)}</button>`).join("")}</div>` : ""}
-    <div class="chips">${Object.entries(PART_LABEL).map(([k, l]) => `<button class="chip${ch.parts[k] ? " on" : ""}" data-part="${k}">${t(l)}</button>`).join("")}</div>
-    <h4>${t("雪板")}</h4><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><img src="assets/riders/boards/${k}_top.jpg?v=1" alt=""></button>`).join("")}</div>`;
-  if (name === "动作") pane.innerHTML = `<div class="chips">${POSES.map(([k, l]) => `<button class="chip${rider?.current === k ? " on" : ""}" data-play="${k}">${t(l)}</button>`).join("")}</div>
-    <div class="tricks">${TRICKS.map(([k, l]) => `<button class="trick${rider?.current === k ? " on" : ""}" data-play="${k}">${ch.fav === k ? "<i>★</i>" : ""}${t(l)}</button>`).join("")}</div>
-    <p class="hint">${t("点一个看动作；再点一次正在播的 trick，设成你最爱的（选人页会时不时做一下）")}</p>`;
-  for (const i of pane.querySelectorAll("input[type=range]")) i.oninput = () => { const k = i.dataset.k; ch[k] = +i.value; pane.querySelector(`[data-v="${k}"]`).textContent = fmts[k](ch[k]); show(draft); };
-  for (const b of pane.querySelectorAll("[data-tpl]")) b.onclick = () => { if (ch.tpl === b.dataset.tpl) return; const k = Object.keys(OUTFITS).find((o) => CFG.presets[OUTFITS[o].ch].tpl === b.dataset.tpl), pre = presetChar(OUTFITS[k].ch);
-    Object.assign(ch, { tpl: pre.tpl, height: pre.height }); setHair(ch, hairOf(pre)); paneTab(name); show(draft); };
-  for (const b of pane.querySelectorAll("[data-board]")) b.onclick = () => { ch.board = b.dataset.board; paneTab(name); show(draft); };
-  for (const b of pane.querySelectorAll("[data-hair]")) b.onclick = () => { setHair(ch, b.dataset.hair); paneTab(name); show(draft); };
-  for (const b of pane.querySelectorAll("[data-part]")) b.onclick = () => { ch.parts[b.dataset.part] = !ch.parts[b.dataset.part]; paneTab(name); show(draft); };
-  for (const b of pane.querySelectorAll("[data-play]")) b.onclick = () => { const k = b.dataset.play;
-    if (rider?.current === k && TRICKS.some(([n]) => n === k)) ch.fav = ch.fav === k ? null : k; else rider?.play(k); paneTab(name); };
+function render() {
+  const ch = wear.ch;
+  $("wnav").innerHTML = NAV.map((n) => (n ? nav(n, wtab) : `<i class="vr"></i>`)).join("");
+  $("wsub").innerHTML = wtab === "gear" ? GEAR.map((n) => nav(n, gear)).join("") : "";
+  $("wsub").hidden = wtab !== "gear";
+  let h = "";
+  if (wtab === "outfits") {
+    const card = (r) => `<button class="combo${wear.from === r.id && !wear.dirty ? " on" : ""}" data-outfit="${r.id}">${dots(charOf(r))}<span translate="no">${escape(r.name)}</span>${r.isDefault ? "" : `<i class="del" data-del="${r.id}" aria-label="${t("删除")}">×</i>`}</button>`;
+    h = naming
+      ? `<form class="naming"><input id="name" maxlength="16" placeholder="${t("比如：周末粉雪")}" value="${escape(outfitOf(wear.from)?.isDefault ? "" : wearName())}"><button type="button" data-cancel>${t("取消")}</button><button class="go">${t("保存")}</button></form>`
+      : `<div class="swrow cards">${wear.dirty ? `<button class="combo keep" data-keep>${dots(ch)}<span>${t("存成我的")}</span></button>` : ""}`
+        + `<button class="combo rnd" data-shuffle aria-label="${t("随机")}"><img src="${ICON("shuffle")}" alt=""><span>${t("随机")}</span></button>`
+        + Object.keys(OUTFITS).map((k) => card(template(k))).join("") + st.riders.map(card).join("") + `</div>`;
+  }
+  if (wtab === "top") h = swatches("jacket") + `<div class="tiles">${tile("hood", "帽兜")}${tile("vest", "马甲")}${tile("grid", "格纹")}</div>`
+    + (ch.parts.vest ? `<div class="lrow"><span>${t("马甲颜色")}</span>${swatches("vest")}</div>` : "");
+  if (wtab === "pants") h = swatches("pants");
+  if (wtab === "gear") {
+    if (gear === "helmet") h = swatches("helmet") + `<div class="tiles">${tile("visor", "帽檐")}${tile("stickers", "贴纸")}<button class="chip${ch.glossyHelmet ? " on" : ""}" data-gloss>${t("亮面")}</button></div>`;
+    else if (gear === "board") h = `<div class="boardrow"><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><img src="assets/riders/boards/${k}_base.jpg?v=1" alt=""></button>`).join("")}</div>`
+      + `<div class="stance">${["regular", "goofy"].map((s) => `<button class="chip${wear.stance === s ? " on" : ""}" data-stance="${s}">${s === "regular" ? "Regular" : "Goofy"}</button>`).join("")}<small>${t(wear.stance === "goofy" ? "右脚在前" : "左脚在前")}</small></div></div>`;
+    else h = swatches(gear);
+  }
+  if (wtab === "look") {
+    const T = CFG.templates[ch.tpl], S = Object.fromEntries(CFG.sliders.map((x) => [x.key, x]));
+    h = (ch.tpl === "F" ? `<div class="lrow"><span>${t("发型")}</span><div class="swrow">${HAIR.map(([k, l]) => `<button class="chip${hairOf(ch) === k ? " on" : ""}" data-hair="${k}">${k === "none" ? (EN_ON ? t("不要头发") : "不要") : t(l)}</button>`).join("")}<i class="gap"></i>`
+        + SWATCHES.hair.map((c) => `<button class="sw${same(c, colorOf(ch, "hair")) ? " on" : ""}" data-c="${c}" data-for="hair" style="background:${c}"></button>`).join("") + `</div></div>` : "")
+      + `<div class="lrow"><span>${t("身材")}</span><div class="swrow">${["F", "M"].map((k, i) => `<button class="chip${ch.tpl === k ? " on" : ""}" data-tpl="${k}">${t("体形 {n}", { n: i + 1 })}</button>`).join("")}</div></div>`
+      + slider("height", "身高", T.hmin, T.hmax, 1, (v) => `${v} cm`)
+      + `<button class="morebtn" data-more>${t(more ? "收起 ⌃" : "更多 ⌄")}</button>`
+      + (more ? `<div class="sl2">` + slider("weight", "体重", S.weight.lo, S.weight.hi, 1, word(S.weight.lo, S.weight.hi, "偏瘦", "适中", "偏壮"))
+        + slider("muscle", "肌肉", S.muscle.lo, S.muscle.hi, 1, word(S.muscle.lo, S.muscle.hi, "柔和", "普通", "结实"))
+        + slider("jease", "外套宽松", S.jease.lo, S.jease.hi, 1, word(S.jease.lo, S.jease.hi, "合身", "适中", "宽松"))
+        + slider("jlen", "外套长度", S.jlen.lo, S.jlen.hi, 0.5, word(S.jlen.lo, S.jlen.hi, "短", "适中", "长"))
+        + slider("pease", "裤子宽松", S.pease.lo, S.pease.hi, 1, word(S.pease.lo, S.pease.hi, "合身", "适中", "宽松")) + `</div>` : "");
+  }
+  $("wbody").innerHTML = h; $("wbody").dataset.tab = wtab;
+  $("wbody").querySelector(".combo.on")?.scrollIntoView({ block: "nearest", inline: "nearest" }); // the outfit worn, in sight
+  if (naming) { $("name").focus(); $("name").select(); } // keep the name to update that outfit, or type a new one
 }
-$("editBtn").onclick = openEdit;
-for (const b of $("stance").children) b.onclick = () => {
-  const cur = chosen();
-  st.stances = { ...(st.stances || {}), [cur.id]: b.dataset.s }; save();
-  renderPick(); show(chosen());
-};
-$("cancelBtn").onclick = () => { editing = false; view("pick"); show(chosen(), "enter"); };
-$("saveBtn").onclick = () => {
+for (const id of ["wnav", "wsub"]) $(id).addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (!b) return; id === "wnav" ? open(b.dataset.k) : open("gear", b.dataset.k); });
+// Wear an outfit: a new copy of it (your stance stays yours), and its entrance.
+function wearOutfit(r) {
+  Object.assign(wear, { ch: deep(charOf(r)), from: r.id, name: r.name, dirty: false });
+  save(); render(); show({ enter: true });
+}
+$("wbody").addEventListener("click", (e) => {
+  const el = e.target.closest("button, [data-del]"); if (!el) return;
+  const d = el.dataset, ch = wear.ch;
+  if (d.del) {
+    e.stopPropagation(); const r = st.riders.find((x) => x.id === d.del);
+    if (!r || !confirm(`${t("删除")}「${r.name}」？`)) return;
+    st.riders = st.riders.filter((x) => x !== r);
+    if (wear.from === r.id) Object.assign(wear, { from: null, name: r.name, dirty: true });
+    save(); render(); show(); return;
+  }
+  if (d.outfit) return wearOutfit(outfitOf(d.outfit));
+  if ("keep" in d) { naming = true; return render(); }
+  if ("cancel" in d) { naming = false; return render(); }
+  if ("shuffle" in d) { // a colour from each part's list
+    for (const p of ["jacket", "pants", "helmet", "gloves", "lens", "boots"]) paint(ch, p, SWATCHES[p][Math.floor(Math.random() * SWATCHES[p].length)]);
+    wear.dirty = true; render(); return changed();
+  }
+  if (d.c) { // a swatch: its row says which part (the hair's dots say it themselves)
+    const part = d.for || el.closest("[data-paint]").dataset.paint; paint(ch, part, d.c);
+    for (const s of el.parentElement.querySelectorAll(".sw[data-c]")) s.classList.toggle("on", s === el);
+    return changed();
+  }
+  if (d.part) { ch.parts[d.part] = !ch.parts[d.part]; return changed({ body: true }); }
+  if ("gloss" in d) { ch.glossyHelmet = !ch.glossyHelmet; return changed({ body: true }); }
+  if (d.board) { ch.board = d.board; return changed({ body: true }); }
+  if (d.stance) { wear.stance = d.stance; save(); render(); return show(); }
+  if (d.hair) { setHair(ch, d.hair); return changed({ body: true }); }
+  if (d.tpl && d.tpl !== ch.tpl) { // the other template: its preset's height and hair, the same colours, parts and fit
+    const pre = presetChar(Object.keys(CFG.presets).find((k) => CFG.presets[k].tpl === d.tpl));
+    Object.assign(ch, { tpl: pre.tpl, height: pre.height }); setHair(ch, hairOf(pre));
+    return changed({ body: true });
+  }
+  if ("more" in d) { more = !more; render(); }
+});
+// The phone's colour picker: live while it's open, and the row is redrawn (the new colour first) when it closes.
+$("wbody").addEventListener("input", (e) => {
+  const i = e.target;
+  if (i.type === "color") { paint(wear.ch, i.closest("[data-paint]").dataset.paint, i.value); for (const s of i.closest(".swrow").querySelectorAll(".sw")) s.classList.remove("on"); return changed(); }
+  if (i.type === "range") { const k = i.dataset.k; wear.ch[k] = +i.value; $("wbody").querySelector(`[data-v="${k}"]`).textContent = fmts[k](wear.ch[k]); changed(); }
+});
+$("wbody").addEventListener("change", (e) => { if (e.target.type === "color") render(); });
+// Save what I wear as one of my outfits, by a short name (the same name as the one it came from: that one, updated).
+$("wbody").addEventListener("submit", (e) => {
+  e.preventDefault();
   const name = $("name").value.trim();
   if (!name) { $("name").focus(); $("name").placeholder = t("先取个名字"); return; }
-  draft.name = name;
-  if (draft.id) Object.assign(st.riders.find((r) => r.id === draft.id), draft);
-  else { draft.id = "r" + Date.now().toString(36); st.riders.push(draft); }
-  st.rider = draft.id; save(); editing = false;
-  view("pick"); renderPick(); show(chosen(), "enter");
-};
+  const was = st.riders.find((r) => r.id === wear.from), r = was && was.name === name ? was : { id: "r" + Date.now().toString(36), base: "rider_a" };
+  Object.assign(r, { name, colors: partColors(wear.ch), ch: deep(wear.ch) });
+  if (r !== was) st.riders.push(r);
+  Object.assign(wear, { from: r.id, name, dirty: false }); naming = false;
+  save(); render(); show();
+});
 
 // ---- Tabs: the rider, the resorts (a map of them to conquer), the journal.
 let collection = null, tab = "rider";
@@ -269,7 +352,7 @@ for (const id of ["sheet", "trips", "records"]) {
 }
 canvas.addEventListener("pointerdown", fold);
 for (const b of $("tabs").children) b.onclick = () => { if ($("tabs").classList.contains("shut")) { $("tabs").classList.remove("shut"); return; } setTab(b.dataset.tab); }; // folded: a tap opens it
-$("useBtn").onclick = () => { st.rider = chosen().id; save(); setTab("resort"); };
+$("useBtn").onclick = () => { save(); setTab("resort"); };
 const resortList = async () => (await (await fetch("data/resorts.json")).json()).filter((r) => r.ready);
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
@@ -310,7 +393,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=32");
+    const { Trips } = await import("./trips.js?v=33");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -320,7 +403,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=17");
+  const { renderMemory } = await import("./memory.js?v=18");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
@@ -330,15 +413,8 @@ async function openBook(r) {
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
   openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });
 }
-function view(v) {
-  $("pickView").hidden = v !== "pick"; $("editView").hidden = v !== "edit";
-  document.body.classList.toggle("editing", v === "edit");
-  $("headTitle").textContent = t({ pick: "选你的穿搭", edit: "捏人", resort: "去哪个雪场" }[v]);
-  $("headSub").textContent = { pick: t("先选一套穿搭，再选雪场"), edit: t("身材、衣服、颜色、动作，取个名字存在这台手机"), resort: `${chosen().name} · ${t("单板")} · ${stanceOf(chosen()) === "goofy" ? "Goofy" : "Regular"}` }[v];
-}
-
-renderPick();
-show(chosen()).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = t("人物没加载出来，刷新试试"); console.warn(e); });
+render(); renderPoses();
+show({ enter: true }).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = t("人物没加载出来，刷新试试"); console.warn(e); });
 // ?tab=resort or ?tab=log (from the game's menu); a rider already chosen starts on the map.
 const askTab = new URLSearchParams(location.search).get("tab");
 setTab(new URLSearchParams(location.search).has("trip") ? "trip" : ({ log: "log", resort: "resort", trip: "trip" })[askTab] || "rider");
@@ -355,6 +431,6 @@ face(); addEventListener("prerun:avatar", () => { face(); trips?.render?.(); });
   btn.classList.add("resume");
   btn.innerHTML = `<span class="hop"><span>${[0, 1, 2].map((i) => `<img class="f${i}" src="assets/icons/ride_crayon_${i}.png?v=2" alt="">`).join("")}</span></span>`;
   btn.setAttribute("aria-label", `${t("继续")} · ${name} ${ses.where || ""}`);
-  btn.onclick = () => { st.rider = chosen().id; save(); location.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`; };
+  btn.onclick = () => { save(); location.href = `look.html?resort=${encodeURIComponent(ses.resort)}&lift=${encodeURIComponent(ses.lift)}&at=${ses.at}`; };
 })();
 translatePage();

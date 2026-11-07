@@ -13,29 +13,17 @@
     #head b { font: 600 24px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 2px; }
     #status { position: absolute; top: 45%; left: 50%; transform: translateX(-50%); color: var(--muted); font-size: 14px; }
     #who { position: absolute; left: 0; right: 0; bottom: 56px; text-align: center; color: var(--navy); font: 600 24px "Cormorant Garamond", "Noto Serif SC", serif; text-shadow: 0 0 8px rgba(253,251,246,.95); pointer-events: none; }
-    #stance { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 0; border-radius: 999px; overflow: hidden; box-shadow: 0 3px 8px rgba(40,30,20,.18); }
-    #stance button { flex: none; font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 0; padding: 7px 14px; cursor: pointer; }
-    #stance button.on { background: var(--navy); color: #fdfbf6; }
-    #editBtn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 64px; padding: 8px 4px; font: 13px/1.25 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 12px; box-shadow: 0 3px 8px rgba(40,30,20,.18); cursor: pointer; text-align: center; }
-    #editBtn img { display: block; width: 30px; height: 30px; margin: 0 auto 2px; }
-    /* The edit page's tabs, sliders and chips (body, clothes, moves) */
-    .etabs { display: flex; gap: 6px; margin: 4px 0 10px; } .etabs button { flex: 1; padding: 8px 0; border: 0; border-radius: 999px; background: #efe8db; font: 14px "Noto Serif SC", serif; color: var(--ink); cursor: pointer; }
-    .etabs button.on { background: var(--navy); color: #fdfbf6; font-weight: 600; }
-    #epane[hidden], #etools[hidden], #parts[hidden] { display: none; }
-    #epane .sl { display: block; margin: 12px 4px; } #epane .sl span { display: flex; justify-content: space-between; font: 14px "Noto Serif SC", serif; color: var(--navy); } #epane .sl b { font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif; }
-    #epane input[type=range] { width: 100%; margin: 10px 0 0; accent-color: #22344d; }
-    #epane .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
-    #epane .chip, #epane .trick { padding: 7px 14px; border-radius: 999px; border: 1.5px solid #d6cbb6; background: var(--paper); font: 13px "Noto Serif SC", serif; color: var(--ink); cursor: pointer; }
-    #epane .chip.on, #epane .trick.on { background: var(--navy); color: #fdfbf6; border-color: var(--navy); }
-    #epane .tricks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; } #epane .trick { position: relative; border-radius: 14px; padding: 12px 4px; }
-    #epane h4 { margin: 14px 0 6px; font: 14px "Noto Serif SC", serif; color: var(--navy); }
-    #epane .boards { display: flex; gap: 10px; } #epane .boards button { width: 44px; height: 150px; padding: 2px; border: 2px solid transparent; border-radius: 22px; background: none; cursor: pointer; }
-    #epane .boards button.on { border-color: var(--navy); } #epane .boards img { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; display: block; }
-    #epane .trick i { position: absolute; right: 6px; top: 2px; font-style: normal; color: #b6463b; } #epane .hint { font-size: 12px; color: var(--muted); margin: 4px 0 12px; }
-    .tools { display: flex; gap: 10px; justify-content: flex-end; margin: 2px 0 6px; }
-    .tools button { width: 44px; height: 44px; padding: 6px; border-radius: 50%; border: 1px solid #e2d8c6; background: var(--card); cursor: pointer; }
-    .tools img, #saveBtn img { width: 100%; height: 100%; display: block; }
-    #saveBtn img { width: 22px; height: 22px; display: inline-block; vertical-align: -5px; margin-right: 6px; filter: brightness(0) invert(1); }
+    #who small { margin-left: 6px; font: 12px "Noto Serif SC", serif; color: var(--muted); vertical-align: 3px; }
+    /* Poses: small pills along the card's bottom edge, clear of the go button; "…" opens the rest above them. */
+    #poses { position: absolute; left: 12px; right: 84px; bottom: 16px; display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; scrollbar-width: none; }
+    #poses::-webkit-scrollbar { display: none; }
+    #poses button, #morePoses button { flex: none; font: 13px "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.94); border: 0; border-radius: 999px; padding: 6px 12px; box-shadow: 0 3px 8px rgba(40,30,20,.15); cursor: pointer; }
+    #poses button.on, #morePoses button.on { background: var(--navy); color: #fdfbf6; }
+    #morePoses { position: absolute; left: 12px; right: 12px; bottom: 60px; padding: 10px; border-radius: 16px; background: rgba(253,251,246,.94); box-shadow: 0 8px 20px rgba(40,30,20,.18); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+    #morePoses .chips { display: flex; flex-wrap: wrap; gap: 6px; } #morePoses .chips + .chips { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e6dccb; }
+    #morePoses button { box-shadow: inset 0 0 0 1px #ddd2bf; padding: 5px 11px; } #morePoses button.on { box-shadow: none; }
+    #morePoses i { font-style: normal; color: var(--red); margin-right: 3px; } #morePoses button.on i { color: #f3c9c4; }
+    #morePoses p { margin: 8px 2px 0; font-size: 11px; color: var(--muted); }
     #useBtn { position: absolute; right: 12px; bottom: 10px; width: 58px; height: 58px; padding: 9px; background: var(--navy); border: 0; border-radius: 50%; box-shadow: 0 4px 10px rgba(34,52,77,.3); cursor: pointer; }
     #useBtn svg { width: 100%; height: 100%; display: block; }
     /* A pre-run to go back to: the crayon rider crouches, springs up, cheers at the top, lands. */
@@ -51,9 +39,58 @@
       60% { transform: translateY(-10%); } 78% { transform: translateY(-4%); } 86% { transform: scale(1.05, .93); } 94%, 100% { transform: none; } }
     #useBtn.resume::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: #22344d url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 12'%3E%3Cpath d='M2 1l7 5-7 5z' fill='%23fdfbf6'/%3E%3C/svg%3E") 55% 50% / 9px no-repeat; box-shadow: 0 0 0 2px #fbf7ef; }
     @media (prefers-reduced-motion: reduce) { #useBtn.resume img, #useBtn.resume .hop span { animation: none; } #useBtn.resume .f0 { opacity: 1; } }
-    #chars .card { height: 58px; flex-basis: 120px; flex-direction: row; align-items: center; gap: 10px; justify-content: flex-start; }
-    body.editing #stance, body.editing #editBtn, body.editing #useBtn { display: none; }
     #sheet { position: fixed; left: 0; right: 0; bottom: 0; padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; top: calc(56vh + 22px + env(safe-area-inset-top)); padding: 4px 16px 16px; overflow-y: auto; background: transparent; }
+    /* The wardrobe: icons with their names under them, the open one on a paper tag; the gear's own row under it. */
+    #wnav, #wsub { display: flex; align-items: center; justify-content: space-around; }
+    #wnav { padding: 0 4px 8px; border-bottom: 1px solid #e2d8c6; }
+    #wnav button, #wsub button { flex: none; width: 54px; padding: 5px 0 4px; border: 0; border-radius: 14px; background: none; font: 12px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; display: grid; justify-items: center; gap: 2px; }
+    #wnav img { width: 30px; height: 30px; object-fit: contain; } #wsub img { width: 24px; height: 24px; object-fit: contain; }
+    #wnav button.on, #wsub button.on { background: #f1e4cc; color: var(--navy); font-weight: 600; box-shadow: inset 0 0 0 1.5px #d9bf8f; }
+    #wnav .vr { width: 1px; height: 44px; background: #e2d8c6; }
+    #wsub { justify-content: flex-start; gap: 4px; padding: 6px 0 0; } #wsub button { width: 50px; padding: 4px 0 3px; font-size: 11px; gap: 1px; }
+    #wbody { padding: 6px 0 0; }
+    /* rows that scroll sideways, padded so a selected ring is never cut */
+    #wbody .swrow { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding: 6px 6px; margin: 0 -6px; scrollbar-width: none; }
+    #wbody .swrow::-webkit-scrollbar { display: none; }
+    #wbody .sw { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); cursor: pointer; }
+    #wbody .sw.on { box-shadow: 0 0 0 2px #f6f1e7, 0 0 0 4px var(--navy); }
+    #wbody .sw.more { position: relative; overflow: hidden; background: conic-gradient(#b6463b, #c9a86a, #5d8f68, #4a72a8, #6a4f63, #b6463b); opacity: .85; }
+    #wbody .sw.more input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; cursor: pointer; }
+    #wbody .gap { flex: none; width: 4px; }
+    #wbody .lrow { display: flex; align-items: center; gap: 10px; margin-top: 4px; } #wbody .lrow > span { flex: none; font-size: 13px; color: var(--navy); } #wbody .lrow .swrow { flex: 1; min-width: 0; }
+    #wbody .lrow .sw { width: 28px; height: 28px; }
+    #wbody .chip { flex: none; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd2bf; background: #fdfbf6; font: 13px "Noto Serif SC", serif; color: #8a8278; cursor: pointer; }
+    #wbody .chip.on { background: var(--navy); border-color: var(--navy); color: #fdfbf6; }
+    /* parts on and off: little pictures of them, ticked when on */
+    #wbody .tiles { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    #wbody .tile { flex: none; width: 62px; padding: 0; border: 0; background: none; font: 12px "Noto Serif SC", serif; color: #6f675d; cursor: pointer; }
+    #wbody .tile i { display: block; position: relative; width: 62px; height: 62px; margin-bottom: 2px; box-sizing: border-box; border-radius: 14px; border: 1px solid #ddd2bf; background: #fdfbf6 center / cover no-repeat; }
+    #wbody .tile.on { color: var(--navy); font-weight: 600; } #wbody .tile.on i { border: 2px solid var(--navy); }
+    #wbody .tile.on i::after { content: ""; position: absolute; right: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--navy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='%23fdfbf6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+    #wbody .tiles .chip { align-self: flex-start; margin: 16px 0 0 4px; }
+    /* outfits: overlapping colour dots and a name */
+    #wbody .cards { gap: 8px; padding: 6px 6px 8px; }
+    #wbody .combo { flex: none; position: relative; min-width: 78px; padding: 10px 12px 8px; border: 1px solid #ddd2bf; border-radius: 14px; background: #fdfbf6; cursor: pointer; display: grid; justify-items: center; gap: 6px; font: 13px "Noto Serif SC", serif; color: var(--navy); }
+    #wbody .combo.on { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+    #wbody .combo span { max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #wbody .combo .dots { display: flex; } #wbody .combo .dots i { width: 19px; height: 19px; margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px #fdfbf6; } #wbody .combo .dots i:first-child { margin-left: 0; }
+    #wbody .combo.rnd, #wbody .combo.keep { border-style: dashed; border-color: #cbbfa9; } #wbody .combo.rnd { min-width: 56px; } #wbody .combo.rnd img { width: 22px; height: 22px; }
+    #wbody .combo.keep { background: #f1e4cc; border: 0; box-shadow: inset 0 0 0 1.5px #d9bf8f; font-weight: 600; }
+    #wbody .combo .del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: #fdfbf6; box-shadow: inset 0 0 0 1px #d9cdb9; font: 14px/19px sans-serif; font-style: normal; color: var(--muted); text-align: center; }
+    #wbody .naming { display: flex; gap: 8px; align-items: center; padding: 6px 0; }
+    #wbody .naming input { flex: 1; min-width: 0; box-sizing: border-box; font: 16px "Noto Serif SC", serif; padding: 8px 12px; border-radius: 999px; border: 1px solid #cbbfa9; background: #fdfbf6; color: var(--ink); }
+    #wbody .naming button { flex: none; font: 600 15px "Cormorant Garamond", "Noto Serif SC", serif; border-radius: 999px; padding: 8px 14px; border: 1px solid #cbbfa9; color: var(--navy); background: #fdfbf6; cursor: pointer; }
+    #wbody .naming .go { background: var(--navy); border-color: var(--navy); color: #fdfbf6; }
+    /* the boards, tall, and which foot leads */
+    #wbody .boardrow { display: flex; align-items: center; gap: 18px; }
+    #wbody .boards { display: flex; gap: 8px; } #wbody .boards button { width: 34px; height: 116px; padding: 2px; border: 2px solid transparent; border-radius: 20px; background: none; cursor: pointer; }
+    #wbody .boards button.on { border-color: var(--navy); } #wbody .boards img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+    #wbody .stance { display: grid; gap: 8px; justify-items: start; } #wbody .stance small { font-size: 11px; color: var(--muted); }
+    /* the look: hair, build, height, and the rest behind "更多" */
+    #wbody .sl { display: block; margin: 8px 2px 4px; } #wbody .sl span { display: flex; justify-content: space-between; font-size: 13px; color: var(--navy); } #wbody .sl b { font: 600 14px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--muted); }
+    #wbody input[type=range] { width: 100%; margin: 6px 0 0; accent-color: #22344d; }
+    #wbody .sl2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; } #wbody .sl2 .sl { margin-top: 4px; }
+    #wbody .morebtn { display: block; margin: 2px auto 0; padding: 4px 10px; border: 0; background: none; font: 12px "Noto Serif SC", serif; color: var(--muted); cursor: pointer; }
     h3 { display: flex; align-items: center; gap: 10px; margin: 8px 0 8px; font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; font-weight: 400; letter-spacing: .04em; }
     h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
     .row { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
@@ -72,14 +109,6 @@
     .seg { display: flex; gap: 8px; }
     .seg button { flex: 1; font: 15px "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); background: var(--paper); border: 1px solid #e2d8c6; border-radius: 6px; padding: 9px 6px; cursor: pointer; }
     .seg button.on { background: var(--navy); border-color: var(--navy); color: #fdfbf6; font-weight: 600; }
-    .part { margin: 4px 0 12px; display: flex; align-items: center; gap: 8px; } .part .row { flex: 1; min-width: 0; }
-    .part .ico { flex: none; width: 44px; height: 44px; object-fit: contain; }
-    .part .lbl { font: 16px "Cormorant Garamond", "Noto Serif SC", serif; color: #6f675e; margin: 0 2px 6px; display: flex; justify-content: space-between; }
-    .sw { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 3px solid #fdfbf6; box-shadow: 0 0 0 1px #d9cdb9, 0 2px 4px rgba(90,70,40,.15); cursor: pointer; padding: 0; }
-    .sw.on { box-shadow: 0 0 0 2px var(--navy), 0 2px 4px rgba(90,70,40,.15); }
-    .sw.pick { background: conic-gradient(#b5524a, #d8b46a, #7f9e88, #8eaec4, #4a5f7a, #9a86ad, #b5524a); position: relative; overflow: hidden; }
-    .sw.pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-    #name { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 6px; border: 1px solid #cbbfa9; background: var(--paper); color: var(--ink); }
     /* Tabs along the bottom: rider, resorts (the conquest map), journal. */
     /* The tabs: a frosted pill floating over the page; on the map it folds into one round button while you explore. */
     /* A pre-run left half way: a small round button over the tabs' right end; tap it and it opens into a pill
@@ -132,4 +161,3 @@
     #compass { position: absolute; left: 18px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 54px; height: 54px; pointer-events: none; opacity: .9; }
     #worldCredit { position: absolute; left: 8px; right: 90px; bottom: 2px; text-align: center; font-size: 9px; color: rgba(60,50,40,.5); pointer-events: none; }
     [hidden] { display: none !important; }
-  
