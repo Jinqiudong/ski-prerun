@@ -40,6 +40,12 @@ square, black diamond, orange for parks, yellow for slow).
   entry in `../glb/<family>.json` may carry `"for"`: the research building or lift names
   (`data/facilities/<id>.json`) it stands for, so the game can pick it by name. Each docstring names the
   photos the model was checked against.
+- `utah.py` holds the Salt Lake City-area Ikon resorts' models (Alta, Snowbird, Brighton, Solitude, Deer Valley,
+  Snowbasin): Snowbird's Aerial Tram (`tram_cabin`, `tower_tram`, `tram_dock_bottom`, `tram_dock_top`), the landmark
+  lodges, and a parametric mountain lodge (`lodge_body`, `front_gable`, `capped_chimney`, `deck`) they share.
+  Their research is `data/facilities/<id>.json`; a lift may name its maker's hood there (`terminal_model`), which
+  the ride prefers over a name match. Two more hoods live in `stations.py`: `terminal_detach_ctec` (Garaventa
+  CTEC Stealth) and `terminal_detach_dline` (Doppelmayr D-Line).
 - `gear.py` holds hand-held props for the riders (the radio), built to `assets/props/` rather than `../glb/`:
   `Blender -b -P models/facilities/blender/build.py -- assets/props radio`. Real scale; origin at the grip,
   not the foot; the top along Blender +Z (game +Y), the face to −Y (game +Z). `finalize(..., ground=False)`

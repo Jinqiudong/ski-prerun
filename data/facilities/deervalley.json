@@ -1,0 +1,1137 @@
+{
+ "resort": "deervalley",
+ "name": "Deer Valley Resort",
+ "researched": "2026-11-07",
+ "about": "Real on-mountain facilities of Deer Valley for the 3D scenes. Lifts are keyed by OSM way id. Buildings use lat/lon (the origin is not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "Everything is painted Deer Valley green: old CTEC Stealth / Uni-GS terminals in a dark bottle green over a cream band with the lift name in green script; the 2024-26 expansion lifts in a brighter forest green (D-Line or UNI-G clad to look like D-Line).",
+  "Expanded Excellence / East Village lifts (Keetley, Hoodoo, Aurora 2024; Galena, Pioche, Neptune, Pinyon, Revelator, Vulcan, East Village Gondola 2025-26; Hail Peak 2026-27) are all Doppelmayr and all Deer Valley's. None belongs to Park City Mountain.",
+  "Revelator Express: OSM says 6 seats; it is a quad (skiresort.info, liftblog photos).",
+  "Neptune and Pioche did not open in 2025-26 (liftblog comments, Feb 2026); whether they run in 2026-27 is not confirmed.",
+  "OSM lacks Deer Valley's ~8 Sunkid conveyors (skiresort.info) and any separate feature for the Big Dutch mid-station.",
+  "Old-lift colours are from liftblog photos dated 2015 (Stealth, Uni-GS lifts), 2016-2023 (Uni-G lifts) and 2025-2026 (expansion lifts)."
+ ],
+ "lifts": {
+  "36742290": {
+   "name": "Sterling Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2006,
+   "terminal": "Doppelmayr CTEC Uni-GS",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#f0f0ec",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Bald Mountain summit lift from Silver Lake Village. Uni-GS stations: dark green rounded hood with glazed nose and a white lower band with the lift name in green script. Liftblog photos 2015.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/sterling-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1391,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "36742291": {
+   "name": "Silver Lake Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1999,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Snow Park to Silver Lake Lodge. CTEC Stealth terminals: dark green faceted hood with a ribbon of windows over a cream band carrying the name in green script; dark green towers. Top terminal stands beside Silver Lake Lodge.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/silver-lake-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1950,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36743744": {
+   "name": "Carpenter Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1996,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Main out-of-base lift at Snow Park Lodge; liftblog calls the base a Stealth II terminal. Same dark green / cream-band look; Yan-built towers.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/carpenter-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1442,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36744562": {
+   "name": "Wasatch Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1996,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Silver Lake Village area to Bald Mountain summit. Stealth bottom terminal in the photos.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/wasatch-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1205,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36744563": {
+   "name": "Sultan Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2005,
+   "terminal": "Doppelmayr CTEC Uni-GS",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#f0f0ec",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": false,
+   "note": "Bald Mountain (Sultan/Mayflower side). Uni-GS terminals with 90-degree loading at the bottom; photos are snowy, so the hood colour is taken from the sister lift Sterling.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/sultan-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1411,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "36927943": {
+   "name": "Empire Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1998,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Empire Canyon Lodge to the top of Empire Canyon. Stealth terminals, dark green over cream band ('Empire' script).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/empire-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1421,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36927944": {
+   "name": "Ruby Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2002,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Empire Canyon Lodge to Flagstaff Mountain; liftblog calls the stations Stealth III (compact bottom terminal).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/ruby-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 733,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36927945": {
+   "name": "Red Cloud",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1990,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30",
+    "chair": "#5a5f66"
+   },
+   "color_verified": true,
+   "note": "Yan triple on Flagstaff Mountain: dark green bottom bullwheel frame and an elevated dark green top drive house with 'RED CLOUD' lettering (cell site on the roof). Dark green towers, grey chairs.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/red-cloud-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 740
+  },
+  "36927946": {
+   "name": "Quincy Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2001,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Flagstaff Mountain; liftblog calls it a Stealth III station.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/quincy-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1206,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36927947": {
+   "name": "Northside Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1993,
+   "terminal": "Garaventa CTEC Stealth",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Oldest detachable at Deer Valley; Stealth terminal with green script 'Northside' on the cream band.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/northside-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1087,
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "36927948": {
+   "name": "Silver Strike Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2004,
+   "terminal": "Doppelmayr CTEC Uni-GS",
+   "color": {
+    "terminal": "#c9cccf",
+    "terminal_band": "#f0f0ec",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": false,
+   "note": "Flagstaff Mountain from Silver Lake / Empire Pass side, 90-degree loading at the bottom. In the 2015 photo the arched hood looks light grey with dark script name, unlike Sterling's green; may be snow and flat light, so treat the hood colour as unconfirmed.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/silver-strike-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1522,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "104083425": {
+   "name": "Snowflake",
+   "type": "fixed_chair",
+   "seats": 2,
+   "bubble": false,
+   "manufacturer": "CTEC",
+   "year": 1993,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30",
+    "chair": "#5a5f66"
+   },
+   "color_verified": false,
+   "note": "Beginner double at Snow Park beside Burns Express. CTEC Sprint terminals; Skytrac added two towers and moved the bottom terminal back for 2022-23.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/snowflake-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 329
+  },
+  "104085879": {
+   "name": "Viking",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1990,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30",
+    "chair": "#5a5f66"
+   },
+   "color_verified": false,
+   "note": "Short Yan triple at Silver Lake Village. Skytrac replaced half tower 3 in 2025.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/viking-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 174
+  },
+  "104085882": {
+   "name": "Homestake Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2018,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#1f5040",
+    "terminal_band": "#f0f0ec",
+    "tower": "#1f5040",
+    "chair": "#b8bcc0"
+   },
+   "color_verified": true,
+   "note": "Short lift out of Silver Lake Village (8 towers, 39 chairs; built by Highlander). Uni-G hood in dark green with a white front band and 'Homestake Express' script.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/homestake-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 531,
+   "terminal_model": "terminal_detach_unig"
+  },
+  "104085884": {
+   "name": "Judge",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2004,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30"
+   },
+   "color_verified": false,
+   "note": "Short triple on Flagstaff Mountain.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/judge-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 217
+  },
+  "104087778": {
+   "name": "Mountaineer Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2012,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#1f5040",
+    "terminal_band": "#e9e6dc",
+    "tower": "#1f5040",
+    "chair": "#5a5f66"
+   },
+   "color_verified": true,
+   "note": "Replaced Deer Crest; links Snow Park / Burns to Little Baldy and the Jordanelle Gondola. Uni-G dark green hood with glass roof, 'Mountaineer' script on the nose.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/mountaineer-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 871,
+   "terminal_model": "terminal_detach_unig"
+  },
+  "104087780": {
+   "name": "Jordanelle Express Gondola",
+   "type": "gondola",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1998,
+   "terminal": "Garaventa CTEC (stations inside timber buildings)",
+   "color": {
+    "cabin": "#1f3b30",
+    "cabin_logo": "#c9a24a",
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30"
+   },
+   "color_verified": true,
+   "note": "Gondola from the Jordanelle base (US-40) up to Little Baldy / Deer Crest. Both stations are housed in lodge-style buildings: honey timber siding, river-rock piers, green steel gable roof open at the rope end. Dark green cabins with a gold Deer Valley logo. Cabin size: skiresort.info and Wikipedia say 4 passengers.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/jordanelle-express-gondola-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 1553
+  },
+  "104094233": {
+   "name": "Crown Point",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1990,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30",
+    "chair": "#5a5f66"
+   },
+   "color_verified": false,
+   "note": "Yan triple on Bald Eagle Mountain (tension station at the bottom, Yan top drive).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/crown-point-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 390
+  },
+  "104094234": {
+   "name": "Lady Morgan Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2007,
+   "terminal": "Doppelmayr CTEC Uni-GS",
+   "color": {
+    "terminal": "#1e3a30",
+    "terminal_band": "#f0f0ec",
+    "tower": "#1e3a30",
+    "chair": "#4a4f55"
+   },
+   "color_verified": true,
+   "note": "Served the 2007 Lady Morgan expansion off Empire Canyon. Glass-roofed green Uni-GS-style terminals with a white band and the name in script.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/lady-morgan-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 774,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "104096266": {
+   "name": "Mayflower",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Yan",
+   "year": 1984,
+   "color": {
+    "terminal": "#1e3a30",
+    "tower": "#1e3a30",
+    "chair": "#5a5f66"
+   },
+   "color_verified": false,
+   "note": "Yan triple on the Mayflower side of Bald Mountain; height-adjustable bottom terminal.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/mayflower-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 984
+  },
+  "844333121": {
+   "name": "Keetley Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": true,
+   "manufacturer": "Doppelmayr",
+   "year": 2024,
+   "terminal": "Doppelmayr D-Line",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30",
+    "seat": "#3a9e78",
+    "bubble": "#3a3f45"
+   },
+   "color_verified": true,
+   "note": "Main lift out of East Village to Keetley Point (2024-25). D-Line terminals in Deer Valley green with a big LED screen on the nose; heated green seats, smoked bubbles; conical green towers. 102 chairs, parking barn built 2025.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/keetley-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 2003,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "844333122": {
+   "name": "Galena Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30"
+   },
+   "color_verified": true,
+   "note": "Built 2024-25, opened 2025-26; top beside Keetley on Keetley Point. UNI-G terminal clad to look like a D-Line: green box hood, glazed nose and roof, Doppelmayr logo.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/galena-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 1392,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "844333123": {
+   "name": "Neptune Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30"
+   },
+   "color_verified": true,
+   "note": "Short quad serving the Velvaere neighbourhood below Pioche Village; top beside Pioche Express. Green D-Line-styled UNI-G with name lettered on the nose. OSM tags it proposed; liftblog shows it built. Liftblog comments (Feb 2026) say it did not open in 2025-26; 2026-27 status not confirmed.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/neptune-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 1039,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "844333124": {
+   "name": "Pioche Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2f6e52",
+    "seat": "#3a3f45"
+   },
+   "color_verified": true,
+   "note": "From the bottom of Aurora to Pioche Point, the northern summit of the expansion. Chairs have green frames with dark seats. Liftblog comments (Feb 2026) say it did not open in 2025-26; 2026-27 status not confirmed.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/pioche-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 1393,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "844333125": {
+   "name": "Hoodoo Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2024,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2f8a62",
+    "seat": "#3a9e78"
+   },
+   "color_verified": true,
+   "note": "Short beginner lift from near the Grand Hyatt to beside the Keetley top-terminal area. Green-frame chairs with green/grey striped seats.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/hoodoo-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 328,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "844333126": {
+   "name": "Aurora",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2024,
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "chair": "#2a2d30",
+    "chair_bail": "#2f7a5a"
+   },
+   "color_verified": true,
+   "note": "Only fixed-grip lift in the expansion: four towers, Alpenstar drive (green dome hood) with loading carpet, EJ quad chairs with green bail and black hanger.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/aurora-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 197
+  },
+  "844333128": {
+   "name": "East Village Gondola II",
+   "type": "gondola",
+   "seats": 10,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr D-Line",
+   "color": {
+    "cabin": "#2a2d30",
+    "cabin_alt": "#1f5a44",
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44"
+   },
+   "color_verified": true,
+   "note": "Upper section of the East Village Express Gondola, Big Dutch mid-station to Park Peak (cabins run through). Very tall towers, two downhill stretches; crosses over Revelator. Top station sits under the Park Peak Lodge (cabin parking on its first floor). Omega V cabins: photos show both charcoal cabins with a white deer logo and cabins with green frames; mix not confirmed.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/east-village-gondola-ii-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/",
+    "https://www.deervalley.com/media-room/012826-gondola-opening"
+   ],
+   "osm_length_m": 2593
+  },
+  "1044084706": {
+   "name": "Hail Peak Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2026,
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30"
+   },
+   "color_verified": false,
+   "note": "Under construction in autumn 2026 (towers flown in Sept 2026), due to open for 2026-27: East Village to Hail Peak, 86 chairs, 1,130 ft rise. Terminal style not yet photographed; probably the same green D-Line-styled UNI-G as the other expansion quads (unconfirmed).",
+   "verified": true,
+   "sources": [
+    "https://townlift.com/2026/09/deer-valley-resort-hosts-helicopter-fly-in-of-new-hail-peak-express-lift-towers/",
+    "https://www.kpcw.org/park-city/2026-06-29/deer-valley-resort-to-open-200-new-acres-run-dedicated-to-military-families",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/"
+   ],
+   "osm_length_m": 1223
+  },
+  "1099477126": {
+   "name": "Burns Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2022,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#1f6a4a",
+    "terminal_band": "#d9dcdf",
+    "tower": "#b8bcc0",
+    "chair": "#c0c4c8",
+    "seat": "#3a9e78"
+   },
+   "color_verified": true,
+   "note": "Shortest detachable in America, beginner lift at Snow Park next to Snowflake. Brighter green Uni-G hood, galvanized towers, silver chairs with green/grey seats and auto lap bars.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/burns-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://en.wikipedia.org/wiki/Deer_Valley"
+   ],
+   "osm_length_m": 320,
+   "terminal_model": "terminal_detach_unig"
+  },
+  "1201810800": {
+   "name": "Revelator Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30"
+   },
+   "color_verified": true,
+   "note": "Upper half of the old '6A/6B' line on Park Peak, to the high point of the expansion (9,370 ft); passes under Gondola II. OSM tags it 6 seats, but skiresort.info, liftblog and the photos show a quad.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/revelator-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 1077,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "1201810804": {
+   "name": "Pinyon Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": true,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr D-Line",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30",
+    "seat": "#2f6e52",
+    "bubble": "#3a3f45"
+   },
+   "color_verified": true,
+   "note": "6-CLD-B (Doppelmayr plate): links Silver Lake side (between Bald and Flagstaff) to Park Peak. Like Keetley but with longer terminals for in-station chair parking; name lettered on the nose.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/pinyon-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 915,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "1210150101": {
+   "name": null,
+   "type": "platter",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "OSM platter, 152 m, west of Snow Park (40.6392,-111.4841). No surface lift of this kind is listed by skiresort.info (it lists only conveyors) or liftblog, and no photo was found. Could be a private or ski-school tow; unidentified.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1210150101",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/"
+   ],
+   "osm_length_m": 152
+  },
+  "1383315664": {
+   "name": "Vulcan Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr Uni-G (D-Line styling)",
+   "color": {
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44",
+    "tower_base": "#1f5a44",
+    "chair": "#2a2d30"
+   },
+   "color_verified": true,
+   "note": "Lower half of the old '6A/6B' line on Park Peak (118 chairs), mixed tower styles; from the drainage up to near Big Dutch. OSM tags it proposed but it was built and ran in 2025-26.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/vulcan-express-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/"
+   ],
+   "osm_length_m": 1597,
+   "terminal_model": "terminal_detach_dline"
+  },
+  "1525900413": {
+   "name": "East Village Gondola I",
+   "type": "gondola",
+   "seats": 10,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2025,
+   "terminal": "Doppelmayr D-Line",
+   "color": {
+    "cabin": "#2a2d30",
+    "cabin_alt": "#1f5a44",
+    "terminal": "#1f5a44",
+    "tower": "#1f5a44"
+   },
+   "color_verified": true,
+   "note": "Lower section, East Village base to the Big Dutch angle mid-station (optional unload). Long green D-Line station with a curved glazed roof and a multimedia screen on the nose ('Deer Skiers, Welcome.'). 142 Omega V cabins with heated individual seats across both sections; 40 towers; whole ride ~14.5 min, 2,570 ft rise. Opened to the public at the end of January 2026 (ribbon cutting 3 Feb 2026).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/east-village-gondola-i-deer-valley-ut/",
+    "https://www.skiresort.com/en/ski-resort/deer-valley/ski-lifts/",
+    "https://liftblog.com/tag/extell/",
+    "https://www.deervalley.com/media-room/012826-gondola-opening"
+   ],
+   "osm_length_m": 2126
+  }
+ },
+ "buildings": [
+  {
+   "name": "Snow Park Lodge",
+   "kind": "base_lodge",
+   "lat": 40.637367,
+   "lon": -111.478325,
+   "footprint_m": {
+    "length": 87.5,
+    "width": 97.8,
+    "heading_deg": 107.7
+   },
+   "storeys": 3,
+   "style": "Main base lodge. Big timber chalet: honey-tan vertical board siding, several steep gables with dark shake/standing-seam roofs, two stone chimneys with copper caps, long bands of tall windows over a slope-side deck and plaza; a lower stone-and-timber entry wing with a heavy timber porch on the road side. Carpenter and Silver Lake Express load beside it.",
+   "model": "snow_park_lodge",
+   "osm": "w224293845",
+   "note": "Still standing in 2026; the Snow Park redevelopment (Alterra) has approvals for phase 1 but no demolition date. OSM footprint covers the whole lodge complex.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/224293845",
+    "https://www.deervalley.com/things-to-do/meetings-special-occasions/groups-and-meetings/snow-park-lodge",
+    "https://townlift.com/2025/11/snow-park-redevelopment-moves-forward-with-city-deer-valley-parking-agreement/"
+   ]
+  },
+  {
+   "name": "Silver Lake Lodge",
+   "kind": "restaurant",
+   "lat": 40.622002,
+   "lon": -111.48811,
+   "footprint_m": {
+    "length": 126.0,
+    "width": 63.1,
+    "heading_deg": 171.6
+   },
+   "storeys": 2,
+   "style": "Mid-mountain lodge at Silver Lake Village (8,100 ft). Long low timber hall with a huge central glass gable facing the snow (log posts and trusses behind floor-to-ceiling glass), cedar-shake roofs, wood decks with log railings and a big brick-paved plaza; Mariposa and Royal Street Cafe inside. Silver Lake Express top terminal beside it.",
+   "model": "silver_lake_lodge",
+   "osm": "w241190808",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/241190808",
+    "https://www.deervalley.com/things-to-do/meetings-special-occasions/groups-and-meetings/silver-lake-lodge"
+   ]
+  },
+  {
+   "name": "Empire Canyon Lodge",
+   "kind": "restaurant",
+   "lat": 40.615181,
+   "lon": -111.50994,
+   "footprint_m": {
+    "length": 53.6,
+    "width": 53.1,
+    "heading_deg": 125.3
+   },
+   "storeys": 2,
+   "style": "Day lodge at the Empire Canyon base next to Montage Deer Valley: large log-and-timber lodge with board-and-batten siding, cedar-shake gabled roofs, stone chimneys and stone-faced terrace walls, many-paned windows; Fireside Dining inside. Empire and Ruby Express load beside it.",
+   "model": "empire_canyon_lodge",
+   "osm": "w251098893",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/251098893",
+    "https://www.deervalley.com/things-to-do/meetings-special-occasions/groups-and-meetings/empire-canyon-lodge",
+    "https://liftblog.com/empire-express-deer-valley-ut/"
+   ]
+  },
+  {
+   "name": "East Village Gondola base (temporary skier services)",
+   "kind": "base_lodge",
+   "lat": 40.61896,
+   "lon": -111.44282,
+   "storeys": 1,
+   "style": "East Village base, 2025-26: the long green Doppelmayr D-Line gondola station with curved glazed roof and LED nose screen, Keetley and Hoodoo nearby, temporary skier-services buildings and construction cranes; the Grand Hyatt is the finished building. Permanent skier services building (East Village Lodge) is under construction (opening 2026 or 2027/28, sources disagree).",
+   "model": "ticket_office",
+   "osm": null,
+   "note": "Position is the OSM bottom of East Village Gondola I; no OSM building for the base yet.",
+   "verified": false,
+   "sources": [
+    "https://liftblog.com/east-village-gondola-i-deer-valley-ut/",
+    "https://townlift.com/2026/05/deer-valley-east-village-where-things-stand-heading-into-summer-2026/",
+    "https://www.kpcw.org/wasatch-county/2026-08-31/deer-valley-to-open-200-new-skiable-acres-this-winter-while-lodge-construction-continues"
+   ]
+  },
+  {
+   "name": "Grand Hyatt Deer Valley",
+   "kind": "hotel",
+   "lat": 40.620703,
+   "lon": -111.441639,
+   "footprint_m": {
+    "length": 148.8,
+    "width": 74.3,
+    "heading_deg": 151.4
+   },
+   "storeys": 8,
+   "style": "Big new East Village hotel (open by the 2025-26 season): long multi-wing block, dark-stained timber and stone with light render, many gables and balconies; seen behind the Hoodoo and gondola stations.",
+   "model": "village_block_b",
+   "osm": "w1317321433",
+   "note": "Storeys estimated from liftblog photos; unconfirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1317321433",
+    "https://liftblog.com/hoodoo-express-deer-valley-ut/"
+   ]
+  },
+  {
+   "name": "Park Peak Lodge",
+   "kind": "restaurant",
+   "lat": 40.59866,
+   "lon": -111.4901,
+   "storeys": null,
+   "style": "Summit lodge at the top of East Village Gondola II, under construction; first floor (gondola cabin parking and some dining) due for 2026-27. Look not yet documented.",
+   "model": "restaurant",
+   "osm": null,
+   "note": "Position is the OSM top of Gondola II; not in OSM as a building.",
+   "verified": false,
+   "sources": [
+    "https://www.parkcitymag.com/home-and-real-estate/2026/01/deer-valley-east-village",
+    "https://liftblog.com/east-village-gondola-ii-deer-valley-ut/"
+   ]
+  },
+  {
+   "name": "Jordanelle Gondola base",
+   "kind": "base_lodge",
+   "lat": 40.63599,
+   "lon": -111.45163,
+   "storeys": 2,
+   "style": "Jordanelle base station: lodge-style building of honey timber siding, river-rock piers and a green metal gable roof open at the rope end; dark green cabins inside.",
+   "model": "base_lodge",
+   "osm": null,
+   "note": "Position is the OSM bottom of the gondola; liftblog photos may show the top station, which has the same style.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/jordanelle-express-gondola-deer-valley-ut/"
+   ]
+  },
+  {
+   "name": "Stein Eriksen Lodge",
+   "kind": "hotel",
+   "lat": 40.622411,
+   "lon": -111.490988,
+   "storeys": 5,
+   "style": "Norwegian-inspired luxury hotel in Silver Lake Village: heavy dark-stained timber, sandstone-clad lower walls and porte-cochere, steep gables with deep eaves, tall glass gable at the entrance, many timber balconies; several 4-6 storey wings stepping down the slope.",
+   "model": "village_block_b",
+   "osm": "n2354379198",
+   "note": "OSM has only a node, no footprint.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/node/2354379198",
+    "https://www.steinlodge.com/"
+   ]
+  },
+  {
+   "name": "Snowshoe Tommy's",
+   "kind": "warming_hut",
+   "lat": 40.609701,
+   "lon": -111.482085,
+   "footprint_m": {
+    "length": 11.3,
+    "width": 7.9,
+    "heading_deg": 92.8
+   },
+   "storeys": 1,
+   "style": "Small cafe cabin near the top of Sterling/Wasatch on Bald Mountain (11 x 8 m).",
+   "model": "warming_hut",
+   "osm": "w1321855589",
+   "note": "Exterior look not confirmed from a photo.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1321855589",
+    "https://www.deervalley.com/things-to-do/dining/snowshoe-tommys"
+   ]
+  },
+  {
+   "name": "Black Diamond Lodge",
+   "kind": "village_block",
+   "lat": 40.636458,
+   "lon": -111.477688,
+   "footprint_m": {
+    "length": 187.1,
+    "width": 37.4,
+    "heading_deg": 19.4
+   },
+   "storeys": 4,
+   "style": "Condo lodge on the Snow Park base slope (187 x 37 m footprint).",
+   "model": "village_block_a",
+   "osm": "w251098891",
+   "note": "Look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/251098891"
+   ]
+  },
+  {
+   "name": "Montage Deer Valley",
+   "kind": "hotel",
+   "lat": 40.615924,
+   "lon": -111.511737,
+   "footprint_m": {
+    "length": 214.1,
+    "width": 208.8,
+    "heading_deg": 63.9
+   },
+   "storeys": 7,
+   "style": "Large hotel at Empire Pass beside Empire Canyon Lodge; seen behind the lodge in the resort's summer photo: stone base, timber and stucco wings, many gables.",
+   "model": "village_block_b",
+   "osm": "w226669913",
+   "note": "Storeys estimated.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/226669913",
+    "https://www.deervalley.com/things-to-do/meetings-special-occasions/groups-and-meetings/empire-canyon-lodge"
+   ]
+  },
+  {
+   "name": "Goldener Hirsch Inn",
+   "kind": "hotel",
+   "lat": 40.622543,
+   "lon": -111.488888,
+   "footprint_m": {
+    "length": 40.2,
+    "width": 32.0,
+    "heading_deg": 9.4
+   },
+   "storeys": 5,
+   "style": "Austrian-style hotel in Silver Lake Village next to Silver Lake Lodge.",
+   "model": "village_block_b",
+   "osm": "w241190800",
+   "note": "Look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/241190800"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Deer Valley green everywhere",
+   "description": "Every terminal, tower, operator hut and snow gun is Deer Valley green; older terminals carry a cream band with the lift name in green italic script.",
+   "kit": "partial",
+   "kit_note": "Paint terminal_detach hoods dark green with a cream band; towers green.",
+   "refs": [
+    "36742291",
+    "36743744",
+    "36744562",
+    "36927943"
+   ]
+  },
+  {
+   "name": "East Village Express Gondola",
+   "description": "Three-mile two-section 10-passenger gondola from East Village via the Big Dutch angle station to Park Peak, with long green D-Line stations, glass roofs and LED screens on the noses.",
+   "kit": "partial",
+   "kit_note": "gondola10 and gondola_station exist; needs D-Line long green station with curved glazed roof, and an angle mid-station.",
+   "refs": [
+    "1525900413",
+    "844333128"
+   ]
+  },
+  {
+   "name": "Keetley and Pinyon bubble six-packs",
+   "description": "Doppelmayr D-Line six-seaters with green heated seats, smoked bubbles, conical green towers and LED screens on the terminal noses.",
+   "kit": "partial",
+   "kit_note": "chair6_bubble exists; needs green seats, D-Line box hood in green.",
+   "refs": [
+    "844333121",
+    "1201810804"
+   ]
+  },
+  {
+   "name": "Silver Lake Lodge and Village",
+   "description": "Mid-mountain village at 8,100 ft: the big glass-gabled timber Silver Lake Lodge with Stein Eriksen Lodge and Goldener Hirsch beside it; Silver Lake Express, Sterling, Homestake and Viking meet here.",
+   "kit": "partial",
+   "kit_note": "restaurant model; scale up with a central glass gable and shake roof.",
+   "refs": [
+    "36742291",
+    "36742290",
+    "104085882"
+   ]
+  },
+  {
+   "name": "Snow Park Lodge",
+   "description": "The original big timber chalet base lodge with copper-capped stone chimneys at the bottom of Carpenter and Silver Lake Express.",
+   "kit": "partial",
+   "kit_note": "base_lodge model in honey timber with dark roofs.",
+   "refs": [
+    "36743744",
+    "36742291"
+   ]
+  },
+  {
+   "name": "Jordanelle Gondola",
+   "description": "Small dark green cabins in timber-and-stone lodge-style stations, from US-40 up to Little Baldy.",
+   "kit": "partial",
+   "kit_note": "gondola6 at 4-seat scale; station clad as a lodge.",
+   "refs": [
+    "104087780"
+   ]
+  }
+ ]
+}

@@ -5,4 +5,6 @@
  {"name": "terminal_detach_lpa", "label": "脱挂式站台：Leitner-Poma LPA（长低罩、玻璃拱顶、色带）", "rope": [3.0, 4.45], "for": ["American Eagle", "American Flyer", "Timberline Express", "Panoramic Express", "Super Gauge Express", "Sunnyside Express", "Wild Spur Express", "High Alpine", "Tiehack Express", "Lenawee Express"]},
  {"name": "terminal_detach_omega", "label": "脱挂式站台：Poma Omega（拱顶两端圆、深色玻璃、名牌带）", "rope": [3.0, 4.45], "for": ["Super Bee", "Excelerator", "Gemini Express", "Olympia Express", "Explorer Express", "Christie Peak Express", "Black Mountain Express", "Exhibition", "Loge Peak", "Cloud Nine", "Summit Express"]},
  {"name": "terminal_detach_unig", "label": "脱挂式站台：Doppelmayr Uni-G（圆润罩、深色顶、侧边门廊顶棚）", "rope": [3.0, 4.45], "for": ["Alpenglow", "Kokomo Express", "Elkhead Express", "Greenhorn Ranch Express"]},
- {"name": "terminal_detach_dopp90", "label": "脱挂式站台：90 年代 Doppelmayr（银色平顶罩、红色顶边带）", "rope": [3.0, 4.45], "for": ["Storm Peak Express", "Sundown Express", "Thunderhead Express"]}]
+ {"name": "terminal_detach_dopp90", "label": "脱挂式站台：90 年代 Doppelmayr（银色平顶罩、红色顶边带）", "rope": [3.0, 4.45], "for": ["Storm Peak Express", "Sundown Express", "Thunderhead Express"]},
+ {"name": "terminal_detach_ctec", "label": "脱挂式站台：Garaventa CTEC Stealth（多面体罩、奶油色名牌带、深绿上部和窗带）", "rope": [3.0, 4.45]},
+ {"name": "terminal_detach_dline", "label": "脱挂式站台：Doppelmayr D-Line（高大方正圆角罩、侧面玻璃带、车头大屏幕）", "rope": [3.0, 4.45]}]

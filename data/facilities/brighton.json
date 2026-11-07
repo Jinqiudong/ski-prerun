@@ -1,0 +1,430 @@
+{
+ "resort": "brighton",
+ "name": "Brighton",
+ "researched": "2026-11-07",
+ "about": "Real lifts and buildings of Brighton Resort (Big Cottonwood Canyon, Utah), researched for the 3D scenes. Lifts are keyed by OSM way id. Buildings give lat/lon (origin not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "Lift colours are from liftblog photos dated Feb 2016 (older lifts) and Dec 2023 (Crest 6); older hoods may have been repainted since.",
+  "OSM's 'Crest Express' (137706713) is now Crest 6, the 2023 Doppelmayr D-Line six-pack.",
+  "OSM tags Explorer as a quad; it is a triple.",
+  "A Forest Service decision (Jan 2024) approved a six-passenger chondola from the base to Snake Creek Lodge; it is not on liftblog's 2024-2026 new-lift lists, so it is not built as of Nov 2026. Do not add it.",
+  "Real lifts all present in OSM: 6 chairs + 2 carpets. OSM's base buildings also include non-resort ones (church, Cold Creek Lodge clinic, Alpine Lodge guest house, Wasatch Mountain Club Lodge) which are left out here.",
+  "Reference photos: brighton/photos/ (see SOURCES.md). No usable exterior photo found for Alpine Rose or Milly Chalet."
+ ],
+ "lifts": {
+  "137706713": {
+   "name": "Crest 6",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2023,
+   "terminal": "Doppelmayr D-Line",
+   "color": {
+    "terminal": "#1f5a48",
+    "terminal_band": "#c9ced2",
+    "chair": "#3a3d42",
+    "tower": "#b4b8bb",
+    "tower_base": "#9a9ea2"
+   },
+   "color_verified": true,
+   "note": "Replaced the 1991 Crest Express quad in summer 2023; OSM still calls it Crest Express. Utah's first D-Line six: dark green hood, a long curved silver/glass roof over the station and a big LED screen in the front face of the bottom terminal. 71 chairs, 16 towers (some conical, imported from Austria), top drive with two-ring direct drive. Chairs dark grey with green trim and no bubble in liftblog's Dec 2023 photos (skiresort.info lists it as a bubble lift; OSM says bubble=no). Bottom sits beside the Molly Green's A-frames.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/crest-6-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/",
+    "https://www.peakrankings.com/content/brighton-announces-six-pack-crest-replacement-first-ever-mid-mountain-lodge"
+   ],
+   "terminal_model": "terminal_detach_dline"
+  },
+  "137706718": {
+   "name": "Great Western Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1992,
+   "terminal": "CTEC",
+   "color": {
+    "terminal": "#1c2a26",
+    "terminal_band": "#c1c2c2",
+    "chair": "#8a8f94",
+    "tower": "#24382f"
+   },
+   "color_verified": true,
+   "note": "Early-generation CTEC detachable: very dark green barn-shaped (gambrel) hood with a row of skylights along the roof and a silver lower skirt; dark green towers. 101 chairs, 23 towers, bottom drive, 6,620 ft. Longest lift at Brighton.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/great-western-express-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "10125436": {
+   "name": "Milly Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2007,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#23382f",
+    "terminal_band": "#b9bec2",
+    "chair": "#a3a8ac",
+    "tower": "#a9adb0",
+    "lettering": "#f2f2f2"
+   },
+   "color_verified": true,
+   "note": "Uni-GS (the Doppelmayr CTEC version of the Uni-G): dark green hood with silver ribs over a glazed roof, an arched glass end and white 'MILLY EXPRESS' lettering on the side. Galvanized towers, dark green lift shack. 63 chairs, 14 towers, bottom drive. Bottom terminal is next to Milly Chalet; its top terminal is visible from Solitude's side of the ridge.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/milly-express-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "137706709": {
+   "name": "Snake Creek Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2000,
+   "terminal": "CTEC",
+   "color": {
+    "terminal": "#e4e8ea",
+    "terminal_band": "#1b1e20",
+    "terminal_top": "#233c35",
+    "chair": "#8a8f94",
+    "tower": "#24382f"
+   },
+   "color_verified": true,
+   "note": "Garaventa CTEC 'Stealth' terminals. In liftblog's Feb 2016 photos the bottom (return) hood is white/silver with a band of dark windows, while the top drive hood is dark green over a white skirt; dark green towers. 73 chairs, 20 towers. Night-skiing lift. The Snake Creek Lodge / Sidewinder (2024) stands at its bottom. Current (2026) hood colours not re-checked.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/snake-creek-express-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "44478908": {
+   "name": "Majestic",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2004,
+   "color": {
+    "terminal": "#24382f",
+    "chair": "#8a8f94",
+    "tower": "#24382f"
+   },
+   "color_verified": true,
+   "note": "Fixed quad relocated from Deer Valley in 2004; dark green drive terminal at the top and green tension return at the bottom by Molly Green's. 100 chairs, 15 towers. skiresort.info gives no year.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/majestic-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/"
+   ]
+  },
+  "137706711": {
+   "name": "Explorer",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "CTEC",
+   "year": 1992,
+   "color": {
+    "terminal": "#24382f",
+    "chair": "#8a8f94",
+    "tower": "#24382f",
+    "operator_hut": "#8a5a35"
+   },
+   "color_verified": true,
+   "note": "Short beginner triple (850 ft) with a dark green CTEC Sprint drive/tension terminal with a glazed hood and a timber operator hut. OSM tags occupancy 4, but liftblog and skiresort.info both say triple.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/explorer-brighton-ut/",
+    "https://liftblog.com/brighton-ut/",
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/"
+   ]
+  },
+  "1304551701": {
+   "name": "Caterpillar",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Sunkid",
+   "year": 2022,
+   "color": {},
+   "color_verified": false,
+   "note": "Unnamed in OSM (119 m). Brighton opened a 400 ft (122 m) covered 'Caterpillar' surface lift for new beginner terrain in 2022; skiresort.info lists Caterpillar as a covered Sunkid carpet. Matched on length and location (beginner area by Explorer), not on a name tag.",
+   "verified": false,
+   "sources": [
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/",
+    "https://www.abc4.com/news/wasatch-front/brighton-ski-resort-prepared-to-open-its-slopes-for-the-2022-season/amp/"
+   ]
+  },
+  "137706712": {
+   "name": "Magic Carpet",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Unnamed 65 m carpet by Explorer in the teaching area. skiresort.info lists a second Sunkid carpet called Porcupine; which OSM carpet carries that name is not confirmed. A 2024 Forest Service decision approved two more teaching carpets; whether they are built is not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.skiresort.com/en/ski-resort/brighton/ski-lifts/",
+    "https://www.fs.usda.gov/r04/uinta-wasatch-cache/projects/65033"
+   ]
+  }
+ },
+ "buildings": [
+  {
+   "name": "Brighton Center",
+   "kind": "base_lodge",
+   "lat": 40.598328,
+   "lon": -111.583741,
+   "footprint_m": {
+    "length": 36.1,
+    "width": 35.9,
+    "heading_deg": 134.2
+   },
+   "storeys": 3,
+   "style": "Main base building (OSM 'Brighton Resort', 36 x 36 m, 3 levels): ticket office, rentals, Sports Desk and the Blind Miner coffee shop on the 1st floor. The one photo found shows a broad low gable with a snow-loaded grey roof over dark timber/log walls and a carved 'BRIGHTON CENTER' sign under the eave, with red Explorer / Great Western direction signs on a post. Overall massing and glazing not confirmed.",
+   "model": "base_lodge",
+   "osm": "w182573699",
+   "note": "Look only partly confirmed (sign and roof edge). Photo: brighton/photos/brighton_center_1.jpg.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/182573699",
+    "https://brightonresort.com/mountain-dining/blind-miner",
+    "https://www.skiutah.com/members/blind-miners-coffee",
+    "https://www.deseret.com/utah/2024/1/26/24036292/brighton-utah-family-skiing-milly-chalet-jeffrey-sanich/"
+   ]
+  },
+  {
+   "name": "Alpine Rose",
+   "kind": "restaurant",
+   "lat": 40.598053,
+   "lon": -111.583212,
+   "footprint_m": {
+    "length": 34.8,
+    "width": 25.1,
+    "heading_deg": 111.8
+   },
+   "style": "Base cafeteria next to the Brighton Center (35 x 25 m); the Waffle Cabin kiosk sits on its deck. An Alpine Rose Lodge has stood at Brighton since at least the 1940s. Exterior look not confirmed from a photo.",
+   "model": "base_lodge",
+   "osm": "w182573700",
+   "note": "No exterior photo found; model the deck with a small timber Waffle Cabin kiosk.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/182573700",
+    "https://brightonresort.com/mountain-dining/alpine-rose",
+    "https://brightonresort.com/mountain-dining/waffle-cabin",
+    "https://www.skiutah.com/members/alpine-rose-cafeteria"
+   ]
+  },
+  {
+   "name": "Molly Green's",
+   "kind": "restaurant",
+   "lat": 40.597578,
+   "lon": -111.584345,
+   "footprint_m": {
+    "length": 26.7,
+    "width": 21.4,
+    "heading_deg": 22.6
+   },
+   "storeys": 3,
+   "style": "Brighton's landmark A-frame: two (or more) joined steep A-frame gables, roofs nearly to the ground, dark brown shingle/board roofs heavily loaded with snow, dark timber gable ends with a big window and a stone chimney; external stair on the side. 3 levels (OSM). Pub with pizza, beer, live music. Stands right beside the Crest 6 bottom and Majestic bottom.",
+   "model": "molly_greens",
+   "osm": "w609870422",
+   "note": "Kit 'restaurant' does not do an A-frame; see signature. Photos: molly_greens_1/2.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/609870422",
+    "https://brightonresort.com/mountain-dining/molly-greens",
+    "https://liftblog.com/crest-6-brighton-ut/",
+    "https://liftblog.com/majestic-brighton-ut/"
+   ]
+  },
+  {
+   "name": "Milly Chalet",
+   "kind": "base_lodge",
+   "lat": 40.599703,
+   "lon": -111.585657,
+   "footprint_m": {
+    "length": 28.3,
+    "width": 18.8,
+    "heading_deg": 144.2
+   },
+   "style": "Second base lodge at the bottom of Milly Express (28 x 19 m), restaurant and bar with a patio; Doyle's Dawgs hot-dog stand at its side. Described as alpine-style; in a 2016 liftblog photo it is a small building with a timber/yellow-tan gable behind the Milly terminal. Exterior not confirmed in detail.",
+   "model": "base_lodge",
+   "osm": "w604078731",
+   "note": "Only seen small in the background of brighton/photos/milly_base_1.jpg.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/604078731",
+    "https://brightonresort.com/mountain-dining/milly-chalet",
+    "https://brightonresort.com/mountain-dining/doyles-dawgs",
+    "https://liftblog.com/milly-express-brighton-ut/"
+   ]
+  },
+  {
+   "name": "Snake Creek Lodge (Sidewinder)",
+   "kind": "restaurant",
+   "lat": 40.595087,
+   "lon": -111.575005,
+   "footprint_m": {
+    "length": 37.7,
+    "width": 19.7,
+    "heading_deg": 162.3
+   },
+   "storeys": 1,
+   "style": "Brighton's first mid-mountain lodge, opened Feb 2024 at the base of Snake Creek Express. Single storey, 4,618 sq ft hybrid: three repurposed shipping containers (kitchen + restroom pod) in the middle, two dining halls of heavy timber and steel either side. Black vertical metal siding, black steel posts and outriggers, warm cedar soffits under shallow shed roofs, big glass walls, a weathered-steel/rust fascia band with 'SNAKE CREEK LODGE' lettering; patio with picnic tables. Seats 180.",
+   "model": "snake_creek_lodge",
+   "osm": "w1304564943",
+   "note": "OSM names it 'The Sidewinder Restaurant'; the building is Snake Creek Lodge, Sidewinder is the restaurant inside.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/1304564943",
+    "https://brightonresort.com/mountain-dining/sidewinder",
+    "https://www.big-d.com/projects/brighton-snake-creek-lodge",
+    "https://townlift.com/2023/08/brighton-resort-introduces-new-mountain-rest-area-and-eatery/",
+    "https://www.skiutah.com/news/brighton-resort-opens-its-first-mid"
+   ]
+  },
+  {
+   "name": "Brighton Lodge",
+   "kind": "hotel",
+   "lat": 40.596888,
+   "lon": -111.585007,
+   "footprint_m": {
+    "length": 39.9,
+    "width": 16.3,
+    "heading_deg": 69.6
+   },
+   "storeys": 2,
+   "style": "Resort-owned 19-room lodge (40 x 16 m, 2 storeys): long, plain motel-style block with dark brown siding, rows of windows with white trim and balconies, low snow-covered roof; outdoor hot tub; carved log-post 'BRIGHTON LODGE' entry sign.",
+   "model": "village_block_b",
+   "osm": "w609870423",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/609870423",
+    "https://brightonresort.com/lodging"
+   ]
+  },
+  {
+   "name": "Brighton Store",
+   "kind": "restaurant",
+   "lat": 40.60313,
+   "lon": -111.583142,
+   "storeys": 1,
+   "style": "Log cabin at the front of the Brighton Loop with a steep dark A-frame entry gable, brown standing-seam metal roof, round-log walls with diamond-pane windows; groceries, retail and fried chicken.",
+   "model": "warming_hut",
+   "osm": "n801826412",
+   "note": "OSM has only a node, no footprint.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/node/801826412",
+    "https://brightonresort.com/mountain-shopping/brighton-store"
+   ]
+  },
+  {
+   "name": "Yurt (Majestic top)",
+   "kind": "warming_hut",
+   "lat": 40.590323,
+   "lon": -111.578094,
+   "footprint_m": {
+    "length": 7.6,
+    "width": 7.6,
+    "heading_deg": 147.2
+   },
+   "style": "7.6 m round yurt beside the Majestic top terminal.",
+   "model": "yurt",
+   "osm": "w1280984544",
+   "note": "Use and look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1280984544"
+   ]
+  },
+  {
+   "name": "Silver Lake Visitor Center",
+   "kind": "ticket",
+   "lat": 40.603439,
+   "lon": -111.58481,
+   "footprint_m": {
+    "length": 18.1,
+    "width": 10.3,
+    "heading_deg": 20.1
+   },
+   "style": "Forest Service visitor centre at Silver Lake (18 x 10 m); OSM links it to Solitude's Nordic Center. Not a Brighton Resort building.",
+   "model": "ticket_office",
+   "osm": "w362273731",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/362273731"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Crest 6 D-Line",
+   "description": "Utah's first Doppelmayr D-Line six (2023): dark green hood under a long curved silver/glass roof, with a big LED screen built into the front of the bottom station next to the Molly Green's A-frames.",
+   "kit": "partial",
+   "kit_note": "chair6 and terminal_detach exist; needs the D-Line hood shape (flat-faced box with curved glazed roof) in dark green and an emissive screen panel.",
+   "refs": [
+    "137706713"
+   ]
+  },
+  {
+   "name": "Molly Green's A-frames",
+   "description": "Steep joined A-frame roofs almost to the snow, dark shingles, timber gable ends: the classic Brighton base-area silhouette.",
+   "kit": "no",
+   "kit_note": "Needs an A-frame lodge model (steep 60+ degree roof, glazed gable end, side stair).",
+   "refs": []
+  },
+  {
+   "name": "Dark forest-green lift hardware",
+   "description": "Older Brighton lifts (Great Western, Snake Creek top, Majestic, Explorer, Milly) wear dark forest green on hoods, towers and lift shacks; Great Western's barn-roof CTEC hood with skylights is distinctive.",
+   "kit": "partial",
+   "kit_note": "Paint parts on terminal_detach/terminal_fixed and towers; a gambrel CTEC hood variant would help.",
+   "refs": [
+    "137706718",
+    "137706709",
+    "44478908",
+    "137706711",
+    "10125436"
+   ]
+  },
+  {
+   "name": "Snake Creek Lodge",
+   "description": "Black container-and-timber mid-mountain lodge (2024) with cedar soffits and a rust-steel name band at the bottom of Snake Creek Express.",
+   "kit": "no",
+   "kit_note": "Needs its own model; closest kit 'restaurant'.",
+   "refs": [
+    "137706709"
+   ]
+  },
+  {
+   "name": "Night skiing",
+   "description": "Brighton lights a large part of the mountain for night skiing (Snake Creek was lit from Dec 2022).",
+   "kit": "partial",
+   "kit_note": "Light poles along runs.",
+   "refs": [
+    "137706709",
+    "137706713"
+   ]
+  }
+ ]
+}

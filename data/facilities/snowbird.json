@@ -1,0 +1,620 @@
+{
+ "resort": "snowbird",
+ "name": "Snowbird",
+ "researched": "2026-11-07",
+ "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id (same as osm_snowbird.json). Buildings use lat/lon (the resort origin is not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "Tram cabins replaced by CWA in 2022 (red and blue kept); the original red cabin is now the Tram Bar on the Tram Club patio.",
+  "Chickadee became a Skytrac fixed quad in summer 2026 (new bottom position; OSM still tags a double). Wilbere became a Doppelmayr fixed quad on a new line in 2024.",
+  "The Mid-Gad Restaurant was replaced by The Nest (opened 10 Dec 2025); OSM still has the old footprint.",
+  "Snowbird repainted its terminals bright blue (photos 2022-2023); older photos show white/green or white/blue hoods.",
+  "Lifts missing from OSM: the Chickadee Conveyor (skiresort.info people mover). The Cliff Lodge and The Summit are not in OSM as named buildings.",
+  "Lift photos: liftblog 2015-2026. Building photos: Reaveley Engineers project pages and liftblog."
+ ],
+ "lifts": {
+  "10125080": {
+   "name": "Aerial Tram",
+   "type": "tram",
+   "seats": 125,
+   "bubble": false,
+   "manufacturer": "Garaventa (1971); cabins CWA / Doppelmayr 2022",
+   "year": 1971,
+   "terminal": "Garaventa",
+   "cabin_model": "CWA 125-passenger (2022)",
+   "color": {
+    "cabin": "#c8232b",
+    "cabin_2": "#1d6cc0",
+    "cabin_roof": "#16191e",
+    "cabin_logo": "#ffffff",
+    "hanger": "#a9adb1",
+    "tower": "#8f969c",
+    "terminal": "#b5a68c"
+   },
+   "color_verified": true,
+   "note": "Jig-back tram from the Snowbird Center to Hidden Peak (11,000 ft) with two 125-passenger cabins, one red and one blue. New CWA cabins in 2022 (blue in early 2022, red later that year): near-black glazed body with floor-to-ceiling windows, glass floor panels, a coloured lower band and roof edge (red or blue) with a white 'snowbird' wordmark and white line-art of the peaks, a removable summer rooftop balcony, and a light-grey hanger with a grey carriage. Bottom dock is built into the Snowbird Center: a board-formed concrete A-frame portal with a deep overhanging roof. Top dock on Hidden Peak is an open grey steel-lattice structure on a concrete base next to the Summit building. Line towers are tall galvanised lattice towers with a cantilevered saddle (towers numbered up to 4). The original red cabin now sits on the Tram Club patio (Tram Bar, 2025).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/aerial-tram-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/",
+    "https://www.snowbird.com/improvements/"
+   ],
+   "cabin_model_kit": "tram_cabin",
+   "tower_model_kit": "tower_tram",
+   "note_kit": "A jig-back tram: two cabins, no loop. The kit has tram_cabin, tower_tram, tram_dock_bottom and tram_dock_top; the ride still draws a cable_car as a gondola until it learns to run two cabins to and fro."
+  },
+  "31845482": {
+   "name": "Peruvian",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr CTEC",
+   "year": 2006,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Peruvian Express: long Doppelmayr CTEC Uni-GS terminals (long-hood Uni-G variant) painted Snowbird's bright blue with a white 'peruvian express' wordmark; bottom beside the tram dock at the Snowbird Center, top just below Hidden Peak with vault drive and 90-degree unloading, next to the Peruvian Tunnel portal. Roller-coaster profile with many hold-down towers. Grey chairs, light grey towers with yellow base pads. Terminals were white with dark-green trim in older photos and are blue by 2023.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/peruvian-snowbird-ut-2/",
+    "https://liftblog.com/peruvian-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/",
+    "https://www.sunkidworld.com/en/projects/detail/with-the-sunkid-moving-carpet-snowbird/"
+   ],
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "10124737": {
+   "name": "Gadzoom",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1997,
+   "terminal": "CTEC",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Gad Valley's main detachable quad: early Garaventa CTEC Stealth terminals with a long window-band hood, all blue since c. 2022 (white-and-blue earlier) with a white 'gadzoom' wordmark. Many tower tubes reused from the old Doppelmayr Gad 1 double.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/gadzoom-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "31845484": {
+   "name": "Gad 2",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2013,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Gad 2 Express, Doppelmayr Uni-G terminals in Snowbird blue with dark glass roof and window; rust-red operator huts. Undulating line with depression towers.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/gad-2-snowbird-ut-2/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_unig"
+  },
+  "31845483": {
+   "name": "Little Cloud",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2012,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Little Cloud Express: blue Doppelmayr Uni-G terminals with dark glass roof panels, rust-red operator huts; drive-tension at the bottom, 90-degree unloading at the top.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/little-cloud-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_unig"
+  },
+  "31845480": {
+   "name": "Baldy",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 2001,
+   "terminal": "CTEC",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Baldy Express in Mineral Basin: Garaventa CTEC Stealth III terminals (top has 90-degree unloading), all blue by 2023 with a white 'baldy express' wordmark; the upper line bends slightly with canted sheaves.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/baldy-express-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "31845481": {
+   "name": "Mineral Basin",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Garaventa CTEC",
+   "year": 1999,
+   "terminal": "CTEC",
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c"
+   },
+   "color_verified": true,
+   "note": "Mineral Basin Express: early Garaventa CTEC Stealth terminals with a wide window-band hood, blue with white 'mineral basin express' lettering (the top on Hidden Peak still showed white/blue in a 2023 photo); bottom in Mineral Basin, drive at the top near the tram dock.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/mineral-basin-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ],
+   "terminal_model": "terminal_detach_ctec"
+  },
+  "137670515": {
+   "name": "Mid-Gad Lift",
+   "type": "fixed_chair",
+   "seats": 2,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 1980,
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb"
+   },
+   "color_verified": true,
+   "note": "Fixed-grip double from the Gad Valley base (Creekside) to the Nest (former Mid-Gad restaurant), with a mid-station unload. Newer Doppelmayr CTEC bottom drive-tension terminal with a blue hood and 'mid-gad' wordmark (green in older photos). Year from skiresort.info; not cross-checked.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/mid-gad-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ]
+  },
+  "137691201": {
+   "name": "Chickadee Lift",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Skytrac",
+   "year": 2026,
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "operator_hut": "#7a3b2a"
+   },
+   "color_verified": true,
+   "note": "Replaced in early summer 2026 (built in 76 days): Skytrac fixed-grip quad with a Monarch top drive under a blue hood, loading conveyor, rust-brown operator hut; beginner lift by the Snowbird Center/Cliff Lodge. Replaced the 1972 double. The new bottom terminal is in a different place, so the OSM way (tagged as a double) may still show the old line.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/chickadee-snowbird-ut-2/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/",
+    "https://snowbrains.com/skytrac-inc-finishes-new-chickadee-lift-at-snowbird-ut-in-just-76-days/",
+    "https://www.snowbird.com/improvements/"
+   ]
+  },
+  "137734920": {
+   "name": "Baby Thunder",
+   "type": "fixed_chair",
+   "seats": 2,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 1995,
+   "color": {
+    "chair": "#9aa0a6",
+    "terminal": "#2d2f31",
+    "tower": "#a7adb3"
+   },
+   "color_verified": true,
+   "note": "Beginner double at the Gad Valley base: Doppelmayr bottom tension station with a timber operator hut, top drive bullwheel on a single post (motor room underground).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/baby-thunder-snowbird-ut/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ]
+  },
+  "1213734247": {
+   "name": "Wilbere",
+   "type": "fixed_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2024,
+   "color": {
+    "chair": "#8a9097",
+    "terminal": "#1f82d2",
+    "tower": "#c3c7cb",
+    "tower_base": "#e3c11c",
+    "operator_hut": "#c98a3a"
+   },
+   "color_verified": true,
+   "note": "New 2024 fixed-grip quad on a new alignment from near Creekside Lodge, with a Chairkit loading conveyor; bottom tension station, Alpenstar fixed drive on top under a rounded blue hood; timber operator huts with a 'wilbere' sign. Replaced the old Wilbere double.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/wilbere-snowbird-ut-2/",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/",
+    "https://www.snowbird.com/improvements/"
+   ]
+  },
+  "31845485": {
+   "name": "Peruvian Tunnel",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Sunkid",
+   "year": 2006,
+   "color": {
+    "carpet": "#3a3d40",
+    "walls": "#7a6a55"
+   },
+   "color_verified": true,
+   "note": "About 600 ft (c. 180-200 m) tunnel through the Hidden Peak ridge from the top of Peruvian to Mineral Basin, with a 180 m Sunkid moving carpet in the middle; rough shotcrete arched walls lit by lamps, mining artefacts and framed photos along the walkways. Opened 12 Dec 2006. Exterior portals not photographed here.",
+   "verified": true,
+   "sources": [
+    "https://www.sunkidworld.com/en/projects/detail/with-the-sunkid-moving-carpet-snowbird/",
+    "https://karenbobotas.blogspot.com/2018/03/history-lessons-bored-through-mountain.html",
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/"
+   ]
+  },
+  "976539206": {
+   "name": "Thunder Tube",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": true,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Covered beginner carpet at the Gad Valley/Baby Thunder area (OSM bubble=yes means a covered gallery). Maker and year unknown; look not checked.",
+   "verified": true,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/snowbird/ski-lifts/",
+    "https://www.openstreetmap.org/way/976539206"
+   ]
+  },
+  "976562095": {
+   "name": "Conveyor #3",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": null,
+   "color": {},
+   "color_verified": false,
+   "note": "Very short carpet next to Thunder Tube (OSM gives 'Conveyor #3' also as Thunder Tube's alt name). Not confirmed by a lift list.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/976562095"
+   ]
+  }
+ },
+ "buildings": [
+  {
+   "name": "Snowbird Center (tram bottom dock)",
+   "kind": "base_lodge",
+   "lat": 40.580978,
+   "lon": -111.657152,
+   "footprint_m": {
+    "length": 70.1,
+    "width": 83.5,
+    "heading_deg": 23.1
+   },
+   "storeys": null,
+   "style": "The base hub on the plaza: stepped brutalist building of board-formed tan concrete with dark-framed glass bands and flat roofs; the tram dock rises out of it as a tall concrete A-frame portal with a heavy overhanging roof. Inside: ticketing, Forklift, General Gritts, Baked & Brewed, Tram Club (with the original red tram cabin on its patio), Steak Pit. Renovated 2018; pedestrian bridges to the Cliff Lodge and Lower Village (2018).",
+   "model": "tram_dock_bottom",
+   "osm": "w256023700",
+   "note": "Number of levels not confirmed (several levels step down the slope). Needs its own model together with the tram dock.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/256023700",
+    "https://liftblog.com/aerial-tram-snowbird-ut/",
+    "https://www.snowbird.com/improvements/"
+   ]
+  },
+  {
+   "name": "Cliff Lodge",
+   "kind": "hotel",
+   "lat": 40.582206,
+   "lon": -111.65456,
+   "storeys": null,
+   "style": "The landmark hotel: tall slab of raw board-formed concrete with recessed balconies on a regular grid and timber-brown balcony backs, plus a wing clad in dark mirror glass; flat roof; sits east of the Snowbird Center. Houses the Aerie (top floor), Atrium, SeventyOne and the Cliff Spa.",
+   "model": "cliff_lodge",
+   "osm": null,
+   "note": "Not mapped as a building in OSM; position from the OSM node of The Aerie restaurant (level 10) inside it. Commonly described as 11 storeys; the photo shows about ten balcony floors above a glazed base. Footprint unknown.",
+   "verified": true,
+   "sources": [
+    "https://www.reaveley.com/projects/snowbird-ski-resort-the-nest-restaurant-replacement",
+    "https://www.openstreetmap.org/node/4311856223"
+   ]
+  },
+  {
+   "name": "The Summit (Hidden Peak)",
+   "kind": "restaurant",
+   "lat": 40.5611,
+   "lon": -111.645,
+   "storeys": 2,
+   "style": "Summit lodge at 11,000 ft beside the tram top dock (2015-2016): two-storey flat-roofed building of grey concrete panels with continuous floor-to-ceiling glazing on the upper floor, a rounded glass corner, a concrete stair/elevator tower carrying the Snowbird logo, an external concrete stair and a big concrete deck with Adirondack chairs.",
+   "model": "the_summit",
+   "osm": null,
+   "note": "Not in the OSM file as a building; position taken from the tram top station (w1306467021) and needs checking on a map.",
+   "verified": true,
+   "sources": [
+    "https://www.reaveley.com/projects/the-summit-at-snowbird",
+    "https://www.snowbird.com/improvements/"
+   ]
+  },
+  {
+   "name": "Aerial Tram top dock",
+   "kind": "tram_dock",
+   "lat": 40.561035,
+   "lon": -111.645219,
+   "footprint_m": {
+    "length": 10.5,
+    "width": 5.6,
+    "heading_deg": 65.9
+   },
+   "storeys": null,
+   "style": "Open grey steel-lattice station frame with railings and a stair, standing on a concrete plinth/machinery room on the Hidden Peak ridge; cabin berth cantilevered over the slope.",
+   "model": "tram_dock_top",
+   "osm": "w1306467021",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/1306467021",
+    "https://liftblog.com/aerial-tram-snowbird-ut/"
+   ]
+  },
+  {
+   "name": "The Nest (new Mid-Gad restaurant)",
+   "kind": "restaurant",
+   "lat": 40.569209,
+   "lon": -111.659116,
+   "footprint_m": {
+    "length": 27.4,
+    "width": 23.9,
+    "heading_deg": 177.9
+   },
+   "storeys": 1,
+   "style": "Opened 10 Dec 2025 on the site of the old Mid-Gad Restaurant at the top of the Mid-Gad lift: a glass dining hall wrapped on three sides by 145 floor-to-ceiling panels, with a diagonal timber/steel diagrid visible behind the glass, cantilevered on columns over the slope; flat roof with deep eave; low grey-panelled service wing with the Snowbird logo; heated deck (90 seats). 355 seats inside. GSBS Architects, Layton Construction.",
+   "model": "the_nest",
+   "osm": "w564872333",
+   "note": "The OSM footprint (27 x 24 m) is the old Mid Gad building; the new one is larger and the footprint should be redrawn.",
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/564872333",
+    "https://www.reaveley.com/projects/snowbird-ski-resort-the-nest-restaurant-replacement",
+    "https://saltlakemagazine.com/snowbird-the-nest-open/",
+    "https://www.snowbird.com/improvements/"
+   ]
+  },
+  {
+   "name": "Creekside Lodge",
+   "kind": "base_lodge",
+   "lat": 40.578194,
+   "lon": -111.667822,
+   "storeys": null,
+   "style": "Gad Valley base lodge near the bottoms of Gadzoom, Mid-Gad and Wilbere; look not checked.",
+   "model": "base_lodge",
+   "osm": "n2632777262",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/node/2632777262",
+    "https://liftblog.com/wilbere-snowbird-ut-2/"
+   ]
+  },
+  {
+   "name": "The Lodge at Snowbird",
+   "kind": "hotel",
+   "lat": 40.58124,
+   "lon": -111.659086,
+   "footprint_m": {
+    "length": 131.3,
+    "width": 46.6,
+    "heading_deg": 67.4
+   },
+   "storeys": null,
+   "style": "Condo hotel west of the Snowbird Center (Lodge Bistro inside); concrete-and-timber 1970s blocks; not checked closely.",
+   "model": "village_block_b",
+   "osm": "w152251469",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/152251469"
+   ]
+  },
+  {
+   "name": "The Inn at Snowbird",
+   "kind": "hotel",
+   "lat": 40.581127,
+   "lon": -111.660255,
+   "footprint_m": {
+    "length": 47.1,
+    "width": 22.1,
+    "heading_deg": 66.8
+   },
+   "storeys": null,
+   "style": "Condo hotel in the Lower Village; brown timber-and-concrete block seen behind the Cliff Lodge; not checked closely.",
+   "model": "village_block_b",
+   "osm": "w206197544",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/206197544"
+   ]
+  },
+  {
+   "name": "Iron Blosam Lodge",
+   "kind": "hotel",
+   "lat": 40.580795,
+   "lon": -111.661604,
+   "footprint_m": {
+    "length": 117.7,
+    "width": 25.3,
+    "heading_deg": 75.0
+   },
+   "storeys": null,
+   "style": "Long condo hotel in the Lower Village (The Wildflower restaurant inside); not checked.",
+   "model": "village_block_b",
+   "osm": "w206197545",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/206197545"
+   ]
+  },
+  {
+   "name": "Gad Valley yurt (large)",
+   "kind": "warming_hut",
+   "lat": 40.578004,
+   "lon": -111.667028,
+   "footprint_m": {
+    "length": 9.2,
+    "width": 9.2,
+    "heading_deg": 50.6
+   },
+   "storeys": 1,
+   "style": "Yurt at the Gad Valley base.",
+   "model": "yurt",
+   "osm": "w971866241",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/971866241"
+   ]
+  },
+  {
+   "name": "Gad Valley yurt (small)",
+   "kind": "warming_hut",
+   "lat": 40.578062,
+   "lon": -111.667268,
+   "footprint_m": {
+    "length": 6.1,
+    "width": 6.1,
+    "heading_deg": 142.0
+   },
+   "storeys": 1,
+   "style": "Yurt at the Gad Valley base.",
+   "model": "yurt",
+   "osm": "w971866242",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/971866242"
+   ]
+  },
+  {
+   "name": "Snowbird / Alta access gate hut",
+   "kind": "patrol",
+   "lat": 40.566884,
+   "lon": -111.630997,
+   "footprint_m": {
+    "length": 4.7,
+    "width": 4.4,
+    "heading_deg": 88.5
+   },
+   "storeys": 1,
+   "style": "Small hut at the Snowbird-Alta boundary on the ridge (pass check); look not checked.",
+   "model": "warming_hut",
+   "osm": "w256025695",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/256025695"
+   ]
+  },
+  {
+   "name": "Restroom (west)",
+   "kind": "warming_hut",
+   "lat": 40.575448,
+   "lon": -111.681215,
+   "footprint_m": {
+    "length": 3.8,
+    "width": 3.4,
+    "heading_deg": 106.8
+   },
+   "storeys": 1,
+   "style": "Small toilet building at the west edge of the resort.",
+   "model": "restroom",
+   "osm": "w159550218",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/159550218"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Aerial Tram",
+   "description": "Two 125-passenger cabins, one red and one blue, shuttling 2.4 km from the concrete A-frame dock in the Snowbird Center to Hidden Peak over tall lattice towers; 2022 cabins are black glass boxes with a coloured band, white 'snowbird' wordmark and a rooftop balcony in summer.",
+   "kit": "no",
+   "kit_note": "Needs a tram model: large cabin + hanger + track/haul ropes, lattice towers, concrete A-frame bottom dock and steel top dock.",
+   "refs": [
+    "10125080"
+   ]
+  },
+  {
+   "name": "Snowbird blue terminals",
+   "description": "All detachable terminals (Uni-G, Uni-GS, CTEC Stealth) and the new fixed lifts wear one bright azure blue with white lowercase wordmarks; rust-red operator huts.",
+   "kit": "partial",
+   "kit_note": "terminal_detach exists; paint blue, add the long window-band CTEC variant.",
+   "refs": [
+    "31845482",
+    "10124737",
+    "31845484",
+    "31845483",
+    "31845480",
+    "31845481",
+    "1213734247",
+    "137691201"
+   ]
+  },
+  {
+   "name": "Cliff Lodge",
+   "description": "The raw concrete high-rise hotel with a grid of balconies and a black glass wing, visible from everywhere in the base.",
+   "kit": "no",
+   "kit_note": "Needs its own model.",
+   "refs": []
+  },
+  {
+   "name": "Peruvian Tunnel",
+   "description": "Ride a carpet through a lit mining-style tunnel under Hidden Peak into Mineral Basin.",
+   "kit": "partial",
+   "kit_note": "magic_carpet exists; needs a tunnel portal + shotcrete tube.",
+   "refs": [
+    "31845485"
+   ]
+  },
+  {
+   "name": "The Summit and The Nest",
+   "description": "Glass-and-concrete Summit on Hidden Peak at the tram top; the new glass diagrid Nest (2025) mid-mountain in Gad Valley.",
+   "kit": "partial",
+   "kit_note": "restaurant model with large glazing; diagrid is new.",
+   "refs": []
+  }
+ ]
+}

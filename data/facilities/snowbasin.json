@@ -1,0 +1,563 @@
+{
+ "resort": "snowbasin",
+ "name": "Snowbasin",
+ "researched": "2026-11-07",
+ "about": "Real on-mountain facilities, researched for the 3D scenes. Lifts are keyed by OSM way id. Buildings carry lat/lon (the scene origin is not fixed yet). 'verified': false marks anything not confirmed by a lift database, the resort or a photo; colours are read from dated photos and are approximate hex. Buildings are placed by lat/lon (the resort's origin is not fixed yet); 'model' is the kit model drawn there, a landmark of its own where one was built from photos; lifts carry terminal_model, the maker's hood.",
+ "notes": [
+  "OSM has all 13 lifts skiresort.info lists for Snowbasin; no real lift is missing from OSM.",
+  "Becker Express (Leitner-Poma quad, 2025-26) replaced the 1986 Stadeli Becker triple; OSM way 195798981 already follows the new alignment from the Wildcat base.",
+  "Wildcat Express (2017) replaced the Wildcat triple; Middle Bowl Express (2021) replaced a Thiokol triple. Porcupine is now the only fixed-grip chair.",
+  "No new lift announced for 2026-27 (a Dec 2025 roundup's 'Electric Horseman Express' belongs to Park City Mountain). Meadow Pavilion is being expanded for 2026-27.",
+  "The two unnamed OSM carpets are matched to Grizzly and Wildflower carpets by length only.",
+  "Lift colours are from liftblog photos dated 2015 (1998 Doppelmayr lifts), 2017-2020 (Wildcat, tram), 2022 (Middle Bowl), 2024 (DeMoisy) and Feb 2026 (Becker)."
+ ],
+ "lifts": {
+  "10203748": {
+   "name": "Wildcat Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2017,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#eef0ee",
+    "terminal_band": "#2e6b43",
+    "terminal_roof_glass": "#22303a",
+    "chair": "#9aa0a4",
+    "chair_seat": "#2a2c2f",
+    "tower": "#9aa0a4",
+    "tower_base": "#2e6b43"
+   },
+   "color_verified": true,
+   "note": "Snowbasin's first six-pack (2017), replaced the Wildcat triple. Uni-G-M stations: white hood with a green stripe along the bottom edge and dark glass roof panels; EJ-model chairs with DT grips, Chairkit loading gates, no carpet. Bottom beside Becker Express and Little Cat at the main base.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/wildcat-express-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://liftblog.com/2017/09/10/snowbasins-first-six-pack-rises/"
+   ],
+   "osm_length_m": 1491,
+   "terminal_model": "terminal_detach_unig"
+  },
+  "136016336": {
+   "name": "Needles Express Gondola",
+   "type": "gondola",
+   "seats": 8,
+   "bubble": true,
+   "manufacturer": "Doppelmayr",
+   "year": 1998,
+   "terminal": "Doppelmayr Uni/Spacejet (1990s)",
+   "cabin_model": "Doppelmayr/CWA 8-passenger cabin (1998 generation; exact model not confirmed)",
+   "color": {
+    "cabin": "#a9bccb",
+    "cabin_lower": "#f0f0ec",
+    "cabin_logo": "#f2c230",
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2f5b3e",
+    "terminal_glass": "#1d2327",
+    "tower": "#8f969a",
+    "tower_base": "#1f6f5c"
+   },
+   "color_verified": true,
+   "note": "From Earl's Lodge to Needles Lodge. Long 1990s Doppelmayr stations: white hood with a dark-green lower skirt and a continuous black window strip; bottom station fronted by a stone gatehouse, underground cabin parking; top station on a stone base with the drive vault below, beside Needles Lodge. Cabins pale grey-blue glass/upper body over a white lower panel with Snowbasin's yellow sun logo; a few cabins carry flag stripes. Same cabins and stations as Strawberry.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/needles-express-gondola-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://www.snowbasin.com/dining/needles-lodge/"
+   ],
+   "osm_length_m": 2764
+  },
+  "136016402": {
+   "name": "John Paul Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 1998,
+   "terminal": "Doppelmayr Uni/Spacejet (1990s)",
+   "color": {
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2f5b3e",
+    "terminal_glass": "#1d2327",
+    "tower": "#8f969a",
+    "tower_base": "#1f6f5c",
+    "chair": "#a3a9ad",
+    "chair_seat": "#3a3d40"
+   },
+   "color_verified": true,
+   "note": "Long HSQ (2,184 m in OSM) from the main base to John Paul Lodge; bottom terminal has underground chair parking and a small stone ticket/operator house beside it. Top station next to the Allen Peak Tram bottom. Built for the 2002 Olympic men's downhill/super-G access. Same white/dark-green 1990s hood as the gondolas.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/john-paul-express-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 2184,
+   "terminal_model": "terminal_detach_dopp90"
+  },
+  "136016424": {
+   "name": "Allen Peak Tram",
+   "type": "tram",
+   "seats": 15,
+   "bubble": true,
+   "manufacturer": "Doppelmayr",
+   "year": 1998,
+   "terminal": "Doppelmayr (1990s)",
+   "cabin_model": "Small cylindrical 15-passenger cabins (two)",
+   "color": {
+    "cabin": "#f0f0ee",
+    "cabin_glass": "#2e5f8c",
+    "cabin_flags": "French, Austrian, Swiss, Italian etc. flags with names of Olympic downhill champions",
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2f5b3e",
+    "tower": "#8f969a"
+   },
+   "color_verified": true,
+   "note": "Small 15-passenger tram (Doppelmayr 'Olympic Tram', 1998) from the John Paul Express top to Allen Peak, start of the Grizzly men's downhill. Short line (328 m in OSM). Cylindrical cabins: blue-tinted glass upper half, white lower band decorated with national flags and names of past Olympic downhill champions. Bottom station is a white/green 1990s Doppelmayr hood on a single concrete pier with steel stairs; top is a concrete drive/bullwheel tower. Originally towerless; a tower was added near the top in 2017.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/allen-peak-tram-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://commons.wikimedia.org/wiki/File:View_of_Snowbasin_Resort_from_Allen_Peak.jpg"
+   ],
+   "osm_length_m": 328
+  },
+  "195798979": {
+   "name": "Little Cat Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Doppelmayr",
+   "year": 2008,
+   "terminal": "Doppelmayr Uni-G",
+   "color": {
+    "terminal": "#eef0ee",
+    "terminal_band": "#2e6b43",
+    "terminal_roof_glass": "#22303a",
+    "chair": "#a3a9ad",
+    "chair_seat": "#2c2f33",
+    "tower": "#9aa0a4",
+    "tower_base": "#c9a630"
+   },
+   "color_verified": true,
+   "note": "Short beginner HSQ (skiresort: 'Littlecat Express') at the main base. Early Uni-G: white hood, green lower band, dark glass roof. Tower bases in 2015 photos are yellow-padded.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/littlecat-express-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 486,
+   "terminal_model": "terminal_detach_unig"
+  },
+  "195798981": {
+   "name": "Becker Express",
+   "type": "detach_chair",
+   "seats": 4,
+   "bubble": false,
+   "manufacturer": "Leitner-Poma",
+   "year": 2025,
+   "terminal": "LPA",
+   "color": {
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2e7a3c",
+    "terminal_roof_glass": "#26312f",
+    "chair": "#b9bdc0",
+    "chair_seat": "#1e2023",
+    "tower": "#aeb3b5",
+    "tower_base": "#2f8a4a"
+   },
+   "color_verified": true,
+   "note": "Opened 2025-26, replacing the 1986 Stadeli Becker triple on a new alignment; bottom moved beside Wildcat Express (Doppelmayr and LPA stations squeezed together). 1,800 p/h, ride under 7 min. LPA stations in Snowbasin colours: white hood with a green band, green arched end frames and a dark glass roof; 'BECKER' lettering. Austrian-made chairs, grey with black seats; grey towers with green bases. OSM way already follows the new alignment (bottom at the Wildcat base).",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/becker-express-snowbasin-ut/",
+    "https://liftblog.com/2024/08/22/snowbasin-announces-becker-replacement/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://www.kpcw.org/ski-resorts/2025-10-03/snowbasin-debuts-high-speed-lift-pass-scanning-upgrades-nov-28"
+   ],
+   "osm_length_m": 1703,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "195798982": {
+   "name": "Strawberry Express Gondola",
+   "type": "gondola",
+   "seats": 8,
+   "bubble": true,
+   "manufacturer": "Doppelmayr",
+   "year": 1998,
+   "terminal": "Doppelmayr Uni/Spacejet (1990s)",
+   "cabin_model": "Doppelmayr/CWA 8-passenger cabin (1998 generation; exact model not confirmed)",
+   "color": {
+    "cabin": "#a9bccb",
+    "cabin_lower": "#f0f0ec",
+    "cabin_logo": "#f2c230",
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2f5b3e",
+    "terminal_glass": "#1d2327",
+    "tower": "#8f969a",
+    "tower_base": "#1f6f5c"
+   },
+   "color_verified": true,
+   "note": "Longest lift at Snowbasin (2,815 m in OSM). Bottom terminal sits inside the large Strawberry base building (tan walls, heavy pale log trusses, stone plinth) with automated cabin parking; exposed top terminal on a stone vault holding the drive motors, with a small operator cabin. Breakover/compression towers are triple-leg. Cabins as Needles: pale grey-blue with white lower panel and yellow sun logo.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/strawberry-express-gondola-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 2815
+  },
+  "195801396": {
+   "name": "Porcupine",
+   "type": "fixed_chair",
+   "seats": 3,
+   "bubble": false,
+   "manufacturer": "Stadeli",
+   "year": 1986,
+   "color": {
+    "chair": "#6f8a96",
+    "terminal_house": "#7a5a40",
+    "terminal_house_lower": "#c9b27a",
+    "tower": "#8f969a",
+    "tower_base": "#1f6f5c"
+   },
+   "color_verified": true,
+   "note": "Last fixed-grip chair at Snowbasin since Becker's replacement. Both terminals are enclosed in gabled chalet houses: brown vertical board upper walls, tan stucco lower walls, open drive-through bay for the chairs. Blue-grey chairs.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/porcupine-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://www.kpcw.org/ski-resorts/2025-10-03/snowbasin-debuts-high-speed-lift-pass-scanning-upgrades-nov-28"
+   ],
+   "osm_length_m": 1873
+  },
+  "960196819": {
+   "name": "Middle Bowl Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Leitner-Poma",
+   "year": 2021,
+   "terminal": "LPA",
+   "color": {
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2e7a3c",
+    "terminal_roof_glass": "#26312f",
+    "chair": "#b9bdc0",
+    "chair_seat": "#1e2023",
+    "tower": "#aeb3b5",
+    "tower_base": "#2f8a4a"
+   },
+   "color_verified": true,
+   "note": "Snowbasin's first Leitner-Poma lift (2021), replaced a Thiokol triple on a slightly new alignment. LPA stations: white hood with a green band, green arched end frames, dark glass roof, 'MIDDLE BOWL' lettering. Austrian-made six-seat chairs, 90-degree loading at the bottom. OSM carries a leftover proposed:aerialway tag; the lift is built.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/middle-bowl-express-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 1428,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "1125736587": {
+   "name": "DeMoisy Express",
+   "type": "detach_chair",
+   "seats": 6,
+   "bubble": false,
+   "manufacturer": "Leitner-Poma",
+   "year": 2023,
+   "terminal": "LPA",
+   "color": {
+    "terminal": "#f1f2ef",
+    "terminal_band": "#2e7a3c",
+    "terminal_roof_glass": "#26312f",
+    "chair": "#b9bdc0",
+    "chair_seat": "#1e2023",
+    "tower": "#aeb3b5",
+    "tower_base": "#2f8a4a"
+   },
+   "color_verified": true,
+   "note": "Infill six-pack in the Strawberry area (2023), the only way out of that sector besides the Strawberry gondola; ends lower than the gondola top. LPA stations: white hood with a green band, green arched end frames, dark glass roof, 'DeMoisy' lettering.",
+   "verified": true,
+   "sources": [
+    "https://liftblog.com/demoisy-express-snowbasin-ut/",
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://snowindustrynews.com/articles/snowbasin-announces-new-six-person-lift-for-2023-24-demoisy-express"
+   ],
+   "osm_length_m": 2209,
+   "terminal_model": "terminal_detach_lpa"
+  },
+  "1125736936": {
+   "name": "Grizzly Carpet",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Sunkid",
+   "year": 2015,
+   "color": {},
+   "color_verified": false,
+   "note": "Unnamed in OSM; 60 m at the main base by the Grizzly Center. Matched to skiresort.info's 60 m Grizzly Carpet by length and position, not confirmed by name.",
+   "verified": false,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 60
+  },
+  "1125736937": {
+   "name": "Wildflower Carpet",
+   "type": "magic_carpet",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": "Sunkid",
+   "year": 2002,
+   "color": {},
+   "color_verified": false,
+   "note": "Unnamed in OSM; 25 m at the main base. Matched to skiresort.info's 24 m Wildflower Carpet by length, not confirmed by name.",
+   "verified": false,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/"
+   ],
+   "osm_length_m": 25
+  },
+  "1214120404": {
+   "name": "Wildcat Handle Tow",
+   "type": "rope_tow",
+   "seats": null,
+   "bubble": false,
+   "manufacturer": null,
+   "year": 2020,
+   "color": {},
+   "color_verified": false,
+   "note": "Handle tow near the Wildcat Express bottom (skiresort: 195 m; OSM 120 m). Added 2020 per news roundups; maker not found.",
+   "verified": true,
+   "sources": [
+    "https://www.skiresort.info/ski-resort/snowbasin/ski-lifts/",
+    "https://www.kpcw.org/ski-resorts/2025-10-03/snowbasin-debuts-high-speed-lift-pass-scanning-upgrades-nov-28"
+   ],
+   "osm_length_m": 120
+  }
+ },
+ "buildings": [
+  {
+   "name": "Earl's Lodge",
+   "kind": "base_lodge",
+   "lat": 41.216066,
+   "lon": -111.856879,
+   "footprint_m": {
+    "length": 62.8,
+    "width": 70.4,
+    "heading_deg": 11.9
+   },
+   "storeys": 2,
+   "style": "Main base day lodge (about 45,000 sq ft) built by the Holding family for the 2002 Olympics: whole-log spruce frame, big exposed log trusses and gabled entry porticos, river-stone walls and tall stone chimneys, cedar-shake-style grey-brown roofs with several gables, tall mullioned timber windows. Two storeys plus a lower level (OSM). Needles Gondola leaves from its slope side; houses Earl's servery, Cinnabar and The Overlook.",
+   "model": "earls_lodge",
+   "osm": "w136016447",
+   "photos": [
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/earls_lodge_1.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/earls_lodge_2.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/earls_lodge_3.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/earls_lodge_4.jpg"
+   ],
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/136016447",
+    "https://www.snowbasin.com/dining/earls-lodge/",
+    "https://www.skiutah.com/members/snowbasin-banquets-events",
+    "https://liftblog.com/needles-express-gondola-snowbasin-ut/"
+   ]
+  },
+  {
+   "name": "Needles Lodge",
+   "kind": "restaurant",
+   "lat": 41.193506,
+   "lon": -111.873698,
+   "footprint_m": {
+    "length": 43.2,
+    "width": 58.2,
+    "heading_deg": 60.1
+   },
+   "storeys": 2,
+   "style": "Mid/upper-mountain restaurant at the Needles Gondola top (~8,700-9,300 ft, sources differ), tucked under the rock spires of the Needles. Heavy log post-and-beam frame with log gable trusses, rubble-stone walls and chimneys, grey shake hip/gable roof, tall timber-mullioned glass walls, big stone-walled terrace deck with umbrellas on the downhill side.",
+   "model": "needles_lodge",
+   "osm": "w64126736",
+   "photos": [
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/needles_lodge_1.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/needles_lodge_2.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/needles_lodge_3.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/needles_lodge_4.jpg"
+   ],
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/64126736",
+    "https://www.snowbasin.com/dining/needles-lodge/",
+    "https://www.flickr.com/photos/97448468@N00/2893716657"
+   ]
+  },
+  {
+   "name": "John Paul Lodge",
+   "kind": "restaurant",
+   "lat": 41.204339,
+   "lon": -111.879802,
+   "footprint_m": {
+    "length": 48.4,
+    "width": 28.1,
+    "heading_deg": 60.8
+   },
+   "storeys": 1,
+   "style": "Round/polygonal lodge at ~9,000 ft at the John Paul Express top and Allen Peak Tram bottom: stone base walls, ring of tall timber-framed windows, low conical shake roof topped by a small stone-and-timber cupola/chimney lantern; wraparound deck with glass rail. Named after John Paul Jones (died WWII).",
+   "model": "john_paul_lodge",
+   "osm": "w64126639",
+   "note": "Storey count read from photos, not confirmed. OSM footprint is 48 x 28 m, longer than a round plan; may include the deck/annex.",
+   "photos": [
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/john_paul_lodge_1.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/john_paul_lodge_3.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/allen_peak_tram_3.jpg"
+   ],
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/64126639",
+    "https://www.snowbasin.com/dining/john-paul-lodge/",
+    "https://www.skiutah.com/members/john-paul-lodge",
+    "https://commons.wikimedia.org/wiki/File:View_of_Snowbasin_Resort_from_Allen_Peak.jpg"
+   ]
+  },
+  {
+   "name": "Grizzly Center",
+   "kind": "base_lodge",
+   "lat": 41.21592,
+   "lon": -111.857998,
+   "footprint_m": {
+    "length": 65.8,
+    "width": 58.5,
+    "heading_deg": 30.2
+   },
+   "storeys": null,
+   "style": "Guest-services building at the main base just east of Earl's Lodge: rentals (about 600 sets of skis), retail, tickets. 66 x 58 m footprint. Presumably in the same log-and-stone style as Earl's Lodge, but no clear exterior photo was found.",
+   "model": "base_lodge",
+   "osm": "w136016356",
+   "note": "Use and location confirmed; exterior look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/136016356",
+    "https://www.powderhounds.com/usa/utah/snowbasin/facilities-services.aspx",
+    "https://www.snowbasin.com/Resort-Services/Shopping"
+   ]
+  },
+  {
+   "name": "Strawberry base building (Strawberry Xpresso & Cafe / Strawberry Patio)",
+   "kind": "base_lodge",
+   "lat": 41.194839,
+   "lon": -111.841352,
+   "footprint_m": {
+    "length": 56.6,
+    "width": 47.7,
+    "heading_deg": 71.4
+   },
+   "storeys": 2,
+   "style": "Bottom station building of the Strawberry Express Gondola, which runs straight through it, with automated cabin parking inside: tan/cream stucco walls, very heavy pale-varnished log trusses and columns carrying a broad gabled roof, stone plinth and stone-clad column bases, large mullioned windows; café with a sunny patio and fire pits.",
+   "model": "base_lodge",
+   "osm": "w132191152",
+   "note": "OSM names it 'Strawberry Xpresso & Cafe'; the resort's dining page calls the outlet Strawberry Patio. Storeys estimated from photos.",
+   "photos": [
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/strawberry_gondola_terminal_1.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/strawberry_gondola_terminal_2.jpg",
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/strawberry_gondola_terminal_3.jpg"
+   ],
+   "verified": true,
+   "sources": [
+    "https://www.openstreetmap.org/way/132191152",
+    "https://liftblog.com/strawberry-express-gondola-snowbasin-ut/",
+    "https://www.snowbasin.com/Dining/Strawberry-Patio"
+   ]
+  },
+  {
+   "name": "Meadow Pavilion",
+   "kind": "base_lodge",
+   "lat": 41.216389,
+   "lon": -111.858341,
+   "footprint_m": {
+    "length": 32.7,
+    "width": 20.4,
+    "heading_deg": 32.0
+   },
+   "storeys": null,
+   "style": "Base pavilion near Earl's Lodge used for lunches, ski-school groups and meeting; expanded for the 2026-27 season. 33 x 20 m in OSM.",
+   "model": "warming_hut",
+   "osm": "w1535297861",
+   "note": "Exterior look not confirmed.",
+   "verified": false,
+   "sources": [
+    "https://www.openstreetmap.org/way/1535297861",
+    "https://www.skiutah.com/blog/authors/dallas/2026-utah-resort-updates"
+   ]
+  },
+  {
+   "name": "Needles Gondola gatehouse",
+   "kind": "ticket",
+   "lat": 41.2157,
+   "lon": -111.858,
+   "storeys": 1,
+   "style": "Small square rubble-stone gatehouse with a hipped shake roof and an arched window, right beside the Needles Gondola bottom station and the John Paul Express bottom (stone ticket/operator house).",
+   "model": "ticket_office",
+   "osm": null,
+   "note": "Not in OSM; lat/lon approximate (between the Needles and John Paul bottom stations). Seen in liftblog photos.",
+   "photos": [
+    "/private/tmp/claude-501/-Users-jinqiudong-Desktop-venture-lab/011918e4-44d6-43a1-a829-22611a13be99/scratchpad/slcref/snowbasin/photos/needles_gondola_terminal_1.jpg"
+   ],
+   "verified": false,
+   "sources": [
+    "https://liftblog.com/needles-express-gondola-snowbasin-ut/",
+    "https://liftblog.com/john-paul-express-snowbasin-ut/"
+   ]
+  }
+ ],
+ "signature": [
+  {
+   "name": "Olympic downhill tram",
+   "description": "Tiny two-cabin Allen Peak Tram: cylindrical 15-person cabins with blue glass and a white band of national flags of Olympic downhill champions, climbing to the start of the 2002 Grizzly downhill.",
+   "kit": "no",
+   "kit_note": "No tram in the kit; needs a small round cabin model with flag decals and a single-pier bottom station.",
+   "refs": [
+    "136016424"
+   ]
+  },
+  {
+   "name": "White-and-green 1998 Doppelmayr 'spaceship' stations",
+   "description": "Long rounded white hoods with a dark-green skirt and a black window strip on both gondolas and John Paul Express, often perched on stone bases.",
+   "kit": "partial",
+   "kit_note": "gondola_station and terminal_detach exist; paint white with dark-green lower band, add stone plinth.",
+   "refs": [
+    "136016336",
+    "195798982",
+    "136016402"
+   ]
+  },
+  {
+   "name": "Sun-logo gondola cabins",
+   "description": "Pale grey-blue 8-person cabins with a white lower panel and Snowbasin's yellow sun on Needles and Strawberry gondolas.",
+   "kit": "partial",
+   "kit_note": "gondola (8 seats) exists; repaint and add sun decal.",
+   "refs": [
+    "136016336",
+    "195798982"
+   ]
+  },
+  {
+   "name": "Green-trimmed LPA stations",
+   "description": "New Leitner-Poma stations (Middle Bowl, DeMoisy, Becker) in white with green arched end frames and green band, lift name in big letters.",
+   "kit": "partial",
+   "kit_note": "terminal_detach exists; paint white/green with green end arches.",
+   "refs": [
+    "960196819",
+    "1125736587",
+    "195798981"
+   ]
+  },
+  {
+   "name": "Holding-era log and stone lodges",
+   "description": "Earl's, Needles and John Paul lodges: whole-log trusses, river-stone walls and chimneys, shake roofs and huge timber-mullioned windows; Needles sits under the rock spires, John Paul is round with a cupola.",
+   "kit": "partial",
+   "kit_note": "base_lodge/restaurant exist but are plainer; need log-truss gables, stone chimneys and a round variant for John Paul.",
+   "refs": []
+  }
+ ]
+}
