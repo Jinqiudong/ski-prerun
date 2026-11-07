@@ -1,6 +1,6 @@
 // How I look to friends on a shared trip (a member's "look"): my avatar, and my rider as the rider page has
 // it chosen (one of the four outfits, or one of mine). Friends' memory photos dress me from it.
-import { myAvatar } from "./i18n.js?v=29";
+import { myAvatar } from "./i18n.js?v=30";
 import { canon } from "../start/season.js?v=3";
 
 // The four outfits and the character preset each is (boarder.js OUTFITS[k].ch).

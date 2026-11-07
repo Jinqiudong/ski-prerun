@@ -1,6 +1,8 @@
 // The page's one AudioContext and its mixer. Buses: sfx (the board, landings, the lift's tower passes),
-// ambience (wind, the mountain, the lift's hum), music, and voice (kept for voice chat between friends).
+// ambience (wind, the mountain, the lift's hum), music, and voice (friends talking, src/ride/voice.js).
 // sfx, ambience and music each pass through a duck gain, so voice can push them down: duck(amount, s).
+// Voice skips the master: turning the game's sound off doesn't silence friends (keepAwake keeps the
+// context running for them).
 // Phones only let sound start from a tap, so the context is resumed on the first touch, click or key.
 // On / off and the volumes are kept on this phone (localStorage "prerunSound").
 
@@ -13,7 +15,7 @@ const DEFAULTS = { on: true, music: 0.16, sfx: 0.7, v: 2 };
 const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s.v === DEFAULTS.v ? { ...DEFAULTS, ...s } : { ...DEFAULTS, on: s.on ?? true }; } catch { return { ...DEFAULTS }; } };
 export const settings = load();
 
-let A = null, mix = null;
+let A = null, mix = null, keep = false;
 const listeners = new Set();
 
 // The bus graph on any context (an OfflineAudioContext too, for rendering tests to WAV files).
@@ -21,8 +23,8 @@ export function makeMixer(ctx) {
   const master = ctx.createGain(), limit = ctx.createDynamicsCompressor();
   limit.threshold.value = -6; limit.knee.value = 6; limit.ratio.value = 8; limit.attack.value = 0.002; limit.release.value = 0.2;
   master.connect(limit); limit.connect(ctx.destination);
-  const bus = (vol) => { const input = ctx.createGain(), duck = ctx.createGain(), level = ctx.createGain(); level.gain.value = vol; input.connect(duck); duck.connect(level); level.connect(master); return { input, duck, level }; };
-  const m = { ctx, master, sfx: bus(1), ambience: bus(1), music: bus(1), voice: bus(1) };
+  const bus = (vol, to = master) => { const input = ctx.createGain(), duck = ctx.createGain(), level = ctx.createGain(); level.gain.value = vol; input.connect(duck); duck.connect(level); level.connect(to); return { input, duck, level }; };
+  const m = { ctx, master, sfx: bus(1), ambience: bus(1), music: bus(1), voice: bus(0.9, limit) };
   // One shared reverb (a valley's worth), fed by sends from music and ambience.
   m.reverb = ctx.createConvolver(); m.reverb.normalize = true;
   const ir = impulse(ctx.sampleRate), b = ctx.createBuffer(2, ir[0].length, ctx.sampleRate); b.copyToChannel(ir[0], 0); b.copyToChannel(ir[1], 1); m.reverb.buffer = b;
@@ -44,7 +46,7 @@ export function start() {
   apply(0);
   // Every tap tries until it is running (a tap that only scrolled may not count on iOS); then it costs nothing.
   const unlock = () => {
-    if (!settings.on || A.state === "running" || document.hidden) return;
+    if ((!settings.on && !keep) || A.state === "running" || document.hidden) return;
     A.resume().catch(() => {});
     // Old iOS: a silent buffer played inside the tap opens the output.
     const s = A.createBufferSource(); s.buffer = A.createBuffer(1, 1, A.sampleRate); s.connect(A.destination); s.start();
@@ -53,7 +55,7 @@ export function start() {
   if (settings.on) A.resume().catch(() => {}); // desktops let it start by itself
   A.onstatechange = () => { for (const f of listeners) f(A.state); };
   // Quiet when the page is hidden (another app, the lock screen); back when it shows.
-  document.addEventListener("visibilitychange", () => { if (document.hidden) A.suspend().catch(() => {}); else if (settings.on) A.resume().catch(() => {}); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) A.suspend().catch(() => {}); else if (settings.on || keep) A.resume().catch(() => {}); });
   return mix;
 }
 
@@ -71,10 +73,16 @@ function apply(glide = 0.15) {
 }
 export function set(patch) {
   Object.assign(settings, patch); save(); apply();
-  if (A && "on" in patch) (settings.on ? A.resume() : A.suspend()).catch(() => {});
+  if (A && "on" in patch) (settings.on || keep ? A.resume() : A.suspend()).catch(() => {});
+}
+// Voice chat is on (friends connected): keep the context running even with the game's sound off.
+export function keepAwake(on) {
+  keep = !!on;
+  if (A && keep && A.state !== "running" && !document.hidden) A.resume().catch(() => {});
+  if (A && !keep && !settings.on) A.suspend().catch(() => {});
 }
 
-// Voice chat (later): duck(0.8) while someone talks pulls music down by 80 % and effects by a bit less;
+// Voice chat: duck(0.8) while someone talks pulls music down by 80 % and effects by a bit less;
 // duck(0) brings them back. seconds: how long the move takes.
 export function duck(amount = 0.7, seconds = 0.25) { duckMix(mix, amount, seconds); }
 export function duckMix(m, amount, seconds = 0.25, at) {

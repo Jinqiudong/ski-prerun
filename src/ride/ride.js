@@ -6,7 +6,7 @@ import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
 import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=14";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=1";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=2";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
@@ -15,13 +15,13 @@ import { TrailMap } from "./mapview.js?v=8";
 import { PaintedMap } from "./paintedmap.js?v=3";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=29";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=30";
 import { navRow } from "../core/nav.js?v=11";
-import { rideSound } from "../audio/index.js?v=4";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=6";
+import { rideSound } from "../audio/index.js?v=5";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=7";
 import { dropIn } from "../core/transition.js?v=4";
 import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=3";
+import { rideTogether } from "./together.js?v=4";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
@@ -2225,7 +2225,7 @@ async function main() {
     setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort });
   window.__together = together;
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
-    rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel) }; // testing (the radio has no moment in the ride yet)
+    rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel) }; // testing (the walkie-talkie in voice.js raises the radio for real)
   // The lifts around this one, seen from the chair; then the buildings, signs and props.
   for (const l of R.lifts) if (!ctx.liftsShown.has(l) && l.pts.some(([x, z]) => line.ground.some((g, i) => i % 3 === 0 && Math.hypot(g.x - x, g.z - z) < 800))) { ctx.liftsShown.add(l); ctx.fac.addOtherLift(l); }
   setTimeout(() => ctx.fac.dressResort().catch((e) => console.warn(e)), 300);
