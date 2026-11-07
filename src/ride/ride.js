@@ -22,7 +22,7 @@ import { openSoundPanel, creditLine } from "../audio/panel.js?v=9";
 import { dropIn } from "../core/transition.js?v=6";
 import { Facilities } from "./kitworld.js?v=2";
 import { rideTogether } from "./together.js?v=8";
-import { startParty } from "../core/party.js?v=2";
+import { startParty } from "../core/party.js?v=3";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);

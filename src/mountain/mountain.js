@@ -11,7 +11,7 @@ import { addStep } from "../ride/roadbook.js?v=16";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=33";
 import { openNav } from "../core/nav.js?v=13";
 import { liftTicket } from "../core/transition.js?v=6";
-import { startParty } from "../core/party.js?v=2";
+import { startParty } from "../core/party.js?v=3";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.

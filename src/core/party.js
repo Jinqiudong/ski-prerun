@@ -27,9 +27,7 @@ import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers,
 
 const KEY = "prerunParty", SEEN = "prerunPartySeen", RIDE_TRIP = "prerunRideTrip", LAND = "prerunTogetherLand";
 const FACES = ["peek", "blink", "happy", "surprised", "doze", "love"];
-// The sign hangs below the pet (the owner: held down from its paws, not up over its head): drag.png, the pet
-// with its paws over the edge, then two short cords and the wooden plank (plank.png) with our words on it.
-const HOLD = { pet: 145 / 258, cord: 16, board: 0.42 }; // drag.png's height per width; cord length; plank height per width
+// The pet holds on to the top edge of whatever it brings: its paws (drag.png) over the note or the panel (the owner).
 const DOZE_AFTER = 45000;
 const store = (s, k, v) => { try { if (v === undefined) return s.getItem(k); if (v === null) s.removeItem(k); else s.setItem(k, v); } catch { /* storage off */ } return null; };
 const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -51,17 +49,16 @@ const CSS = `
 #ptPet.hide .pet { opacity: 0; pointer-events: none; }
 #ptPet .pet { transition: opacity .3s, transform .35s; }
 #ptPet.pulled .pet { transform: translateY(14px); }
-#ptSign { position: fixed; z-index: 41; width: 160px; pointer-events: none; transform-origin: 50% 100%; }
+#ptSign { position: fixed; z-index: 41; width: 200px; pointer-events: none; transform-origin: 50% 100%; }
 #ptSign[hidden] { display: none; }
-#ptSign .art { position: relative; width: 160px; pointer-events: auto; cursor: pointer; animation: pt-pop .55s cubic-bezier(.3,1.5,.5,1) both; }
-#ptSign .art img.pt, #ptOpen .hold img.pt { display: block; width: 100%; height: auto; position: relative; z-index: 1; }
-#ptSign .cords, #ptOpen .hold .cords { position: relative; margin: -6px 26% 0; border-left: 2px solid #8a6a4e; border-right: 2px solid #8a6a4e; }
-#ptSign .board, #ptOpen .hold .board { position: relative; margin: 0 -6px; background: center / 100% 100% no-repeat; transform: rotate(-2deg); transform-origin: 50% 0; }
-#ptSign .face { position: absolute; inset: 10% 9% 10%; display: grid; place-items: center; align-content: center; gap: 1px; text-align: center; color: #4a3424; font: 600 15px/1.2 "Noto Serif SC", serif; overflow: hidden; }
+#ptSign .art { position: relative; width: 200px; pointer-events: auto; cursor: pointer; animation: pt-pop .55s cubic-bezier(.3,1.5,.5,1) both; }
+#ptSign .art img.pt, #ptOpen .hold img.pt { display: block; width: 150px; height: auto; margin: 0 auto; position: relative; z-index: 2; }
+#ptSign .note { position: relative; margin-top: -20px; padding: 18px 12px 10px; border-radius: 10px; background: #fdfbf6; border: 1px solid #d8ccb6; box-shadow: 0 8px 20px rgba(40,30,20,.25); }
+#ptSign .face { display: grid; gap: 2px; text-align: center; color: #22344d; font: 600 15px/1.25 "Noto Serif SC", serif; }
 #ptSign .face b { font: 600 17px/1.15 "Noto Serif SC", serif; } #ptSign .face small { font: 500 12px/1.2 "Noto Serif SC", serif; color: #6f5a46; }
-#ptSign .bar { position: absolute; left: 18%; right: 18%; bottom: 8%; height: 5px; border-radius: 3px; background: rgba(74,52,36,.18); overflow: hidden; }
+#ptSign .bar { position: relative; margin: 8px 6px 0; height: 5px; border-radius: 3px; background: rgba(74,52,36,.18); overflow: hidden; }
 #ptSign .bar i { display: block; height: 100%; width: 100%; background: #b6463b; transform-origin: 0 50%; }
-#ptSign .acts { display: flex; justify-content: center; gap: 6px; margin-top: 4px; pointer-events: auto; }
+#ptSign .acts { display: flex; justify-content: center; gap: 6px; margin-top: 8px; pointer-events: auto; }
 #ptSign .acts button { padding: 5px 11px !important; font-size: 12.5px !important; }
 #ptSign .acts button, #ptPanel button { font: 600 13px "Noto Serif SC", serif; padding: 6px 12px; border-radius: 999px; border: 1px solid #cbbfa9; background: #fdfbf6; color: #22344d; cursor: pointer; box-shadow: 0 3px 8px rgba(40,30,20,.16); white-space: nowrap; }
 #ptSign .acts button.go, #ptPanel button.go { background: #22344d; border-color: #22344d; color: #fdfbf6; }
@@ -69,13 +66,9 @@ const CSS = `
 #ptScrim.on { background: rgba(40,34,28,.28); }
 #ptOpen { position: fixed; z-index: 45; left: 50%; top: calc(env(safe-area-inset-top) + 4px); width: min(360px, calc(100vw - 20px)); transform: translate(-50%, -110%) rotate(-3deg); transform-origin: 50% 0; transition: transform .55s cubic-bezier(.3,1.35,.5,1); }
 #ptOpen.on { transform: translate(-50%, 0) rotate(0); }
-#ptOpen .hold { position: relative; width: 150px; margin: 0 auto 6px; z-index: 1; touch-action: none; cursor: grab; }
+#ptOpen .hold { position: relative; width: 150px; margin: 0 auto -20px; z-index: 2; touch-action: none; cursor: grab; }
 #ptOpen .hold img { pointer-events: none; }
-#ptOpen .hold .face { position: absolute; inset: 10% 9% 10%; display: grid; place-items: center; align-content: center; text-align: center; color: #4a3424; font: 600 17px/1.15 "Noto Serif SC", serif; pointer-events: none; }
-#ptOpen .hold .face small { display: block; font: 500 12px/1.2 "Noto Serif SC", serif; color: #6f5a46; }
 #ptPanel { position: relative; max-height: calc(100vh - 230px - env(safe-area-inset-top)); overflow: auto; padding: 18px 12px 12px; border-radius: 10px; background: #fdfbf6; border: 1px solid #d8ccb6; box-shadow: 0 10px 26px rgba(40,30,20,.3); color: #22344d; font: 14px "Noto Serif SC", serif; }
-#ptPanel::before, #ptPanel::after { content: ""; position: absolute; top: -10px; width: 3px; height: 14px; background: #8a6a4a; border-radius: 2px; }
-#ptPanel::before { left: 30%; } #ptPanel::after { right: 30%; }
 #ptPanel select { font: inherit; width: 100%; margin-bottom: 8px; padding: 6px; border-radius: 6px; border: 1px solid #cbbfa9; background: #f6f1e7; color: #22344d; }
 #ptPanel .row { display: grid; grid-template-columns: 36px 1fr; gap: 2px 8px; align-items: center; padding: 8px 2px; border-top: 1px dashed #e0d6c4; }
 #ptPanel .row:first-of-type { border-top: 0; }
@@ -192,12 +185,9 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   btn.addEventListener("click", (e) => { if (e.detail === 0) openPanel(); }); // keyboard and screen readers
 
   // ---- The sign: a message held up over the ledge, our words on the owner's plank.
-  function holdArt(w, html, bar = "") {
-    return `<img class="pt" src="${A("drag")}" alt=""><div class="cords" style="height:${HOLD.cord}px"></div>` +
-      `<div class="board" style="height:${Math.round(w * HOLD.board)}px;background-image:url(${A("plank")})"><div class="face">${html}</div>${bar}</div>`;
-  }
+  const holdArt = () => `<img class="pt" src="${A("drag")}" alt="">`;
   function placeSign() {
-    const r = pet.getBoundingClientRect(), w = 160, h = w * (HOLD.pet + HOLD.board) + HOLD.cord + 40;
+    const r = pet.getBoundingClientRect(), w = 200, h = sign.offsetHeight || 170;
     const left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2));
     const below = r.top < h + 20; // near the top of the screen: it hangs below the ledge instead
     sign.style.left = `${left}px`; sign.style.top = `${below ? r.top : r.top - h + 56}px`;
@@ -221,7 +211,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
         acts = mine ? `<button data-a="no">${t("取消")}</button>` : `<button class="go" data-a="yes">${t("一起坐")}</button><button data-a="no">${t("这次不坐")}</button>`;
       }
       if (n.kind === "info") { words = `<b>${esc(n.text)}</b>`; acts = ""; }
-      sign.innerHTML = `<div class="art">${holdArt(160, words, n.kind === "call" ? `<div class="bar"><i></i></div>` : "")}</div><div class="acts">${acts}</div>`;
+      sign.innerHTML = `<div class="art">${holdArt()}<div class="note"><div class="face">${words}</div>${n.kind === "call" ? `<div class="bar"><i></i></div>` : ""}${acts ? `<div class="acts">${acts}</div>` : ""}</div></div>`;
       sign.hidden = false; placeSign();
       sign.querySelector(".art").onclick = () => actNote(n);
       for (const b of sign.querySelectorAll("[data-a]")) b.onclick = (e) => { e.stopPropagation(); b.dataset.a === "yes" ? actNote(n) : dropNote(n, n.kind === "call" && n.call.id === me ? "cancel" : "no"); };
@@ -480,7 +470,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
     const all = liveMembers(heard, now, { all: true });
     const members = all.filter((m) => m.in), online = new Set(all.map((m) => m.id));
     const lead = S.fol ? resolveFollow(heard, me, S.fol, now) : null;
-    const head = `<div class="hold">${holdArt(150, `<span>${esc(t("一起滑"))}<small>${esc(tr?.name || "")}</small></span>`)}</div>`;
+    const head = `<div class="hold">${holdArt()}</div>`;
     let h = "";
     if (trips.length > 1) h += `<select data-k="trip" aria-label="${esc(t("哪个行程"))}">${trips.map((x) => `<option value="${esc(x.id)}"${x.id === S.trip ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>`;
     if (!S.trip) h += `<p class="hint">${esc(t("先在行程里分享给朋友"))}</p>`;
