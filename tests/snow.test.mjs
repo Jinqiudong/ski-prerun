@@ -2,7 +2,7 @@
 // bumps' zipper, and the board over them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { POWDER, powderAmount, groomedRun, powderTerrain, powderField, powderAt, MOGULS, runPitch, mogulRun, markMoguls, mogulHeight, cap, MogulField, bumpStep } from "../src/ride/snow-core.js";
+import { POWDER, powderAmount, groomedRun, wildName, runFacts, powderTerrain, powderField, powderAt, MOGULS, runPitch, mogulRun, markMoguls, mogulHeight, cap, MogulField, bumpStep } from "../src/ride/snow-core.js";
 
 // A synthetic mountain on a 10 m grid, x east, z south: heights from f(x, z).
 function terrain(f, n = 81, cell = 10) {
@@ -33,6 +33,36 @@ test("groomed runs: classic, or untagged greens and blues", () => {
   assert.ok(!groomedRun({ level: "expert" }));
   assert.ok(!groomedRun({ grooming: "mogul", level: "intermediate" }));
   assert.ok(!groomedRun({ grooming: "backcountry", level: "easy" }));
+});
+
+test("a run named for trees, glades, a bowl, a chute or a cirque is taken as not groomed (inferred); a tag still wins", () => {
+  for (const n of ["Jackstraw Trees", "Log Chute", "Bellmar Bowl", "Aspen Glade", "Vasquez Cirque", "Chutes"]) assert.ok(wildName(n), n);
+  for (const n of ["Treeline", "Bowling Alley", "Cranmer", "", null]) assert.ok(!wildName(n), String(n));
+  assert.ok(!groomedRun({ name: "Jackstraw Trees", level: "intermediate" }));
+  assert.ok(!groomedRun({ name: "Bellmar Bowl", level: "easy" }));
+  assert.ok(groomedRun({ name: "Spirit Chute", grooming: "classic", level: "intermediate" }));
+  assert.ok(groomedRun({ name: "Windsong", level: "intermediate" }));
+});
+
+test("run facts: measured length, drop and pitch; the surface from the tag or inferred; powder only as a maybe", () => {
+  // a straight run down a 20 degree slope, 400 m
+  const pts = Array.from({ length: 41 }, (_, i) => [0, i * 10]), heightAt = (x, z) => 1000 - z * tan(20);
+  const f = runFacts({ name: "Test", level: "intermediate", pts }, pts, heightAt);
+  assert.equal(f.len, 400);
+  assert.ok(Math.abs(f.drop - 400 * tan(20)) < 1);
+  assert.ok(Math.abs(f.pitch - 20) <= 1 && Math.abs(f.mean - 20) <= 1);
+  assert.deepEqual(f.surface, { k: "groomed", src: "inferred" });
+  assert.equal(f.powder, null);
+  assert.deepEqual(runFacts({ level: "advanced", grooming: "classic", pts }, pts, heightAt).surface, { k: "groomed", src: "tag" });
+  assert.deepEqual(runFacts({ level: "advanced", grooming: "mogul", pts }, pts, heightAt).surface, { k: "moguls", src: "tag" });
+  assert.deepEqual(runFacts({ level: "expert", grooming: "backcountry", pts }, pts, heightAt).surface, { k: "offpiste", src: "tag" });
+  assert.deepEqual(runFacts({ name: "Some Trees", level: "intermediate", pts }, pts, heightAt).surface, { k: "ungroomed", src: "inferred", wild: true });
+  // powder: a field that is deep everywhere; on a groomed run only its edges are said to have any, off it the whole run
+  const field = { w: 3, h: 3, x0: -1000, z0: -1000, x1: 1000, z1: 1000, data: new Uint8Array(9).fill(255) };
+  const fakeAt = field;
+  assert.deepEqual(runFacts({ level: "intermediate", pts }, pts, heightAt, { f: fakeAt, amt: 1 }).powder, { k: "edges", src: "inferred" });
+  assert.deepEqual(runFacts({ level: "advanced", pts }, pts, heightAt, { f: fakeAt, amt: 1 }).powder, { k: "whole", src: "inferred" });
+  assert.equal(runFacts({ level: "advanced", pts }, pts, heightAt, { f: fakeAt, amt: 0 }).powder, null);
 });
 
 test("powder: the lee side of a ridge, not the windward side or its crest", () => {

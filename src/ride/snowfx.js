@@ -5,7 +5,7 @@
 // is one instanced mesh (36 clumps) and one points draw (stars, birds and puffs together), updated only while
 // something is falling; the moguls are one static mesh per mogul run near the way down.
 import * as THREE from "three";
-import { lineHeight, MOGULS } from "./snow-core.js?v=1";
+import { lineHeight, MOGULS } from "./snow-core.js?v=2";
 
 // ---------- Seeing the rider through the trees ----------
 // Tree pixels in a cone from the camera to the rider (3.2 m round at the lens, 1.3 m at the rider) and

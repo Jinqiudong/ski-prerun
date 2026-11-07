@@ -5,17 +5,18 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=22";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=23";
+import { segsOf, thinTrack } from "./roadbook-core.js?v=1";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=11";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
-import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
+import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
-import { TrailMap } from "./mapview.js?v=9";
+import { TrailMap } from "./mapview.js?v=10";
 import { PaintedMap } from "./paintedmap.js?v=11";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=41";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=42";
 import { navRow } from "../core/nav.js?v=19";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=15";
@@ -24,8 +25,8 @@ import { Facilities } from "./kitworld.js?v=4";
 import { rideTogether } from "./together.js?v=15";
 import { startParty } from "../core/party.js?v=11";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=3";
-import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=1";
-import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
+import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep } from "./snow-core.js?v=2";
+import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=2";
 import { Guide } from "./guide.js?v=6";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
 import { startPractice, spotTitle } from "./practice.js?v=4";
@@ -304,7 +305,7 @@ function snowfall() {
 
 // The resort's weather: snow in the last three days whitens the trees; snowing now makes it fall.
 // ?snow=0..1 and ?falling=1 override it for previews.
-// After heavy snow, powder (snow-core.js): onPowder(amount 0..1) once it is known; ?powder=1 (0..1, or map
+// After heavy snow, powder (snow-core.js): onPowder(amount 0..1, cm in the last three days) once it is known; ?powder=1 (0..1, or map
 // for the field itself painted on the snow) forces it.
 async function weather(params, flakes, at, applySky, onPowder) {
   let recent = null, now = false;
@@ -321,7 +322,7 @@ async function weather(params, flakes, at, applySky, onPowder) {
   flakes.visible = now;
   snowing = now;
   const powder = powderAmount(recent, params.get("powder"));
-  onPowder?.(powder);
+  onPowder?.(powder, recent);
   if (now && sun) setSnowyAir();
   const cell = (icon, big, small) => `<div class="cell"><img src="assets/icons/${icon}.png?v=1" alt=""><b>${big}</b>${small}</div>`;
   $("weather").insertAdjacentHTML("afterbegin", (now ? cell("heavysnow", "", "正在下雪") : "") + (powder > 0 ? cell("powder", `${Math.round(powder * 100)}%`, "粉雪") : "") + (recent != null ? cell("snow", `${recent.toFixed(1)} cm`, "3 天降雪") : "") + cell("trees", `${Math.round(treeSnow.value * 100)}%`, "树上积雪"));
@@ -1044,7 +1045,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function openMenu() {
     const ski = st.phase === "ski" && phys && !ended;
     fan("fanDown", $("menuBtn"), [
-      ["packing", "路书", () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) })],
+      ["packing", "路书", () => openBookPage(RESORT, bookHost())],
       ski && ["trailmap", "地图", openBigMap],
       ["windy", "声音", openSoundPanel], // no speaker icon in the library yet: the wind is the closest
       ["sliders", "设置", openSettings],
@@ -1058,10 +1059,12 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // After the run: the same sheet, to look back (no starting from it).
   const openJournal = () => { skiLog.save(); pmap.openSheet({ browse: true }); };
   st.journal = openJournal;
-  // The roadbook: each way down as a step (the runs in order, the lift at the bottom, the path for its map).
-  // Moguls on a run (m) and a powder day (pw) go in too, with their icons.
-  const bookRoute = (P, changed = false) => addStep(RESORT, { k: "route", changed, title: P.title, segs: P.segs.map((g) => ({ n: g.run.name || "无名雪道", l: g.run.level, ...(g.run.moguls ? { m: 1 } : {}) })), ...(ctx.powder?.amt > 0 ? { pw: 1 } : {}), next: P.next?.name || null, path: thinPath(P.path),
-    flats: P.flats.map((f) => ({ n: f.run.name || "无名雪道", m: f.m, k: f.kind, at: f.at })) });
+  // The roadbook (roadbook-core.js): the way down picked at the top, as a step: what kind (a run you came for,
+  // or a lift or base to get to), where to, the runs on it with their ids and stretches, the plan's path.
+  const bookRoute = (P, changed = false) => addStep(RESORT, { k: "go", kind: P.kind, title: P.title, to: P.kind === "lift" || P.kind === "base" ? P.short : null,
+    first: P.kind === "run" && P.first ? String(P.first.id) : null, segs: segsOf(P.legs, (x, z) => T.heightAt(x, z)), path: thinPath(P.path), ...(changed ? { changed: 1 } : {}) });
+  // The book over the ride: the trail map for its ground, and the ride's own snow for the powder line.
+  const bookHost = () => ({ name: R.name, map: tmap, snow: async () => (ctx.snowCm === undefined ? null : { cm: ctx.snowCm, amt: ctx.powder?.amt ?? 0, f: ctx.powder?.f }) });
   // Skipping ahead with a tap on the map: the way from here to there along the chosen route counts as
   // seen, so it goes in the log as skied.
   function markAlong(x, z) {
@@ -1654,14 +1657,14 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       row = P.leads.lifts.slice(0, 3).map((n) => link(n, null, `坐 ${n} 上山 ›`)).join("");
     }
     $("arriveTitle").textContent = title;
-    addStep(RESORT, { k: "arrive", title });
+    addStep(RESORT, { k: "down", track: thinTrack(skiLog.track) }); // the line really ridden, for the book's map
     $("arriveNote").textContent = note;
     buddy.arrive($("arriveNote"));
     skiLog.save(true);
     $("arriveRow").innerHTML = row + `<button class="btn" id="seeBook">${ICO("packing")}预滑路书</button><button class="btn" id="seeLog">${ICO("memory")}我的滑雪记录</button><a class="btn" href="${withResort("mountain/")}">${ICO("resorts")}回雪场</a><button class="btn" id="againDown">再来一次</button>`;
     $("againDown").onclick = rideAgain;
     $("seeLog").onclick = openJournal;
-    $("seeBook").onclick = () => openBookPage(RESORT, { name: R.name, drawMap: paintWith(tmap) });
+    $("seeBook").onclick = () => openBookPage(RESORT, bookHost());
   }
 
   // Where the rider stands after getting off: down the ramp, beside the sign.
@@ -1674,6 +1677,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const tagBox = $("runTags"), cards = $("runCards");
   let from, fromLook, riderFrom, riderTo, yaw0;
   st.start = (now) => {
+    if (TRIP) addStep(RESORT, { k: "up", lift: lift.name, id: lift.id }); // at the top: this lift was ridden (the roadbook's leg)
     st.phase = "unload"; st.t0 = now;
     bubbleWant = 1;
     const rider = ctx.rider;
@@ -2017,7 +2021,6 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
       card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
       card.querySelector(".go").onclick = async (e) => {
-        addStep(RESORT, { k: "top", at: lift.name, options: [...dests, ...runs].map((x) => x.title), chose: P.title });
         bookRoute(P);
         await dropIn(P, RESORT, R); // the run's card, then DROP IN (src/core/transition.js)
         camera.clearViewOffset();
@@ -2314,7 +2317,6 @@ async function main() {
   setLiftKind(lift, research, kitIndex);
   // The lift's models (carrier, tower parts, terminals): the ride waits for these; the rest comes later.
   const [carrier, base, shaft, head, bottom, top0] = await kits([SPEC.carrier, "tower_base", "tower_shaft", "tower_head", SPEC.bottom, SPEC.top]);
-  if (TRIP) addStep(RESORT, { k: "lift", name: lift.name });
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
   const line = liftLine(T, lift);
@@ -2330,7 +2332,8 @@ async function main() {
   const flakes = snowfall();
   scene.add(flakes);
   // Powder after heavy snow: the field (where it lies) is worked out once, when the weather says so.
-  weather(params, flakes, R.origin, ctx.applySky, (amt) => {
+  weather(params, flakes, R.origin, ctx.applySky, (amt, cm) => {
+    ctx.snowCm = cm; // the roadbook's powder line
     if (amt <= 0 && params.get("powder") !== "map") return;
     setTimeout(() => {
       const f = powderField(T, mask, R.runs, mask.grid[0], mask.grid[1]);

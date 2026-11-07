@@ -12,10 +12,10 @@ import { Runner } from "./runner.js?v=1";
 import { guideAnimal } from "./guide-core.js?v=2";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
-import { t } from "../core/i18n.js?v=41";
+import { t } from "../core/i18n.js?v=42";
 import { fallLine } from "./edge-core.js?v=1";
 import { tiltRead, tiltZero } from "./tilt-core.js?v=2";
-import { sight } from "./snowfx.js?v=1";
+import { sight } from "./snowfx.js?v=2";
 import { STEPS, stepOf, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress, saveProgress, nextStep, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM } from "./practice-core.js?v=1";
 
 const CSS = `

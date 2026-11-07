@@ -10,8 +10,8 @@ import { ANIMAL_RIDERS, ANIMAL_ZH, animalOf } from "../rider/animal-core.js?v=1"
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=2";
 import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
 import { makeEntrance } from "./entrance.js?v=25";
-import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=22";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=41";
+import { openBookPage, locateIn } from "../ride/roadbook.js?v=23";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=42";
 import { playIntro } from "./intro.js?v=28";
 import { flyTo } from "../core/transition.js?v=12";
 import { startParty } from "../core/party.js?v=11";
@@ -539,7 +539,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=41");
+    const { Trips } = await import("./trips.js?v=42");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -554,10 +554,10 @@ async function openRecords() {
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.
 async function openBook(r) {
-  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=9")]);
+  const [{ Terrain, treeMaskFn }, { TrailMap }] = await Promise.all([import("../ride/world.js?v=5"), import("../ride/mapview.js?v=10")]);
   const R = await (await fetch(`data/${r.id}.json`)).json(), T = new Terrain(R);
   const tm = new TrailMap(T, R, treeMaskFn(R, T), R.places.filter((p) => p.kind === "village"));
-  openBookPage(r.id, { name: r.name, drawMap: paintWith(tm), locate: locateIn(R.origin) });
+  openBookPage(r.id, { name: r.name, map: tm, locate: locateIn(R.origin) });
 }
 render(); renderPoses();
 show({ enter: true }).then(() => (rider_ready = true)).catch((e) => { $("status").textContent = t("人物没加载出来，刷新试试"); console.warn(e); });

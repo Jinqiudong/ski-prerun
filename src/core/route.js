@@ -6,6 +6,8 @@ export const LEVELS = ["easy", "intermediate", "advanced", "expert"];
 const RUN_SPEED = { easy: 6, intermediate: 8, advanced: 7.5, expert: 6.5 };
 const LIFT_SPEED = 4.5; // detachable chairs run about 5 m/s, fixed grips slower
 const LIFT_WAIT = 90; // seconds in line and boarding
+// The planner's pace, for estimates shown to the rider (labelled 估算: not measured).
+export const PACE = { run: RUN_SPEED, lift: LIFT_SPEED, wait: LIFT_WAIT };
 const JOIN = 80; // meters: close enough to skate from one element onto another
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
