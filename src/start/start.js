@@ -10,10 +10,10 @@ import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=2";
 import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
 import { makeEntrance } from "./entrance.js?v=24";
 import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=17";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=35";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=36";
 import { playIntro } from "./intro.js?v=23";
 import { flyTo } from "../core/transition.js?v=7";
-import { startParty } from "../core/party.js?v=5";
+import { startParty } from "../core/party.js?v=6";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rideTrip, cleanState, cleanHi, cleanRider, changed, seatOrder, seatsOf, chairToJoin, whereOf, alongPts } from "../src/ride/together-core.js";
+import { rideTrip, cleanState, cleanHi, cleanRider, changed, seatOrder, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD, HOLD_MAX, whereOf, alongPts } from "../src/ride/together-core.js";
 
 const trip = (o) => ({ id: "t-" + Math.random().toString(36).slice(2, 8), shared: true, from: "2026-11-05", to: "2026-11-08", srv: { members: [{ id: "mA" + "0".repeat(8) }] }, ...o });
 
@@ -58,18 +58,83 @@ test("seats: the first in the ride's seat, then beside them, then the other side
   assert.deepEqual([s.get("a"), s.get("b"), s.get("c")], [1, 0, -1]);
 });
 
-test("chairToJoin: the friend who boarded first, within 6 s, owns the chair", () => {
-  const me = { id: "mB", lift: "American Flyer", b: 10000 };
-  const A = { id: "mA", ph: "lift", l: "American Flyer", d: 30, b: 6000, c: "mA@6000" };
+test("chairToJoin: the friend who boarded first, within 20 s or still holding the chair, owns it", () => {
+  const me = { id: "mB", lift: "American Flyer", b: 30000 };
+  const A = { id: "mA", ph: "lift", l: "American Flyer", d: 30, b: 26000, c: "mA@26000" };
   assert.equal(chairToJoin(me, [A])?.id, "mA");
   assert.equal(chairToJoin(me, [{ ...A, b: 3000, c: "mA@3000" }]), null, "too long ago");
+  assert.equal(chairToJoin(me, [{ ...A, b: 3000, c: "mA@3000", hd: 1 }])?.id, "mA", "long ago, but their chair waits for me");
   assert.equal(chairToJoin(me, [{ ...A, b: 3000, c: "mA@3000" }], { want: "mA" })?.id, "mA", "asked to ride with them");
-  assert.equal(chairToJoin(me, [{ ...A, b: 12000 }]), null, "they boarded after me: they join mine");
+  assert.equal(chairToJoin(me, [{ ...A, b: 33000, hd: 1 }]), null, "holding, but they got on after me: they join mine");
+  assert.equal(chairToJoin(me, [{ ...A, b: 32000 }]), null, "they boarded after me: they join mine");
   assert.equal(chairToJoin(me, [{ ...A, l: "Super Bee" }]), null);
-  assert.equal(chairToJoin({ ...me, b: 6000 }, [A])?.id, "mA", "same moment: the smaller id owns it");
-  assert.equal(chairToJoin({ id: "m0", lift: "American Flyer", b: 6000 }, [A]), null, "same moment, and mine is the smaller id");
-  assert.equal(chairToJoin({ id: "mZ", lift: "American Flyer", b: 6000 }, [A])?.id, "mA");
-  assert.equal(chairToJoin(me, [{ ...A, c: "mB@10000" }]), null, "already in mine");
+  assert.equal(chairToJoin({ ...me, b: 26000 }, [A])?.id, "mA", "same moment: the smaller id owns it");
+  assert.equal(chairToJoin({ id: "m0", lift: "American Flyer", b: 26000 }, [A]), null, "same moment, and mine is the smaller id");
+  assert.equal(chairToJoin({ id: "mZ", lift: "American Flyer", b: 26000 }, [A])?.id, "mA");
+  assert.equal(chairToJoin(me, [{ ...A, c: "mB@30000" }]), null, "already in mine");
+});
+
+test("cleanState and changed carry the seat and the hold", () => {
+  const s = cleanState({ id: "mB12345678", ph: "lift", l: "X", d: 14, b: 1, c: "mB12345678@1", k: 2, kt: 5, hd: 1 });
+  assert.deepEqual([s.k, s.kt, s.hd], [2, 5, 1]);
+  const bad = cleanState({ id: "mB12345678", ph: "lift", l: "X", d: 14, k: 1.5, hd: true });
+  assert.deepEqual([bad.k, bad.hd], [undefined, undefined]);
+  const l = { ph: "lift", l: "X", d: 100, v: 15, c: "c", k: 1 };
+  assert.equal(changed(l, { ...l, d: 103.75, k: 2 }, 250), true, "a seat switch goes out at once");
+  assert.equal(changed(l, { ...l, d: 103.75, hd: 1 }, 250), true);
+});
+
+test("chairSeats: one rider a seat; the earlier claim keeps it, the later moves to the nearest free one", () => {
+  const s = chairSeats([{ id: "a", k: 1, kt: 10 }, { id: "b", k: 2, kt: 20 }], 4);
+  assert.deepEqual([s.get("a"), s.get("b")], [1, 2]);
+  // the bug the owner saw: both said the same seat. Never both in it.
+  const c = chairSeats([{ id: "b", k: 1, kt: 20 }, { id: "a", k: 1, kt: 10 }], 4);
+  assert.deepEqual([c.get("a"), c.get("b")], [1, 0], "b to the nearest free seat (0 and 2 tie: the lower)");
+  assert.deepEqual([...chairSeats([{ id: "b", k: 1, kt: 10 }, { id: "a", k: 1, kt: 10 }], 2)], [["a", 1], ["b", 0]], "same moment: the smaller id");
+  // no claim (an older phone): the free seats in seatOrder
+  const d = chairSeats([{ id: "a", k: 1, kt: 10 }, { id: "x" }, { id: "y" }], 4);
+  assert.deepEqual([d.get("x"), d.get("y")], [2, 0]);
+  // full: the last claim rides the chair behind
+  const e = chairSeats([{ id: "a", k: 0, kt: 1 }, { id: "b", k: 1, kt: 2 }, { id: "c", k: 1, kt: 3 }], 2);
+  assert.equal(e.get("c"), -1);
+  assert.equal(chairSeats([{ id: "a", k: 7, kt: 1 }], 4).get("a"), 1, "a seat the chair doesn't have: as if they never said");
+  // same inputs in any order, the same answer on every phone
+  const m = [{ id: "a", k: 2, kt: 5 }, { id: "b", k: 2, kt: 6 }, { id: "c", k: 3, kt: 1 }, { id: "d" }];
+  assert.deepEqual([...chairSeats(m, 6)].sort(), [...chairSeats([...m].reverse(), 6)].sort());
+  assert.equal(new Set(chairSeats(m, 6).values()).size, 4);
+});
+
+test("seat switching: the next free seat each way, and the first free seat to get on", () => {
+  const seats = new Map([["a", 1], ["b", 2]]);
+  assert.equal(seatToward(seats, 4, 1, 1), 3, "past b");
+  assert.equal(seatToward(seats, 4, 1, -1), 0);
+  assert.equal(seatToward(seats, 4, 2, 1), 3);
+  assert.equal(seatToward(new Map([["a", 0], ["b", 1]]), 2, 1, 1), -1, "a full two-seater: nowhere to go");
+  assert.equal(freeSeat(seats, 4), 0);
+  assert.equal(freeSeat(new Map([["a", 1]]), 6), 2, "next to the first");
+  assert.equal(freeSeat(new Map([["a", 0], ["b", 1]]), 2), -1);
+});
+
+test("holdLeft and comingTo: the first at the lift waits for friends on their way, not for ever", () => {
+  assert.equal(holdLeft(1000, 2000, []), 0, "nobody coming: go");
+  assert.equal(holdLeft(1000, 2000, [{ loading: false }]), HOLD - 1000);
+  assert.equal(holdLeft(1000, 2000, [{ loading: true }]), HOLD_MAX - 1000, "their page is still opening: longer");
+  assert.equal(holdLeft(1000, 1000 + HOLD_MAX + 1, [{ loading: true }]), 0);
+  const me = { id: "mA", lift: "American Flyer", resort: "copper", b: 5000, c: "mA@5000", d0: 14 };
+  const P = (o) => ({ id: "mB", in: true, page: "ride", resort: "copper", lift: "American Flyer", ph: "lift", ...o });
+  assert.deepEqual(comingTo(me, [P({})], []), [{ id: "mB", loading: true }], "opening this lift's ride");
+  assert.deepEqual(comingTo(me, [P({ b: 7000, c: "mB@7000" })], []), [{ id: "mB", loading: true }], "on it after me, not in my chair yet");
+  assert.deepEqual(comingTo(me, [P({ b: 3000, c: "mB@3000" })], []), [], "got on before me: I join them");
+  assert.deepEqual(comingTo(me, [P({ b: 7000, c: "mA@5000" })], []), [], "in my chair");
+  assert.deepEqual(comingTo(me, [P({ lift: "Super Bee" })], []), [], "another lift");
+  assert.deepEqual(comingTo(me, [P({ lift: "Super Bee", ph: "ski", fol: "mA" })], []), [{ id: "mB", loading: true }], "following me: the party brings them");
+  assert.deepEqual(comingTo(me, [P({ in: false })], []), [], "not in the party");
+  const ski = { id: "mC", ph: "ski", x: 0, z: 0, w: "American Flyer" };
+  assert.deepEqual(comingTo(me, [], [ski]), [{ id: "mC", loading: false }], "waiting at the bottom of this lift");
+  assert.deepEqual(comingTo(me, [], [{ ...ski, w: "Super Bee" }]), []);
+  const inMine = { id: "mB", ph: "lift", l: "American Flyer", d: 14, c: "mA@5000" };
+  assert.deepEqual(comingTo(me, [P({})], [inMine]), [], "their ride says they sat down in my chair");
+  assert.deepEqual(comingTo(me, [P({})], [{ ...inMine, c: "mB@9000", d: 60 }]), [], "already riding up in another chair");
 });
 
 test("whereOf and alongPts", () => {

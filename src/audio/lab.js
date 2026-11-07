@@ -2,7 +2,7 @@
 // to real field recordings and music candidates (assets/audio/lab/manifest.json), so the owner can listen
 // A/B and tick what we should use. Picks are kept on this phone (localStorage "prerunSoundLab").
 // It uses the game's own sound code (snow.js, ambience.js, music.js) but changes nothing in the game.
-import { EN_ON } from "../core/i18n.js?v=35";
+import { EN_ON } from "../core/i18n.js?v=36";
 import { makeMixer } from "./engine.js?v=5";
 import { BoardSound } from "./snow.js?v=4";
 import { Ambience } from "./ambience.js?v=4";
