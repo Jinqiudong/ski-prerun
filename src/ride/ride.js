@@ -28,7 +28,8 @@ import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep }
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=1";
 import { Guide } from "./guide.js?v=6";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=2";
+import { startPractice, spotTitle } from "./practice.js?v=3";
+import { tiltRead } from "./tilt-core.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -1176,18 +1177,13 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   addEventListener("pointerup", touchEnd);
   addEventListener("pointercancel", touchEnd);
   st.setAuto = (on) => { auto = on; };
-  // The phone's tilt as riding input, relative to how it was held when the run started: a small dead
-  // zone, full at 18° either way. Forward and back recentres slowly (over ~10 s) to however you settle
-  // into holding it, so a new grip doesn't read as braking.
+  // The phone's tilt as riding input, relative to how it was held when the run started (tilt-core.js).
   let tiltAt = 0, tiltOff = 9;
   const tiltNow = () => {
     if (!tilt.ok) return null;
     tilt.zero ||= { side: tilt.side, fwd: tilt.fwd };
     const now = clock(), dt = Math.min(0.1, (now - (tiltAt || now)) / 1000); tiltAt = now;
-    tilt.zero.fwd += (tilt.fwd - tilt.zero.fwd) * dt * 0.1;
-    const ramp = (v, dead, full) => Math.sign(v) * clamp((Math.abs(v) - dead * D) / ((full - dead) * D), 0, 1);
-    // Speed needs a clear tip (6°+), so holding the phone a little differently never brakes you on a flat.
-    return { steer: ramp(tilt.side - tilt.zero.side, 2, 18), pace: ramp(tilt.zero.fwd - tilt.fwd, 6, 24) };
+    return tiltRead(tilt.zero, tilt.side, tilt.fwd, dt, 0.1);
   };
   const segAt = (P, i) => { let k = 0; while (k + 1 < P.segs.length && P.segs[k + 1].at <= i) k++; return k; };
   // Starting again somewhere else: a white flash, the camera dropping from high above, the rider
