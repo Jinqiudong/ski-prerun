@@ -181,6 +181,7 @@ const EN = {
   "解锁新地点": "NEW SPOT", "又来啦": "BACK AGAIN", "已发现 {n} 处秘密地点": "{n} secret spots found", "这趟 +{k}": "+{k} this run", "小狐狸": "Little fox",
   // The bunny hill practice (src/ride/practice.js)
   "宝宝坡": "Bunny hill", "{name} 宝宝坡": "{name} bunny hill", "{name} 旁的缓坡": "The gentle slope by {name}", "去宝宝坡练习": "Practise on the bunny hill", "去宝宝坡练习 ›": "Practise on the bunny hill ›",
+  "坐这条上宝宝坡 ›": "Ride up to the bunny hill ›", "坐 {name} 上宝宝坡 ›": "Ride {name} to the bunny hill ›", "离基地 {km} 公里": "{km} km from the base", "魔毯": "Magic carpet", "拖牵": "Rope tow", "初学者短缆车": "Short beginner chair", "初学者魔毯": "Beginner magic carpet", "初学者拖牵": "Beginner rope tow",
   "{len} 米 · 平均 {deg}°": "{len} m · {deg}° on average", "加速 · 立刃 · 换刃 · 刹车": "Speed · edges · linked turns · braking",
   "握好手机": "Hold your phone", "怎么舒服怎么握，点「开始」，现在的角度就是「平」": "Hold it however feels right and tap Start: that angle is \"flat\"", "先站稳～手机怎么舒服怎么拿": "Stand steady~ hold the phone however's comfy",
   "板头朝坡下放平，手机往前倾（或手指往下拖），滑到 {v} km/h": "Nose down the hill, board flat, tip the phone forward (or drag down): reach {v} km/h", "板头朝下，放平，冲～": "Nose down, flat base, go~",
