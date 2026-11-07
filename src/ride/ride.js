@@ -5,23 +5,24 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray } from "./board.js?v=11";
-import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=14";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=4";
+import { addStep, thinPath, openBookPage, paintWith } from "./roadbook.js?v=16";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, talkBoarder } from "../rider/boarder.js?v=5";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=1";
 import { TrailMap } from "./mapview.js?v=8";
-import { PaintedMap } from "./paintedmap.js?v=3";
+import { PaintedMap } from "./paintedmap.js?v=5";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=32";
-import { navRow } from "../core/nav.js?v=11";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=33";
+import { navRow } from "../core/nav.js?v=13";
 import { rideSound } from "../audio/index.js?v=5";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=7";
-import { dropIn } from "../core/transition.js?v=4";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=9";
+import { dropIn } from "../core/transition.js?v=6";
 import { Facilities } from "./kitworld.js?v=2";
-import { rideTogether } from "./together.js?v=7";
+import { rideTogether } from "./together.js?v=8";
+import { startParty } from "../core/party.js?v=1";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=2";
 
 const $ = (id) => document.getElementById(id);
@@ -2094,6 +2095,9 @@ const SURFACE = ["groomed", "powder", "ice"].find((x) => x === params.get("surfa
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
 const RESORT = (params.get("resort") || settings.resort || "copper").replace(/[^a-z0-9-]/g, "");
+// The party (src/core/party.js): the pet on the screen's edge and the friends on this trip, from the first
+// moment (the ride loads for a while; the others see me on my way here).
+const party = startParty({ page: "ride", resort: RESORT, lift: params.get("lift"), sub: "lift" });
 const withResort = (url) => url + (url.includes("?") ? "&" : "?") + `resort=${RESORT}`;
 for (const a of document.querySelectorAll('a[href="mountain/"]')) a.href = withResort("mountain/");
 // Once at the top, the address says so (?at=1, set on arrival), so a reload comes back to the top instead
@@ -2193,8 +2197,12 @@ async function main() {
   const snd = rideSound();
   snd?.ready.then(() => { const c = creditLine(snd.music.tracks()); if (c) $("credit").append(c); });
   const top = topOfLift({ T, R, lift, line, ctx, getChair: () => myChair, snd });
+  party.setRn(R.name);
   window.__top = top;
   let d = d0 + (Number(params.get("at")) || 0) * (d1 - d0), last = performance.now();
+  // 一起坐: everyone on the call boarded at the same moment; however long this page took to load, the chair
+  // is as far up the line as theirs.
+  if (TRIP && params.get("sync")) d = Math.min(d1, d0 + (Math.max(0, Date.now() - Number(params.get("sync"))) / 1000) * SPEED * 3);
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
@@ -2222,7 +2230,7 @@ async function main() {
     get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,
     speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate)),
     seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN }),
-    setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort });
+    setSeat: (x) => { MY_SEAT = x; ctx.rider.position.x = x; }, setBubble, offLift, withResort, party });
   window.__together = together;
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
     rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel) }; // testing (the walkie-talkie in voice.js raises the radio for real)
@@ -2278,6 +2286,7 @@ async function main() {
     const k = Math.min(1, dt * 16); // the gyro is smooth already: follow it closely
     look.yaw += (clamp(look.dragYaw + (look.phone?.yaw || 0), -1.3, 1.3) - look.yaw) * k;
     look.pitch += (clamp(look.dragPitch + (look.phone?.pitch || 0), -0.7, 0.35) - look.pitch) * k;
+    party.setSub(!top.phase && !arrived ? "lift" : top.phase === "ski" || top.phase === "hike" ? (top.live?.().ended ? "end" : "ski") : top.phase === "pick" ? "pick" : "top");
     if (top.phase) { top.step(now, dt); together.frame(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
     sit(ctx.rider, look.yaw, together.mate());
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);

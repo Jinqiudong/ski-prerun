@@ -34,11 +34,11 @@ export function rideTrip(list, today, resort, member, wanted = null) {
 // "hike" (x, z, h). Skiing also says where to: e [x, z] and en, its name.
 export const PHASES = ["lift", "top", "ski", "hike"];
 export const QUICK = [
-  { k: "wait", zh: "等我", icon: "rest" },
-  { k: "meet", zh: "缆车站见", icon: "lift" },
-  { k: "good", zh: "这条好滑", icon: "star" },
-  { k: "down", zh: "我先下去了", icon: "snowboard" },
-  { k: "coming", zh: "去找你", icon: "compass_rose" },
+  { k: "wait", zh: "等我", icon: "msg_wait" },
+  { k: "meet", zh: "缆车站见", icon: "msg_meet" },
+  { k: "good", zh: "这条好滑", icon: "msg_good" },
+  { k: "down", zh: "我先下去了", icon: "msg_down" },
+  { k: "coming", zh: "去找你", icon: "msg_coming" },
 ];
 const num = (v, lo, hi) => (typeof v === "number" && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null);
 const str = (v, n = 60) => (typeof v === "string" ? v.slice(0, n) : null);

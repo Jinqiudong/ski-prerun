@@ -4,15 +4,16 @@
 // by name. All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=4";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=5";
 import { ANIMAL_RIDERS, ANIMAL_ZH, animalOf } from "../rider/animal-core.js?v=1";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=1";
 import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, TRICKS, BOARDS, SIGNATURE, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
 import { makeEntrance } from "./entrance.js?v=24";
-import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=14";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=32";
-import { playIntro } from "./intro.js?v=20";
-import { flyTo } from "../core/transition.js?v=4";
+import { openBookPage, paintWith, locateIn } from "../ride/roadbook.js?v=16";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=33";
+import { playIntro } from "./intro.js?v=22";
+import { flyTo } from "../core/transition.js?v=6";
+import { startParty } from "../core/party.js?v=1";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -222,7 +223,7 @@ for (const id of ["poses", "morePoses"]) $(id).addEventListener("click", (e) => 
 
 // ---- The wardrobe: a row of icons, and what the chosen one changes below it.
 const ICON = (n) => `assets/icons/${n}.png?v=1`;
-const NAV = [["outfits", "hanger", "穿搭"], ["top", "jacket", "上衣"], ["pants", "pants", "裤子"], ["gear", "helmet", "装备"], null, ["look", "sliders", "外形"]];
+const NAV = [["outfits", "hanger", "穿搭"], ["top", "jacket", "上衣"], ["pants", "pants", "裤子"], ["gear", "helmet", "装备"], null, ["look", "look_mirror", "外形"]];
 const GEAR = [["gloves", "gloves", "手套"], ["lens", "lens", "雪镜"], ["helmet", "helmet", "头盔"], ["boots", "boots", "雪鞋"], ["board", "board", "雪板"]];
 let wtab = "outfits", gear = "helmet", naming = false, more = false;
 // Open a wardrobe item (and a gear's own sub-item): the camera goes close on that part, or back out.
@@ -371,9 +372,10 @@ $("wbody").addEventListener("submit", (e) => {
 
 // ---- Tabs: the rider, the resorts (a map of them to conquer), the journal.
 let collection = null, tab = "rider";
+const party = startParty({ page: "home", sub: "rider" }); // the party pet (src/core/party.js), on every tab
 const logOf = () => { try { return JSON.parse(localStorage.getItem("prerunLog") || "{}"); } catch { return {}; } };
 async function setTab(t) {
-  tab = t; $("tabs").classList.remove("shut");
+  tab = t; $("tabs").classList.remove("shut"); party.setSub(t);
   for (const b of $("tabs").children) b.classList.toggle("on", b.dataset.tab === t);
   const rider = t === "rider";
   for (const id of ["stage", "sheet"]) $(id).hidden = !rider;
@@ -398,7 +400,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=48");
+    const { Collection } = await import("./collection.js?v=50");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -434,7 +436,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=33");
+    const { Trips } = await import("./trips.js?v=35");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -444,7 +446,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=18");
+  const { renderMemory } = await import("./memory.js?v=20");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.

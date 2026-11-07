@@ -6,10 +6,10 @@
 // sees the same plan, live. Each section has an owner; anyone else's edit becomes a proposal the owner
 // accepts or declines. A copy is kept on this phone for offline. Older trips stay on this phone until
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=32";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=33";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
-import { daysOf } from "../ride/roadbook.js?v=14";
-import { myLook, sameLook } from "../core/look.js?v=5";
+import { daysOf } from "../ride/roadbook.js?v=16";
+import { myLook, sameLook } from "../core/look.js?v=7";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };

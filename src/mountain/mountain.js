@@ -7,15 +7,19 @@ import { Terrain } from "../ride/world.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=5";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=1";
-import { addStep } from "../ride/roadbook.js?v=14";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=32";
-import { openNav } from "../core/nav.js?v=11";
-import { liftTicket } from "../core/transition.js?v=4";
+import { addStep } from "../ride/roadbook.js?v=16";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=33";
+import { openNav } from "../core/nav.js?v=13";
+import { liftTicket } from "../core/transition.js?v=6";
+import { startParty } from "../core/party.js?v=1";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
 const RESORT_ID = (() => { try { return new URLSearchParams(location.search).get("resort") || JSON.parse(localStorage.getItem("prerun") || "{}").resort || "copper"; } catch { return "copper"; } })().replace(/[^a-z0-9-]/g, "");
 const RESORT = { lat: 39.4775, lon: -106.1605, tz: "America/Denver", name: "Copper Mountain" };
+// The party (src/core/party.js): its pet on the right edge; in a party, a lift card's button calls everyone
+// to ride it together (一起坐) instead of going alone.
+const party = startParty({ page: "resort", root: "../", resort: RESORT_ID });
 const FLY = 1.8; // seconds: down to a base; back up is a little quicker
 const $ = (id) => document.getElementById(id);
 const status = (t) => { $("status").textContent = t; return new Promise((r) => setTimeout(r, 20)); };
@@ -79,6 +83,7 @@ async function main() {
   await status("下载地形…");
   const R = await fetch(`../data/${RESORT_ID}.json`).then((r) => r.json());
   Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // all Colorado so far: Denver time
+  party.setRn(R.name);
   document.title = `${R.name} · 雪场预滑`;
   document.querySelector("#title b").textContent = R.name;
   // The heights and the run counts, from the resort list (tools/resort_stats.py).
@@ -252,6 +257,9 @@ async function main() {
     };
   }
   const tagBox = $("liftTags"), cards = $("liftCards");
+  // In a party with someone else in it, "坐这条上山" becomes "约大家一起坐".
+  const together = () => party.in && party.members().length > 0;
+  setInterval(() => { const k = together() ? "约大家一起坐 ›" : "坐这条上山 ›"; for (const b of cards.querySelectorAll(".liftCard .go")) if (b.dataset.k !== k) { b.dataset.k = k; b.textContent = tr(k); } }, 1000);
   function openBase(base) {
     const ls = liftsAt(base).filter((l) => RIDEABLE.includes(l.kind)); // carpets and drag lifts aren't ridden in the game
     // Seen from the base looking up its main lift: the camera flies down from the whole mountain to there,
@@ -264,7 +272,7 @@ async function main() {
     controls.enabled = false;
     spin = u0;
     mini = { base, lifts: ls, info: new Map(ls.map((l) => [l, liftInfo(l)])), t0: performance.now() + FLY * 1000, intro: true, pick: null, spinTo: null, raise: 0, spin0: u0 };
-    document.body.classList.add("mini");
+    document.body.classList.add("mini"); party.setSub("base");
     document.body.classList.remove("picking", "detail");
     $("introSkip").hidden = false;
     $("miniTitle").textContent = base.name;
@@ -292,7 +300,7 @@ async function main() {
         <div class="acts"><button class="more">详情</button><button class="go">坐这条上山 ›</button></div>`;
       card.addEventListener("click", (e) => { if (!e.target.closest("button")) pickLift(l, { scroll: true }); });
       card.querySelector(".more").addEventListener("click", () => { pickLift(l, { scroll: true }); openDetail(true); });
-      card.querySelector(".go").addEventListener("click", () => go(l));
+      card.querySelector(".go").addEventListener("click", () => { if (together()) party.callLift(l.name, RESORT_ID, R.name); else go(l); });
       cards.append(card);
       info.card = card;
     }
@@ -414,7 +422,7 @@ async function main() {
   });
   // Back to the whole mountain: every run and lift as it was, and the camera flies back up.
   $("miniBack").addEventListener("click", () => {
-    mini = null; document.body.classList.remove("mini", "picking", "detail");
+    mini = null; document.body.classList.remove("mini", "picking", "detail"); party.setSub("");
     air.focusLift(null); air.showAll();
     const v = VIEWS.hero(center);
     leaving = air.poseOf(new THREE.Vector3(...v.pos), new THREE.Vector3(...v.target));
