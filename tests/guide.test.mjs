@@ -30,14 +30,14 @@ test("lines: playful pools, every line once before any repeats, never twice runn
 
 const run = (g, frames, inp) => { const said = []; for (let f = 0; f < frames; f++) said.push(...guideStep(g, { dt: 1 / 30, ...inp(f) })); return said; };
 
-test("it keeps 15–25 m ahead of you", () => {
+test("it keeps 10–16 m ahead of you", () => {
   const g = newGuide(0);
   let sR = 0;
   run(g, 30 * 20, () => ({ sR: (sR += 10 / 30), speed: 10, end: 5000 }));
   const gap = g.s - sR;
   assert.ok(gap >= GAP.min - 1 && gap <= GAP.max + 1, `gap ${gap}`);
   assert.equal(g.mode, "lead");
-  assert.ok(gapFor(0) >= 15 && gapFor(30) <= 25 && gapFor(10, true) < gapFor(10)); // closer in the trees, to be seen among them
+  assert.ok(gapFor(0) >= 10 && gapFor(30) <= 16 && gapFor(10, true) < gapFor(10)); // closer in the trees, to be seen among them
 });
 
 test("fall behind and it stops, waits with a word, then goes on when you come", () => {

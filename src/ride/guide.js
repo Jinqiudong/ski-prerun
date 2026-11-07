@@ -48,7 +48,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const Y = new THREE.Vector3(0, 1, 0);
 // How tall it stands on screen: the toy animals (animal-core.js ANIMAL_SIZE) scaled to about this, in metres.
-const TALL = 1.35;
+const TALL = 1.9;
 
 export class Guide {
   // scene; camera; T (heightAt, normalAt); ground(x, z): the snow's surface (moguls, powder); trees: { grid, cell }
@@ -63,9 +63,8 @@ export class Guide {
     this.name = t(ANIMAL_ZH[this.animal] || "小狐狸");
     animalRider({ animal: this.animal, board: "B" }).then((root) => {
       this.root = root; this.holder.add(root);
-      const S = clamp(TALL / (root.userData.tall || 1), 1, 3.2);
+      const S = clamp(TALL / (root.userData.tall || 1), 1, 4.5);
       this.holder.scale.setScalar(S);
-      root.userData.board.scale.setScalar(clamp(2.1 / (1.5 * S), 0.5, 1)); // the board no longer than a real one
       root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     }).catch(() => {});
     if (!document.getElementById("gdCss")) { const s = document.createElement("style"); s.id = "gdCss"; s.textContent = CSS; document.head.append(s); }
@@ -127,8 +126,8 @@ export class Guide {
       want.set(c.x + Math.cos(this.circle) * 2.6, 0, c.z + Math.sin(this.circle) * 2.6);
     } else {
       const p = pointAt(P.path, P.dist, g.s, prog), moving = g.mode === "lead" ? clamp(g.v / 4, 0, 1) : 0;
-      // off to one side of your line and back (not hidden behind your rider), little of it in the trees
-      const lat = clamp(3 * Math.sin(g.s / 80), -1, 1) * (3.6 + 1.4 * Math.sin(g.s / 11)) * (0.5 + 0.5 * moving) * (1 - this.woods * 0.85);
+      // a little to one side of your line (not hidden behind your rider, still near the middle of the screen)
+      const lat = clamp(3 * Math.sin(g.s / 80), -1, 1) * (2.2 + 0.6 * Math.sin(g.s / 11)) * (0.6 + 0.4 * moving) * (1 - this.woods * 0.3);
       want.set(p.x - Math.cos(p.h) * lat, 0, p.z + Math.sin(p.h) * lat);
     }
     if (!this.placed) { this.pos.copy(want); this.placed = true; }
@@ -226,7 +225,9 @@ export class Guide {
     const behind = p.z > 1, w = b.offsetWidth || 120;
     let x = (p.x * 0.5 + 0.5) * innerWidth, y = (-p.y * 0.5 + 0.5) * innerHeight;
     if (behind) { x = innerWidth / 2; y = innerHeight * 0.3; }
-    const cx = clamp(x, w / 2 + 8, innerWidth - w / 2 - 8), cy = clamp(y - 4, 150, innerHeight - 120);
+    // a bubble with buttons stays toward the middle, whatever the animal's place
+    const lo = this.bub.acts ? Math.max(w / 2 + 8, innerWidth * 0.5 - 24) : w / 2 + 8, hi = this.bub.acts ? Math.min(innerWidth - w / 2 - 8, innerWidth * 0.5 + 24) : innerWidth - w / 2 - 8;
+    const cx = clamp(x, lo, hi), cy = clamp(y - 4, 150, innerHeight - 120);
     b.style.left = `${cx}px`; b.style.top = `${cy}px`;
     b.style.setProperty("--tail", `${clamp(50 + ((x - cx) / w) * 100, 12, 88)}%`);
   }

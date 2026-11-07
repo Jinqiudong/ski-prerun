@@ -51,9 +51,10 @@ export function lineBag(rand = Math.random) {
 }
 
 // ---------- Where it rides ----------
-// Distances along the route, in metres. The gap it keeps grows a little with speed; in the trees it rides closer.
-export const GAP = { min: 15, max: 25, trees: 16, wait: 36, resume: 18, slowFor: 3, chatter: [22, 40], waitAgain: 7 };
-export const gapFor = (speed, inTrees = false) => (inTrees ? GAP.trees : Math.min(GAP.max, GAP.min + Math.max(0, speed) * 0.8));
+// Distances along the route, in metres. Close enough to read at a glance on a phone (it rides just beyond your
+// rider), a little further when fast; closer still in the trees.
+export const GAP = { min: 10, max: 16, trees: 14, wait: 36, resume: 18, slowFor: 3, chatter: [22, 40], waitAgain: 7 };
+export const gapFor = (speed, inTrees = false) => (inTrees ? GAP.trees : Math.min(GAP.max, GAP.min + Math.max(0, speed) * 0.5));
 export function newGuide(sR = 0) { return { s: sR + 12, v: 0, mode: "lead", t: 0, slow: 0, off: 0, chat: 30, told: new Set(), turn: null }; }
 // One step. inp: { sR: you, along the route; speed; off: how far you are from the route; end: the route's length;
 // turns: [{ s, bearing, key }] the way's turn-offs ahead (bearing > 0 is to the left); down: you're in the snow
@@ -88,7 +89,7 @@ export function guideStep(g, inp) {
   }
   // Leading: as fast as you, a little faster to open the gap, slower to close it. You down in the snow, or
   // stopped a while, or far behind: it stops and turns round.
-  if (gap > GAP.wait || (g.slow > GAP.slowFor && gap > 10) || (down && gap > 6)) { to("wait"); say.push(down ? "crash" : "wait"); g.v = 0; return say; }
+  if (gap > GAP.wait || (g.slow > GAP.slowFor && gap > 8) || (down && gap > 6)) { to("wait"); say.push(down ? "crash" : "wait"); g.v = 0; return say; }
   if (next && next.turnHere !== false && next.s - g.s < 10 && next.s - sR > 14) { g.turn = next; to("turn"); g.s = Math.min(Math.max(g.s, next.s), end); say.push("atTurn"); return say; }
   g.v = Math.max(0, Math.min(speed + 6, speed + (want - gap) * 0.8));
   if (gap < 3) g.v = speed + 8; // you caught it up: it scoots on
