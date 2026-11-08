@@ -33,6 +33,7 @@ import { startPractice, spotTitle } from "./practice.js?v=9";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
+import { sPlan, sAt, alongPath } from "./sline-core.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -1308,41 +1309,74 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     el.className = best.kind; el.hidden = false;
     if (fresh) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
   }
-  let guide = null, arrowA = 1;
-  function chevronGeometry() { // a flat "^", 1.8 m wide, pointing +z
-    const T0 = [0, 0, 0.6], RO = [0.9, 0, -0.3], RI = [0.9, 0, -0.75], N = [0, 0, 0.12], LI = [-0.9, 0, -0.75], LO = [-0.9, 0, -0.3];
-    const pos = [T0, RO, RI, T0, RI, N, T0, N, LI, T0, LI, LO].flat();
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    return g;
+  // The line to ride, painted on the snow ahead: an S of linked turns weaving across the route's line
+  // (sline-core.js), the same S the board steers by when you leave it alone (stepSki). One ribbon, its
+  // vertices rewritten in place each frame: soft-edged, gold fading to the snow's white and gone by 130 m,
+  // a slow glint running down it so you see which way it goes, a little bolder under you while you're on it.
+  const S_STEP = 1.25, S_ROWS = 105, S_COLS = 4, S_FROM = 1.5;
+  const S_GOLD = new THREE.Color(ROUTE_GOLD).toArray(), S_GLINT = new THREE.Color(0xffe7a3).toArray(); // (linear, as vertex colours are)
+  let guide = null, arrowA = 1, sp = null, sGain = 0, onS = 0;
+  const sPt = {}, sHere = {}, sAim = {}, sRow = new Float32Array((S_ROWS + 1) * 2);
+  const S_LEAD = 4, S_LEAD_V = 0.45; // the board's aim on the S (stepSki): this far ahead on it, plus this many metres per m/s
+  const sStat = { n: 0, e2: 0, o2: 0, on: 0, w: 0 }; // testing: how closely the board rides the S
+  st.sline = (reset) => { const o = { rmsErr: +Math.sqrt(sStat.e2 / (sStat.n || 1)).toFixed(2), rmsOff: +Math.sqrt(sStat.o2 / (sStat.n || 1)).toFixed(2), onShare: +(sStat.on / (sStat.w || 1)).toFixed(2), gain: +sGain.toFixed(2), n: sStat.n, way: +Math.atan2(sHere.hx, sHere.hz).toFixed(2), cam: +(camH ?? 0).toFixed(2), head: +(phys?.heading ?? 0).toFixed(2), off: +(sHere.off * sGain).toFixed(1) }; if (reset) Object.assign(sStat, { n: 0, e2: 0, o2: 0, on: 0, w: 0 }); return o; };
+  st.slinePlan = () => { const P = chosen, q = sp?.P === P ? sp : sPlan(P); return { length: Math.round(P.length), flats: P.flats.map((f) => [Math.round(P.dist[f.a]), Math.round(P.dist[f.b]), f.kind]), straight: [...q.amp].map((a, i) => (a < 0.2 ? Math.round(P.dist[i]) : null)).filter((x) => x != null) }; };
+  // The S for a plan, made again when the plan or its junctions change.
+  function splan(P) {
+    const js = nav?.js;
+    if (sp?.P !== P || sp.js !== js) {
+      const turns = (js || []).filter((j) => j.i < P.path.length && Math.abs(j.options.find((o) => o.route)?.bearing || 0) > 0.18).map((j) => P.dist[j.i]);
+      sp = sPlan(P, { junctions: turns }); sp.js = js;
+    }
+    return sp;
   }
-  const GUIDE_N = 20, GUIDE_GAP = 6.5;
-  function stepGuide(P, now) {
+  const snowY = (x, z) => T.heightAt(x, z) + 0.1 + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE;
+  function stepGuide(P, now, sR) {
     if (!guide) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xf2b632, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, });
-      guide = new THREE.InstancedMesh(chevronGeometry(), mat, GUIDE_N);
-      guide.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(GUIDE_N * 3), 3);
+      const n = S_ROWS * S_COLS, g = new THREE.BufferGeometry(), idx = new Uint16Array((S_ROWS - 1) * (S_COLS - 1) * 6);
+      for (let r = 0, k = 0; r < S_ROWS - 1; r++) for (let c = 0; c < S_COLS - 1; c++) {
+        const a = r * S_COLS + c, b = a + S_COLS;
+        idx.set([a, b, a + 1, a + 1, b, b + 1], k); k += 6;
+      }
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+      g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 4), 4).setUsage(THREE.DynamicDrawUsage));
+      const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+      guide = new THREE.Mesh(g, mat);
       guide.frustumCulled = false; guide.renderOrder = 3;
       world.add(guide);
     }
-    const d0 = P.dist[prog], flow = ((now / 1000) * 7) % GUIDE_GAP, m = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-    let i = prog;
-    const last = P.path.length - 1, gold = new THREE.Color(0xf2b632), snow = new THREE.Color(0xffffff);
-    for (let k = 0; k < GUIDE_N; k++) {
-      const want = d0 + 4 + k * GUIDE_GAP + flow;
-      while (i < last && P.dist[i + 1] < want) i++;
-      if (i >= last || want > P.dist[last]) { m.makeScale(0, 0, 0); guide.setMatrixAt(k, m); continue; }
-      const t = (want - P.dist[i]) / (P.dist[i + 1] - P.dist[i] || 1), [ax, az] = P.path[i], [bx, bz] = P.path[i + 1];
-      const x = ax + (bx - ax) * t, z = az + (bz - az) * t, h = Math.atan2(bx - ax, bz - az);
-      q.setFromUnitVectors(up, T.normalAt(x, z, v)).multiply(q2.setFromAxisAngle(up, h));
-      const fade = 1 - Math.max(0, (want - d0 - 70) / 70); // full for the first 70 m, gone by 140 m
-      m.compose(new THREE.Vector3(x, T.heightAt(x, z) + 0.12 + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE, z), q, new THREE.Vector3(2.8, 1, 3.2).multiplyScalar(0.75 + 0.25 * fade));
-      guide.setMatrixAt(k, m);
-      guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
+    const plan = splan(P), pos = guide.geometry.attributes.position.array, col = guide.geometry.attributes.color.array;
+    // the S's centre line, a row every 1.25 m from just ahead of you
+    sPt.i = prog;
+    for (let r = 0; r <= S_ROWS; r++) {
+      sAt(plan, sR + S_FROM + r * S_STEP, sPt);
+      const o = sPt.off * sGain;
+      sRow[r * 2] = sPt.cx + sPt.rx * o; sRow[r * 2 + 1] = sPt.cz + sPt.rz * o;
     }
-    guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
-    // none while the guide leads in sight (guide.js), eased in and out; always there with no guide
+    const end = P.dist[P.dist.length - 1], flow = (now / 1000) * 6;
+    for (let r = 0; r < S_ROWS; r++) {
+      const d = S_FROM + r * S_STEP, x = sRow[r * 2], z = sRow[r * 2 + 1];
+      let tx = sRow[r * 2 + 2] - x, tz = sRow[r * 2 + 3] - z; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L;
+      const fade = 1 - Math.max(0, (d - 70) / 60); // gold for the first 70 m, white and gone by 130 m
+      const near = Math.max(0, 1 - d / 28) * onS; // the stretch you're on, bolder while you ride it
+      const half = (0.4 + 0.006 * d) * (1 + 0.3 * near), soft = 0.12;
+      const glint = Math.pow(0.5 + 0.5 * Math.cos(((d - flow) / 16) * Math.PI * 2), 8) * 0.55 * fade;
+      const a = Math.min(1, (d - S_FROM) / 4) * Math.min(1, fade * 1.7) * (0.9 + 0.1 * near) * (sR + d > end ? 0 : 1);
+      const ax = x - tz * half, az = z + tx * half, bx = x + tz * half, bz = z - tx * half; // its two edges
+      const ya = snowY(ax, az), yb = snowY(bx, bz), w = Math.max(0.05, fade);
+      for (let c = 0; c < S_COLS; c++) {
+        const u = c === 0 ? 0 : c === S_COLS - 1 ? 1 : c === 1 ? soft / (2 * half) : 1 - soft / (2 * half), v = (r * S_COLS + c) * 3, q = (r * S_COLS + c) * 4;
+        pos[v] = ax + (bx - ax) * u; pos[v + 1] = ya + (yb - ya) * u; pos[v + 2] = az + (bz - az) * u;
+        for (let e = 0; e < 3; e++) col[q + e] = 1 + (S_GOLD[e] + (S_GLINT[e] - S_GOLD[e]) * glint - 1) * w; // fading to the snow's white
+        col[q + 3] = c === 0 || c === S_COLS - 1 ? 0 : a;
+      }
+    }
+    guide.geometry.attributes.position.needsUpdate = true; guide.geometry.attributes.color.needsUpdate = true;
+    // Quieter while the guide leads in sight (guide.js), eased in and out, never gone: it is the line the
+    // board rides. Always full with no guide.
     arrowA += ((NOGUIDE ? 1 : buddy.alpha) - arrowA) * 0.08;
-    guide.material.opacity = 0.92 * arrowA; guide.visible = arrowA > 0.01;
+    guide.material.opacity = 0.95 * (0.75 + 0.25 * arrowA); guide.visible = true;
     if (nav) for (const o of nav.group.children) if (o.userData.chev) o.visible = arrowA > 0.3; // and the chevrons before each turn-off
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
@@ -1408,13 +1442,27 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     let ti = near.i; while (ti < last && P.dist[ti] - P.dist[near.i] < ahead) ti++;
     idleFor = touching ? 0 : idleFor + dt;
     if (!touching) latIn *= Math.exp(-dt * 0.35);
-    // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
-    // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: about 7 m either side
-    // of the line, a turn every 30 m; wider on steep snow, so each turn finishes further across the fall line.
-    const weave = auto ? 0 : (7 + 4 * clamp(((r.slope || 0) - 0.21) / 0.31, 0, 1)) * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1) * (1 - buddy.woods); // none on a line through the trees
-    const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
+    // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: the S drawn on the snow
+    // (sline-core.js, stepGuide), its shape from the run's level and steepness, straight where there's no room.
+    // Its width: none on autopilot or at a crawl (linked turns would only stall you), full from 8 m/s, eased,
+    // and the drawing and the board use the same number, so the S you see is the one you ride.
+    const plan = splan(P), sR = alongPath(P, r.x, r.z, near.i);
+    sGain += ((auto ? 0 : clamp((r.speed - 3) / 5, 0, 1) * (1 - buddy.woods)) - sGain) * Math.min(1, dt * 0.8);
+    sAt(plan, sR, sHere);
+    const sw = clamp((sHere.amp * sGain) / 1.5, 0, 1);
+    // Aim at a point on the S a few metres ahead (10 m at 13 m/s): short enough to ride each arc rather than
+    // cut it (measured in a whole run untouched: within about 0.5 m of the drawn line), the board's own lag
+    // making up the rest. A drag across the piste (latIn) shifts the aim off it; let go and you drift back.
+    const lead = Math.min(ahead, S_LEAD + r.speed * S_LEAD_V);
+    sAt(plan, sR + lead, sAim);
+    const weave = sGain * sAim.off;
+    const lat = clamp(latIn + weave, -LAT, LAT);
     // The rider's right on screen is local -x: (−cos h, +sin h).
-    const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
+    const tx = sAim.cx + sAim.rx * lat, tz = sAim.cz + sAim.rz * lat;
+    // On it? (for the drawing: the stretch you're on a little bolder)
+    const sErr = (r.x - sHere.cx) * sHere.rx + (r.z - sHere.cz) * sHere.rz - sGain * sHere.off;
+    onS += ((sw > 0.6 && Math.abs(sErr) < 1.6 ? 1 : 0) - onS) * Math.min(1, dt * 3);
+    sStat.n++; sStat.e2 += sErr * sErr; sStat.o2 += (sGain * sHere.off) ** 2; if (sw > 0.6) sStat.on += Math.abs(sErr) < 1.6 ? 1 : 0, sStat.w++;
     let steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
     // Tilting the phone rides it: left or right edges into a turn at once (the route only nudges you
     // back), tipping it away lets it run, toward you slows down. Measured from how you held it at the start.
@@ -1510,7 +1558,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       snd.ski(r, { air, station: clamp(1 - Math.hypot(r.x - topP.x, r.z - topP.z) / 120, 0, 1), dt });
     }
     tracks.add(r);
-    stepGuide(P, clock());
+    stepGuide(P, clock(), sR);
     const Q = buddy.step(dt, { P, prog, r, off: near.d, js: nav?.js }); if (Q) chosen = Q; // a detour spliced in (or taken out again)
     const NL = ctx.nightLights;
     if (NL) { // brighter close to a floodlight
@@ -1538,7 +1586,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     inWoods += (wT - inWoods) * Math.min(1, dt * (wT > inWoods ? 0.9 : 0.6));
     const w = inWoods, tall = ctx.rider.userData.tall || 1.7;
     if (camH == null) camH = r.heading;
-    camH += angleDiff(r.heading, camH) * Math.min(1, dt * (5 - 2.8 * w));
+    // Linking turns on the S, it looks more down the way than across with each turn, so the S ahead reads
+    // as an S and the view doesn't swing side to side every couple of seconds.
+    const wayH = Math.atan2(sHere.hx, sHere.hz), camT = wayH + angleDiff(r.heading, wayH) * (1 - 0.55 * sw * (1 - w));
+    camH += angleDiff(camT, camH) * Math.min(1, dt * (5 - 2.8 * w));
     const back = _back.set(-Math.sin(camH), 0, -Math.cos(camH));
     const want = _want.set(r.x, r.y, r.z).addScaledVector(back, (7.5 + r.speed * 0.1) * (1 - w) + (2.3 + r.speed * 0.04) * w);
     // In a crash it swings round to the open side, away from the tree and out from under its branches, and
