@@ -2,16 +2,19 @@
 // each rigged animal (the capybara: character.js, its Stand_Idle) in its default colours,
 // three-quarters on, rendered once into a small transparent PNG under assets/riders/thumbs/animal_<name>.png.
 // Rerun it when an animal's model or animal.js's sizes change.
-// usage: node tools/render_animal_thumbs.mjs [name ...]   (only those; needs puppeteer-core: npm i --no-save puppeteer-core, and Google Chrome)
+// --photo: instead, each rigged animal larger and turned less, for the log's day photos (photo.js), as
+// assets/riders/animals/<name>_photo.png.
+// usage: node tools/render_animal_thumbs.mjs [--photo] [name ...]   (only those; needs puppeteer-core: npm i --no-save puppeteer-core, and Google Chrome)
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join, extname, normalize } from "node:path";
 import puppeteer from "puppeteer-core";
 
 const ROOT = join(dirname(new URL(import.meta.url).pathname), "..");
-const OUT = join(ROOT, "assets/riders/thumbs");
+const PHOTO = process.argv.includes("--photo"), ARGS = process.argv.slice(2).filter((a) => a !== "--photo");
+const OUT = join(ROOT, PHOTO ? "assets/riders/animals" : "assets/riders/thumbs");
 const CHROME = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const SIZE = 160; // drawn at twice this and scaled down, for smooth edges
+const SIZE = PHOTO ? 480 : 160; // drawn at twice this and scaled down, for smooth edges
 
 // The page: lit like the rider page; the camera framed on the animal (the board runs off the edges).
 const PAGE = `<!doctype html><html><head><meta charset="utf-8">
@@ -21,7 +24,7 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { ANIMAL_RIDERS, RIGGED } from "./src/rider/animal-core.js?v=2";
 import { makeCharacter } from "./src/rider/character.js?v=13";
-const ONLY = ${JSON.stringify(process.argv.slice(2))};
+const ONLY = ${JSON.stringify(PHOTO ? ARGS.length ? ARGS : ["capybara"] : ARGS)}, PHOTO = ${PHOTO};
 import { animalRider, idleAnimal } from "./src/rider/animal.js?v=3";
 const S = ${SIZE} * 2;
 const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -39,15 +42,15 @@ for (const a of [...RIGGED, ...ANIMAL_RIDERS].filter((a) => !ONLY.length || ONLY
   if (RIGGED.includes(a)) { const C = await makeCharacter(a); C.set({ parts: {}, board: "A" }); C.play("Stand_Idle", { fade: 0 }); C.mixer.update(0); root = new THREE.Group(); root.add(C.root); model = C.root; }
   else { root = await animalRider({ animal: a, board: "A" }); root.userData.gaze.wait = 1e9; idleAnimal(root); model = root.userData.model; }
   await new Promise((ok) => setTimeout(ok, 300)); // the board's pictures
-  root.rotation.y = RIGGED.includes(a) ? 0.55 : Math.PI / 2 - 0.65; sc.add(root); root.updateMatrixWorld(true); // a rigged one faces +z, three-quarters on
+  root.rotation.y = PHOTO ? 0.3 : RIGGED.includes(a) ? 0.55 : Math.PI / 2 - 0.65; sc.add(root); root.updateMatrixWorld(true); // a rigged one faces +z, three-quarters on
   const box = new THREE.Box3(); model.traverse((o) => { if (o.isMesh && o.visible) box.expandByObject(o); });
   const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
   c.y -= s.y * 0.04;
-  const R = Math.max(s.x, s.y, s.z) * 0.56, dist = R / Math.tan(THREE.MathUtils.degToRad(12));
+  const R = Math.max(s.x, s.y, s.z) * (PHOTO ? 0.64 : 0.56), dist = R / Math.tan(THREE.MathUtils.degToRad(12));
   cam.position.copy(c).addScaledVector(new THREE.Vector3(0, 0.32, 1).normalize(), dist); cam.lookAt(c);
   r.render(sc, cam); sc.remove(root);
   const g = small.getContext("2d"); g.clearRect(0, 0, ${SIZE}, ${SIZE}); g.imageSmoothingQuality = "high"; g.drawImage(r.domElement, 0, 0, ${SIZE}, ${SIZE});
-  out["animal_" + a] = small.toDataURL("image/png");
+  out[PHOTO ? a + "_photo" : "animal_" + a] = small.toDataURL("image/png");
 }
 window.__out = out;
 </script></body></html>`;
@@ -69,5 +72,5 @@ try {
   await page.waitForFunction(() => window.__out, { timeout: 120000 });
   const out = await page.evaluate(() => window.__out);
   mkdirSync(OUT, { recursive: true });
-  for (const [k, url] of Object.entries(out)) { writeFileSync(join(OUT, `${k}.png`), Buffer.from(url.split(",")[1], "base64")); console.log(`assets/riders/thumbs/${k}.png`); }
+  for (const [k, url] of Object.entries(out)) { writeFileSync(join(OUT, `${k}.png`), Buffer.from(url.split(",")[1], "base64")); console.log(join(OUT, `${k}.png`)); }
 } finally { await browser.close(); server.close(); }

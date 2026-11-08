@@ -80,7 +80,7 @@ async function idb(mode, fn) {
 }
 // One photo at a time: the drawing is quick, but a phone shouldn't do several at once while you swipe.
 let line = Promise.resolve();
-const draw = (d) => { const p = line.then(async () => (await import("./photo.js?v=4")).renderPhoto({ resort: d.resort, date: d.date, people: d.people })); line = p.catch(() => {}); return p; };
+const draw = (d) => { const p = line.then(async () => (await import("./photo.js?v=5")).renderPhoto({ resort: d.resort, date: d.date, people: d.people })); line = p.catch(() => {}); return p; };
 const pending = new Map();
 const photoURL = (d) => { const k = photoKey(d, PHOTO_V); if (!pending.has(k)) pending.set(k, fetchPhoto(d, k).finally(() => pending.delete(k))); return pending.get(k); };
 async function fetchPhoto(d, k) {

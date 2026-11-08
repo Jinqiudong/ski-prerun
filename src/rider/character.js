@@ -25,7 +25,7 @@ export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Ani
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 const files = {};
-const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(PETS[tpl] ? `assets/riders/animals/${PETS[tpl].file}?v=1` : `assets/riders/tpl_${tpl.toLowerCase()}.glb?v=5`));
+const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(PETS[tpl] ? `assets/riders/animals/${PETS[tpl].file}?v=1` : `assets/riders/tpl_${tpl.toLowerCase()}.glb?v=6`));
 // The ride's clips (stance, turns, lift, air, stops, falls, chairlift talk, radio) live in a second, skeleton-only file;
 // tracks bind by bone name, so they play on the template as they are. Only the ride needs them.
 const rides = {};
@@ -33,7 +33,7 @@ const rideOf = (tpl) => (rides[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tp
 // The light version for the ride (about 30k triangles drawn, 512 px textures): the same skeleton, names and
 // morphs, and no clips of its own. Each file loads once; every rider made from it shares its geometry and textures.
 const lods = {};
-const lodOf = (tpl) => (lods[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_lod.glb?v=2`));
+const lodOf = (tpl) => (lods[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_lod.glb?v=3`));
 // An animal has one file for the rider page and the ride (no light version); its clips are the woman's template's
 // (the same rest orientations), from tpl_f.glb or tpl_f_ride.glb.
 const CLIPS_OF = "F";

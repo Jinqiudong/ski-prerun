@@ -208,9 +208,10 @@ function aim() {
   // an animal: nearer and lower, the whole board in the picture
   if (rider?.isAnimal || (rider?.pet && !s)) { const h = rider.tall; view.at.set(0, h * 0.42, 0); view.pos.set(0, h * 0.42 + 0.7 + h * 0.2, 3.4 + h * 0.9); return; }
   if (!s || !rider) { view.pos.copy(REST.pos); view.at.copy(REST.at); return; }
-  const [bones, d0, up, low] = s, d = rider.pet && focus === "head" ? d0 * 1.5 : d0; // a rigged animal's head is a big one
+  // a rigged animal's head is a big one, with its hat (and the leaf on it) well above the Head bone
+  const big = rider.pet && focus === "head", [bones, d0, up, low] = s, d = big ? d0 * 1.8 : d0;
   view.at.set(0, 0, 0); for (const b of bones) view.at.add(rider.bones[b].getWorldPosition(v3)); view.at.divideScalar(bones.length);
-  view.at.x *= 0.5; view.at.z *= 0.5; view.at.y -= low; // keep near the middle, a little below the part
+  view.at.x *= 0.5; view.at.z *= 0.5; view.at.y -= big ? -0.12 : low; // keep near the middle, a little below the part
   view.pos.set(view.at.x, view.at.y + d * up, view.at.z + d);
 }
 // The clear part of the screen (CSS px), and the picture moved and scaled so its middle is there and its height

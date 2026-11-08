@@ -339,6 +339,11 @@ function radioOver(u, dt) {
 // (kitworld.js), so the hips go just above it. Off the chair: standing on the board, gliding down the ramp.
 // talk: a friend beside you on the chair, +1 on your left (+x), -1 on your right: Chairlift_Sit_Talk.
 export const SEAT = new THREE.Vector3(0, 0.6, -0.08);
+// A rigged animal (the capybara) on the chair: the people's sit puts its short legs straight out along the seat, so
+// its feet rest on the seat and the board, hanging from the lead foot, cuts up through it. It sits further forward
+// instead (PET_FWD): its legs reach out past the seat's front edge, as a small animal sits, and the board hangs in
+// front of the chair.
+const PET_FWD = 0.2;
 const _v = new THREE.Vector3();
 function faceForward(u) {
   u.yaw.rotation.set(0, u.toeX < 0 ? Math.PI / 2 : -Math.PI / 2, 0); // chest (the toes' side) to +z
@@ -374,6 +379,11 @@ export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
   u.model.position.x -= h.x - seat.x; u.model.position.z -= h.z - seat.z;
   u.yaw.position.y = seat.y - h.y;
+  if (u.C?.pet) { // forward on the seat: the root's +z (the way the chest faces) in the model's parent's frame
+    root.updateMatrixWorld(true);
+    const o = u.model.parent.worldToLocal(root.localToWorld(_v.set(0, 0, 0))).clone(), f = u.model.parent.worldToLocal(root.localToWorld(_v.set(0, 0, PET_FWD)));
+    u.model.position.add(f.sub(o));
+  }
   finish(root);
 }
 // On the chair: a wave (Chairlift_Wave) or pointing ahead (Chairlift_Point), once.
