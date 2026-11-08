@@ -1383,7 +1383,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     // (slower through moguls: you pick a line through the bumps; ask for more and you get some air)
     const cap = { easy: 11, intermediate: 14, advanced: 15, expert: 15 }[seg.run.level] * (flat || flatAhead ? 1.6 : 1) * (onMogul || seg.run.moguls ? 0.62 : 1) * (1 - 0.45 * buddy.woods);
     const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
-    const heel = heelSide(ctx.rider), gov = governor(r.speed, cap, !(Math.abs(steer) > 0.08 && -Math.sign(steer) !== heel)); // a toe-side turn carves on
+    // A toe-side turn carves on. Your own tilted turns are the same both ways: a heel-side one braking at the
+    // easy pace felt like the phone braking whenever you tipped it that way.
+    const heel = heelSide(ctx.rider), gov = governor(r.speed, cap, !own && !(Math.abs(steer) > 0.08 && -Math.sign(steer) !== heel));
     let pace = asked > 0 ? (r.speed > cap * 1.6 ? -0.5 : asked) : Math.min(asked, -gov);
     if (flat && pace > -0.6) pace = Math.max(pace, 0.8); // tucked through a flat unless you really brake
     // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
