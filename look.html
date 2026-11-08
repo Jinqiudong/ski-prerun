@@ -20,7 +20,7 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/styles/paper.css?v=1">
-  <link rel="stylesheet" href="src/styles/ride-paper.css?v=4">
+  <link rel="stylesheet" href="src/styles/ride-paper.css?v=5">
 </head>
 <body>
   <canvas id="c"></canvas>
@@ -48,6 +48,8 @@
     <div class="strip"><span class="hs"><img src="assets/icons/hud_speed.png?v=1" alt="速度"><b id="hsSpeed">0</b><small>km/h</small></span><i class="sep"></i><span class="hs run" id="hsRun"></span><i class="sep" id="hsToSep"></i><span class="hs to" id="hsTo"><img id="hsToIco" alt=""><span id="hsToName"></span></span><i class="sep"></i><span class="hs"><img src="assets/icons/challenge.png?v=1" alt="还剩"><b id="hsLeft"></b><small id="hsLeftU"></small></span></div>
     <div class="nums"><span><b id="skiSpeed">0</b> km/h</span><span>还剩 <b id="skiLeft"></b></span></div><p id="skiWhere"></p><p id="skiCue"></p></div>
   <div id="turnCue" hidden></div>
+  <!-- the road ahead while the guide leads (ride.js roadCue): an arrow-shaped road sign, not speech -->
+  <div id="roadCue" hidden></div>
   <div id="arrive" class="glass" hidden><b id="arriveTitle"></b><p id="arriveNote"></p>
     <div class="row" id="arriveRow"><a class="btn" href="mountain/">回雪场选下一条</a><button class="btn" id="again">再坐一次</button></div></div>
   <button id="trickBtn" hidden><img src="assets/icons/trick.png?v=1" alt="">动作</button>
@@ -60,6 +62,6 @@
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { liftRide } from "./src/core/transition.js?v=16"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=39"></script>
+  <script type="module" src="src/ride/ride.js?v=40"></script>
 </body>
 </html>

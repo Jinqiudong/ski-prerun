@@ -13,10 +13,10 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=15";
+import { PaintedMap } from "./paintedmap.js?v=16";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=45";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=46";
 import { navRow } from "../core/nav.js?v=23";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=19";
@@ -27,7 +27,7 @@ import { startParty } from "../core/party.js?v=15";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=11";
+import { Guide } from "./guide.js?v=12";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
 import { startPractice, spotTitle } from "./practice.js?v=9";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
@@ -1052,7 +1052,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (!NOGUIDE) buddy.start(P, prog);
     st.phase = "ski";
     document.body.classList.toggle("navmin", !NOGUIDE); // the guide leads: signs and the strip, no text (ride-paper.css)
-    strip.start(P);
+    strip.start(P); $("roadCue").hidden = true; roadShown = "";
     $("skiHud").hidden = false;
     pmap.show(true);
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : P.title;
@@ -1278,6 +1278,36 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   // The way to go, on the snow ahead of you: big gold arrowheads every 6.5 m along the route for the next 130 m,
   // flowing forward and fading with distance, so the line through each turn is always in front of you.
+  // The road ahead, while the guide leads: its conditions as a road sign above the strip, an arrow-shaped plate,
+  // not speech (the owner: road reminders are arrows, kept apart from what the guide says): 平路 (keep your
+  // speed), 上坡 (a climb), 蘑菇 (moguls), with the distance to it; the nearest one, while it's coming up and
+  // just as you're on it. With no guide these are the text card's (flashCue).
+  const ROAD = { flat: ["road_flat", "平路", 140], up: ["road_up", "上坡", 80], moguls: ["moguls", "蘑菇", 160] };
+  let roadShown = "";
+  function roadCue(P) {
+    if (NOGUIDE) return;
+    const here = P.dist[prog], end = P.dist[P.dist.length - 1];
+    let best = null;
+    const take = (kind, d) => { if (!best || d < best.d) best = { kind, d }; };
+    for (const f of P.flats) {
+      const a = P.dist[f.a], b = P.dist[f.b];
+      if (here >= a && here <= Math.min(b, a + 40)) take(f.kind, 0); else if (a > here && a - here < ROAD[f.kind][2]) take(f.kind, a - here);
+    }
+    P.segs.forEach((g, k) => {
+      if (!g.run.moguls) return;
+      const a = P.dist[g.at], b = k + 1 < P.segs.length ? P.dist[P.segs[k + 1].at] : end;
+      if (here >= a && here < Math.min(b, a + 40)) take("moguls", 0); else if (a > here && a - here < ROAD.moguls[2]) take("moguls", a - here);
+    });
+    const el = $("roadCue");
+    const key = best ? `${best.kind}:${best.d > 0 ? Math.max(10, Math.round(best.d / 10) * 10) : 0}` : "";
+    if (key === roadShown) return;
+    if (!best) { roadShown = ""; el.hidden = true; return; }
+    const [icon, word] = ROAD[best.kind], fresh = !roadShown.startsWith(best.kind + ":");
+    roadShown = key;
+    el.innerHTML = `<img src="assets/icons/${icon}.png?v=1" alt=""><b>${t(word)}</b>${best.d > 0 ? `<small>${key.split(":")[1]} m</small>` : ""}`;
+    el.className = best.kind; el.hidden = false;
+    if (fresh) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+  }
   let guide = null, arrowA = 1;
   function chevronGeometry() { // a flat "^", 1.8 m wide, pointing +z
     const T0 = [0, 0, 0.6], RO = [0.9, 0, -0.3], RI = [0.9, 0, -0.75], N = [0, 0, 0.12], LI = [-0.9, 0, -0.75], LO = [-0.9, 0, -0.3];
@@ -1402,7 +1432,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     for (const f of [flatAhead, rise]) if (f && !f.told) { f.told = true; flashCue(f.kind === "flat" ? `前面 ${fmtLen(f.m)} 平路 · 别刹车，带速度，板放平` : `前面 ${fmtLen(f.m)} 上坡 · 要走上去`); }
     // Moguls ahead on the way (蘑菇道): once for each mogul run, as it comes up.
     const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
-    if (mg) { mogTold.add(mg.run); mogTold.add("any"); buddy.sign("moguls"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
+    if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
+    roadCue(P);
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Which way a heel-side skid turns the board's nose, as boarder.js / animal.js draw it (mirrored if goofy).
     const heelSide = (o) => (o.userData.kind === "animal" ? -1 : -(o.userData.toeX || 1)) * (o.userData.goofy ? -1 : 1);
@@ -1735,7 +1766,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("liftOffer").hidden = true; closeBigMap();
     if (guide) guide.visible = false;
     tbtn.hidden = true; closeWheel();
-    $("skiHud").hidden = true; document.body.classList.remove("navmin");
+    $("skiHud").hidden = true; document.body.classList.remove("navmin"); $("roadCue").hidden = true; roadShown = "";
     $("turnCue").hidden = true;
     pmap.show(false);
     $("arrive").hidden = false;

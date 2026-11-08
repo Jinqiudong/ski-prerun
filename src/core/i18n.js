@@ -174,7 +174,11 @@ const EN = {
   "蘑菇道": "Moguls", "蘑菇道：{runs}": "Moguls: {runs}", "前方蘑菇道": "Moguls ahead", "膝盖放软，看着下一个蘑菇": "soft knees, look to the next bump",
   "放慢一点，膝盖放软，一个一个绕过去": "Slow down a little, soft knees, round them one by one", "蘑菇道：有雪包（猫跳）的雪道": "Moguls: a run with bumps",
   // The guide animal (src/ride/guide-core.js, guide.js): its signs are pictures; the detour offers, the spots found
-  "钻树林？": "Into the trees?", "上山": "Ride up", "试试蘑菇？": "Try the bumps?", "去深粉？": "Powder?", "走！": "Go!", "不了": "Not now",
+  "钻树林？": "Into the trees?", "这边！": "This way!", "跟我来": "Follow me", "往这走": "Over here", "直走～": "Straight on~", "别拐哦": "Don't turn", "一直走": "Keep going",
+  "这儿进！": "In here!", "就这儿": "Right here", "跟上～": "Keep up~", "等你哦": "Waiting~", "慢慢来": "Easy now", "不急～": "No rush~",
+  "走错啦": "Wrong way", "回来～": "Come back~", "不是那边": "Not there", "好耶": "Yay", "对啦": "That's it", "回来啦": "You're back",
+  "找到啦": "Found it", "秘密基地": "Secret spot", "快到啦": "Almost there", "到站咯": "Lift's here", "到家咯": "Home!",
+  "平路": "Flat", "上坡": "Uphill", "蘑菇": "Bumps", "上山": "Ride up", "试试蘑菇？": "Try the bumps?", "去深粉？": "Powder?", "走！": "Go!", "不了": "Not now",
   "{run} 旁的松林": "The pines by {run}", "{run} 的蘑菇阵": "The bumps on {run}", "{run} 边的深粉": "The stash by {run}", "雪道": "the run",
   "解锁新地点": "NEW SPOT", "又来啦": "BACK AGAIN", "已发现 {n} 处秘密地点": "{n} secret spots found", "这趟 +{k}": "+{k} this run", "小狐狸": "Little fox",
   // The bunny hill practice (src/ride/practice.js)

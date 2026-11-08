@@ -243,6 +243,20 @@ ICONS.hud_speed = () => [
   { d: circ(64, 92, 10), fill: C.dslate, sw: 4, hl: ["M59 89 Q60 86 63 85"] },
   { d: line([2, 120], [26, 120]), sw: 4 }, { d: line([40, 120], [88, 120]), sw: 4 }, { d: line([102, 120], [120, 120]), sw: 4 },
 ];
+// The road's conditions (the ride's road sign, not the guide's bubble). 平路: a flat run-out ahead, keep your
+// speed: a flat arrow over level snow with speed lines behind it. 上坡: a climb: an arrow up a rising slope.
+ICONS.road_flat = () => [
+  { d: "M4 104 Q4 96 14 96 H114 Q124 96 124 104 V114 Q124 122 116 122 H12 Q4 122 4 114 Z", fill: C.white, shade: C.blue, sw: 4.5, hl: ["M14 102 H46"] },
+  { d: line([6, 46], [26, 46]), sw: 4.5 }, { d: line([2, 62], [22, 62]), sw: 4.5 }, { d: line([8, 78], [26, 78]), sw: 4.5 },
+  U({ ...capsule(36, 62, 84, 62, 26), ...ARROW, hl: ["M-6 8 V34"] },
+    { d: poly([80, 30], [122, 62], [80, 94]), ...ARROW, hl: ["M90 46 L104 56"] }),
+];
+ICONS.road_up = () => [
+  { d: "M4 114 Q4 106 14 104 L112 46 Q124 40 124 54 V114 Q124 122 116 122 H12 Q4 122 4 114 Z", fill: C.white, shade: C.blue, sw: 4.5, hl: ["M20 106 L60 84"] },
+  U({ ...capsule(22, 80, 72, 50, 24), ...ARROW, hl: ["M-5 8 V30"] },
+    { d: poly([60, 26], [110, 30], [88, 74]), ...ARROW }),
+  ...[[96, 92], [76, 104], [108, 76]].map(([x, y]) => ({ d: circ(x, y, 2.4), fill: INK, sw: 0 })),
+];
 
 // a snowboard from the side, centred on (cx, cy), turned by a degrees
 function board(cx, cy, a) {

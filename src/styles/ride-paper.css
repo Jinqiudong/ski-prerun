@@ -180,3 +180,15 @@
     #pmMini { border: 0; padding: 5px; background: conic-gradient(#c0675c calc(var(--share, 0) * 1turn), #fdfbf6 0); }
     #pmMini canvas { box-shadow: 0 0 0 2px #fdfbf6; }
     #pmMini span { display: none; }
+    /* The road ahead (ride.js roadCue): a painted road sign, arrow-shaped, pointing on down the way, above the
+       strip; amber like a trail marker, with no tail, so it never reads as the guide speaking. */
+    #roadCue { position: fixed; z-index: 11; left: 50%; bottom: calc(102px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; justify-items: center; align-content: end;
+      width: 78px; height: 96px; padding: 0 0 7px; box-sizing: border-box; background: #f0cf7e; color: #22344d; pointer-events: none;
+      clip-path: polygon(50% 0, 100% 26%, 100% 100%, 0 100%, 0 26%); filter: drop-shadow(0 4px 8px rgba(40,30,20,.3)); }
+    #roadCue::before { content: ""; position: absolute; inset: 3px; z-index: -1; background: #f6dc98; clip-path: polygon(50% 0, 100% 26%, 100% 100%, 0 100%, 0 26%); }
+    #roadCue img { width: 34px; height: 34px; } #roadCue b { font: 700 15px/1.15 "Noto Serif SC", serif; } #roadCue small { font: 600 12px/1 Oswald, sans-serif; color: #5b4a2c; }
+    #roadCue.moguls { background: #e9b9a6; } #roadCue.moguls::before { background: #f4d3c4; } /* bumps: a warmer plate */
+    #roadCue[hidden], body:not(.navmin) #roadCue { display: none; }
+    #roadCue.pop { animation: rcPop .5s cubic-bezier(.3,1.6,.5,1); }
+    @keyframes rcPop { from { transform: translateX(-50%) translateY(16px) scale(.7); opacity: 0; } }
+    body.navmin #liftOffer.mini { bottom: calc(210px + env(safe-area-inset-bottom)); }

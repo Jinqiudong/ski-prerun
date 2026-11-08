@@ -2,7 +2,7 @@
 // the line through the trees, the detour spliced into a plan, and the spots found.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { guideAnimal, SIGNS, MOMENT, TURN_SHOW, heldSign, GAP, gapFor, newGuide, guideStep, arrowAlpha, DETOURS, wantDetour, pointAt, indexAt, findTreeLine, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "../src/ride/guide-core.js";
+import { guideAnimal, SIGNS, MOMENT, TURN_SHOW, heldSign, PHRASES, phraseBag, GAP, gapFor, newGuide, guideStep, arrowAlpha, DETOURS, wantDetour, pointAt, indexAt, findTreeLine, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "../src/ride/guide-core.js";
 
 test("the guide is the resort's animal unless it would vanish on the snow, never the one you ride as", () => {
   assert.equal(guideAnimal("marmot", null), "marmot");
@@ -28,6 +28,20 @@ test("signs, not sentences: every sign is a painted icon; direction only, held f
   assert.equal(heldSign(g, turns, 1100), null); // straight on, nothing else there
   assert.equal(heldSign({ ...g, mode: "wait" }, turns, 200), "wait");
   assert.equal(heldSign({ ...g, mode: "back" }, turns, 200), "uturn");
+});
+
+test("a word or two beside the sign: 2–5 characters, no sentences, never the same twice running", () => {
+  for (const [k, pool] of Object.entries(PHRASES)) {
+    assert.ok(SIGNS[k], k);
+    for (const w of pool) assert.ok([...w].length >= 2 && [...w].length <= 5 && !/[。，,.]/.test(w), w);
+  }
+  let seed = 7; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const say = phraseBag(rand), n = PHRASES.wait.length, got = [];
+  for (let i = 0; i < n * 3; i++) got.push(say("wait"));
+  for (let r = 0; r < 3; r++) assert.equal(new Set(got.slice(r * n, r * n + n)).size, n);
+  for (let i = 1; i < got.length; i++) assert.notEqual(got[i], got[i - 1]);
+  assert.equal(say("nope"), "");
+  assert.ok(!SIGNS.moguls); // the road's conditions are the ride's road sign, not the guide's
 });
 
 const run = (g, frames, inp) => { const said = []; for (let f = 0; f < frames; f++) said.push(...guideStep(g, { dt: 1 / 30, ...inp(f) })); return said; };

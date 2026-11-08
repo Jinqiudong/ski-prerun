@@ -17,6 +17,7 @@ export function guideAnimal(resortAnimal, mine) {
 // ---------- What it shows ----------
 // No sentences (the owner: reading on the way down gives a headache): one painted sign per moment in its bubble
 // (assets/icons/<icon>.png), direction only, never a run's name; the run you're on is the HUD's strip.
+// A sign may carry a word or two beside it (PHRASES).
 // A sign is either held (the turn-off ahead, waiting for you, coming back for you) or a moment (a short flash).
 export const SIGNS = {
   left: "nav_left", right: "nav_right", straight: "nav_straight", // the turn-off ahead
@@ -25,8 +26,35 @@ export const SIGNS = {
   wait: "msg_wait", // you fell behind or fell over: it waits
   good: "msg_good", // back on the route
   found: "star", // a secret spot found
-  moguls: "moguls", lift: "lift", lodge: "lodge", // the way's moments from the ride: moguls ahead, nearly there
+  lift: "lift", lodge: "lodge", // nearly there (from the ride)
 };
+// Beside the sign, now and then a word or two (the owner: short replies are fine, not much text): 2–5 characters,
+// never a sentence, never a run's name; the sign stays the main thing. One pool per sign; signs not here say
+// nothing. The road's conditions (flats, a climb, moguls) are not the guide's: ride.js shows them as a road sign.
+export const PHRASES = {
+  left: ["这边！", "跟我来", "往这走"], right: ["这边！", "跟我来", "往这走"], straight: ["直走～", "别拐哦", "一直走"],
+  here: ["这儿进！", "就这儿"],
+  wait: ["跟上～", "等你哦", "慢慢来", "不急～"],
+  uturn: ["走错啦", "回来～", "不是那边"],
+  good: ["好耶", "对啦", "回来啦"],
+  found: ["找到啦", "秘密基地"],
+  lift: ["快到啦", "到站咯"], lodge: ["快到啦", "到家咯"],
+};
+// A shuffled bag per sign: every phrase once before any comes back, never the same twice running.
+export function phraseBag(rand = Math.random) {
+  const bags = {}, last = {};
+  return (sign) => {
+    const pool = PHRASES[sign]; if (!pool?.length) return "";
+    let bag = bags[sign];
+    if (!bag?.length) {
+      bag = bags[sign] = pool.map((_, i) => i);
+      for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+      if (bag.length > 1 && bag[bag.length - 1] === last[sign]) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+    }
+    const i = bag.pop(); last[sign] = i;
+    return pool[i];
+  };
+}
 // What a moment from guideStep shows, for as long (s); the rest say nothing (no chatter).
 export const MOMENT = { back: ["good", 1.6], go: ["here", 2.2], unlock: ["found", 2.6] };
 export const TURN_SHOW = 150; // the turn-off's arrow is up from this far out until you're through it

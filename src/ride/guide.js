@@ -11,8 +11,8 @@ import { Spray } from "./board.js?v=13";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
 import { myRider, fallState } from "../rider/boarder.js?v=15";
-import { t } from "../core/i18n.js?v=45";
-import { guideAnimal, SIGNS, MOMENT, heldSign, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=4";
+import { t } from "../core/i18n.js?v=46";
+import { guideAnimal, SIGNS, MOMENT, heldSign, phraseBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=5";
 
 const CSS = `
 #gdBubble { position: fixed; left: 0; top: 0; z-index: 30; width: max-content; max-width: 230px; padding: 4px 6px; border-radius: 12px; background: #fdfbf6; border: 1px solid #d8ccb6;
@@ -22,7 +22,9 @@ const CSS = `
 #gdBubble::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -7px; width: 12px; height: 12px; margin-left: -6px; background: #fdfbf6;
   border-right: 1px solid #d8ccb6; border-bottom: 1px solid #d8ccb6; transform: rotate(45deg); }
 #gdBubble.pop { animation: gd-pop .45s cubic-bezier(.3,1.6,.5,1); }
-#gdBubble img.sign { display: block; width: 50px; height: 50px; }
+#gdBubble img.sign { display: block; width: 48px; height: 48px; flex: none; }
+#gdBubble:not(.ask) { display: flex; align-items: center; gap: 2px; } #gdBubble:not(.ask)[hidden] { display: none; }
+#gdBubble .say { padding: 0 6px 0 2px; font: 600 16px/1.1 "Noto Serif SC", serif; color: #22344d; white-space: nowrap; }
 #gdBubble.ask { padding: 6px 12px 8px; } #gdBubble img.ic { display: block; width: 44px; height: 44px; margin: 0 auto 2px; } #gdBubble b { display: block; font: 600 15px/1.3 "Noto Serif SC", serif; }
 #gdBubble .acts { display: flex; gap: 6px; justify-content: center; margin-top: 6px; pointer-events: auto; }
 #gdBubble .acts button { font: 600 13px "Noto Serif SC", serif; padding: 5px 12px; border-radius: 999px; border: 1px solid #cbbfa9; background: #fdfbf6; color: #22344d; box-shadow: 0 3px 8px rgba(40,30,20,.16); }
@@ -57,7 +59,7 @@ export class Guide {
     Object.assign(this, { scene, camera, T, ground, trees, resort, rider, force, storage });
     this.holder = new THREE.Group(); this.holder.visible = false; scene.add(this.holder);
     this.root = null; this.P = null; this.g = null; this.det = null; this.pending = null; this.woods = 0; this.alpha = 1; this.lastDetour = -Infinity;
-    this.found = []; this.clock = 0; this.held = null; this.shown = "";
+    this.found = []; this.clock = 0; this.held = null; this.shown = ""; this.word = phraseBag();
     const mine = myRider().ch.animal || null;
     this.animal = guideAnimal(ANIMALS[resort], mine);
     this.name = t(ANIMAL_ZH[this.animal] || "小狐狸");
@@ -218,7 +220,8 @@ export class Guide {
     this.bub = { key: `${kind}:${this.clock}`, sign, acts, until: this.clock + secs };
     if (hop && this.root) this.runner.hop(kind === "unlock" ? 2 : 1);
   }
-  // The ride's own moments for the bubble: "moguls" ahead, nearly there ("lift" or "lodge").
+  // The ride's own moments for the bubble: nearly there ("lift" or "lodge"). The road's conditions are not the
+  // guide's (ride.js roadCue).
   sign(kind, secs = 2.6) { if (!this.P || this.bub?.acts || !SIGNS[kind]) return; this.bub = { key: `${kind}:${this.clock}`, sign: kind, until: this.clock + secs }; }
   // What the bubble shows now: a moment, else the held sign (the turn-off ahead, waiting, coming back), else nothing.
   // Rebuilt only when that changes, with a pop.
@@ -236,7 +239,10 @@ export class Guide {
       const row = document.createElement("div"); row.className = "acts";
       m.acts.forEach(([label, fn], k) => { const x = document.createElement("button"); x.textContent = label; if (!k) x.className = "go"; x.onclick = (e) => { e.stopPropagation(); this.bub = null; fn(); }; x.onpointerdown = (e) => e.stopPropagation(); row.append(x); });
       b.append(row);
-    } else b.innerHTML = `<img class="sign" src="${ICON(SIGNS[m ? m.sign : this.held])}" alt="">`;
+    } else { // the sign, and a word or two beside it (guide-core.js PHRASES)
+      const sign = m ? m.sign : this.held, w = t(this.word(sign));
+      b.innerHTML = `<img class="sign" src="${ICON(SIGNS[sign])}" alt="">${w ? `<span class="say">${w}</span>` : ""}`;
+    }
     b.hidden = false; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
     return true;
   }
