@@ -1,8 +1,8 @@
-// The guide animal (src/ride/guide-core.js): who guides, what it says, where it rides, the arrows under it,
+// The guide animal (src/ride/guide-core.js): who guides, the signs it shows, where it rides, the arrows under it,
 // the line through the trees, the detour spliced into a plan, and the spots found.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { guideAnimal, LINES, lineBag, GAP, gapFor, newGuide, guideStep, arrowAlpha, DETOURS, wantDetour, pointAt, indexAt, findTreeLine, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "../src/ride/guide-core.js";
+import { guideAnimal, SIGNS, MOMENT, TURN_SHOW, heldSign, PHRASES, phraseBag, GAP, gapFor, newGuide, guideStep, arrowAlpha, DETOURS, wantDetour, pointAt, indexAt, findTreeLine, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "../src/ride/guide-core.js";
 
 test("the guide is the resort's animal unless it would vanish on the snow, never the one you ride as", () => {
   assert.equal(guideAnimal("marmot", null), "marmot");
@@ -15,17 +15,33 @@ test("the guide is the resort's animal unless it would vanish on the snow, never
   assert.equal(guideAnimal(undefined, null), "fox");
 });
 
-test("lines: playful pools, every line once before any repeats, never twice running", () => {
-  for (const k of ["start", "lead", "wait", "resume", "turnL", "turnR", "atTurn", "wrong", "back", "crash", "inTrees", "go", "no", "unlock"]) assert.ok(LINES[k].length >= 2, k);
-  assert.ok(LINES.wait.includes("慢慢来～") && LINES.wait.includes("跟上呀") && LINES.turnL.includes("前面要左转哦"));
-  let seed = 3; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const say = lineBag(rand), n = LINES.wait.length, got = [];
+test("signs, not sentences: every sign is a painted icon; direction only, held from 150 m to the turn-off", async () => {
+  const { existsSync } = await import("node:fs");
+  for (const [k, ic] of Object.entries(SIGNS)) assert.ok(existsSync(new URL(`../assets/icons/${ic}.png`, import.meta.url)), k);
+  for (const [k, [sign, secs]] of Object.entries(MOMENT)) assert.ok(SIGNS[sign] && secs > 0, k);
+  const g = newGuide(0), turns = [{ s: 300, bearing: 0.8, many: true }, { s: 600, bearing: -0.9, many: true }, { s: 900, bearing: 0.05, many: true }, { s: 1200, bearing: 0.05, many: false }];
+  assert.equal(heldSign(g, turns, 300 - TURN_SHOW - 1), null); // too far yet
+  assert.equal(heldSign(g, turns, 200), "left");
+  assert.equal(heldSign(g, turns, 302), "left"); // still up just through it
+  assert.equal(heldSign(g, turns, 500), "right");
+  assert.equal(heldSign(g, turns, 800), "straight"); // straight on past other ways
+  assert.equal(heldSign(g, turns, 1100), null); // straight on, nothing else there
+  assert.equal(heldSign({ ...g, mode: "wait" }, turns, 200), "wait");
+  assert.equal(heldSign({ ...g, mode: "back" }, turns, 200), "uturn");
+});
+
+test("a word or two beside the sign: 2–5 characters, no sentences, never the same twice running", () => {
+  for (const [k, pool] of Object.entries(PHRASES)) {
+    assert.ok(SIGNS[k], k);
+    for (const w of pool) assert.ok([...w].length >= 2 && [...w].length <= 5 && !/[。，,.]/.test(w), w);
+  }
+  let seed = 7; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const say = phraseBag(rand), n = PHRASES.wait.length, got = [];
   for (let i = 0; i < n * 3; i++) got.push(say("wait"));
   for (let r = 0; r < 3; r++) assert.equal(new Set(got.slice(r * n, r * n + n)).size, n);
   for (let i = 1; i < got.length; i++) assert.notEqual(got[i], got[i - 1]);
-  assert.match(say("start", { name: "鼠兔" }), /鼠兔|出发咯/);
-  assert.ok(!say("start", { name: "鼠兔" }).includes("{name}"));
   assert.equal(say("nope"), "");
+  assert.ok(!SIGNS.moguls); // the road's conditions are the ride's road sign, not the guide's
 });
 
 const run = (g, frames, inp) => { const said = []; for (let f = 0; f < frames; f++) said.push(...guideStep(g, { dt: 1 / 30, ...inp(f) })); return said; };
@@ -68,6 +84,9 @@ test("a turn-off: said once from ~90 m, then it holds at the mouth till you're t
   let sR = 0; const said = [];
   for (let f = 0; f < 30 * 40 && sR < 230; f++) { sR += 7 / 30; said.push(...guideStep(g, { sR, speed: 7, end: 5000, turns, dt: 1 / 30 })); if (g.mode === "turn") assert.ok(g.s >= 200 && sR < 200); }
   assert.equal(said.filter((k) => k === "turnL").length, 1);
+  const g2 = newGuide(0), said2 = [];
+  for (let f = 0, sR = 0; f < 30 * 30 && sR < 230; f++) { sR += 7 / 30; said2.push(...guideStep(g2, { sR, speed: 7, end: 5000, turns: [{ s: 200, bearing: 0, many: true, key: "j2" }], dt: 1 / 30 })); }
+  assert.equal(said2.filter((k) => k === "straight").length, 1);
   assert.ok(said.includes("atTurn"));
   assert.equal(g.mode, "lead");
   assert.ok(g.s > 200);
@@ -91,10 +110,10 @@ test("it never rides past the end of the way", () => {
   assert.ok(g.s <= 298);
 });
 
-test("the arrows: faint while the guide leads, full near a turn-off, off the route or when it has gone back", () => {
-  assert.equal(arrowAlpha({ mode: "lead" }), 0.2);
-  assert.equal(arrowAlpha({ mode: "lead", toTurn: 50 }), 1);
-  assert.ok(arrowAlpha({ mode: "lead", toTurn: 110 }) > 0.2 && arrowAlpha({ mode: "lead", toTurn: 110 }) < 1);
+test("the arrows: none while the guide leads in sight, back off the route, out of sight or when it has gone back", () => {
+  assert.equal(arrowAlpha({ mode: "lead" }), 0);
+  assert.equal(arrowAlpha({ mode: "turn" }), 0);
+  assert.equal(arrowAlpha({ mode: "wait" }), 0);
   assert.equal(arrowAlpha({ mode: "back" }), 1);
   assert.equal(arrowAlpha({ mode: "lead", off: 40 }), 1);
   assert.equal(arrowAlpha({ mode: "lead", seen: false }), 1);

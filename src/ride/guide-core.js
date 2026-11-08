@@ -1,5 +1,5 @@
 // The guide's rules, with no DOM and no three.js (tested: tests/guide.test.mjs). A little animal on its own feet runs
-// the route 15–25 m ahead of you: it waits (turned round, a word in a bubble) when you fall behind, holds at a
+// the route 15–25 m ahead of you: it waits (turned round, a sign in its bubble) when you fall behind, holds at a
 // junction's mouth until you're there, comes back when you go the wrong way. Sometimes it takes you off the route
 // for a detour that finds a new spot (a line through the trees; moguls and powder are designed, not built), then
 // back onto the route. guide.js draws it and talks; ride.js asks it each frame (and splices a detour in).
@@ -14,40 +14,60 @@ export function guideAnimal(resortAnimal, mine) {
   return mine === "fox" ? "marmot" : "fox";
 }
 
-// ---------- What it says ----------
-// One pool per moment. {name}: the animal's name; the rest are said as they are.
-export const LINES = {
-  start: ["我是{name}，今天我带路！", "跟着{name}走，不会迷路～", "出发咯，跟紧我！", "{name}来带路啦"],
-  lead: ["这边这边～", "跟紧我哦", "今天雪真好", "风好舒服～", "你滑得不错嘛", "看我的脚印走就对了", "前面一路顺～", "嘿嘿，追上我呀", "我闻到松树的味道了", "别看风景啦，看我～"],
-  wait: ["慢慢来～", "跟上呀", "我在这儿等你", "不急不急～", "我在前面哦！", "喂～这边！", "等你一下下", "我不走，你慢慢滑"],
-  resume: ["走咯！", "好嘞，继续！", "跟上啦～", "就是这样！"],
-  turnL: ["前面要左转哦", "下个路口往左～", "等下靠左边！"],
-  turnR: ["前面要右转哦", "下个路口往右～", "等下靠右边！"],
-  atTurn: ["这边！", "从这儿进～", "看我，就是这条", "这个口子，别错过"],
-  wrong: ["哎——不是那边！", "走错啦，回来回来～", "那边不对哦", "等等我！路在这边"],
-  back: ["对啦，就是这条", "回来啦～", "好险好险", "嗯！跟着我"],
-  crash: ["哎呀，没事吧？", "拍拍雪，再来～", "树也吓了一跳", "摔一下不算什么"],
-  inTrees: ["小心树哦～", "低头，有树枝！", "跟着我的脚印走", "这里好安静", "松针掉进领子里了"],
-  go: ["跟我来！", "走！钻树林咯～", "就这儿，进！"],
-  no: ["好，下次再带你去～", "那我们走大路～"],
-  unlock: ["找到啦！", "这是我们的秘密基地～", "记住这里哦"],
+// ---------- What it shows ----------
+// No sentences (the owner: reading on the way down gives a headache): one painted sign per moment in its bubble
+// (assets/icons/<icon>.png), direction only, never a run's name; the run you're on is the HUD's strip.
+// A sign may carry a word or two beside it (PHRASES).
+// A sign is either held (the turn-off ahead, waiting for you, coming back for you) or a moment (a short flash).
+export const SIGNS = {
+  left: "nav_left", right: "nav_right", straight: "nav_straight", // the turn-off ahead
+  here: "nav_here", // into the trees: this way, now
+  uturn: "nav_back", // the wrong way: it comes back for you
+  wait: "msg_wait", // you fell behind or fell over: it waits
+  good: "msg_good", // back on the route
+  found: "star", // a secret spot found
+  lift: "lift", lodge: "lodge", // nearly there (from the ride)
 };
-// A shuffled bag per pool: every line once before any comes back, never the same twice running.
-export function lineBag(rand = Math.random) {
+// Beside the sign, now and then a word or two (the owner: short replies are fine, not much text): 2–5 characters,
+// never a sentence, never a run's name; the sign stays the main thing. One pool per sign; signs not here say
+// nothing. The road's conditions (flats, a climb, moguls) are not the guide's: ride.js shows them as a road sign.
+export const PHRASES = {
+  left: ["这边！", "跟我来", "往这走"], right: ["这边！", "跟我来", "往这走"], straight: ["直走～", "别拐哦", "一直走"],
+  here: ["这儿进！", "就这儿"],
+  wait: ["跟上～", "等你哦", "慢慢来", "不急～"],
+  uturn: ["走错啦", "回来～", "不是那边"],
+  good: ["好耶", "对啦", "回来啦"],
+  found: ["找到啦", "秘密基地"],
+  lift: ["快到啦", "到站咯"], lodge: ["快到啦", "到家咯"],
+};
+// A shuffled bag per sign: every phrase once before any comes back, never the same twice running.
+export function phraseBag(rand = Math.random) {
   const bags = {}, last = {};
-  return (kind, vars) => {
-    const pool = LINES[kind]; if (!pool?.length) return "";
-    let bag = bags[kind];
+  return (sign) => {
+    const pool = PHRASES[sign]; if (!pool?.length) return "";
+    let bag = bags[sign];
     if (!bag?.length) {
-      bag = bags[kind] = pool.map((_, i) => i);
+      bag = bags[sign] = pool.map((_, i) => i);
       for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
-      if (bag.length > 1 && bag[bag.length - 1] === last[kind]) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+      if (bag.length > 1 && bag[bag.length - 1] === last[sign]) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
     }
-    const i = bag.pop(); last[kind] = i;
-    let s = pool[i];
-    if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(v);
-    return s;
+    const i = bag.pop(); last[sign] = i;
+    return pool[i];
   };
+}
+// What a moment from guideStep shows, for as long (s); the rest say nothing (no chatter).
+export const MOMENT = { back: ["good", 1.6], go: ["here", 2.2], unlock: ["found", 2.6] };
+export const TURN_SHOW = 150; // the turn-off's arrow is up from this far out until you're through it
+const TURNING = 0.18; // radians: less than this off straight on is straight on
+// The held sign now. g: the guide (guideStep); turns: as guideStep's (bearing > 0 is left; many: the junction has
+// more than one way, so straight on needs saying too); sR: you along the route.
+export function heldSign(g, turns, sR) {
+  if (g.mode === "back") return "uturn";
+  if (g.mode === "wait") return "wait";
+  const next = turns.find((j) => j.s > sR - 5);
+  if (!next || next.s - sR > TURN_SHOW) return null;
+  if (Math.abs(next.bearing) > TURNING) return next.bearing > 0 ? "left" : "right";
+  return next.many ? "straight" : null;
 }
 
 // ---------- Where it rides ----------
@@ -59,7 +79,8 @@ export function newGuide(sR = 0) { return { s: sR + 12, v: 0, mode: "lead", t: 0
 // One step. inp: { sR: you, along the route; speed; off: how far you are from the route; end: the route's length;
 // turns: [{ s, bearing, key }] the way's turn-offs ahead (bearing > 0 is to the left); down: you're in the snow
 // after a crash; inTrees; dt }. Moves g.s (where it is along the route; "back" means off the route, toward you)
-// and returns what it wants to say: [kind] (see LINES).
+// and returns its moments: [kind] (turnL / turnR / straight as a turn-off comes up, atTurn, wait, crash, resume,
+// wrong, back, lead and inTrees now and then; MOMENT says which of them show).
 export function guideStep(g, inp) {
   const { sR, speed = 0, off = 0, end = Infinity, turns = [], down = false, inTrees = false, dt } = inp, say = [];
   const to = (m) => { if (g.mode !== m) { g.mode = m; g.t = 0; } };
@@ -75,7 +96,7 @@ export function guideStep(g, inp) {
   const gap = g.s - sR, want = gapFor(speed, inTrees);
   // The turn-off coming up: said once, from about 90 m out.
   const next = turns.find((j) => j.s > sR - 5);
-  if (next && next.s - sR < 90 && !g.told.has(next.key)) { g.told.add(next.key); if (Math.abs(next.bearing) > 0.18) say.push(next.bearing > 0 ? "turnL" : "turnR"); }
+  if (next && next.s - sR < 90 && !g.told.has(next.key)) { g.told.add(next.key); if (Math.abs(next.bearing) > TURNING) say.push(next.bearing > 0 ? "turnL" : "turnR"); else if (next.many) say.push("straight"); }
   if (g.mode === "turn") {
     // Holding at the mouth of the right way until you're nearly there.
     if (!g.turn || sR > g.turn.s - 12) { g.turn = null; to("lead"); }
@@ -97,13 +118,11 @@ export function guideStep(g, inp) {
   if ((g.chat -= dt) < 0) { g.chat = GAP.chatter[0] + Math.random() * (GAP.chatter[1] - GAP.chatter[0]); say.push(inTrees ? "inTrees" : "lead"); }
   return say;
 }
-// How much the gold arrowheads on the snow show (0.2..1): faint while the guide is in sight and leading you, full
-// near a turn-off, when it has gone back for you, or when you're off the route.
-export function arrowAlpha({ mode, toTurn = Infinity, off = 0, seen = true }) {
-  if (!seen || mode === "back" || off > 25) return 1;
-  if (toTurn < 80) return 1;
-  if (toTurn < 140) return 0.2 + 0.8 * (1 - (toTurn - 80) / 60);
-  return 0.2;
+// The gold arrowheads on the snow (0 or 1): none at all while the guide is in sight and guiding you (it is the
+// way; its bubble has the turns), back when it isn't: out of sight, gone back for you, or you're off the route.
+// No guide at all (ride.js ?guide=0): always 1.
+export function arrowAlpha({ mode, off = 0, seen = true }) {
+  return !seen || mode === "back" || off > 25 ? 1 : 0;
 }
 
 // ---------- Detours ----------
@@ -112,11 +131,11 @@ export function arrowAlpha({ mode, toTurn = Infinity, off = 0, seen = true }) {
 // spot(run, tr): its name, through tr (i18n.js t) when shown.
 const fill = (s, v) => Object.entries(v).reduce((a, [k, x]) => a.split(`{${k}}`).join(x), s);
 export const DETOURS = [
-  { key: "trees", ready: true, icon: "trees", spot: (run, tr = fill) => tr("{run} 旁的松林", { run: run || "雪道" }), offer: "要不要钻一下树林？", find: (o) => findTreeLine(o) },
+  { key: "trees", ready: true, icon: "trees", spot: (run, tr = fill) => tr("{run} 旁的松林", { run: run || "雪道" }), offer: "钻树林？", find: (o) => findTreeLine(o) },
   // 天塌了，误入蘑菇道: off onto a nearby mogul run (snow-core.js MogulField) for a stretch, back at its foot.
-  { key: "moguls", ready: false, icon: "moguls", spot: (run, tr = fill) => tr("{run} 的蘑菇阵", { run: run || "雪道" }), offer: "敢不敢试试蘑菇？", find: () => null },
+  { key: "moguls", ready: false, icon: "moguls", spot: (run, tr = fill) => tr("{run} 的蘑菇阵", { run: run || "雪道" }), offer: "试试蘑菇？", find: () => null },
   // 滑进深粉: across to where powder lies deepest beside the run (snow-core.js powderField) and back.
-  { key: "powder", ready: false, icon: "powder", spot: (run, tr = fill) => tr("{run} 边的深粉", { run: run || "雪道" }), offer: "那边有深粉，去不去？", find: () => null },
+  { key: "powder", ready: false, icon: "powder", spot: (run, tr = fill) => tr("{run} 边的深粉", { run: run || "雪道" }), offer: "去深粉？", find: () => null },
 ];
 // How often: once a run at most, never in the first 120 m or the last 200 m, never near a turn-off, not two
 // within three minutes; a place not yet found more often (65%) than one you know (20%). force: "trees" (?detour=trees)

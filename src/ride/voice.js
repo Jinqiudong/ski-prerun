@@ -13,7 +13,7 @@
 // The rules with no DOM are in voice-core.js; the ICE servers (STUN, an optional TURN) in voice-config.js.
 import * as THREE from "three";
 import { start as audioStart, duck, keepAwake } from "../audio/engine.js?v=5";
-import { t } from "../core/i18n.js?v=45";
+import { t } from "../core/i18n.js?v=46";
 import { VOICE, gainAt, sendTo, wantPeers, offerer, retryAfter, cleanSignal, cleanVoiceState, RADIO_HOLD, speaking, duckFor, micProblem } from "./voice-core.js?v=1";
 import { ICE_SERVERS } from "./voice-config.js?v=1";
 

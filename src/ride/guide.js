@@ -1,5 +1,5 @@
 // The guide, drawn: a little animal on its own four feet (runner.js) running the route ahead of you, paw prints
-// and puffs of snow behind it, with a word now and then in a paper bubble over its head (the party note's
+// and puffs of snow behind it, and a painted sign in a paper bubble over its head (the party note's
 // look, core/party.js). Its rules are guide-core.js; ride.js makes one at the top, starts it with each way down,
 // steps it in the skiing phase (it may hand back a plan with a detour spliced in, or without it again), and asks
 // how much the gold arrowheads should show and how wooded the way is just now.
@@ -11,19 +11,21 @@ import { Spray } from "./board.js?v=13";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=1";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
 import { myRider, fallState } from "../rider/boarder.js?v=15";
-import { t } from "../core/i18n.js?v=45";
-import { guideAnimal, lineBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=3";
+import { t } from "../core/i18n.js?v=46";
+import { guideAnimal, SIGNS, MOMENT, heldSign, phraseBag, newGuide, guideStep, arrowAlpha, DETOURS, DETOUR, wantDetour, pointAt, splicePlan, spotKey, loadSpots, addSpot, knownSpot } from "./guide-core.js?v=5";
 
 const CSS = `
-#gdBubble { position: fixed; left: 0; top: 0; z-index: 30; width: max-content; max-width: 230px; padding: 7px 12px 8px; border-radius: 12px; background: #fdfbf6; border: 1px solid #d8ccb6;
+#gdBubble { position: fixed; left: 0; top: 0; z-index: 30; width: max-content; max-width: 230px; padding: 4px 6px; border-radius: 12px; background: #fdfbf6; border: 1px solid #d8ccb6;
   box-shadow: 0 6px 16px rgba(40,30,20,.25); color: #22344d; font: 600 14px/1.3 "Noto Serif SC", serif; text-align: center; pointer-events: none; transform: translate(-50%, -100%);
   transition: opacity .25s; white-space: normal; }
 #gdBubble[hidden] { display: none; }
 #gdBubble::after { content: ""; position: absolute; left: var(--tail, 50%); bottom: -7px; width: 12px; height: 12px; margin-left: -6px; background: #fdfbf6;
   border-right: 1px solid #d8ccb6; border-bottom: 1px solid #d8ccb6; transform: rotate(45deg); }
 #gdBubble.pop { animation: gd-pop .45s cubic-bezier(.3,1.6,.5,1); }
-#gdBubble.fade { opacity: 0; }
-#gdBubble img { width: 22px; height: 22px; vertical-align: -6px; margin-right: 4px; }
+#gdBubble img.sign { display: block; width: 48px; height: 48px; flex: none; }
+#gdBubble:not(.ask) { display: flex; align-items: center; gap: 2px; } #gdBubble:not(.ask)[hidden] { display: none; }
+#gdBubble .say { padding: 0 6px 0 2px; font: 600 16px/1.1 "Noto Serif SC", serif; color: #22344d; white-space: nowrap; }
+#gdBubble.ask { padding: 6px 12px 8px; } #gdBubble img.ic { display: block; width: 44px; height: 44px; margin: 0 auto 2px; } #gdBubble b { display: block; font: 600 15px/1.3 "Noto Serif SC", serif; }
 #gdBubble .acts { display: flex; gap: 6px; justify-content: center; margin-top: 6px; pointer-events: auto; }
 #gdBubble .acts button { font: 600 13px "Noto Serif SC", serif; padding: 5px 12px; border-radius: 999px; border: 1px solid #cbbfa9; background: #fdfbf6; color: #22344d; box-shadow: 0 3px 8px rgba(40,30,20,.16); }
 #gdBubble .acts button.go { background: #22344d; border-color: #22344d; color: #fdfbf6; }
@@ -57,7 +59,7 @@ export class Guide {
     Object.assign(this, { scene, camera, T, ground, trees, resort, rider, force, storage });
     this.holder = new THREE.Group(); this.holder.visible = false; scene.add(this.holder);
     this.root = null; this.P = null; this.g = null; this.det = null; this.pending = null; this.woods = 0; this.alpha = 1; this.lastDetour = -Infinity;
-    this.found = []; this.say = lineBag(); this.clock = 0;
+    this.found = []; this.clock = 0; this.held = null; this.shown = ""; this.word = phraseBag();
     const mine = myRider().ch.animal || null;
     this.animal = guideAnimal(ANIMALS[resort], mine);
     this.name = t(ANIMAL_ZH[this.animal] || "小狐狸");
@@ -74,10 +76,9 @@ export class Guide {
   start(P, prog) {
     this.P = P; this.det = null; this.pending = null; this.detNext = 0; this.detDone = false; this.woods = 0;
     this.g = newGuide(P.dist[prog] || 0); this.placed = false; this.holder.visible = !!this.root;
-    this.card.hidden = true; this.found = [];
-    setTimeout(() => { if (this.P === P) this.speak("start"); }, 1600);
+    this.card.hidden = true; this.found = []; this.held = null; this.bub = null;
   }
-  hide() { this.holder.visible = false; this.prints.clear(); this.bubble.hidden = true; this.bub = null; this.P = null; }
+  hide() { this.holder.visible = false; this.prints.clear(); this.bubble.hidden = true; this.bub = null; this.held = null; this.shown = ""; this.P = null; this.alpha = 1; }
   // Where you are along the way: the nearest point's distance, plus how far past it you are toward the next.
   along(P, prog, x, z) {
     const i = Math.min(prog, P.path.length - 2), [ax, az] = P.path[i], [bx, bz] = P.path[i + 1], L = P.dist[i + 1] - P.dist[i] || 1;
@@ -102,14 +103,18 @@ export class Guide {
     const g = this.g, sR = (this.sR = this.along(P, prog, r.x, r.z)), end = P.dist[P.dist.length - 1];
     // The turn-offs ahead, and a detour's way in as one.
     const turns = [];
-    for (const j of js) { const way = j.options.find((o) => o.route); if (way && j.i < P.path.length) turns.push({ s: P.dist[j.i], bearing: way.bearing, key: j }); }
+    for (const j of js) { const way = j.options.find((o) => o.route); if (way && j.i < P.path.length) turns.push({ s: P.dist[j.i], bearing: way.bearing, many: j.options.length > 1, key: j }); }
     const D = this.det;
     if (D?.Q === P && D.state !== "done") turns.push({ s: P.dist[P.detour.a] + 10, bearing: D.line.side * 0.7, key: D });
     turns.sort((a, b) => a.s - b.s);
     const inTrees = D?.Q === P && sR > P.dist[P.detour.a] && sR < P.dist[P.detour.b];
     this.woods += ((inTrees ? 1 : 0) - this.woods) * Math.min(1, dt * 2);
     const said = guideStep(g, { sR, speed: r.speed, off, end, turns, down: !!fallState(this.rider), inTrees, dt });
-    for (const k of said) this.speak(k, k === "wait" || k === "crash" || k === "atTurn" || k === "back");
+    for (const k of said) {
+      if (MOMENT[k]) this.speak(k, true);
+      else if (["turnL", "turnR", "straight", "atTurn", "wait", "crash"].includes(k) && this.root) this.runner.hop(1); // a little jump as the sign comes up
+    }
+    this.held = heldSign(g, turns, sR);
     let ret = this.detours(P, sR, end);
     // Where it is: along the route (a little weave of its own), circling the mouth of a turn-off, or coming back to you.
     const want = new THREE.Vector3();
@@ -154,8 +159,8 @@ export class Guide {
     }
     this.prints.update(dt); this.puffs.update(dt);
     // The arrows under it: quiet while it's in sight and leading.
-    const next = turns.find((j) => j.s > sR - 5), seen = this.holder.visible && Math.hypot(this.pos.x - r.x, this.pos.z - r.z) < 70;
-    this.alpha = arrowAlpha({ mode: g.mode, toTurn: next ? next.s - sR : Infinity, off, seen });
+    const seen = this.holder.visible && Math.hypot(this.pos.x - r.x, this.pos.z - r.z) < 70;
+    this.alpha = arrowAlpha({ mode: g.mode, off, seen });
     this.place();
     return ret;
   }
@@ -184,7 +189,7 @@ export class Guide {
     if (D.state === "ahead" && P.dist[D.line.a] - sR < 110) {
       D.Q = splicePlan(P, D.line.a, D.line.b, D.line.pts, (x, z) => this.T.heightAt(x, z));
       D.state = "offered"; this.lastDetour = this.clock;
-      this.speak("offer", true, [[t("走！"), () => this.speak("go")], [t("不了"), () => { if (this.sR >= D.Q.dist[D.Q.detour.a]) return; D.state = "done"; this.pending = D.Q.orig; this.speak("no"); }]]);
+      this.speak("offer", true, [[t("走！"), () => this.speak("go")], [t("不了"), () => { if (this.sR >= D.Q.dist[D.Q.detour.a]) return; D.state = "done"; this.pending = D.Q.orig; }]]);
       for (const j of this.js) j.i = D.Q.shift(j.i); // the junctions past it move along with their points
       this.P = D.Q;
       return D.Q;
@@ -205,33 +210,52 @@ export class Guide {
     navigator.vibrate?.([40, 60, 40]);
     this.speak("unlock", true);
   }
-  // A word in the bubble (kind: guide-core.js LINES, or "offer"); hop: a little jump as it says it; acts: buttons.
+  // A moment in the bubble, over whatever it holds: kind is a guideStep moment (guide-core.js MOMENT), "offer"
+  // (the detour's icon, its three words and buttons: acts) or a sign of the way's from the ride (sign(): moguls,
+  // lift, lodge). hop: a little jump as it shows.
   speak(kind, hop = false, acts = null) {
-    if (this.bub?.acts && !acts && kind !== "go" && kind !== "no") return; // the offer stays up till it's answered or passed
-    const text = kind === "offer" ? t(this.det?.def.offer || "") : t(this.say(kind), { name: this.name });
-    if (!text) return;
-    const b = this.bubble;
-    b.innerHTML = `${kind === "offer" ? `<img src="${ICON(this.det?.def.icon || "trees")}" alt="">` : ""}${text}`;
-    if (acts) {
-      const row = document.createElement("div"); row.className = "acts";
-      acts.forEach(([label, fn], k) => { const x = document.createElement("button"); x.textContent = label; if (!k) x.className = "go"; x.onclick = (e) => { e.stopPropagation(); this.bub = null; fn(); }; x.onpointerdown = (e) => e.stopPropagation(); row.append(x); });
-      b.append(row);
-    }
-    b.hidden = false; b.classList.remove("fade", "pop"); void b.offsetWidth; b.classList.add("pop");
-    this.bub = { until: this.clock + (acts ? 7 : 3.2), acts: !!acts };
+    if (this.bub?.acts && !acts && kind !== "go") return; // the offer stays up till it's answered or passed
+    const [sign, secs] = kind === "offer" ? [null, 7] : MOMENT[kind] || [];
+    if (kind !== "offer" && !sign) return;
+    this.bub = { key: `${kind}:${this.clock}`, sign, acts, until: this.clock + secs };
     if (hop && this.root) this.runner.hop(kind === "unlock" ? 2 : 1);
+  }
+  // The ride's own moments for the bubble: nearly there ("lift" or "lodge"). The road's conditions are not the
+  // guide's (ride.js roadCue).
+  sign(kind, secs = 2.6) { if (!this.P || this.bub?.acts || !SIGNS[kind]) return; this.bub = { key: `${kind}:${this.clock}`, sign: kind, until: this.clock + secs }; }
+  // What the bubble shows now: a moment, else the held sign (the turn-off ahead, waiting, coming back), else nothing.
+  // Rebuilt only when that changes, with a pop.
+  paint() {
+    const b = this.bubble;
+    if (this.bub && !this.bub.acts && this.clock > this.bub.until) this.bub = null;
+    if (this.bub?.acts && this.clock > this.bub.until) this.bub = null;
+    const m = this.bub, key = m ? m.key : this.held ? `held:${this.held}` : "";
+    if (key === this.shown) return !!key;
+    this.shown = key;
+    if (!key) { b.hidden = true; return false; }
+    b.classList.toggle("ask", !!m?.acts);
+    if (m && !m.sign) { // the detour's offer
+      b.innerHTML = `<img class="ic" src="${ICON(this.det?.def.icon || "trees")}" alt=""><b>${t(this.det?.def.offer || "")}</b>`;
+      const row = document.createElement("div"); row.className = "acts";
+      m.acts.forEach(([label, fn], k) => { const x = document.createElement("button"); x.textContent = label; if (!k) x.className = "go"; x.onclick = (e) => { e.stopPropagation(); this.bub = null; fn(); }; x.onpointerdown = (e) => e.stopPropagation(); row.append(x); });
+      b.append(row);
+    } else { // the sign, and a word or two beside it (guide-core.js PHRASES)
+      const sign = m ? m.sign : this.held, w = t(this.word(sign));
+      b.innerHTML = `<img class="sign" src="${ICON(SIGNS[sign])}" alt="">${w ? `<span class="say">${w}</span>` : ""}`;
+    }
+    b.hidden = false; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+    return true;
   }
   // The bubble over its head, on screen.
   place() {
     const b = this.bubble;
-    if (!this.bub) { b.hidden = true; return; }
-    if (this.clock > this.bub.until) { if (this.bub.acts) this.bub = null; else { b.classList.add("fade"); if (this.clock > this.bub.until + 0.3) { this.bub = null; b.hidden = true; } } return; }
+    if (!this.paint()) return;
     const p = this.pos.clone().addScaledVector(Y, TALL + 0.55).project(this.camera);
-    const behind = p.z > 1, w = b.offsetWidth || 120;
+    const behind = p.z > 1, w = b.offsetWidth || 80, ask = !!this.bub?.acts;
     let x = (p.x * 0.5 + 0.5) * innerWidth, y = (-p.y * 0.5 + 0.5) * innerHeight;
     if (behind) { x = innerWidth / 2; y = innerHeight * 0.3; }
     // a bubble with buttons stays toward the middle, whatever the animal's place
-    const lo = this.bub.acts ? Math.max(w / 2 + 8, innerWidth * 0.5 - 24) : w / 2 + 8, hi = this.bub.acts ? Math.min(innerWidth - w / 2 - 8, innerWidth * 0.5 + 24) : innerWidth - w / 2 - 8;
+    const lo = ask ? Math.max(w / 2 + 8, innerWidth * 0.5 - 24) : w / 2 + 8, hi = ask ? Math.min(innerWidth - w / 2 - 8, innerWidth * 0.5 + 24) : innerWidth - w / 2 - 8;
     const cx = clamp(x, lo, hi), cy = clamp(y - 4, 150, innerHeight - 120);
     b.style.left = `${cx}px`; b.style.top = `${cy}px`;
     b.style.setProperty("--tail", `${clamp(50 + ((x - cx) / w) * 100, 12, 88)}%`);

@@ -5,7 +5,7 @@
 // run for its name and level. Skied runs are clean coloured ink on a thin paper casing, the rest a faint
 // pencil dash. People are their own avatars (assets/icons/av_*.png); ones that overlap gather into one
 // bubble with "+N" (tap it and they fan out; zoom in and they separate). You are always on top, ringed red.
-import { t, myAvatar } from "../core/i18n.js?v=45";
+import { t, myAvatar } from "../core/i18n.js?v=46";
 
 const INK = { easy: "#2e8b4f", intermediate: "#2a5db0", advanced: "#1c1f25", expert: "#1c1f25" };
 const LEVELS = [["easy", "绿道"], ["intermediate", "蓝道"], ["advanced", "黑道"], ["expert", "双黑"]];
@@ -76,6 +76,7 @@ export class PaintedMap {
     this.segs = segs; this.levels = lv;
     const s = this.log.stats(); this.stats = s;
     this.miniChip.textContent = t("已滑 {p}%", { p: Math.round(s.share * 100) });
+    this.mini.style.setProperty("--share", Math.min(1, s.share).toFixed(3)); this.mini.title = this.miniChip.textContent; // the ring round it (ride-paper.css)
     if (this.isOpen) this.fillSheet();
   }
 

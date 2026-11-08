@@ -13,10 +13,10 @@ import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=15";
+import { PaintedMap } from "./paintedmap.js?v=16";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=45";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=46";
 import { navRow } from "../core/nav.js?v=23";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=19";
@@ -27,12 +27,13 @@ import { startParty } from "../core/party.js?v=15";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=11";
+import { Guide } from "./guide.js?v=12";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
 import { startPractice, spotTitle } from "./practice.js?v=9";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
+import { sPlan, sAt, alongPath } from "./sline-core.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
@@ -965,7 +966,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     world.add(hk.flags);
     addStep(RESORT, { k: "hike", name: hike.name, mins: hike.mins, gain: hike.gain || 0, gear: HIKE_GEAR });
     camera.fov = 60; camera.updateProjectionMatrix();
-    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap(); buddy.hide();
+    $("liftOffer").hidden = true; $("guide").hidden = true; closeBigMap(); buddy.hide(); document.body.classList.remove("navmin");
     document.body.classList.remove("picking"); camera.clearViewOffset();
     for (const m of [...marks.children]) { marks.remove(m); m.geometry.dispose(); }
     routeMarks = []; reveal = null; clearTags();
@@ -1049,8 +1050,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     crash = null; shake = 0; stall = 0; passTree = null; camH = null; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
     latIn = 0; paceIn = 0; idleFor = 9; alerted = null;
     prog = i0; ended = false;
-    buddy.start(P, prog);
+    if (!NOGUIDE) buddy.start(P, prog);
     st.phase = "ski";
+    document.body.classList.toggle("navmin", !NOGUIDE); // the guide leads: signs and the strip, no text (ride-paper.css)
+    strip.start(P); $("roadCue").hidden = true; roadShown = "";
     $("skiHud").hidden = false;
     pmap.show(true);
     $("liftName").innerHTML = P.kind === "run" ? `${LEVEL_MARK[P.first.level]}${P.title}` : P.title;
@@ -1065,6 +1068,30 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The way down, made findable: forest and runs along it, a sign at every junction saying where each
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
   let nav = null, offFor = 0, lastLook = 0, onRun = null;
+  // The HUD while the guide leads (body.navmin): one strip of icons, like a car's nav: speed, the run you're on
+  // (its mark and name), where the way ends (a lift or a base), how far. No sentences. The run's name changes
+  // only once you're settled on the new one (0.8 s), with a flash of ink so a turn onto another run is seen.
+  const strip = {
+    run: null, cand: null, held: 0, near: false,
+    start(P) {
+      this.run = null; this.cand = null; this.near = false;
+      const to = P.next ? ["lift", P.next.name] : P.kind === "lift" ? ["lift", P.short] : P.kind === "base" ? ["lodge", P.short] : null;
+      $("hsTo").hidden = !to; $("hsToSep").hidden = !to;
+      if (to) { $("hsToIco").src = `assets/icons/${to[0]}.png?v=1`; $("hsToName").textContent = to[1] || ""; }
+      $("hsRun").innerHTML = P.first ? `${LEVEL_MARK[P.first.level] || ""}<span>${P.first.name || t("无名雪道")}</span>` : "";
+    },
+    step(r, left, run, dt) {
+      $("hsSpeed").textContent = Math.round(r.speed * 3.6);
+      const km = left >= 1000; $("hsLeft").textContent = km ? (left / 1000).toFixed(1) : Math.round(left); $("hsLeftU").textContent = km ? "km" : "m";
+      if (!run || run === this.run) { this.cand = null; return; }
+      if (run !== this.cand) { this.cand = run; this.held = 0; return; }
+      if ((this.held += dt) < 0.8) return;
+      const was = this.run; this.run = run; this.cand = null;
+      const el = $("hsRun");
+      el.innerHTML = `${LEVEL_MARK[run.level] || ""}<span>${run.name || t("无名雪道")}</span>`;
+      if (was && was.name !== run.name) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } // onto another run
+    },
+  };
   // The map in the corner while skiing: the painted map (paintedmap.js), a round cut-out of the resort's
   // watercolour around you with what you've skied inked on it. Tap it for the whole painting: pan, pinch,
   // tap a place to start from there (a run) or ride it (a lift). Skiing waits while the map is open.
@@ -1162,7 +1189,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const sx = x - Math.cos(h) * 17, sz = z + Math.sin(h) * 17;
       group.add(ctx.fac.junctionSign(sx, sz, h + Math.PI, j.options, () => junctionSign(T, sx, sz, h + Math.PI, j.options, renderer)));
       const way = j.options.find((o) => o.route);
-      if (way && Math.abs(way.bearing) > 0.18) group.add(chevrons(T, path, j.i, way.bearing));
+      if (way && Math.abs(way.bearing) > 0.18) { const c = chevrons(T, path, j.i, way.bearing); c.userData.chev = true; group.add(c); }
     }
     scene.add(group);
     nav = { group, js };
@@ -1252,39 +1279,105 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   // The way to go, on the snow ahead of you: big gold arrowheads every 6.5 m along the route for the next 130 m,
   // flowing forward and fading with distance, so the line through each turn is always in front of you.
-  let guide = null;
-  function chevronGeometry() { // a flat "^", 1.8 m wide, pointing +z
-    const T0 = [0, 0, 0.6], RO = [0.9, 0, -0.3], RI = [0.9, 0, -0.75], N = [0, 0, 0.12], LI = [-0.9, 0, -0.75], LO = [-0.9, 0, -0.3];
-    const pos = [T0, RO, RI, T0, RI, N, T0, N, LI, T0, LI, LO].flat();
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    return g;
+  // The road ahead, while the guide leads: its conditions as a road sign above the strip, an arrow-shaped plate,
+  // not speech (the owner: road reminders are arrows, kept apart from what the guide says): 平路 (keep your
+  // speed), 上坡 (a climb), 蘑菇 (moguls), with the distance to it; the nearest one, while it's coming up and
+  // just as you're on it. With no guide these are the text card's (flashCue).
+  const ROAD = { flat: ["road_flat", "平路", 140], up: ["road_up", "上坡", 80], moguls: ["moguls", "蘑菇", 160] };
+  let roadShown = "";
+  function roadCue(P) {
+    if (NOGUIDE) return;
+    const here = P.dist[prog], end = P.dist[P.dist.length - 1];
+    let best = null;
+    const take = (kind, d) => { if (!best || d < best.d) best = { kind, d }; };
+    for (const f of P.flats) {
+      const a = P.dist[f.a], b = P.dist[f.b];
+      if (here >= a && here <= Math.min(b, a + 40)) take(f.kind, 0); else if (a > here && a - here < ROAD[f.kind][2]) take(f.kind, a - here);
+    }
+    P.segs.forEach((g, k) => {
+      if (!g.run.moguls) return;
+      const a = P.dist[g.at], b = k + 1 < P.segs.length ? P.dist[P.segs[k + 1].at] : end;
+      if (here >= a && here < Math.min(b, a + 40)) take("moguls", 0); else if (a > here && a - here < ROAD.moguls[2]) take("moguls", a - here);
+    });
+    const el = $("roadCue");
+    const key = best ? `${best.kind}:${best.d > 0 ? Math.max(10, Math.round(best.d / 10) * 10) : 0}` : "";
+    if (key === roadShown) return;
+    if (!best) { roadShown = ""; el.hidden = true; return; }
+    const [icon, word] = ROAD[best.kind], fresh = !roadShown.startsWith(best.kind + ":");
+    roadShown = key;
+    el.innerHTML = `<img src="assets/icons/${icon}.png?v=1" alt=""><b>${t(word)}</b>${best.d > 0 ? `<small>${key.split(":")[1]} m</small>` : ""}`;
+    el.className = best.kind; el.hidden = false;
+    if (fresh) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
   }
-  const GUIDE_N = 20, GUIDE_GAP = 6.5;
-  function stepGuide(P, now) {
+  // The line to ride, painted on the snow ahead: an S of linked turns weaving across the route's line
+  // (sline-core.js), the same S the board steers by when you leave it alone (stepSki). One ribbon, its
+  // vertices rewritten in place each frame: soft-edged, gold fading to the snow's white and gone by 130 m,
+  // a slow glint running down it so you see which way it goes, a little bolder under you while you're on it.
+  const S_STEP = 1.25, S_ROWS = 105, S_COLS = 4, S_FROM = 1.5;
+  const S_GOLD = new THREE.Color(ROUTE_GOLD).toArray(), S_GLINT = new THREE.Color(0xffe7a3).toArray(); // (linear, as vertex colours are)
+  let guide = null, arrowA = 1, sp = null, sGain = 0, onS = 0;
+  const sPt = {}, sHere = {}, sAim = {}, sRow = new Float32Array((S_ROWS + 1) * 2);
+  const S_LEAD = 4, S_LEAD_V = 0.45; // the board's aim on the S (stepSki): this far ahead on it, plus this many metres per m/s
+  const sStat = { n: 0, e2: 0, o2: 0, on: 0, w: 0 }; // testing: how closely the board rides the S
+  st.sline = (reset) => { const o = { rmsErr: +Math.sqrt(sStat.e2 / (sStat.n || 1)).toFixed(2), rmsOff: +Math.sqrt(sStat.o2 / (sStat.n || 1)).toFixed(2), onShare: +(sStat.on / (sStat.w || 1)).toFixed(2), gain: +sGain.toFixed(2), n: sStat.n, way: +Math.atan2(sHere.hx, sHere.hz).toFixed(2), cam: +(camH ?? 0).toFixed(2), head: +(phys?.heading ?? 0).toFixed(2), off: +(sHere.off * sGain).toFixed(1) }; if (reset) Object.assign(sStat, { n: 0, e2: 0, o2: 0, on: 0, w: 0 }); return o; };
+  st.slinePlan = () => { const P = chosen, q = sp?.P === P ? sp : sPlan(P); return { length: Math.round(P.length), flats: P.flats.map((f) => [Math.round(P.dist[f.a]), Math.round(P.dist[f.b]), f.kind]), straight: [...q.amp].map((a, i) => (a < 0.2 ? Math.round(P.dist[i]) : null)).filter((x) => x != null) }; };
+  // The S for a plan, made again when the plan or its junctions change.
+  function splan(P) {
+    const js = nav?.js;
+    if (sp?.P !== P || sp.js !== js) {
+      const turns = (js || []).filter((j) => j.i < P.path.length && Math.abs(j.options.find((o) => o.route)?.bearing || 0) > 0.18).map((j) => P.dist[j.i]);
+      sp = sPlan(P, { junctions: turns }); sp.js = js;
+    }
+    return sp;
+  }
+  const snowY = (x, z) => T.heightAt(x, z) + 0.1 + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE;
+  function stepGuide(P, now, sR) {
     if (!guide) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xf2b632, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6, });
-      guide = new THREE.InstancedMesh(chevronGeometry(), mat, GUIDE_N);
-      guide.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(GUIDE_N * 3), 3);
+      const n = S_ROWS * S_COLS, g = new THREE.BufferGeometry(), idx = new Uint16Array((S_ROWS - 1) * (S_COLS - 1) * 6);
+      for (let r = 0, k = 0; r < S_ROWS - 1; r++) for (let c = 0; c < S_COLS - 1; c++) {
+        const a = r * S_COLS + c, b = a + S_COLS;
+        idx.set([a, b, a + 1, a + 1, b, b + 1], k); k += 6;
+      }
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+      g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(n * 4), 4).setUsage(THREE.DynamicDrawUsage));
+      const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+      guide = new THREE.Mesh(g, mat);
       guide.frustumCulled = false; guide.renderOrder = 3;
       world.add(guide);
     }
-    const d0 = P.dist[prog], flow = ((now / 1000) * 7) % GUIDE_GAP, m = new THREE.Matrix4(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-    let i = prog;
-    const last = P.path.length - 1, gold = new THREE.Color(0xf2b632), snow = new THREE.Color(0xffffff);
-    for (let k = 0; k < GUIDE_N; k++) {
-      const want = d0 + 4 + k * GUIDE_GAP + flow;
-      while (i < last && P.dist[i + 1] < want) i++;
-      if (i >= last || want > P.dist[last]) { m.makeScale(0, 0, 0); guide.setMatrixAt(k, m); continue; }
-      const t = (want - P.dist[i]) / (P.dist[i + 1] - P.dist[i] || 1), [ax, az] = P.path[i], [bx, bz] = P.path[i + 1];
-      const x = ax + (bx - ax) * t, z = az + (bz - az) * t, h = Math.atan2(bx - ax, bz - az);
-      q.setFromUnitVectors(up, T.normalAt(x, z, v)).multiply(q2.setFromAxisAngle(up, h));
-      const fade = 1 - Math.max(0, (want - d0 - 70) / 70); // full for the first 70 m, gone by 140 m
-      m.compose(new THREE.Vector3(x, T.heightAt(x, z) + 0.12 + (mogF.size ? mogF.height(x, z) : 0) + powderDepth(x, z) * POWDER_RAISE, z), q, new THREE.Vector3(2.8, 1, 3.2).multiplyScalar(0.75 + 0.25 * fade));
-      guide.setMatrixAt(k, m);
-      guide.setColorAt(k, snow.clone().lerp(gold, Math.max(0.05, fade))); // fading to the snow's white
+    const plan = splan(P), pos = guide.geometry.attributes.position.array, col = guide.geometry.attributes.color.array;
+    // the S's centre line, a row every 1.25 m from just ahead of you
+    sPt.i = prog;
+    for (let r = 0; r <= S_ROWS; r++) {
+      sAt(plan, sR + S_FROM + r * S_STEP, sPt);
+      const o = sPt.off * sGain;
+      sRow[r * 2] = sPt.cx + sPt.rx * o; sRow[r * 2 + 1] = sPt.cz + sPt.rz * o;
     }
-    guide.instanceMatrix.needsUpdate = true; guide.instanceColor.needsUpdate = true;
-    guide.material.opacity = 0.92 * buddy.alpha; // quiet while the guide leads (guide.js)
+    const end = P.dist[P.dist.length - 1], flow = (now / 1000) * 6;
+    for (let r = 0; r < S_ROWS; r++) {
+      const d = S_FROM + r * S_STEP, x = sRow[r * 2], z = sRow[r * 2 + 1];
+      let tx = sRow[r * 2 + 2] - x, tz = sRow[r * 2 + 3] - z; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L;
+      const fade = 1 - Math.max(0, (d - 70) / 60); // gold for the first 70 m, white and gone by 130 m
+      const near = Math.max(0, 1 - d / 28) * onS; // the stretch you're on, bolder while you ride it
+      const half = (0.4 + 0.006 * d) * (1 + 0.3 * near), soft = 0.12;
+      const glint = Math.pow(0.5 + 0.5 * Math.cos(((d - flow) / 16) * Math.PI * 2), 8) * 0.55 * fade;
+      const a = Math.min(1, (d - S_FROM) / 4) * Math.min(1, fade * 1.7) * (0.9 + 0.1 * near) * (sR + d > end ? 0 : 1);
+      const ax = x - tz * half, az = z + tx * half, bx = x + tz * half, bz = z - tx * half; // its two edges
+      const ya = snowY(ax, az), yb = snowY(bx, bz), w = Math.max(0.05, fade);
+      for (let c = 0; c < S_COLS; c++) {
+        const u = c === 0 ? 0 : c === S_COLS - 1 ? 1 : c === 1 ? soft / (2 * half) : 1 - soft / (2 * half), v = (r * S_COLS + c) * 3, q = (r * S_COLS + c) * 4;
+        pos[v] = ax + (bx - ax) * u; pos[v + 1] = ya + (yb - ya) * u; pos[v + 2] = az + (bz - az) * u;
+        for (let e = 0; e < 3; e++) col[q + e] = 1 + (S_GOLD[e] + (S_GLINT[e] - S_GOLD[e]) * glint - 1) * w; // fading to the snow's white
+        col[q + 3] = c === 0 || c === S_COLS - 1 ? 0 : a;
+      }
+    }
+    guide.geometry.attributes.position.needsUpdate = true; guide.geometry.attributes.color.needsUpdate = true;
+    // Quieter while the guide leads in sight (guide.js), eased in and out, never gone: it is the line the
+    // board rides. Always full with no guide.
+    arrowA += ((NOGUIDE ? 1 : buddy.alpha) - arrowA) * 0.08;
+    guide.material.opacity = 0.95 * (0.75 + 0.25 * arrowA); guide.visible = true;
+    if (nav) for (const o of nav.group.children) if (o.userData.chev) o.visible = arrowA > 0.3; // and the chevrons before each turn-off
   }
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
@@ -1349,13 +1442,27 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     let ti = near.i; while (ti < last && P.dist[ti] - P.dist[near.i] < ahead) ti++;
     idleFor = touching ? 0 : idleFor + dt;
     if (!touching) latIn *= Math.exp(-dt * 0.35);
-    // (Only once moving: at a crawl on a flat, linked turns would only stall you.)
-    // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: about 7 m either side
-    // of the line, a turn every 30 m; wider on steep snow, so each turn finishes further across the fall line.
-    const weave = auto ? 0 : (7 + 4 * clamp(((r.slope || 0) - 0.21) / 0.31, 0, 1)) * Math.sin((P.dist[ti] / 30) * Math.PI) * clamp((idleFor - 1.5) / 2, 0, 1) * clamp((r.speed - 4) / 5, 0, 1) * (1 - buddy.woods); // none on a line through the trees
-    const lat = clamp(latIn + weave, -LAT, LAT), hd = pathDir(path, ti);
+    // Linked turns, heel edge to toe edge, as a rider controls speed on a piste: the S drawn on the snow
+    // (sline-core.js, stepGuide), its shape from the run's level and steepness, straight where there's no room.
+    // Its width: none on autopilot or at a crawl (linked turns would only stall you), full from 8 m/s, eased,
+    // and the drawing and the board use the same number, so the S you see is the one you ride.
+    const plan = splan(P), sR = alongPath(P, r.x, r.z, near.i);
+    sGain += ((auto ? 0 : clamp((r.speed - 3) / 5, 0, 1) * (1 - buddy.woods)) - sGain) * Math.min(1, dt * 0.8);
+    sAt(plan, sR, sHere);
+    const sw = clamp((sHere.amp * sGain) / 1.5, 0, 1);
+    // Aim at a point on the S a few metres ahead (10 m at 13 m/s): short enough to ride each arc rather than
+    // cut it (measured in a whole run untouched: within about 0.5 m of the drawn line), the board's own lag
+    // making up the rest. A drag across the piste (latIn) shifts the aim off it; let go and you drift back.
+    const lead = Math.min(ahead, S_LEAD + r.speed * S_LEAD_V);
+    sAt(plan, sR + lead, sAim);
+    const weave = sGain * sAim.off;
+    const lat = clamp(latIn + weave, -LAT, LAT);
     // The rider's right on screen is local -x: (−cos h, +sin h).
-    const tx = path[ti][0] - Math.cos(hd) * lat, tz = path[ti][1] + Math.sin(hd) * lat;
+    const tx = sAim.cx + sAim.rx * lat, tz = sAim.cz + sAim.rz * lat;
+    // On it? (for the drawing: the stretch you're on a little bolder)
+    const sErr = (r.x - sHere.cx) * sHere.rx + (r.z - sHere.cz) * sHere.rz - sGain * sHere.off;
+    onS += ((sw > 0.6 && Math.abs(sErr) < 1.6 ? 1 : 0) - onS) * Math.min(1, dt * 3);
+    sStat.n++; sStat.e2 += sErr * sErr; sStat.o2 += (sGain * sHere.off) ** 2; if (sw > 0.6) sStat.on += Math.abs(sErr) < 1.6 ? 1 : 0, sStat.w++;
     let steer = clamp(angleDiff(r.heading, Math.atan2(tx - r.x, tz - r.z)) * 2.5, -1, 1); // here angleDiff is a - b
     // Tilting the phone rides it: left or right edges into a turn at once (the route only nudges you
     // back), tipping it away lets it run, toward you slows down. Measured from how you held it at the start.
@@ -1374,6 +1481,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     // Moguls ahead on the way (蘑菇道): once for each mogul run, as it comes up.
     const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
     if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
+    roadCue(P);
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Which way a heel-side skid turns the board's nose, as boarder.js / animal.js draw it (mirrored if goofy).
     const heelSide = (o) => (o.userData.kind === "animal" ? -1 : -(o.userData.toeX || 1)) * (o.userData.goofy ? -1 : 1);
@@ -1452,7 +1560,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       snd.ski(r, { air, station: clamp(1 - Math.hypot(r.x - topP.x, r.z - topP.z) / 120, 0, 1), dt });
     }
     tracks.add(r);
-    stepGuide(P, clock());
+    stepGuide(P, clock(), sR);
     const Q = buddy.step(dt, { P, prog, r, off: near.d, js: nav?.js }); if (Q) chosen = Q; // a detour spliced in (or taken out again)
     const NL = ctx.nightLights;
     if (NL) { // brighter close to a floodlight
@@ -1480,7 +1588,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     inWoods += (wT - inWoods) * Math.min(1, dt * (wT > inWoods ? 0.9 : 0.6));
     const w = inWoods, tall = ctx.rider.userData.tall || 1.7;
     if (camH == null) camH = r.heading;
-    camH += angleDiff(r.heading, camH) * Math.min(1, dt * (5 - 2.8 * w));
+    // Linking turns on the S, it looks more down the way than across with each turn, so the S ahead reads
+    // as an S and the view doesn't swing side to side every couple of seconds.
+    const wayH = Math.atan2(sHere.hx, sHere.hz), camT = wayH + angleDiff(r.heading, wayH) * (1 - 0.55 * sw * (1 - w));
+    camH += angleDiff(camT, camH) * Math.min(1, dt * (5 - 2.8 * w));
     const back = _back.set(-Math.sin(camH), 0, -Math.cos(camH));
     const want = _want.set(r.x, r.y, r.z).addScaledVector(back, (7.5 + r.speed * 0.1) * (1 - w) + (2.3 + r.speed * 0.04) * w);
     // In a crash it swings round to the open side, away from the tree and out from under its branches, and
@@ -1517,6 +1628,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (now - lastLook > 500) { lastLook = now; onRun = runNear(r.x, r.z, 26); if (onRun) skiLog.mark(onRun.run, onRun.i); }
     skiLog.step(r.x, r.z, now);
     $("skiWhere").innerHTML = onRun ? `你在 ${nameR(onRun.run)}` : "雪道外";
+    strip.step(r, left, near.d < 45 ? seg.run : onRun?.run, dt); // on the route: the run the route is on (it changes at its turn-offs)
+    if (left < 160 && !strip.near) { strip.near = true; const ic = P.next ? "lift" : P.kind === "lift" ? "lift" : P.kind === "base" ? "lodge" : null; if (ic) buddy.sign(ic, 3); } // nearly there: where it ends
     // Off the route for a while: replan from the run I'm on, if it leads anywhere.
     offFor = near.d > 45 ? offFor + dt : 0;
     if (offFor > 1.2 && onRun && replan(r)) { offFor = 0; return; }
@@ -1561,7 +1674,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const l = R.lifts.find((l) => rideable(l) && !offered.has(l) && l !== P.lift && l !== P.next && ahead(l));
     if (!l) return;
     offered.add(l); offer = l;
-    box.innerHTML = `<b>${ICO("lift")}前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`;
+    box.innerHTML = NOGUIDE ? `<b>${ICO("lift")}前面就是 ${l.name}</b><div class="two"><button class="go">坐这条上山 ›</button><button class="no">继续滑</button></div>`
+      : `<b class="mini"><img src="assets/icons/lift.png?v=1" alt="">${l.name}</b><div class="two"><button class="go">${t("上山")}</button><button class="no">${t("继续")}</button></div>`; // the guide leads: the lift, its name, two buttons
+    box.classList.toggle("mini", !NOGUIDE);
     box.querySelector(".go").onclick = () => { location.href = withResort(`look.html?lift=${encodeURIComponent(l.name)}`); };
     box.querySelector(".no").onclick = () => { box.hidden = true; };
     box.hidden = false;
@@ -1704,7 +1819,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     $("liftOffer").hidden = true; closeBigMap();
     if (guide) guide.visible = false;
     tbtn.hidden = true; closeWheel();
-    $("skiHud").hidden = true;
+    $("skiHud").hidden = true; document.body.classList.remove("navmin"); $("roadCue").hidden = true; roadShown = "";
     $("turnCue").hidden = true;
     pmap.show(false);
     $("arrive").hidden = false;
@@ -1803,7 +1918,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       applyCam();
       if (u >= 1) {
         if (st.phase === "rise") {
-          st.phase = "pick"; flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); chosen?.card.scrollIntoView({ inline: "center", block: "nearest" });
+          st.phase = "pick"; document.body.classList.remove("navmin"); flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); chosen?.card.scrollIntoView({ inline: "center", block: "nearest" });
           if (chosen) requestAnimationFrame(() => aimAt(chosen)); // fit again now the cards are there to fit above
         }
         else startSki();
@@ -2260,7 +2375,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       exits: { mountain: withResort("mountain/"), lift: own && withResort(`look.html?lift=${encodeURIComponent(own.name)}`), liftName: own?.name } });
     st.prac = prac.api; // testing
   };
-  st.fx = fx; st.buddy = buddy; // testing
+  st.fx = fx; st.buddy = buddy; st.strip = strip; // testing
   st.deepPowder = (R0 = 250) => { // testing: onto the deepest powder near here, no tree in the way, down the fall line
     let best = null;
     for (let dx = -R0; dx <= R0; dx += 10) for (let dz = -R0; dz <= R0; dz += 10) {
@@ -2334,6 +2449,8 @@ const sit = (model, lookYaw, talk = 0) => sitBoarder(model, lookYaw, undefined, 
 
 // Opened from the miniature with ?lift=NAME: a real ride, bottom to top, then the arrival card.
 const params = new URLSearchParams(location.search), TRIP = params.has("lift");
+// ?guide=0: no guide animal; the way-finding is the old one (the text card, the turn card, the arrows on the snow).
+const NOGUIDE = params.get("guide") === "0";
 const SURFACE = ["groomed", "powder", "ice"].find((x) => x === params.get("surface")) || null; // the snow under the board, for trying the sound
 const settings = (() => { try { return JSON.parse(localStorage.getItem("prerun") || "{}"); } catch { return {}; } })();
 // Which resort: ?resort=, else the one picked on the start screen. Every link onward carries it.
@@ -2376,7 +2493,13 @@ $("tabFab").onclick = () => {
 };
 // The top pill: tap it for the snow (and, skiing, the controls); tap again to fold it.
 // A chosen (not live) hour and sky are marked 自选 on the pill, folded or not.
-const pillLabel = () => { $("wxToggle").innerHTML = `${COND.live ? "" : `<span class="sim">${t("自选")}</span>`}${t($("topInfo").hidden ? "雪况 ⌄" : "收起 ⌃")}`; };
+// While the guide leads (body.navmin) the pill folds to a round 雪况 button: the sky's icon, a dot when chosen.
+const SKY_ICON = { clear: "sunny", cloudy: "partly", overcast: "cloudy", snow: "snow_now" };
+const pillLabel = () => {
+  $("wxToggle").innerHTML = `${COND.live ? "" : `<span class="sim">${t("自选")}</span>`}${t($("topInfo").hidden ? "雪况 ⌄" : "收起 ⌃")}`;
+  $("wxIco").src = `assets/icons/${(!COND.live && SKY_ICON[COND.sky]) || "snow_now"}.png?v=1`;
+  $("top").classList.toggle("open", !$("topInfo").hidden); $("top").classList.toggle("chosen", !COND.live);
+};
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; pillLabel(); };
 pillLabel();
 const riderLoad = loadBoarder(); // start early: the light template and its clips, about 1.8 MB
