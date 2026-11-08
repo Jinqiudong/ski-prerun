@@ -5,16 +5,16 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=15";
-import { ANIMAL_RIDERS, ANIMAL_ZH, animalOf } from "../rider/animal-core.js?v=1";
-import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=2";
-import { CFG, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=12";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=16";
+import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
+import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
+import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";
 import { makeEntrance } from "./entrance.js?v=25";
-import { openBookPage, locateIn } from "../ride/roadbook.js?v=26";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=46";
-import { playIntro } from "./intro.js?v=32";
-import { flyTo } from "../core/transition.js?v=16";
-import { startParty } from "../core/party.js?v=15";
+import { openBookPage, locateIn } from "../ride/roadbook.js?v=27";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=47";
+import { playIntro } from "./intro.js?v=33";
+import { flyTo } from "../core/transition.js?v=17";
+import { startParty } from "../core/party.js?v=16";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -37,6 +37,10 @@ const SWATCHES = {
   boots: ["#1d1d20", "#3b3d40", "#8f8670", "#a39d8f", "#4a5a6e", "#9c6a55", "#dcd7cc", "#7f9fb8"],
   vest: ["#17171a", "#3b3d40", "#4f5645", "#2f3a4c", "#a8674f", "#c2b49a", "#dcd7cc", "#6e5f6e"],
   hair: ["#3f2a1f", "#1d1a18", "#6b4a2e", "#a07850", "#c9a66b"],
+  // a rigged animal's own: its fur, its beanie, its backpack
+  fur: ["#deb88a", "#c9a27a", "#a8825e", "#8a6a4c", "#e8d8c0", "#b9a48a", "#6e5440", "#5c4636"],
+  beanie: ["#f49228", "#e0b04a", "#a8674f", "#b6463b", "#4a5a6e", "#55604b", "#dcd7cc", "#2b2c30"],
+  backpack: ["#302c28", "#4f5645", "#2f3a4c", "#6e5f6e", "#a8674f", "#8f8670", "#c2b49a", "#dcd7cc"],
 };
 // Every other colour: 32 picked in the game's greyed, misty tones (greys, slates and blues, greens, earth and
 // clay, plums), four rows of eight. No phone colour picker: its rainbow is not this world's.
@@ -44,15 +48,18 @@ const PALETTE = ["#2b2c30", "#3d4148", "#5c6168", "#8a8f94", "#b9bbb8", "#dcd7cc
   "#2f3a4c", "#3f5a6e", "#4a6a8a", "#7b8a96", "#9fb3c4", "#c7d3dc", "#5b6f6a", "#7f9a90",
   "#2f3d2e", "#4f5645", "#525a42", "#6f7a52", "#9aa07a", "#c2b49a", "#a89474", "#7a6448",
   "#6e2f2c", "#9a4a3e", "#a8674f", "#c98a68", "#d9b48f", "#6e5f6e", "#8e7a90", "#b7a3b4"];
-const PART_ZH = { jacket: "上衣颜色", pants: "裤子颜色", helmet: "头盔颜色", gloves: "手套颜色", lens: "雪镜颜色", boots: "雪鞋颜色", vest: "马甲颜色", hair: "头发颜色" };
+const PART_ZH = { jacket: "上衣颜色", pants: "裤子颜色", helmet: "头盔颜色", gloves: "手套颜色", lens: "雪镜颜色", boots: "雪鞋颜色", vest: "马甲颜色", hair: "头发颜色", fur: "毛色", beanie: "帽子颜色", backpack: "背包颜色" };
 // The colours last picked off the palette (on this phone), newest first.
 const RECENT = "prerunColors";
 const recent = () => { try { const a = JSON.parse(localStorage.getItem(RECENT) || "[]"); return Array.isArray(a) ? a.filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 8) : []; } catch { return []; } };
 const remember = (c) => { try { localStorage.setItem(RECENT, JSON.stringify([c, ...recent().filter((x) => !same(x, c))].slice(0, 8))); } catch { /* full or private */ } };
 // The materials each colour sets: the game's six parts (character.js), the vest and the hair.
-const MATS = { ...COLOR_MATS, vest: ["MAT_vest"], hair: ["MAT_hair"] };
-const colorOf = (ch, part) => (ch.colors[MATS[part][0]] || "#888888").toLowerCase();
-const paint = (ch, part, c) => { for (const m of MATS[part]) ch.colors[m] = c; };
+const MATS = { ...COLOR_MATS, vest: ["MAT_vest"], hair: ["MAT_hair"], fur: ["MAT_fur"], beanie: ["MAT_beanie"], backpack: ["MAT_backpack"] };
+// A rigged animal (the capybara) wears its own colours (ch.pet.colors over animals.json's), so a person's clothes
+// are still theirs when they choose a body again.
+const colorsOf = (ch) => (riggedOf(ch.animal) ? { ...PETS[ch.animal].colors, ...(ch.pet?.colors || {}) } : ch.colors);
+const colorOf = (ch, part) => (colorsOf(ch)[MATS[part][0]] || "#888888").toLowerCase();
+const paint = (ch, part, c) => { const to = riggedOf(ch.animal) ? ((ch.pet ||= { colors: {} }).colors ||= {}) : ch.colors; for (const m of MATS[part]) to[m] = c; };
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 
 // ---- Saved state ("prerun"): { wear: { ch, from, name, stance, dirty } (what I wear: a character, the outfit it
@@ -79,7 +86,11 @@ if (!CFG.templates[st.wear?.ch?.tpl] || !st.wear.ch.parts || !st.wear.ch.colors)
 }
 const wear = st.wear;
 if ("animal" in wear.ch && !animalOf(wear.ch.animal)) delete wear.ch.animal;
-const petOf = (ch) => animalOf(ch.animal);
+// petOf: one of the resort animals (animal.js); rigOf: a rigged animal (character.js PETS), dressed and posed as a
+// person is; tplOf: the character.js template a rider is made from.
+const petOf = (ch) => deskPetOf(ch.animal);
+const rigOf = (ch) => riggedOf(ch.animal);
+const tplOf = (ch) => rigOf(ch) || ch.tpl;
 const wearName = () => { const r = outfitOf(wear.from); return r ? r.name : wear.name || t("我的穿搭"); };
 // Something changed: shown at once, kept at once (there is no "wear this" step), and the outfit is now changed.
 function changed({ body = false } = {}) {
@@ -129,7 +140,8 @@ addEventListener("pointerup", (e) => {
 // Which wardrobe item a point on the rider is, by the material under it.
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const PART_OF = [[/^MAT_(jacket|vest|zip|seam|cord)/, ["top"]], [/^MAT_pants/, ["pants"]], [/^MAT_(helmet|sticker)/, ["gear", "helmet"]], [/^MAT_mitten/, ["gear", "gloves"]],
-  [/^MAT_(goggle|lens|face_mask)/, ["gear", "lens"]], [/^MAT_boot/, ["gear", "boots"]], [/^MAT_(board|binding)/, ["gear", "board"]], [/^MAT_hair/, ["look"]]];
+  [/^MAT_(goggle|lens|face_mask)/, ["gear", "lens"]], [/^MAT_boot/, ["gear", "boots"]], [/^MAT_(board|binding)/, ["gear", "board"]], [/^MAT_hair/, ["look"]],
+  [/^MAT_backpack/, ["top"]], [/^MAT_(beanie|leaf|stem)/, ["gear", "helmet"]], [/^MAT_(fur|eye|nose|blush)/, ["look"]]]; // a rigged animal's
 const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
 function partAt(e) {
   if (!rider || entrance.running) return null;
@@ -161,7 +173,8 @@ const GLYPH = {
   P: `<path d="M20 4 C 60 10, 60 22, 36 28 S 20 44, 42 52"/><circle cx="62" cy="46" r="5"/>`,
 };
 // An old favourite that was a trick: the nearest entrance (a jump for the jumps, else the carve).
-const favOf = (ch) => (ENTRANCES.some(([k]) => k === ch.fav) ? ch.fav : /Ollie|Air/.test(ch.fav || "") ? "Anim_Pop_Ref" : "Anim_Carve_Ref");
+const entrancesOf = () => (rider?.pet ? ENTRANCES.filter(([k]) => rider.clips[k]) : ENTRANCES); // a rigged animal: the ones it has clips for
+const favOf = (ch) => (entrancesOf().some(([k]) => k === ch.fav) ? ch.fav : /Ollie|Air/.test(ch.fav || "") ? "Anim_Pop_Ref" : "Anim_Carve_Ref");
 // An animal rides the same slope down (a gentle S) and does one of its moves in front of you (animal.js).
 const petFav = (ch) => (PET_MOVES.some(([k]) => k === ch.petFav) ? ch.petFav : PET_MOVES.some(([k]) => k === ch.fav) ? ch.fav : PET_MOVES[0][0]);
 let lastEntry = null, afterEntry = null;
@@ -193,9 +206,9 @@ const v3 = new THREE.Vector3();
 function aim() {
   const s = SHOTS[focus];
   // an animal: nearer and lower, the whole board in the picture
-  if (rider?.isAnimal) { const h = rider.tall; view.at.set(0, h * 0.42, 0); view.pos.set(0, h * 0.42 + 0.7 + h * 0.2, 3.4 + h * 0.9); return; }
+  if (rider?.isAnimal || (rider?.pet && !s)) { const h = rider.tall; view.at.set(0, h * 0.42, 0); view.pos.set(0, h * 0.42 + 0.7 + h * 0.2, 3.4 + h * 0.9); return; }
   if (!s || !rider) { view.pos.copy(REST.pos); view.at.copy(REST.at); return; }
-  const [bones, d, up, low] = s;
+  const [bones, d0, up, low] = s, d = rider.pet && focus === "head" ? d0 * 1.5 : d0; // a rigged animal's head is a big one
   view.at.set(0, 0, 0); for (const b of bones) view.at.add(rider.bones[b].getWorldPosition(v3)); view.at.divideScalar(bones.length);
   view.at.x *= 0.5; view.at.z *= 0.5; view.at.y -= low; // keep near the middle, a little below the part
   view.pos.set(view.at.x, view.at.y + d * up, view.at.z + d);
@@ -216,16 +229,19 @@ function fit(dt) {
   camera.zoom = frame.k; camera.setViewOffset(W, H, W / 2 - frame.cx, H / 2 - frame.cy, W, H); camera.updateProjectionMatrix();
 }
 window.__stage = { scene, camera, turntable, entrance, get rider() { return rider; }, get focus() { return focus; }, enter, open, closeDress, playPose: (k) => playPose(k) }; // testing
-// Poses are loops: into the pose once (the clip's start), then to and fro over its held part ([from, to] s;
-// the whole clip if not listed), under the breath and the gaze character.js adds while a pose holds.
-const LOOP = { Pose_Wave: [0.5, 2], Pose_Cheer: [0.5, 2], Pose_Hold_Photo: [0.5, 2], Radio_Talk_Stand: [0.5, 1.5] };
+// Poses are loops, under the breath and the gaze character.js adds while a pose holds. Since the character AI's
+// batch 4d these clips are seamless loops that start in the pose (the wave only in the mitten, the cheer a fan
+// from the shoulders, the photo and radio a breath and a nod), so they play straight through, round and round;
+// played to and fro, the wave and the cheer ran backwards every other pass. Any other pose goes to and fro over
+// the whole clip.
+const CYCLE = new Set(["Pose_Wave", "Pose_Cheer", "Pose_Hold_Photo", "Radio_Talk_Stand", "Board_Hold", "Sit_Snow"]);
 const looping = { k: null, t: 0 };
 function loopPose(dt) {
   if (!rider || rider.isAnimal || entrance.running || !POSES.some(([n]) => n === rider.current)) { looping.k = null; return; }
   const k = rider.current, clip = rider.clips[k], a = clip && rider.mixer.existingAction(clip); if (!a) return;
   if (looping.k !== k) { looping.k = k; looping.t = 0; }
-  const [p, q] = LOOP[k] || [0, clip.duration - 1e-3], L = q - p, s = (looping.t += dt) - p;
-  a.time = s < 0 ? looping.t : p + (s % (2 * L) < L ? s % (2 * L) : 2 * L - (s % (2 * L)));
+  const L = clip.duration - 1e-3, s = (looping.t += dt);
+  a.time = CYCLE.has(k) ? s % clip.duration : s % (2 * L) < L ? s % (2 * L) : 2 * L - (s % (2 * L));
 }
 let last = performance.now();
 renderer.setAnimationLoop((now) => {
@@ -249,17 +265,17 @@ const holder = new THREE.Group(); turntable.add(holder);
 let pet = null; // { animal, made: a promise of its stage figure }
 const dropPet = () => { const p = pet; pet = null; p?.made.then((s) => { if (rider === s) { holder.remove(s.root); rider = null; } s.dispose(); }); };
 async function show({ enter: go = false } = {}) {
-  const ch = wear.ch, a = petOf(ch), key = a || ch.tpl;
+  const ch = wear.ch, a = petOf(ch), key = a || tplOf(ch);
   if (pet && pet.animal !== a) dropPet();
   if (a && !pet) pet = { animal: a, made: animalRider({ animal: a }).then(animalStage) };
-  const c = await (a ? pet.made : (chars[ch.tpl] ||= makeCharacter(ch.tpl)));
-  if (ch !== wear.ch || key !== (petOf(wear.ch) || wear.ch.tpl)) return; // something else was put on meanwhile
+  const c = await (a ? pet.made : (chars[tplOf(ch)] ||= makeCharacter(tplOf(ch))));
+  if (ch !== wear.ch || key !== (petOf(wear.ch) || tplOf(wear.ch))) return; // something else was put on meanwhile
   const swapped = rider !== c;
-  if (swapped) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); if (a) center(); }
+  if (swapped) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); if (a) center(); renderPoses(); }
   if (a) c.setBoard(ch.board); else c.set(ch);
   // regular or goofy: the character is mirrored (the entrance rides goofy's line mirrored, entrance.js)
   holder.scale.x = wear.stance === "goofy" ? -1 : 1;
-  holder.position.y = a ? 0.004 : 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
+  holder.position.y = a ? 0.004 : c.pet ? 0.062 : 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
   if (go && focus === "full") enter();
   else if (swapped || !c.current) { if (entrance.running) center(); c.play(pose, { fade: 0 }); }
   $("status").hidden = true;
@@ -276,7 +292,8 @@ function playPose(k) {
   pose = k; rider.play(k); renderPoses();
 }
 function renderPoses() {
-  const list = petOf(wear.ch) ? ["Stand_Idle"] : POSE_ROW;
+  // a rigged animal: the poses it has clips for (character.js leaves out the ones its short arms can't do)
+  const list = petOf(wear.ch) ? ["Stand_Idle"] : rigOf(wear.ch) ? POSE_ROW.filter((k) => !rider?.pet || rider.clips[k]) : POSE_ROW;
   $("poses").innerHTML = list.map((k) => `<button class="${k === pose ? "on" : ""}" data-pose="${k}">${t(LABEL[k])}</button>`).join("");
 }
 $("poses").addEventListener("click", (e) => { const b = e.target.closest("[data-pose]"); if (b) playPose(b.dataset.pose); });
@@ -284,7 +301,7 @@ $("poses").addEventListener("click", (e) => { const b = e.target.closest("[data-
 // start; a tap on the one just played makes it the favourite (★, played when the page opens).
 function renderEntries() {
   const a = petOf(wear.ch), fav = a ? petFav(wear.ch) : favOf(wear.ch);
-  const list = a ? PET_MOVES.map(([k, l]) => [k, l, "P"]) : ENTRANCES;
+  const list = a ? PET_MOVES.map(([k, l]) => [k, l, "P"]) : entrancesOf();
   $("entries").innerHTML = list.map(([k, l, r]) => `<button class="ecard${k === lastEntry ? " on" : ""}" data-entry="${k}">${k === fav ? `<i class="st">★</i>` : ""}<svg viewBox="0 0 84 56" aria-hidden="true">${GLYPH[r]}</svg><span>${t(l)}</span></button>`).join("");
 }
 $("entries").addEventListener("click", (e) => {
@@ -305,12 +322,15 @@ $("entryClose").onclick = () => showEntries(false);
 const ICON = (n) => `assets/icons/${n}.png?v=1`;
 const NAV = [["outfits", "hanger", "穿搭"], ["top", "jacket", "上衣"], ["pants", "pants", "裤子"], ["gear", "helmet", "装备"], null, ["look", "look_mirror", "外形"]];
 const GEAR = [["gloves", "gloves", "手套"], ["lens", "lens", "雪镜"], ["helmet", "helmet", "头盔"], ["boots", "boots", "雪鞋"], ["board", "board", "雪板"]];
+// A rigged animal's gear: bare paws (no gloves), and a hat (its beanie, or the helmet under it).
+const RIG_GEAR = GEAR.filter(([k]) => k !== "gloves").map((n) => (n[0] === "helmet" ? ["helmet", "helmet", "帽子"] : n));
 let wtab = "outfits", gear = "helmet", naming = false, dressing = false, palette = null;
 // Open a wardrobe item (and a gear's own sub-item): the camera goes close on that part, or back out.
 // An animal wears nothing: its camera stays put, and of the gear only the board is left.
 function open(k, sub) {
   if (!dressing) { dressing = true; document.body.classList.add("dressing"); if (entries) showEntries(false); }
   wtab = k; if (sub) gear = sub; naming = false; palette = null;
+  if (rigOf(wear.ch) && gear === "gloves") gear = "helmet";
   focus = petOf(wear.ch) ? "full" : (k === "gear" ? FOCUS[gear] : FOCUS[k]) || "full";
   if (focus !== "full") { const was = entrance.running; center(); if (was && rider) { pose = "Stand_Idle"; rider.play(pose); renderPoses(); } }
   render();
@@ -338,7 +358,7 @@ function paletteCard(part) {
 const tile = (k, l) => `<button class="tile${wear.ch.parts[k] ? " on" : ""}" data-part="${k}"><i style="background-image:url(assets/riders/thumbs/${k}_${wear.ch.tpl.toLowerCase()}.png?v=2)"></i>${t(l)}</button>`;
 // An outfit's colours as dots; an animal's, its picture (tools/render_animal_thumbs.mjs).
 const petPic = (a) => `assets/riders/thumbs/animal_${a}.png?v=1`;
-const dots = (ch) => petOf(ch) ? `<span class="dots pet"><i style="background-image:url(${petPic(ch.animal)})"></i></span>` : `<span class="dots">${["jacket", "pants", "helmet", "lens", "boots"].map((p) => `<i style="background:${colorOf(ch, p)}"></i>`).join("")}</span>`;
+const dots = (ch) => ch.animal ? `<span class="dots pet"><i style="background-image:url(${petPic(ch.animal)})"></i></span>` : `<span class="dots">${["jacket", "pants", "helmet", "lens", "boots"].map((p) => `<i style="background:${colorOf(ch, p)}"></i>`).join("")}</span>`;
 // The look in three-way choices: build (the weight and muscle morphs) and fit (the jacket's and the pants'
 // ease and the jacket's length together); 标准 is the template's own. A look made with the old sliders shows
 // as the nearest of the three, and keeps its numbers until one is picked.
@@ -355,9 +375,9 @@ const seg = (set, zh, ch, key) => `<div class="seg">${Object.keys(set).map((k) =
 // The hair: short (none: under the helmet), long or a braid (the woman's template; the man's has none).
 const HAIR_ROW = [["none", "短发"], ["loose", "长发"], ["braid", "辫子"]].filter(([k]) => HAIR.some(([h]) => h === k));
 function render() {
-  const ch = wear.ch, a = petOf(ch), gk = a ? "board" : gear;
+  const ch = wear.ch, a = petOf(ch), rig = rigOf(ch), gk = a ? "board" : gear;
   $("rail").innerHTML = NAV.map((n) => (n ? nav(n, wtab, a && (n[0] === "top" || n[0] === "pants")) : `<hr>`)).join("");
-  $("wsub").innerHTML = wtab === "gear" && !palette ? GEAR.filter((n) => !a || n[0] === "board").map((n) => nav(n, gk)).join("") : "";
+  $("wsub").innerHTML = wtab === "gear" && !palette ? (rig ? RIG_GEAR : GEAR).filter((n) => !a || n[0] === "board").map((n) => nav(n, gk)).join("") : "";
   $("wsub").hidden = wtab !== "gear" || !!palette;
   let h = "";
   const noClothes = `<p class="pethint">${t("小动物不穿衣服，换块雪板吧")}<button class="chip" data-toboard>${t("雪板")} ›</button></p>`;
@@ -370,12 +390,19 @@ function render() {
         + Object.keys(OUTFITS).map((k) => card(template(k))).join("") + st.riders.map(card).join("") + `</div>`;
   }
   const colours = (part) => `<small class="lbl">${t("颜色")}</small>${swatches(part)}`;
+  // a rigged animal's own accessories: on or off, as chips (it has no part pictures)
+  const acc = (k, l) => `<button class="chip${petParts(PETS[rig], ch)[k] ? " on" : ""}" data-ppart="${k}">${t(l)}</button>`;
   if (a && (wtab === "top" || wtab === "pants")) h = noClothes;
+  else if (rig && wtab === "top") h = colours("jacket") + `<small class="lbl">${t("款式")}</small><div class="tiles">${acc("backpack", "背包")}</div>`
+    + (petParts(PETS[rig], ch).backpack ? `<small class="lbl">${t("背包颜色")}</small>${swatches("backpack")}` : "");
   else if (wtab === "top") h = colours("jacket") + `<small class="lbl">${t("款式")}</small><div class="tiles">${tile("hood", "帽兜")}${tile("vest", "马甲")}${tile("grid", "格子")}</div>`
     + (ch.parts.vest ? `<small class="lbl">${t("马甲颜色")}</small>${swatches("vest")}` : "");
   else if (wtab === "pants") h = colours("pants");
   if (wtab === "gear") {
-    if (gk === "helmet") h = colours("helmet") + `<small class="lbl">${t("款式")}</small><div class="tiles">${tile("visor", "帽檐")}${tile("stickers", "贴纸")}<button class="chip${ch.glossyHelmet ? " on" : ""}" data-gloss>${t("亮面")}</button></div>`;
+    if (rig && gk === "helmet") { const on = petParts(PETS[rig], ch).beanie;
+      h = `<small class="lbl">${t("款式")}</small><div class="tiles">${acc("beanie", "橘子帽")}<button class="chip${!on ? " on" : ""}" data-ppart="beanie">${t("头盔")}</button></div>`
+        + `<small class="lbl">${t(on ? "帽子颜色" : "头盔颜色")}</small>${swatches(on ? "beanie" : "helmet")}`; }
+    else if (gk === "helmet") h = colours("helmet") + `<small class="lbl">${t("款式")}</small><div class="tiles">${tile("visor", "帽檐")}${tile("stickers", "贴纸")}<button class="chip${ch.glossyHelmet ? " on" : ""}" data-gloss>${t("亮面")}</button></div>`;
     else if (gk === "board") h = (a ? `<p class="pethint">${t("小动物不穿衣服，换块雪板吧")}</p>` : "") + `<div class="boardrow"><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><img src="assets/riders/boards/${k}_base.jpg?v=1" alt=""></button>`).join("")}</div>`
       + `<div class="stance">${["regular", "goofy"].map((s) => `<button class="chip${wear.stance === s ? " on" : ""}" data-stance="${s}">${s === "regular" ? "Regular" : "Goofy"}</button>`).join("")}<small>${t(wear.stance === "goofy" ? "右脚在前" : "左脚在前")}</small></div></div>`;
     else h = colours(gear);
@@ -383,9 +410,11 @@ function render() {
   if (wtab === "look") {
     const T = CFG.templates[ch.tpl];
     // who: one of the two bodies, or one of the resort animals on a board
-    h = `<small class="lbl">${t("角色")}</small><div class="swrow who">${["F", "M"].map((k, i) => `<button class="tile${!a && ch.tpl === k ? " on" : ""}" data-tpl="${k}"><i style="background-image:url(assets/riders/thumbs/body_${k.toLowerCase()}.png?v=1)"></i>${t("体形 {n}", { n: i + 1 })}</button>`).join("")}`
-      + ANIMAL_RIDERS.map((k) => `<button class="tile${a === k ? " on" : ""}" data-animal="${k}"><i style="background-image:url(${petPic(k)})"></i>${t(ANIMAL_ZH[k])}</button>`).join("") + `</div>`;
-    if (!a) h += (ch.tpl === "F" ? `<div class="sec"><div class="t">${t("发型")}</div><div class="seg">${HAIR_ROW.map(([k, l]) => `<button class="${hairOf(ch) === k ? "on" : ""}" data-hair="${k}">${t(l)}</button>`).join("")}</div>`
+    h = `<small class="lbl">${t("角色")}</small><div class="swrow who">${["F", "M"].map((k, i) => `<button class="tile${!ch.animal && ch.tpl === k ? " on" : ""}" data-tpl="${k}"><i style="background-image:url(assets/riders/thumbs/body_${k.toLowerCase()}.png?v=1)"></i>${t("体形 {n}", { n: i + 1 })}</button>`).join("")}`
+      + [...RIGGED, ...ANIMAL_RIDERS].map((k) => `<button class="tile${ch.animal === k ? " on" : ""}" data-animal="${k}"><i style="background-image:url(${petPic(k)})"></i>${t(ANIMAL_ZH[k])}</button>`).join("") + `</div>`;
+    // a rigged animal: its fur's colour; no hair, height or body (it has no sliders)
+    if (rig) h += `<small class="lbl">${t("毛色")}</small>${swatches("fur")}`;
+    else if (!a) h += (ch.tpl === "F" ? `<div class="sec"><div class="t">${t("发型")}</div><div class="seg">${HAIR_ROW.map(([k, l]) => `<button class="${hairOf(ch) === k ? "on" : ""}" data-hair="${k}">${t(l)}</button>`).join("")}</div>`
         + (hairOf(ch) !== "none" ? `<div class="swrow hairc">${SWATCHES.hair.map((c) => `<button class="sw${same(c, colorOf(ch, "hair")) ? " on" : ""}" data-c="${c}" data-for="hair" style="background:${c}" aria-label="${c}"></button>`).join("")}</div>` : "") + `</div>` : "")
       + `<label class="sec"><div class="t">${t("身高")}<em data-v="height">${ch.height} cm</em></div><input type="range" data-k="height" min="${T.hmin}" max="${T.hmax}" step="1" value="${ch.height}"></label>`
       + `<div class="sec"><div class="t">${t("身材")}</div>${seg(BUILD, BUILD_ZH, ch, "build")}</div>`
@@ -431,7 +460,7 @@ $("wbody").addEventListener("click", (e) => {
   if (d.palette) { palette = d.palette; return render(); }
   if ("pclose" in d) { palette = null; return render(); }
   if ("shuffle" in d) { // a colour from each part's list
-    for (const p of ["jacket", "pants", "helmet", "gloves", "lens", "boots"]) paint(ch, p, SWATCHES[p][Math.floor(Math.random() * SWATCHES[p].length)]);
+    for (const p of ["jacket", "pants", "helmet", "gloves", "lens", "boots"]) if (!(rigOf(ch) && p === "gloves")) paint(ch, p, SWATCHES[p][Math.floor(Math.random() * SWATCHES[p].length)]);
     wear.dirty = true; render(); return changed();
   }
   if (d.c) { // a swatch: its row says which part (the hair's dots say it themselves); off the palette, kept as recent
@@ -441,13 +470,14 @@ $("wbody").addEventListener("click", (e) => {
     return changed();
   }
   if (d.part) { ch.parts[d.part] = !ch.parts[d.part]; return changed({ body: true }); }
+  if (d.ppart && rigOf(ch)) { ch.parts[d.ppart] = !petParts(PETS[rigOf(ch)], ch)[d.ppart]; return changed({ body: true }); }
   if ("gloss" in d) { ch.glossyHelmet = !ch.glossyHelmet; return changed({ body: true }); }
   if (d.board) { ch.board = d.board; return changed({ body: true }); }
   if (d.stance) { wear.stance = d.stance; save(); render(); return show(); }
   if (d.hair) { setHair(ch, d.hair); return changed({ body: true }); }
   if (d.build) { Object.assign(ch, presetOf(BUILD, d.build, ch.tpl)); return changed({ body: true }); }
   if (d.fit) { Object.assign(ch, presetOf(FIT, d.fit, ch.tpl)); return changed({ body: true }); }
-  if (d.tpl && petOf(ch)) { // back to a person: the body tapped, in the clothes they had
+  if (d.tpl && ch.animal) { // back to a person: the body tapped, in the clothes they had
     if (d.tpl !== ch.tpl) { const pre = presetChar(Object.keys(CFG.presets).find((k) => CFG.presets[k].tpl === d.tpl)); Object.assign(ch, { tpl: pre.tpl, height: pre.height }); setHair(ch, hairOf(pre)); }
     return becomePet(null);
   }
@@ -504,7 +534,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=60");
+    const { Collection } = await import("./collection.js?v=61");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -540,7 +570,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=45");
+    const { Trips } = await import("./trips.js?v=46");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -550,7 +580,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=30");
+  const { renderMemory } = await import("./memory.js?v=31");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.

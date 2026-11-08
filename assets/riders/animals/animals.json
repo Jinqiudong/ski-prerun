@@ -1,0 +1,54 @@
+{
+ "version": 1,
+ "animals": [
+  {
+   "id": "capybara",
+   "name": {
+    "zh": "水豚",
+    "en": "Capybara"
+   },
+   "file": "capybara.glb",
+   "height": 1.15,
+   "colors": {
+    "MAT_backpack": "#302c28",
+    "MAT_backpack_trim": "#60503c",
+    "MAT_beanie": "#f49228",
+    "MAT_blush": "#ee968a",
+    "MAT_boot_panel": "#342c28",
+    "MAT_boot_sole": "#1e1b1a",
+    "MAT_eye": "#1e1612",
+    "MAT_fur": "#deb88a",
+    "MAT_fur_2": "#764a2c",
+    "MAT_goggle_frame": "#222024",
+    "MAT_goggle_strap": "#2c2a2e",
+    "MAT_helmet": "#dedad0",
+    "MAT_jacket": "#8a8856",
+    "MAT_jacket_trim": "#e8e4d2",
+    "MAT_leaf": "#5c963e",
+    "MAT_lens": "#faaaec",
+    "MAT_nose": "#462c1e",
+    "MAT_pants": "#e2d6bc",
+    "MAT_stem": "#604e2c",
+    "MAT_zip": "#3c3a32"
+   },
+   "accessories": {
+    "ACC_Beanie": {
+     "zh": "橘子帽",
+     "default": true,
+     "hides": [
+      "Helmet_A"
+     ]
+    },
+    "ACC_Backpack": {
+     "zh": "背包",
+     "default": true
+    }
+   },
+   "helmet": "Helmet_A",
+   "overrides": [
+    "Stand_Idle__capybara"
+   ],
+   "tint": "material colour x COLOR_0 (MAT_fur, MAT_jacket, MAT_lens carry painted factors)"
+  }
+ ]
+}

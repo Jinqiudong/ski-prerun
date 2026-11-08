@@ -1,7 +1,8 @@
-// The rider page's animal tiles (外形 › 小动物): each resort animal standing on its board (src/rider/animal.js),
+// The rider page's animal tiles (外形 › 小动物): each resort animal standing on its board (src/rider/animal.js), and
+// each rigged animal (the capybara: character.js, its Stand_Idle) in its default colours,
 // three-quarters on, rendered once into a small transparent PNG under assets/riders/thumbs/animal_<name>.png.
 // Rerun it when an animal's model or animal.js's sizes change.
-// usage: node tools/render_animal_thumbs.mjs   (needs puppeteer-core: npm i --no-save puppeteer-core, and Google Chrome)
+// usage: node tools/render_animal_thumbs.mjs [name ...]   (only those; needs puppeteer-core: npm i --no-save puppeteer-core, and Google Chrome)
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join, extname, normalize } from "node:path";
@@ -18,8 +19,10 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 </head><body><script type="module">
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { ANIMAL_RIDERS } from "./src/rider/animal-core.js?v=1";
-import { animalRider, idleAnimal } from "./src/rider/animal.js?v=1";
+import { ANIMAL_RIDERS, RIGGED } from "./src/rider/animal-core.js?v=2";
+import { makeCharacter } from "./src/rider/character.js?v=13";
+const ONLY = ${JSON.stringify(process.argv.slice(2))};
+import { animalRider, idleAnimal } from "./src/rider/animal.js?v=3";
 const S = ${SIZE} * 2;
 const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 r.setSize(S, S); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.setClearColor(0, 0);
@@ -31,12 +34,13 @@ const rim = new THREE.DirectionalLight(0xdfe9ff, 1.2); rim.position.set(-3, 3, -
 const cam = new THREE.PerspectiveCamera(24, 1, 0.05, 50);
 const small = document.createElement("canvas"); small.width = small.height = ${SIZE};
 const out = {};
-for (const a of ANIMAL_RIDERS) {
-  const root = await animalRider({ animal: a, board: "A" });
+for (const a of [...RIGGED, ...ANIMAL_RIDERS].filter((a) => !ONLY.length || ONLY.includes(a))) {
+  let root, model;
+  if (RIGGED.includes(a)) { const C = await makeCharacter(a); C.set({ parts: {}, board: "A" }); C.play("Stand_Idle", { fade: 0 }); C.mixer.update(0); root = new THREE.Group(); root.add(C.root); model = C.root; }
+  else { root = await animalRider({ animal: a, board: "A" }); root.userData.gaze.wait = 1e9; idleAnimal(root); model = root.userData.model; }
   await new Promise((ok) => setTimeout(ok, 300)); // the board's pictures
-  root.userData.gaze.wait = 1e9; idleAnimal(root);
-  root.rotation.y = Math.PI / 2 - 0.65; sc.add(root); root.updateMatrixWorld(true);
-  const box = new THREE.Box3(); root.userData.model.traverse((o) => { if (o.isMesh) box.expandByObject(o); });
+  root.rotation.y = RIGGED.includes(a) ? 0.55 : Math.PI / 2 - 0.65; sc.add(root); root.updateMatrixWorld(true); // a rigged one faces +z, three-quarters on
+  const box = new THREE.Box3(); model.traverse((o) => { if (o.isMesh && o.visible) box.expandByObject(o); });
   const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
   c.y -= s.y * 0.04;
   const R = Math.max(s.x, s.y, s.z) * 0.56, dist = R / Math.tan(THREE.MathUtils.degToRad(12));

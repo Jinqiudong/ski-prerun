@@ -6,6 +6,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 export const CFG = await (await fetch("data/rider_templates.json?v=3")).json();
+// The rigged animal riders (the character AI's animals_A: assets/riders/animals/, animals.json): on the templates'
+// skeleton, so they play the people's clips; by id: { file, height, colors (MAT_* defaults), accessories, helmet, overrides }.
+export const PETS = Object.fromEntries((await (await fetch("assets/riders/animals/animals.json?v=1")).json()).animals.map((a) => [a.id, a]));
 export const PARTS = { hair: "ACC_Hair", hood: "ACC_Hood", vest: "ACC_Vest", visor: "ACC_Visor", stickers: "ACC_Stickers", hair_braid: "ACC_Hair_Braid" };
 // The parts toggled on and off (the hair is a style, below).
 export const PART_LABEL = { hood: "帽兜", vest: "马甲", visor: "帽檐", stickers: "贴纸", grid: "格纹" };
@@ -22,7 +25,7 @@ export const TRICKS = [["Anim_Ollie", "Ollie"], ["Anim_Indy_Air", "Indy"], ["Ani
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 const files = {};
-const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}.glb?v=4`));
+const fileOf = (tpl) => (files[tpl] ||= loader.loadAsync(PETS[tpl] ? `assets/riders/animals/${PETS[tpl].file}?v=1` : `assets/riders/tpl_${tpl.toLowerCase()}.glb?v=5`));
 // The ride's clips (stance, turns, lift, air, stops, falls, chairlift talk, radio) live in a second, skeleton-only file;
 // tracks bind by bone name, so they play on the template as they are. Only the ride needs them.
 const rides = {};
@@ -30,14 +33,35 @@ const rideOf = (tpl) => (rides[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tp
 // The light version for the ride (about 30k triangles drawn, 512 px textures): the same skeleton, names and
 // morphs, and no clips of its own. Each file loads once; every rider made from it shares its geometry and textures.
 const lods = {};
-const lodOf = (tpl) => (lods[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_lod.glb?v=1`));
-export const loadTemplate = (tpl, { lod = false } = {}) => Promise.all(lod ? [lodOf(tpl), rideOf(tpl)] : [fileOf(tpl)]);
+const lodOf = (tpl) => (lods[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_lod.glb?v=2`));
+// An animal has one file for the rider page and the ride (no light version); its clips are the woman's template's
+// (the same rest orientations), from tpl_f.glb or tpl_f_ride.glb.
+const CLIPS_OF = "F";
+export const loadTemplate = (tpl, { lod = false } = {}) => Promise.all(PETS[tpl] ? [fileOf(tpl), lod ? rideOf(CLIPS_OF) : fileOf(CLIPS_OF)]
+  : lod ? [lodOf(tpl), rideOf(tpl)] : [fileOf(tpl)]);
+// The clips an animal can play, made once per animal and set of clips:
+// - only the rotations, plus Board's and Hips' moves: the people's clips key every bone's position and scale at a
+//   person's proportions, which would pull the animal's short limbs back to a person's length (animals_A handoff);
+// - its own version of a clip, <Clip>__<animal>, in place of the people's (Stand_Idle__capybara);
+// - without its own version, the clips its short arms can't do are left out (the grabs, holding the board, the
+//   radio, the photo): the ride's trick wheel and the rider page's poses don't offer them.
+export const PET_NEEDS_OWN = ["Board_Hold", "Pose_Hold_Photo", "Radio_Talk_Stand", "Radio_Talk_Ride", "Indy_Grab", "Melon_Grab", "Tail_Grab", "Anim_Indy_Air", "Anim_Method_Air", "Entrance_D"];
+const petClips = {};
+function clipsForPet(id, own, people, key) {
+  return (petClips[id + key] ||= (() => {
+    const keep = (c) => { c = c.clone(); c.tracks = c.tracks.filter((t) => t.name.endsWith(".quaternion") || /^(Board|Hips)\./.test(t.name)); return c; };
+    const mine = Object.fromEntries(own.filter((c) => c.name.endsWith(`__${id}`)).map((c) => [c.name.slice(0, -id.length - 2), c]));
+    return people.filter((c) => mine[c.name] || !PET_NEEDS_OWN.includes(c.name)).map((c) => { const k = keep(mine[c.name] || c); k.name = c.name; return k; });
+  })());
+}
 
 // A fresh copy of a template, ready to dress and pose: { root, tpl, set(ch), play(name), step(dt) }.
 // { ride }: the full template with the ride's clips too; { lod }: the light one with only the ride's clips.
+// tpl may be a rigged animal's id (PETS): its own file, the people's clips (clipsForPet), its own colours and parts.
 export async function makeCharacter(tpl, { ride = false, lod = false } = {}) {
-  const g = await (lod ? lodOf(tpl) : fileOf(tpl));
-  const animations = lod ? (await rideOf(tpl)).animations : ride ? [...g.animations, ...(await rideOf(tpl)).animations] : g.animations;
+  const pet = PETS[tpl] || null, g = await (lod && !pet ? lodOf(tpl) : fileOf(tpl)), src = pet ? CLIPS_OF : tpl, own = pet ? (await fileOf(src)).animations : g.animations;
+  let animations = lod ? (await rideOf(src)).animations : ride ? [...own, ...(await rideOf(src)).animations] : own;
+  if (pet) animations = clipsForPet(tpl, g.animations, animations, lod ? "lod" : ride ? "ride" : "page");
   const { clone } = await import("three/addons/utils/SkeletonUtils.js");
   const root = clone(g.scene);
   root.traverse((o) => {
@@ -54,8 +78,8 @@ export async function makeCharacter(tpl, { ride = false, lod = false } = {}) {
   const mixer = new THREE.AnimationMixer(root), clips = Object.fromEntries(animations.map((c) => [c.name, c]));
   let action = null, held = true, t = 0; const off = [], gaze = { y: 0, p: 0, ty: 0, tp: 0, wait: 3 };
   const C = {
-    root, tpl, bones, mixer, clips,
-    set(ch) { applyCharacter(root, CFG.templates[tpl], ch); },
+    root, tpl, bones, mixer, clips, pet, tall: pet ? pet.height : 0,
+    set(ch) { if (pet) applyPet(root, pet, ch); else applyCharacter(root, CFG.templates[tpl], ch); },
     // A pose holds its frame at 1 s; a trick plays on a loop. Crossfade between them.
     // { once, dur }: play it through once (stretched to dur seconds) and hold the last frame.
     play(name, { once = false, dur = 0, fade = 0.25 } = {}) {
@@ -180,6 +204,24 @@ export function applyCharacter(root, tpl, ch) {
       const lum = m.color.r * 0.3 + m.color.g * 0.59 + m.color.b * 0.11;
       m.emissive?.setScalar(ch.parts.grid ? 0.05 * Math.max(0, 1 - lum * 4) : 0); m.needsUpdate = true;
     }
+  } });
+}
+
+// A rigged animal (PETS) as a look has it: its own size (the file is at the animal's size: scale 1, never a
+// person's height ratio), its colours (ch.pet.colors over animals.json's), its accessories (ch.parts.beanie,
+// ch.parts.backpack; the beanie hides the helmet), the board picked. No body sliders: it has no morphs.
+export const petAcc = (pet) => Object.keys(pet.accessories || {}).map((n) => [n.replace(/^ACC_/, "").toLowerCase(), n]);
+export const petParts = (pet, ch) => Object.fromEntries(petAcc(pet).map(([k, n]) => [k, k in (ch.parts || {}) ? !!ch.parts[k] : pet.accessories[n].default !== false]));
+function applyPet(root, pet, ch) {
+  root.scale.setScalar(1);
+  const on = petParts(pet, ch), cols = { ...pet.colors, ...(ch.pet?.colors || {}) }, hide = new Set();
+  for (const [k, n] of petAcc(pet)) { const o = root.getObjectByName(n); if (o) o.visible = on[k]; if (on[k]) for (const h of pet.accessories[n].hides || []) hide.add(h); }
+  if (pet.helmet) { const h = root.getObjectByName(pet.helmet); if (h) h.visible = !hide.has(pet.helmet); }
+  root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) {
+    const c = cols[m.name]; if (c) m.color.set(c);
+    const side = m.name === "MAT_board_top" ? "top" : m.name === "MAT_board_base" ? "base" : null;
+    if (side && ch.board && m.userData.board !== ch.board) { m.map = texOf(ch.board, side); m.color.set("#ffffff"); m.needsUpdate = true; m.userData.board = ch.board; }
+    if (m.name === "MAT_helmet") { m.roughness = ch.glossyHelmet ? 0.55 : 0.78; m.metalness = ch.glossyHelmet ? 0.25 : 0; }
   } });
 }
 

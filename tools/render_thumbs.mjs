@@ -19,7 +19,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 </head><body><script type="module">
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { makeCharacter, presetChar } from "./src/rider/character.js?v=12";
+import { makeCharacter, presetChar } from "./src/rider/character.js?v=13";
 const S = ${SIZE} * 2;
 const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 r.setSize(S, S); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.setClearColor(0, 0);
