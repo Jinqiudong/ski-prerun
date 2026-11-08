@@ -14,6 +14,21 @@ export const POSES = [
   { id: "cheer", src: "assets/icons/ride_crayon_2.png?v=1" },
 ];
 
+// Someone riding as a rigged animal (the capybara) stands in the photo as that animal, not as a person: its
+// picture on a transparent ground (tools/render_animal_thumbs.mjs --photo), drawn as it is (in its default colours,
+// not repainted). A crayon sheet of it, when the owner paints one, drops in here instead.
+const ANIMAL_ART = { capybara: "assets/riders/animals/capybara_photo.png?v=1" };
+const artSheets = new Map();
+const artOf = (src) => {
+  if (!artSheets.has(src)) artSheets.set(src, loadImg(src).then((im) => {
+    const w = im.naturalWidth, h = im.naturalHeight, c = canvas(w, h), g = c.getContext("2d"); g.drawImage(im, 0, 0);
+    const data = g.getImageData(0, 0, w, h), px = data.data; let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    return { w, h, data, part: new Uint8Array(w * h), val: new Float32Array(w * h), bbox: [x0, y0, x1 + 1, y1 + 1], animal: true };
+  }));
+  return artSheets.get(src);
+};
+
 export const W = 900, H = 700;
 // A day with no mountain picked: the snowy ridges in the heart of the Colorado watercolour (the start page's map).
 const GENERAL = { url: "assets/wc/colorado.jpg?v=6", crop: [1230, 1230, 600, 467] };
@@ -146,7 +161,7 @@ export async function renderPhoto(spec) {
   const start = hashOf(`${spec.date}`) % POSES.length;
   // Poses: round the list from a start picked by the day, so neighbours differ.
   const poses = ppl.map((p, i) => POSES[(start + i * (POSES.length > 2 ? 2 : 1)) % POSES.length]);
-  const sh = await Promise.all(poses.map(sheetOf));
+  const sh = await Promise.all(poses.map((pose, i) => { const a = ANIMAL_ART[ppl[i].rider?.ch?.animal]; return a ? artOf(a) : sheetOf(pose); }));
   const out = canvas(W, H), g = out.getContext("2d");
   cover(g, bgIm, bg.crop, 0, 0, W, H);
   // The snow bank they stand on.
@@ -158,7 +173,7 @@ export async function renderPhoto(spec) {
   const step = fh * 0.68, x0 = W / 2 - ((n - 1) * step) / 2;
   const figs = ppl.map((p, i) => {
     const r = rng(`${spec.date}:${p.key}`), s = sh[i], [bx0, by0, bx1, by1] = s.bbox;
-    const k = (fh / (by1 - by0)) * (0.92 + r() * 0.14);
+    const k = (fh / (by1 - by0)) * (0.92 + r() * 0.14) * (s.animal ? 0.95 : 1); // an animal stands a little shorter
     const back = n > 2 && i % 2 === 1; // every other one a step back, a little higher and smaller
     return { s, p, k: back ? k * 0.92 : k, x: x0 + i * step + (r() - 0.5) * step * 0.18, foot: H * (back ? 0.86 : 0.93) - r() * H * 0.02, tilt: (r() - 0.5) * 0.16, flip: i > (n - 1) / 2 || (n === 1 && r() < 0.5), back, bw: bx1 - bx0, bh: by1 - by0, bx0, by0 };
   });

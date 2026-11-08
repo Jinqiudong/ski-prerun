@@ -5,7 +5,11 @@
 
 // In the order the rider page shows them: the small ones first.
 export const ANIMAL_RIDERS = ["pika", "hare", "marmot", "ptarmigan", "fox", "sheep", "bear", "elk", "moose"];
-export const ANIMAL_ZH = { pika: "鼠兔", hare: "雪兔", marmot: "土拨鼠", ptarmigan: "雷鸟", fox: "狐狸", sheep: "大角羊", bear: "黑熊", elk: "马鹿", moose: "驼鹿" };
+// The rigged animals (the character AI's, on the riders' skeleton: character.js PETS, assets/riders/animals/): they
+// play the people's clips, wear their own colours (ch.pet.colors) and accessories (ch.parts), and come before the
+// resort animals on the rider page.
+export const RIGGED = ["capybara"];
+export const ANIMAL_ZH = { capybara: "水豚", pika: "鼠兔", hare: "雪兔", marmot: "土拨鼠", ptarmigan: "雷鸟", fox: "狐狸", sheep: "大角羊", bear: "黑熊", elk: "马鹿", moose: "驼鹿" };
 // Toy sizes on a 1.5 m board, in metres: nose to tail at most `len`, and no taller than `tall` (antlers included).
 export const ANIMAL_SIZE = {
   pika: { len: 0.72, tall: 0.62 }, hare: { len: 0.8, tall: 0.95 }, marmot: { len: 0.82, tall: 0.62 }, ptarmigan: { len: 0.7, tall: 0.72 },
@@ -13,7 +17,17 @@ export const ANIMAL_SIZE = {
 };
 
 // One of the animals, or null (a look comes from this phone's storage or over the wire).
-export const animalOf = (v) => (typeof v === "string" && ANIMAL_RIDERS.includes(v) ? v : null);
+export const animalOf = (v) => (typeof v === "string" && (ANIMAL_RIDERS.includes(v) || RIGGED.includes(v)) ? v : null);
+// A rigged animal (drawn by character.js), or null (a person, or a resort animal drawn by animal.js).
+export const riggedOf = (v) => (typeof v === "string" && RIGGED.includes(v) ? v : null);
+// One of the resort animals (animal.js), or null.
+export const deskPetOf = (v) => (typeof v === "string" && ANIMAL_RIDERS.includes(v) ? v : null);
+// A rigged animal's own colours in a look (ch.pet.colors: MAT_* → #rrggbb), only the right kinds of value.
+export function petColors(c) {
+  const out = {};
+  if (c && typeof c === "object") for (const [k, v] of Object.entries(c).slice(0, 40)) if (/^MAT_\w{1,30}$/.test(k) && /^#[0-9a-f]{6}$/i.test(v)) out[k] = v;
+  return out;
+}
 // The animal a look's rider (core/look.js: { ch }, ...) rides as: ch.animal, or null for a person. The rest of
 // ch (template, colours, board) stays as it was, so a person comes back in the same clothes.
 export const lookAnimal = (rider) => animalOf(rider?.ch?.animal);

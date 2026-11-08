@@ -5,10 +5,10 @@
 // braking and crouching. A few play through: the push, the walk with the board, the pop, a fall and getting
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
-import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=12";
-import { myRiderLook } from "../core/look.js?v=17";
-import { animalOf } from "./animal-core.js?v=1";
-import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=2";
+import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
+import { myRiderLook } from "../core/look.js?v=18";
+import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
+import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.
@@ -38,7 +38,11 @@ export function charOfLook(rider) {
     for (const s of CFG.sliders) ch[s.key] = clamp(c[s.key], s.lo, s.hi, base[s.key]);
     for (const k of Object.keys(ch.parts)) if (k in (c.parts || {})) ch.parts[k] = !!c.parts[k];
     for (const [m, v] of Object.entries(c.colors || {})) if (/^MAT_\w+$/.test(m) && HEX.test(v)) ch.colors[m] = v;
-    if (animalOf(c.animal)) ch.animal = c.animal; // riding as one of the resort animals (animal.js)
+    if (animalOf(c.animal)) ch.animal = c.animal; // riding as one of the resort animals (animal.js), or a rigged one
+    if (riggedOf(c.animal)) { // its own colours and accessories (character.js applyPet)
+      ch.pet = { colors: petColors(c.pet?.colors) };
+      for (const k of ["beanie", "backpack"]) if (k in (c.parts || {})) ch.parts[k] = !!c.parts[k];
+    }
     return ch;
   }
   const ch = presetChar(CFG.presets[rider?.preset] ? rider.preset : "A");
@@ -59,7 +63,7 @@ export function myRider() {
 
 // Start loading a template's light version and its clips (mine by default; or my animal's file, if I ride as
 // one); boarderModel waits for it anyway.
-export const loadBoarder = (tpl = null) => { const ch = myRider().ch; return !tpl && ch.animal ? loadAnimal(ch.animal) : loadTemplate(tpl || ch.tpl, { lod: true }); };
+export const loadBoarder = (tpl = null) => { const ch = myRider().ch; return !tpl && deskPetOf(ch.animal) ? loadAnimal(ch.animal) : loadTemplate(tpl || riggedOf(ch.animal) || ch.tpl, { lod: true }); };
 
 const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 // The clips the ride plays, by what it calls them. Held at their peak, except the ones marked played.
@@ -83,8 +87,9 @@ const RADIO_BONES = ["ShoulderR", "UpperArmR", "ForearmR", "HandR", "Neck", "Hea
 export async function boarderModel(friend = null) {
   const me = friend ? { ch: charOfLook(friend.rider), stance: friend.stance === "goofy" ? "goofy" : "regular" } : myRider();
   // An animal on its board instead (animal.js): every pose function below hands it on.
-  if (me.ch.animal) return animalRider({ animal: me.ch.animal, board: me.ch.board, stance: me.stance });
-  const C = await makeCharacter(me.ch.tpl, { lod: true });
+  if (deskPetOf(me.ch.animal)) return animalRider({ animal: me.ch.animal, board: me.ch.board, stance: me.stance });
+  // A rigged animal (character.js PETS) rides as a person does: the same clips, on its own file.
+  const C = await makeCharacter(riggedOf(me.ch.animal) || me.ch.tpl, { lod: true });
   C.set(me.ch);
   const root = new THREE.Group(), yaw = new THREE.Group(), lean = new THREE.Group(), model = C.root;
   root.add(yaw); yaw.add(lean); lean.add(model);
@@ -130,7 +135,7 @@ export async function boarderModel(friend = null) {
   // The leading foot (the one nearer the nose, +z): it stays strapped in on the chairlift.
   const lead = root.worldToLocal(B.footL.getWorldPosition(new THREE.Vector3())).z > 0 ? "L" : "R";
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", C, tpl: me.ch.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ,
+  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ,
     edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0, radio: 0 } };
   return root;
 }
@@ -334,6 +339,11 @@ function radioOver(u, dt) {
 // (kitworld.js), so the hips go just above it. Off the chair: standing on the board, gliding down the ramp.
 // talk: a friend beside you on the chair, +1 on your left (+x), -1 on your right: Chairlift_Sit_Talk.
 export const SEAT = new THREE.Vector3(0, 0.6, -0.08);
+// A rigged animal (the capybara) on the chair: the people's sit puts its short legs straight out along the seat, so
+// its feet rest on the seat and the board, hanging from the lead foot, cuts up through it. It sits further forward
+// instead (PET_FWD): its legs reach out past the seat's front edge, as a small animal sits, and the board hangs in
+// front of the chair.
+const PET_FWD = 0.2;
 const _v = new THREE.Vector3();
 function faceForward(u) {
   u.yaw.rotation.set(0, u.toeX < 0 ? Math.PI / 2 : -Math.PI / 2, 0); // chest (the toes' side) to +z
@@ -369,6 +379,11 @@ export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
   const h = root.worldToLocal(B.hips.getWorldPosition(_v));
   u.model.position.x -= h.x - seat.x; u.model.position.z -= h.z - seat.z;
   u.yaw.position.y = seat.y - h.y;
+  if (u.C?.pet) { // forward on the seat: the root's +z (the way the chest faces) in the model's parent's frame
+    root.updateMatrixWorld(true);
+    const o = u.model.parent.worldToLocal(root.localToWorld(_v.set(0, 0, 0))).clone(), f = u.model.parent.worldToLocal(root.localToWorld(_v.set(0, 0, PET_FWD)));
+    u.model.position.add(f.sub(o));
+  }
   finish(root);
 }
 // On the chair: a wave (Chairlift_Wave) or pointing ahead (Chairlift_Point), once.

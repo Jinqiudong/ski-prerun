@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
-import { animalOf, ANIMAL_SIZE } from "./animal-core.js?v=1";
+import { deskPetOf, ANIMAL_SIZE } from "./animal-core.js?v=2";
 
 const gltf = new GLTFLoader();
 const files = {}; // animal → { p: the loaded file, n: riders made from it }
@@ -78,7 +78,7 @@ const STANCE = 0.32;
 // root sits at the board's base with local +z the way it rides, as boarder.js's rider does:
 //   root → yaw (board skidding across) → lean (board on its edge) → board, and turn (the stance) → body → model
 export async function animalRider({ animal, board = "A", stance = "regular" }) {
-  const a = animalOf(animal) || "fox";
+  const a = deskPetOf(animal) || "fox";
   const g = await loadAnimal(a); files[a].n++;
   const { box, legs, spineY } = g.userData.fit, Z = ANIMAL_SIZE[a];
   const sc = Math.min(Z.len / (box.max.z - box.min.z), Z.tall / (box.max.y - box.min.y));

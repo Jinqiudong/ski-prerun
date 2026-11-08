@@ -1,7 +1,7 @@
 // Riding together, the parts with no DOM and no three.js (tested in node: tests/together.test.mjs): which
 // shared trip the ride belongs to, what a friend's state message may hold, who shares which chair and in
 // which seat, when my own state is worth sending again, and the words for where a friend is.
-import { animalOf } from "../rider/animal-core.js?v=1";
+import { animalOf, riggedOf, petColors } from "../rider/animal-core.js?v=2";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ID = /^[\w-]{4,40}$/;
@@ -86,6 +86,7 @@ export function cleanRider(r) {
     if (/^[A-D]$/.test(c.board)) ch.board = c.board;
     if (c.glossyHelmet === true) ch.glossyHelmet = true;
     if (animalOf(c.animal)) ch.animal = c.animal;
+    if (riggedOf(c.animal) && c.pet && typeof c.pet === "object") ch.pet = { colors: petColors(c.pet.colors) }; // its own colours
     return { ch };
   }
   const out = {};

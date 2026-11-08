@@ -8,11 +8,11 @@ import { markMoguls } from "../ride/snow-core.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=2";
-import { addStep } from "../ride/roadbook.js?v=26";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=46";
-import { openNav } from "../core/nav.js?v=23";
-import { liftTicket } from "../core/transition.js?v=16";
-import { startParty } from "../core/party.js?v=15";
+import { addStep } from "../ride/roadbook.js?v=27";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=47";
+import { openNav } from "../core/nav.js?v=24";
+import { liftTicket } from "../core/transition.js?v=17";
+import { startParty } from "../core/party.js?v=16";
 import { bunnySpot } from "../ride/practice-core.js?v=1";
 import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
 
