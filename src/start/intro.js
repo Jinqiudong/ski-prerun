@@ -178,7 +178,7 @@ function stage(box, st, mood, still) {
 //   during  "day 2 · Copper today", the planes parked at Denver, a tap straight to the mountain
 //   after   the week after: the planes fly home over the whole way, a tap to the Memory tab
 async function tripData(P) {
-  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=44"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
+  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=45"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
   const tr = P.trip, today = ymd(new Date()), byId = Object.fromEntries((Array.isArray(resorts) ? resorts : []).map((r) => [r.id, r]));
   const crew = crewOf(tr, { mine: myAvatar(), avatars: AVATARS }).slice(0, 6);
   if (!crew.length) crew.push({ name: "", from: "", face: myAvatar(), me: true, note: "" });

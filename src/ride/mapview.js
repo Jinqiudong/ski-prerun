@@ -16,13 +16,14 @@ export class TrailMap {
   // The figure that stands for you: an image URL (a transparent full-body picture of your rider).
   setAvatar(src) { const im = new Image(); im.onload = () => (this.avatar = im); im.src = src; }
 
-  // Paint the whole map once (lazily: it takes a moment).
-  build() {
-    if (this.base) return;
+  // Paint the whole map once (lazily: it takes a moment). quiet: no names (the roadbook's ground, which turns).
+  build(quiet = false) {
+    if (quiet ? this.quietBase : this.base) return;
     const { T, R, mask } = this, W = Math.max(T.x1 - T.x0, T.z1 - T.z0);
     const s = (this.s = Math.min(0.5, 2000 / W)); // pixels per metre
     const cw = Math.round((T.x1 - T.x0) * s), ch = Math.round((T.z1 - T.z0) * s);
-    const c = (this.base = document.createElement("canvas")); c.width = cw; c.height = ch;
+    const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+    if (quiet) this.quietBase = c; else this.base = c;
     const g = c.getContext("2d");
     const P = (x, z) => [(x - T.x0) * s, (z - T.z0) * s];
     // Snow with soft relief, lit from the north-west, painted small and smoothed up.
@@ -64,6 +65,7 @@ export class TrailMap {
     }
     // Lodges.
     for (const b of this.bases) this.hut(g, ...P(b.x, b.z), 26 * s * 2, "#c9563f", "#f1e6d2");
+    if (quiet) return;
     // Names: runs along their middle, lifts and lodges by their huts (the huts say which is which).
     const label = (text, u, v, size, fg, bg) => {
       g.font = `700 ${size}px "Avenir Next Rounded", "Arial Rounded MT Bold", -apple-system, "PingFang SC", sans-serif`;
@@ -146,6 +148,60 @@ export class TrailMap {
       if (up != null) this.drawYou(g, cv.width / 2, cv.height / 2, Math.PI, t, dpr, px(150, 26, 54));
       else this.drawYou(g, ...S(you.x, you.z), you.heading, t, dpr, px(150, 26, 54));
     }
+  }
+
+  // The roadbook's map: only what was ridden (roadbook-core.js mapItems) on the quiet ground faded under a
+  // paper wash (Safari has no ctx.filter), turned so the lifts climb up the page. Lifts are straight dashed
+  // lines with the legs' numbers at the bottom; real runs in ink with their names, connectors dotted.
+  // o: { dpr, lodge (an Image), you: { x, z } }.
+  drawBook(cv, items, { dpr = 1, lodge = null, you = null, t = 0 } = {}) {
+    this.build(true);
+    const g = cv.getContext("2d"), W = cv.width, H = cv.height, T = this.T;
+    let dx = 0, dz = 0; for (const l of items.lifts) { dx += l.b[0] - l.a[0]; dz += l.b[1] - l.a[1]; }
+    const rot = dx || dz ? -Math.PI / 2 - Math.atan2(dz, dx) : 0, c = Math.cos(rot), sn = Math.sin(rot);
+    const turn = (x, z) => [x * c - z * sn, x * sn + z * c];
+    const all = [...items.lifts.flatMap((l) => [l.a, l.b]), ...items.lines.flatMap((l) => l.pts), ...items.lodges];
+    if (!all.length) all.push([0, 0]);
+    const tp = all.map((p) => turn(...p)), us = tp.map((p) => p[0]), vs = tp.map((p) => p[1]);
+    const mu = (Math.min(...us) + Math.max(...us)) / 2, mv = (Math.min(...vs) + Math.max(...vs)) / 2;
+    const zoom = Math.min(0.6, (W / dpr) / (Math.max(...us) - Math.min(...us) + 420), (H / dpr) / (Math.max(...vs) - Math.min(...vs) + 520)) * dpr;
+    const cx = mu * c + mv * sn, cz = -mu * sn + mv * c; // the middle, back in the world
+    const S = (x, z) => { const [u, v] = turn(x - cx, z - cz); return [u * zoom + W / 2, v * zoom + H / 2]; };
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = "#f3efe6"; g.fillRect(0, 0, W, H);
+    g.save(); g.translate(W / 2, H / 2); g.rotate(rot); g.scale(zoom / this.s, zoom / this.s); g.translate(-(cx - T.x0) * this.s, -(cz - T.z0) * this.s);
+    g.imageSmoothingEnabled = true; g.drawImage(this.quietBase, 0, 0); g.restore();
+    g.fillStyle = "rgba(246,241,231,.68)"; g.fillRect(0, 0, W, H);
+    const INK = { easy: "#2e8b4f", intermediate: "#2a5db0", advanced: "#1c1f25", expert: "#1c1f25" };
+    const path = (pts) => { g.beginPath(); pts.forEach((p, i) => (i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p)))); };
+    g.lineCap = g.lineJoin = "round";
+    for (const l of items.lines) if (!l.real) { path(l.pts); g.setLineDash([0.1, 5 * dpr]); g.globalAlpha = 0.8; g.strokeStyle = INK[l.level] || INK.intermediate; g.lineWidth = 3 * dpr; g.stroke(); g.globalAlpha = 1; g.setLineDash([]); }
+    for (const l of items.lines) if (l.real) { path(l.pts); g.strokeStyle = "rgba(253,251,246,.95)"; g.lineWidth = 7 * dpr; g.stroke(); g.strokeStyle = INK[l.level] || INK.intermediate; g.lineWidth = 3.6 * dpr; g.stroke(); }
+    for (const l of items.lifts) {
+      const a = S(...l.a), b = S(...l.b);
+      g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.strokeStyle = "rgba(253,251,246,.9)"; g.lineWidth = 4.5 * dpr; g.stroke();
+      g.setLineDash([6 * dpr, 4 * dpr]); g.strokeStyle = "#22344d"; g.lineWidth = 2 * dpr; g.stroke(); g.setLineDash([]);
+      g.fillStyle = "#22344d"; g.beginPath(); g.arc(...b, 3 * dpr, 0, Math.PI * 2); g.fill();
+    }
+    // names of the real runs, kept clear of each other and of the numbers
+    const taken = [], th = 13 * dpr, hit = (x0, y0, x1, y1) => taken.some((b) => x0 < b[2] && x1 > b[0] && y0 < b[3] && y1 > b[1]);
+    for (const l of items.lifts) { const [u, v] = S(...l.a); taken.push([u - 16 * dpr, v - 10 * dpr, u + 16 * dpr, v + 10 * dpr]); }
+    g.font = `italic 600 ${11 * dpr}px "Cormorant Garamond", "Noto Serif SC", serif`; g.textBaseline = "middle"; g.textAlign = "left";
+    for (const lb of items.labels) {
+      const [u, v] = S(...lb.at), w = g.measureText(lb.text).width;
+      const spot = [[8, 0], [-w / dpr - 8, 0], [8, -14], [8, 14], [-w / dpr - 8, -14], [-w / dpr - 8, 14], [8, 28]].map(([ox, oy]) => [u + ox * dpr, v + oy * dpr]).find(([x, y]) => !hit(x, y - th / 2, x + w, y + th / 2));
+      if (!spot) continue;
+      taken.push([spot[0], spot[1] - th / 2, spot[0] + w, spot[1] + th / 2]);
+      g.lineWidth = 4 * dpr; g.strokeStyle = "rgba(251,247,238,.95)"; g.strokeText(lb.text, ...spot); g.fillStyle = "#22344d"; g.fillText(lb.text, ...spot);
+    }
+    for (const l of items.lifts) {
+      const [u, v] = S(...l.a), txt = l.nos.join("·"), r = 9 * dpr, w = Math.max(2 * r, (txt.length * 6 + 8) * dpr);
+      g.fillStyle = "#22344d"; g.strokeStyle = "#fdfbf6"; g.lineWidth = 2 * dpr;
+      g.beginPath(); g.roundRect ? g.roundRect(u - w / 2, v - r, w, 2 * r, r) : g.rect(u - w / 2, v - r, w, 2 * r); g.fill(); g.stroke();
+      g.fillStyle = "#fdfbf6"; g.font = `500 ${11 * dpr}px Oswald, sans-serif`; g.textAlign = "center"; g.fillText(txt, u, v + 0.5 * dpr);
+    }
+    if (lodge?.complete && lodge.naturalWidth) for (const p of items.lodges) { const [u, v] = S(...p); g.drawImage(lodge, u - 40 * dpr, v - 24 * dpr, 26 * dpr, 26 * dpr); }
+    if (you) { const [u, v] = S(you.x, you.z); if (u > 0 && v > 0 && u < W && v < H) this.drawYou(g, u, v, (you.heading || 0) - rot, t, dpr, 40 * dpr); }
   }
 
   // You: your rider, a little full-body figure (rendered from the 3D model), hopping on the spot, with a

@@ -8,8 +8,8 @@
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
 import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=45";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
-import { daysOf } from "../ride/roadbook.js?v=25";
-import { myLook, sameLook } from "../core/look.js?v=16";
+import { daysOf } from "../ride/roadbook.js?v=26";
+import { myLook, sameLook } from "../core/look.js?v=17";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
