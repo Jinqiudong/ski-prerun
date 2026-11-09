@@ -9,9 +9,9 @@
 // button: behind, the way up). Each rider says their seat (k, and when they took it: kt); together-core's chairSeats settles
 // who sits where the same way on every phone, so two riders never share one. Tap the free seat beside you
 // to move over. The painted map shows them; "去找他" flies you over the mountain
-// to land beside them, "跟随" keeps your route on them; quick messages pop over their tags. Voice (voice.js):
-// friends near you are heard where they are, the walkie-talkie reaches everyone; peer to peer, set up on
-// the same channel.
+// to land beside them, "跟随" keeps your route on them; quick messages pop over their tags. Voice is the
+// party's 对讲机 (src/core/voice.js, in the shell, the same call on every page): here a ring on a friend's tag
+// while they speak, their rider raising the radio while they talk (mine too, while I do), and mute on their card.
 // Riding alone, or on a trip that isn't shared: nothing is built and nothing is sent.
 // The rules with no DOM (which trip, seats, what a message may hold) are in together-core.js.
 // In a party (src/core/party.js), the party picks the trip, and the ride is its hands: where I am for the
@@ -24,7 +24,7 @@ import { t, myAvatar } from "../core/i18n.js?v=47";
 import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=16";
 import { ymd } from "../start/trip-intro.js?v=1";
 import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=7";
-import { rideVoice } from "./voice.js?v=14";
+import { voiceHere } from "../core/voice.js?v=1";
 
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = HOLD_MAX;
 const SIT = 900, SETTLE = 2400; // sitting down (ms); the boarding moment before a held chair goes
@@ -44,6 +44,11 @@ const CSS = `
 .tgTag::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; border: 4px solid transparent; border-top-color: #cbbfa9; border-bottom: 0; }
 .tgTag .say { position: absolute; left: 50%; bottom: calc(100% + 7px); transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 4px 10px 4px 5px; border-radius: 14px; background: #22344d; color: #fdfbf6; font: 600 13px "Noto Serif SC", serif; animation: tg-pop .3s cubic-bezier(.3,1.5,.5,1); }
 .tgTag .say img { width: 22px; height: 22px; background: none; }
+.tgTag .spk { width: 18px !important; height: 18px !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; animation: none !important; margin-left: 2px; }
+.tgTag.talk img:first-child { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #3f7d5c; animation: vc-ring .9s ease-in-out infinite alternate; }
+.tgTag .vc { margin-left: 2px; padding: 0 6px; border-radius: 8px; background: #22344d; color: #fdfbf6; font: 600 11px/17px "Noto Serif SC", serif; }
+.tgTag.muted img:first-child { filter: grayscale(1); opacity: .6; } .tgTag.muted .vc { background: #8a8278; }
+@keyframes vc-ring { to { box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 6px rgba(63,125,92,.55); } }
 .tgTag .say::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -5px; border: 5px solid transparent; border-top-color: #22344d; border-bottom: 0; }
 #tgToasts { position: fixed; left: 0; right: 0; top: calc(84px + env(safe-area-inset-top)); z-index: 14; display: grid; justify-items: center; gap: 6px; pointer-events: none; }
 .tgToast { display: flex; align-items: center; gap: 7px; max-width: 80vw; padding: 5px 14px 5px 5px; border-radius: 999px; background: rgba(253,251,246,.96); color: #22344d; box-shadow: 0 6px 14px rgba(40,30,20,.22); font: 14px "Noto Serif SC", serif; animation: tg-in .35s ease-out; transition: opacity .5s, transform .5s; }
@@ -133,7 +138,8 @@ export function rideTogether(api) {
   // ---- The channel
   const ch = new Channel(`ride:${tripId}:${api.resort}`, onMessage, { onJoin: () => ch.broadcast("hi", { ...profile(), ask: true }) });
   addEventListener("pagehide", () => { ch.broadcast("bye", { id: me }); ch.close(); });
-  const voice = rideVoice({ ch, me, camera, myPos: (out) => ctx.rider.getWorldPosition(out), talk: (on) => talkBoarder(ctx.rider, on), nameOf: (id) => friends.get(id)?.name || t("朋友") });
+  const NOVOICE = { stateOf: () => ({}), mute() {}, meTalking: false };
+  const voice = () => voiceHere() || NOVOICE; // the shell's 对讲机
   const alive = () => [...friends.values()].filter((f) => f.s && !f.gone && performance.now() - f.at < STALE);
   function friend(id) {
     let f = friends.get(id);
@@ -148,7 +154,6 @@ export function rideTogether(api) {
   function onMessage(ev, p) {
     rx[ev] = (rx[ev] || 0) + 1;
     if (!p || p.id === me) return;
-    if (ev === "v" || ev === "vs") { voice.onMessage(ev, p); return; }
     const now = performance.now();
     if (ev === "hi") {
       const h = cleanHi(p); if (!h) return;
@@ -158,7 +163,7 @@ export function rideTogether(api) {
       if (JSON.stringify([f.colors, f.rider, f.stance]) !== JSON.stringify([h.colors, look, h.stance])) { Object.assign(f, { colors: h.colors, rider: look, stance: h.stance }); dropModel(f); }
       Object.assign(f, { name: h.name || t("朋友"), avatar: h.avatar });
       if (f.tag) fillTag(f);
-      if (h.ask) { ch.broadcast("hi", { ...profile(), ask: false }); last = null; voice.hello(h.id); } // and my state at the next tick
+      if (h.ask) { ch.broadcast("hi", { ...profile(), ask: false }); last = null; } // and my state at the next tick
       if (fresh && f.s) toast(f.avatar, t("{name} 也在山上", { name: esc(f.name) }));
     } else if (ev === "s") {
       const s = cleanState(p); if (!s) return;
@@ -178,7 +183,6 @@ export function rideTogether(api) {
       if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(30);
     } else if (ev === "bye") {
       const f = friends.get(p.id); if (f) f.gone = now;
-      voice.drop(p.id, false);
     }
   }
 
@@ -401,11 +405,11 @@ export function rideTogether(api) {
     if (!f.tag) { f.tag = document.createElement("button"); f.tag.className = "tgTag"; f.tag.onclick = () => openPop(f); tags.append(f.tag); fillTag(f); }
   }
   function fillTag(f) { f.tag.innerHTML = `<img src="assets/icons/${f.avatar}.png?v=1" alt=""><span translate="no"></span>`; f.tag.querySelector("span").textContent = f.name || "…"; f.sayEl = null; f.vcKey = null; f.spkIcon = null; }
-  // Voice on a tag: a ring while they speak, "对讲中" while their walkie-talkie is up, "已静音" if I muted them.
+  // Voice on a tag: a ring and a bubble while they speak, "已静音" if I muted them.
   function voiceTag(f) {
-    const vs = voice.stateOf(f.id), key = vs.muted ? "已静音" : vs.radio ? "对讲中" : "";
-    f.tag.classList.toggle("talk", vs.speaking && !vs.radio); f.tag.classList.toggle("radio", vs.radio && !vs.muted); f.tag.classList.toggle("muted", vs.muted);
-    const spk = vs.speaking && !vs.muted ? (vs.radio ? "voice_radio" : "voice_speaking") : vs.muted ? "voice_mic_off" : "";
+    const vs = voice().stateOf(f.id), key = vs.muted ? "已静音" : "";
+    f.tag.classList.toggle("talk", !!vs.speaking); f.tag.classList.toggle("muted", !!vs.muted);
+    const spk = vs.speaking ? "voice_speaking" : vs.muted ? "voice_mic_off" : "";
     if (spk !== f.spkIcon) {
       f.spkIcon = spk; f.tag.querySelector(".spk")?.remove();
       if (spk) { const i = document.createElement("img"); i.className = "spk"; i.alt = ""; i.src = `assets/icons/${spk}.png?v=1`; f.tag.querySelector("span").after(i); }
@@ -487,7 +491,7 @@ export function rideTogether(api) {
   function pose(f, dt, now) {
     const m = model(f), p = f.pose;
     if (!m) return false;
-    talkBoarder(m, voice.radioOf(f.id)); // the walkie-talkie up
+    talkBoarder(m, !!voice().stateOf(f.id).talking); // the radio up while they talk
     if (p.kind === "lift") {
       if (m.parent !== p.frame) p.frame.add(m);
       m.position.copy(p.seat); m.quaternion.identity();
@@ -555,12 +559,12 @@ export function rideTogether(api) {
   addEventListener("pointerdown", (e) => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest(".tgTag")) pop.hidden = true; if (!qbox.hidden && !qbox.contains(e.target) && e.target !== fab && !fab.contains(e.target)) { qbox.hidden = true; fab.classList.remove("on"); } });
   const whereText = (f) => { const w = whereOf(f.s); return w ? t(w[0], w[1]) : ""; };
   function openPop(f) {
-    const muted = voice.stateOf(f.id).muted;
+    const muted = !!voice().stateOf(f.id).muted;
     pop.innerHTML = `<b translate="no"></b><small></small><div class="two"><button class="go" data-k="find">${t("去找他 ›")}</button><button data-k="follow">${follow?.id === f.id ? t("取消") : t("跟随")}</button></div><div class="two"><button data-k="mute">${muted ? t("取消静音") : t("静音")}</button></div>`;
     pop.querySelector("b").textContent = f.name; pop.querySelector("small").textContent = whereText(f);
     pop.querySelector("[data-k=find]").onclick = () => { pop.hidden = true; goFind(f.id); };
     pop.querySelector("[data-k=follow]").onclick = () => { pop.hidden = true; if (follow?.id === f.id) stopFollow(); else startFollow(f.id); };
-    pop.querySelector("[data-k=mute]").onclick = () => { pop.hidden = true; voice.mute(f.id, !muted); toast(f.avatar, t(muted ? "能听到 {name} 了" : "已静音 {name}", { name: esc(f.name) })); };
+    pop.querySelector("[data-k=mute]").onclick = () => { pop.hidden = true; voice().mute(f.id, !muted); toast(f.avatar, t(muted ? "能听到 {name} 了" : "已静音 {name}", { name: esc(f.name) })); };
     pop.hidden = false;
     const r = f.tag.getBoundingClientRect(), w = pop.offsetWidth;
     pop.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
@@ -674,7 +678,8 @@ export function rideTogether(api) {
     const dt = Math.max(0, Math.min(0.1, (now - lastFrame) / 1000)); lastFrame = now;
     stepHold(now);
     send(now);
-    if (!friends.size) { voice.frame(now, []); return; }
+    talkBoarder(ctx.rider, voice().meTalking); // my radio up while I talk on the 对讲机
+    if (!friends.size) return;
     tryJoin(now); keepChair(dt); settleSeat();
     const picking = top.phase === "pick";
     const live = [];
@@ -695,7 +700,6 @@ export function rideTogether(api) {
       voiceTag(f);
     }
     stepSeatGo(now); // after place(): the seats as they are this frame
-    voice.frame(now, live);
     fab.hidden = !live.length; fab.querySelector(".n").textContent = live.length || "";
     if (!live.length) { qbox.hidden = true; }
     feedMap(now, live);
@@ -716,12 +720,12 @@ export function rideTogether(api) {
     return { ph: ph === "pick" ? "pick" : "top", lift: lift.name };
   }
   party?.setRide({
-    state: partyState, voice,
+    state: partyState,
     callable: () => top.live?.()?.wait || lift.name, // 一起坐: the lift I wait at the bottom of, else this one again
     find: (id) => { const f = friends.get(id); if (!f?.s || f.gone || performance.now() - f.at > STALE) return false; goFind(id); return true; },
     follow: (id) => startFollow(id, true), unfollow: () => stopFollow(true),
   });
-  window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, get seat() { return seat; }, get held() { return held; }, seatsIn, moveTo, onMessage, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, voice }; // testing
+  window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, get seat() { return seat; }, get held() { return held; }, seatsIn, moveTo, onMessage, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, get voice() { return voice(); } }; // testing
   // A friend beside me in my chair, for the ride to pose me talking to them: +1 on my left (+x), -1 on my right, 0 none.
   function mate() {
     if (top.phase || api.arrived) return 0;
