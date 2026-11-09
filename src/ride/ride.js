@@ -25,10 +25,10 @@ import { navRow } from "../core/nav.js?v=26";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=22";
 import { dropIn } from "../core/transition.js?v=19";
-import { Facilities } from "./kitworld.js?v=6";
-import { rideTogether } from "./together.js?v=28";
-import { startParty } from "../core/party.js?v=20";
-import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
+import { Facilities } from "./kitworld.js?v=7";
+import { rideTogether } from "./together.js?v=29";
+import { startParty } from "../core/party.js?v=21";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=5";
 import { clearRope, ropeY } from "./lift-core.js?v=1";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
@@ -39,16 +39,19 @@ import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
 import { sPlan, sAt, alongPath } from "./sline-core.js?v=1";
+import { guard, pixelRatio, shadowSize, freeOnLeave } from "../core/detail.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const coarse = matchMedia("(pointer: coarse)").matches;
+guard("ride"); // killed for memory last time: lighter from now on (core/detail.js)
 const renderer = new THREE.WebGLRenderer({ canvas: $("c"), antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, coarse ? 1.5 : 2));
+renderer.setPixelRatio(pixelRatio());
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
+freeOnLeave(renderer); // the GPU's memory and the decoded pictures let go at once when the next page comes
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 30000);
 addEventListener("resize", () => {
   camera.aspect = innerWidth / innerHeight;
@@ -656,7 +659,7 @@ function build(ctx) {
     if (reshade) shadeGround(ctx.groundGeo, T, ctx.mask, lightDir, day, ctx.warm);
   };
   sun.castShadow = true;
-  sun.shadow.mapSize.setScalar(coarse ? 1024 : 2048);
+  sun.shadow.mapSize.setScalar(shadowSize());
   Object.assign(sun.shadow.camera, { left: -140, right: 140, top: 140, bottom: -140, near: 1, far: 900 });
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.6;

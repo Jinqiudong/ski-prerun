@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { texCap, keepBitmap, PHONE, lite } from "../core/detail.js?v=1";
 
 const VER = 9;
 const BASE = "models/facilities/glb/"; // relative to look.html
@@ -247,6 +248,42 @@ export function paintMat(color = CHARCOAL) {
   return paints.get(k);
 }
 
+// On a phone the kit's pictures are drawn smaller (core/detail.js texCap): a building's 2048 px atlas at 1024
+// px, its normal map at 512 (lite: 512 and none). Done once per picture, before the model's first frame; the
+// full-size decode is let go. The pictures stay as sharp as the screen shows them anywhere but a metre away.
+const fitted = new WeakMap();
+function fitMap(tex, cap) {
+  if (!fitted.has(tex)) fitted.set(tex, (async () => {
+    const img = tex.image, w = img?.width || 0, h = img?.height || 0;
+    if (!w || !h || Math.max(w, h) <= cap) return;
+    const s = cap / Math.max(w, h), W = Math.max(1, Math.round(w * s)), H = Math.max(1, Math.round(h * s));
+    let out = null;
+    try { // resized while decoding, off the main thread where the browser can
+      out = await createImageBitmap(img, { resizeWidth: W, resizeHeight: H, resizeQuality: "high", premultiplyAlpha: "none", colorSpaceConversion: "none" });
+      if (out.width !== W || out.height !== H) { out.close?.(); out = null; } // resize options ignored: draw it instead
+    } catch { out = null; }
+    if (!out) {
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, W, H); out = c;
+    }
+    img.close?.();
+    tex.image = out; tex.needsUpdate = true;
+  })().catch(() => {}));
+  return fitted.get(tex);
+}
+function fitMaps(m) {
+  if (!m || m.userData.fitted) return null;
+  m.userData.fitted = true;
+  const jobs = [];
+  for (const k of ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"]) {
+    const t = m[k]; if (!t?.isTexture) continue;
+    const cap = texCap(k === "normalMap" ? "normal" : "map");
+    if (cap <= 0) { m[k] = null; m.needsUpdate = true; t.image?.close?.(); t.dispose(); continue; } // lite: no relief
+    jobs.push((cap === Infinity ? Promise.resolve() : fitMap(t, cap)).then(() => keepBitmap(t.image))); // closed when the page goes
+  }
+  return Promise.all(jobs);
+}
+
 // A model as its parts by kind: bake, paint, snow, glass, lit, lamp, flat. Loaded once, shared by all.
 export function kit(name) {
   if (!cache.has(name)) cache.set(name, new Promise((ok, no) => { let tries = 0; const go = () => loader.load(`${BASE}${name}.glb?v=${VER}`, (g) => {
@@ -268,7 +305,7 @@ export function kit(name) {
     });
     const box = new THREE.Box3();
     for (const p of Object.values(parts)) box.union(p.geometry.boundingBox);
-    ok({ name, parts, box });
+    Promise.all(Object.values(parts).map((p) => fitMaps(p.material))).then(() => ok({ name, parts, box }));
   }, undefined, (e) => (++tries < 3 ? setTimeout(go, 600 * tries) : no(e))); go(); })); // a dropped connection is tried again
   return cache.get(name);
 }
@@ -450,7 +487,10 @@ export function mushroomMark(g, cx, cy, r) {
 // Run sign faces in one atlas, so all the run signs draw as one mesh. Cells are 256 × 116 (1.1 × 0.5 m).
 export function runFaceAtlas(runs, renderer) {
   const CW = 256, CH = 116, cols = 8, rows = Math.max(1, Math.ceil(runs.length / cols));
-  const c = document.createElement("canvas"); c.width = CW * cols; c.height = CH * rows; const g = c.getContext("2d");
+  // Drawn at three quarters on a phone (lite: half): a big resort's atlas is 2048 × 2800 px, about 29 MB on the
+  // GPU; 16 MB this way, and the names still read sharp a few metres off (half size was soft up close).
+  const k = lite ? 0.5 : PHONE ? 0.75 : 1;
+  const c = document.createElement("canvas"); c.width = CW * cols * k; c.height = Math.ceil(CH * rows * k); const g = c.getContext("2d"); g.scale(k, k);
   runs.forEach((r, i) => {
     const x = (i % cols) * CW, y = Math.floor(i / cols) * CH;
     g.fillStyle = "#f1ead8"; g.fillRect(x, y, CW, CH);

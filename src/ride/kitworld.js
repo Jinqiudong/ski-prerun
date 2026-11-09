@@ -3,7 +3,7 @@
 // a few props. Everything instanced is pooled (facilities.js Pool): full models near the camera, a plain
 // stand-in further out, nothing beyond. GLBs load lazily, only those this resort and this ride need.
 import * as THREE from "three";
-import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=4";
+import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=5";
 
 const GRAPHITE = "#2c3138";
 // Packed snow banked under a deck or building where the ground falls away: a mound whose sides slope out.

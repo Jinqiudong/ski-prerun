@@ -12,7 +12,8 @@ import { addStep } from "../ride/roadbook.js?v=29";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=49";
 import { openNav } from "../core/nav.js?v=26";
 import { liftTicket } from "../core/transition.js?v=19";
-import { startParty } from "../core/party.js?v=20";
+import { startParty } from "../core/party.js?v=21";
+import { guard, pixelRatio, freeOnLeave } from "../core/detail.js?v=1";
 import { bunnySpot } from "../ride/practice-core.js?v=2";
 import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
 
@@ -27,8 +28,10 @@ const FLY = 1.8; // seconds: down to a base; back up is a little quicker
 const $ = (id) => document.getElementById(id);
 const status = (t) => { $("status").textContent = t; return new Promise((r) => setTimeout(r, 20)); };
 
+guard("resort"); // killed for memory last time: lighter from now on (core/detail.js)
 const renderer = new THREE.WebGLRenderer({ canvas: $("c"), antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, matchMedia("(pointer: coarse)").matches ? 1.5 : 2));
+renderer.setPixelRatio(pixelRatio());
+freeOnLeave(renderer);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
