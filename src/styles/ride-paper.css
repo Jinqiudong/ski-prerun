@@ -224,6 +224,22 @@
     #hubLine .warn { color: #b6463b; }
     #hubLine .doc { font: inherit; color: #22344d; background: none; border: 0; padding: 0; cursor: pointer; }
     #hubLine .doc .cueIco { width: 18px; height: 18px; vertical-align: -4px; margin-right: 1px; }
+    /* A run's conditions (ride.js condIcons: 压雪, 蘑菇, 树林, 未压雪, 粉雪): small painted icons on a paper chip, so
+       they read on the chosen (navy) choice too; tap the runs line for them in words, 推测 where inferred. */
+    .cds { display: inline-flex; align-items: center; gap: 1px; margin-left: 4px; padding: 0 2px; border-radius: 7px; background: #fdfbf6; vertical-align: middle; flex: none; line-height: 0; }
+    .cds img { width: 17px; height: 17px; }
+    #hubGroups .v .cds { margin-left: 3px; } #hubGroups .v .cds img { width: 15px; height: 15px; }
+    #hubLine .runs { cursor: pointer; }
+    #hubLine .rn { white-space: nowrap; }
+    #hubLine .cdet { margin: 4px 0 2px; padding: 6px 8px; border: 1px dashed #d8cfbe; border-radius: 10px; font: 13px/1.55 "Noto Serif SC", serif; color: #5b554d; }
+    #hubLine .cdet[hidden] { display: none; }
+    #hubLine .cdet .cr + .cr { margin-top: 3px; }
+    #hubLine .cdet b { font-weight: 600; color: #22344d; margin-right: 6px; }
+    #hubLine .cdet .cw { display: inline-flex; align-items: center; margin-right: 9px; white-space: nowrap; }
+    #pick #hubLine .cdet .cueIco { width: 16px; height: 16px; margin: 0 2px 0 0; vertical-align: -3px; }
+    #hubLine .cdet .inf { font-style: normal; font-size: 10.5px; line-height: 1.3; color: #8a8278; border: 1px dashed #b9ae9b; border-radius: 6px; padding: 0 3px; margin-left: 3px; }
+    #skiHud .hs.run .cds { margin-left: 3px; padding: 0; background: none; }
+    #skiHud .hs.run .cds img { width: 18px; height: 18px; }
     #hubGo { margin: 8px 16px 0; padding: 10px; border: 0; border-radius: 999px; background: #22344d; color: #fdfbf6; font: 600 19px "Cormorant Garamond", "Noto Serif SC", serif; cursor: pointer; }
     #hubGo[hidden] { display: none; }
     #pick .pickLinks { margin-top: 4px; }

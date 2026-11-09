@@ -7,16 +7,16 @@
 // prerunPractice.
 import * as THREE from "three";
 import { Rider, Tracks, Spray } from "./board.js?v=14";
-import { poseBoarder, myRider } from "../rider/boarder.js?v=23";
+import { poseBoarder, myRider } from "../rider/boarder.js?v=24";
 import { Runner } from "./runner.js?v=1";
 import { guideAnimal } from "./guide-core.js?v=5";
-import { TREE, treeHit } from "./snow-core.js?v=3";
+import { TREE, treeHit } from "./snow-core.js?v=5";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=2";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
-import { t } from "../core/i18n.js?v=49";
+import { t } from "../core/i18n.js?v=50";
 import { fallLine } from "./edge-core.js?v=2";
 import { tiltRead, tiltZero } from "./tilt-core.js?v=2";
-import { sight } from "./snowfx.js?v=3";
+import { sight } from "./snowfx.js?v=4";
 import { stepsFor, stepOf as stepIn, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress as loadIn, saveProgress as saveIn, nextStep as nextIn, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM, PLOUGH_FROM, PLOUGH_IN } from "./practice-core.js?v=2";
 
 const CSS = `
