@@ -88,6 +88,21 @@ def resample(points, step):
         out.append(points[-1])
     return out
 
+# The resort's own outline (tools/fetch_resort.py `outline`), grown by OUTLINE_PAD: a run or lift with less
+# than half its points in it is the neighbour's.
+OUTLINE_PAD = 200
+OUTLINE = [to_local(la, lo) for la, lo in CFG.get("outline") or []]
+def near_outline(x, z):
+    inside = False
+    for (ax, az), (bx, bz) in zip(OUTLINE, OUTLINE[1:] + OUTLINE[:1]):
+        if (az > z) != (bz > z) and x < ax + (z - az) * (bx - ax) / (bz - az): inside = not inside
+    if inside: return True
+    for (ax, az), (bx, bz) in zip(OUTLINE, OUTLINE[1:] + OUTLINE[:1]):
+        dx, dz = bx - ax, bz - az; t = max(0, min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz or 1)))
+        if math.hypot(ax + t * dx - x, az + t * dz - z) < OUTLINE_PAD: return True
+    return False
+dropped = []
+
 elements = json.load(open(osm_path))["elements"]
 LEVELS = {"novice": "easy", "easy": "easy", "intermediate": "intermediate", "advanced": "advanced",
           "expert": "expert", "extreme": "expert", "freeride": "expert"}
@@ -97,6 +112,8 @@ for e in elements:
     pts = [to_local(g["lat"], g["lon"]) for g in e.get("geometry", [])]
     if len(pts) < 2 or not all(x0 <= x <= x1 and z0 <= z <= z1 for x, z in pts):
         continue  # outside the resort area (the Overpass box also catches the neighbouring resort)
+    if OUTLINE and ("piste:type" in tags or "aerialway" in tags) and sum(near_outline(x, z) for x, z in pts) * 2 < len(pts):
+        dropped.append(tags.get("piste:name") or tags.get("name") or str(e["id"])); continue
     if tags.get("piste:type") == "downhill":
         area = pts[0] == pts[-1] or tags.get("area") == "yes"
         pts = resample(pts, 12)
@@ -209,6 +226,7 @@ if poi_path:
                 if not any(p["name"] == tags["name"] for p in places):
                     places.append({"name": tags["name"], "kind": "village", "x": round(x, 1), "z": round(z, 1)})
                 continue
+            if OUTLINE and not near_outline(x, z): continue  # the neighbour's
             places.append({"name": tags["name"], "kind": "food", "x": round(x, 1), "z": round(z, 1)})
 
 out = {
@@ -220,4 +238,5 @@ out = {
     "runs": sorted(runs, key=lambda r: r["name"]), "lifts": sorted(lifts, key=lambda l: l["name"]), "places": places,
 }
 Path(out_path).write_text(json.dumps(out, separators=(",", ":")))
+if dropped: print(f"outside the outline (the neighbour's): {len(dropped)}: {', '.join(sorted(set(dropped)))}")
 print(f"{len(runs)} runs, {len(lifts)} lifts, elevation {hmin:.0f}-{hmax:.0f} m, {Path(out_path).stat().st_size // 1024} KB, trees {sum(mask)}")

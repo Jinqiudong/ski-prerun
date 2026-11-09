@@ -1,26 +1,30 @@
-// The resorts as little dioramas (resort-tiles.js) standing on a snowy watercolour map of central Colorado
-// (tools/bake_map_snow.py), fading toward the screen's edges: each one a square
+// The resorts as little dioramas (resort-tiles.js) standing on snowy watercolour maps, one sheet per region
+// (src/core/regions.js: central Colorado, the Wasatch; tools/bake_map_snow.py), fading toward the screen's
+// edges: each one a square
 // of the resort's real mountain (data/tiles.json, assets/tiles: tools/bake_tiles.py) on a pale plinth, set
-// where it is (Aspen's four, too close together, sit as a two-by-two in their valley); each framed with the
-// town it's by; the drives between them along the roads, with how long they take (data/drives.json), and
-// Denver. Turn it all the way round, tilt and zoom; tap a tile to lift it and see it. Its colour comes back
-// the more of it you've skied; ski all of it and a flag goes up.
+// where it is (Aspen's four, too close together, sit as a two-by-two in their valley, and so do the four in
+// the Cottonwood canyons); each framed with the town it's by; the drives between them along the roads, with
+// how long they take (data/drives.json), and the city you fly into (Denver, Salt Lake City). The map opens on
+// one region (setRegion); the sheets lie side by side at their real places, so you can also pan across.
+// Turn it all the way round, tilt and zoom; tap a tile to lift it and see it. Its colour comes back the more
+// of it you've skied; ski all of it and a flag goes up.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { EN_ON } from "../core/i18n.js?v=47";
-import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=4";
+import { EN_ON } from "../core/i18n.js?v=48";
+import { REGIONS, regionOf } from "../core/regions.js?v=1";
+import { ANIMALS, strataWalls, heightAt, pines, animal3d } from "./resort-tiles.js?v=5";
 import { Pets } from "./pets.js?v=4";
 
 // Diorama tiles (taller, cut-away sides in layers, pines, an animal each); ?flat for the plain ones.
 const DIO = !new URLSearchParams(location.search).has("flat");
 
 const S = 12, PLINTH = 1.6, EX = 1.35; // tile size, plinth depth, vertical exaggeration
-// The painted map's bounds (tools/bake_region.py, tools/bake_map_snow.py): wide enough to fill a portrait
-// phone at the home view, where west is the top of the screen and east the bottom.
-const MAP = { S: 38.0, N: 41.5, W: -110.0, E: -103.2 };
+// The painted maps' bounds are each region's `map` (tools/bake_region.py, tools/bake_map_snow.py): wide enough
+// to fill a portrait phone at that region's home view.
 // The scene's origin and scale are fixed (the first, smaller map's middle and 140 units across its 2.62°),
-// so the tiles, towns, drives and the camera stay where they were whatever the map's bounds.
+// so the tiles, towns, drives and the camera stay where they were whatever the map's bounds; every region's
+// sheet lies at its real place in the same frame.
 const O = { lat: 39.85, lon: -106.09 }, KM = 140 / (2.62 * 85.3); // scene units per km
 const at = (lat, lon) => new THREE.Vector3((lon - O.lon) * 85.3 * KM, 0, -(lat - O.lat) * 111 * KM);
 // The towns, and which resorts each frames. Aspen's four sit as a two-by-two around the valley's middle.
@@ -31,8 +35,11 @@ const TOWNS = [
   { zh: "Nederland", en: "Nederland", ids: ["eldora"] },
   { zh: "Frisco · Summit County", en: "Frisco · Summit County", ids: ["copper"] },
   { zh: "Keystone · Summit County", en: "Keystone · Summit County", ids: ["abasin"] },
+  // Utah: Solitude and Brighton up Big Cottonwood, Snowbird and Alta up Little Cottonwood, south of it.
+  { zh: "Big · Little Cottonwood", en: "Big · Little Cottonwood", ids: ["solitude", "brighton", "snowbird", "alta"], grid: [["solitude", "brighton"], ["snowbird", "alta"]] },
+  { zh: "Park City", en: "Park City", ids: ["deervalley"] },
+  { zh: "Huntsville · Ogden Valley", en: "Huntsville · Ogden Valley", ids: ["snowbasin"] },
 ];
-const DENVER = [39.7392, -104.9903];
 const ink = (c, o) => new THREE.LineDashedMaterial({ color: c, transparent: true, opacity: o, dashSize: 0.9, gapSize: 0.6 });
 
 export class Collection {
@@ -49,32 +56,36 @@ export class Collection {
     sun.position.set(-60, 100, -48); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
     Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 300 });
     sun.shadow.bias = -0.0008; sun.shadow.radius = 4;
-    s.add(sun);
+    s.add(sun, sun.target); this.sun = sun; // it follows the region in view (setRegion), its shadows with it
     const fill = new THREE.DirectionalLight(0xe6eefb, 0.9); fill.position.set(30, 20, 40); s.add(fill); // the sky's light on the sides facing you
-    // The painted map the tiles stand on (it takes their shadows too).
-    const mw = (MAP.E - MAP.W) * 85.3 * KM, mh = (MAP.N - MAP.S) * 111 * KM;
-    const tex = new THREE.TextureLoader().load("assets/wc/colorado.jpg?v=6", (x) => (x.colorSpace = THREE.SRGBColorSpace));
-    tex.anisotropy = 8;
-    // Its own border fades into the snow it lies on, over ~40 km, so the sheet has no edge anywhere.
-    const fade = (() => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256), kw = mw / KM, kh = mh / KM;
+    // The painted maps the tiles stand on, one per region (they take the tiles' shadows too).
+    // Each sheet's own border fades into the snow it lies on, over ~40 km, so it has no edge anywhere.
+    const fadeOf = (kw, kh) => { const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d"), g = x.createImageData(256, 256);
       const ss = (e) => { const a = Math.min(1, Math.max(0, (e - 4) / 40)); return a * a * (3 - 2 * a); };
       for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const a = ss(Math.min(Math.min(i, 255 - i) / 255 * kw, Math.min(j, 255 - j) / 255 * kh)); const k = (j * 256 + i) * 4; g.data[k] = g.data[k + 1] = g.data[k + 2] = 255 * a; g.data[k + 3] = 255; }
-      x.putImageData(g, 0, 0); return new THREE.CanvasTexture(c); })();
-    const fmat = new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1, alphaMap: fade, transparent: true, depthWrite: false });
+      x.putImageData(g, 0, 0); return new THREE.CanvasTexture(c); };
     // And it weakens toward the screen's edges, the farther from the middle the fainter, into the snow: a
     // vignette that follows the screen, not the sheet.
     this.vig = { value: new THREE.Vector2(1, 1) };
-    fmat.onBeforeCompile = (sh) => {
-      sh.uniforms.vigRes = this.vig;
-      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform vec2 vigRes;")
-        .replace("#include <alphamap_fragment>", "#include <alphamap_fragment>\nvec2 vq = abs(gl_FragCoord.xy / vigRes - 0.5) * 2.0;\nfloat vd = pow(pow(vq.x, 2.5) + pow(vq.y, 2.5), 0.4);\ndiffuseColor.a *= 1.0 - smoothstep(0.3, 1.12, vd);");
-    };
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), fmat);
-    floor.rotation.x = -Math.PI / 2; floor.position.copy(at((MAP.N + MAP.S) / 2, (MAP.W + MAP.E) / 2)).setY(-PLINTH); floor.receiveShadow = true; s.add(floor);
+    let mw = 0, mh = 0;
+    for (const reg of REGIONS) {
+      const M = reg.map, w = (M.E - M.W) * 85.3 * KM, h = (M.N - M.S) * 111 * KM;
+      if (reg === REGIONS[0]) { mw = w; mh = h; }
+      const tex = new THREE.TextureLoader().load(M.url, (x) => (x.colorSpace = THREE.SRGBColorSpace));
+      tex.anisotropy = 8;
+      const fmat = new THREE.MeshStandardMaterial({ map: tex, color: 0xf4f4f4, roughness: 1, alphaMap: fadeOf(w / KM, h / KM), transparent: true, depthWrite: false });
+      fmat.onBeforeCompile = (sh) => {
+        sh.uniforms.vigRes = this.vig;
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform vec2 vigRes;")
+          .replace("#include <alphamap_fragment>", "#include <alphamap_fragment>\nvec2 vq = abs(gl_FragCoord.xy / vigRes - 0.5) * 2.0;\nfloat vd = pow(pow(vq.x, 2.5) + pow(vq.y, 2.5), 0.4);\ndiffuseColor.a *= 1.0 - smoothstep(0.3, 1.12, vd);");
+      };
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, h), fmat);
+      floor.rotation.x = -Math.PI / 2; floor.position.copy(at((M.N + M.S) / 2, (M.W + M.E) / 2)).setY(-PLINTH); floor.receiveShadow = true; s.add(floor);
+    }
     // the snowy ground the map lies on, far past its (faded) edges
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(mw * 8, mh * 8), new THREE.MeshStandardMaterial({ color: 0xeceff2, roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -PLINTH - 0.03; ground.receiveShadow = true; s.add(ground);
-    this.marks = []; // HTML labels pinned to the map: towns, drive times, Denver
+    this.marks = []; // HTML labels pinned to the map: towns, drive times, the cities
     this.camera = new THREE.PerspectiveCamera(30, 1, 4, 900);
     const c = (this.controls = new OrbitControls(this.camera, canvas));
     Object.assign(c, { enableDamping: true, dampingFactor: 0.08, minDistance: 14, maxDistance: 700, minPolarAngle: 0.25, maxPolarAngle: 1.25, enablePan: true, screenSpacePanning: false });
@@ -112,8 +123,8 @@ export class Collection {
     this.camera.position.copy(c.target).add(off.setFromSpherical(sp)); this.camera.lookAt(c.target);
   }
 
-  // list: [{ id, name, lat, lon }]; stats: { id: { share } }.
-  async build(list, stats) {
+  // list: [{ id, name, state, lat, lon }]; stats: { id: { share } }; region: the region's id to open on.
+  async build(list, stats, region = REGIONS[0].id) {
     const [data, drives] = await Promise.all([fetch("data/tiles.json").then((x) => x.json()), fetch("data/drives.json").then((x) => x.json()).catch(() => [])]);
     const loader = new THREE.TextureLoader(), byId = Object.fromEntries(list.map((r) => [r.id, r]));
     // Where each tile stands: its own place, or its square of a town's two-by-two.
@@ -173,16 +184,29 @@ export class Collection {
       const txt = EN_ON ? `${h ? `${h} h ` : ""}${m ? `${m} min` : ""}`.trim() : `约 ${h ? `${h} 小时` : ""}${m ? `${m} 分` : ""}`;
       this.mark(txt, pts[Math.floor(pts.length / 2)], "drive");
     }
-    const den = at(...DENVER).setY(y0);
-    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0xb6463b }));
-    pin.position.copy(den); this.scene.add(pin);
-    this.mark("DENVER ✈\uFE0E", den, "city");
-    const box = new THREE.Box3(); for (const t of this.tiles) box.expandByPoint(t.base); box.expandByPoint(den);
-    // Seen from the east, as if driving in from Denver: Denver at the bottom, Aspen at the top, so the
-    // long east–west spread runs up a phone screen.
-    this.home = { target: box.getCenter(new THREE.Vector3()), polar: 0.55, az: Math.PI / 2 };
-    this._fit = null; // measured again now the tiles are in place
-    this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az, false);
+    // Each region's city, a red pin; and the view each region opens on.
+    this.homes = {};
+    for (const reg of REGIONS) {
+      const tiles = this.tiles.filter((t) => regionOf(t.userData) === reg); if (!tiles.length) continue;
+      const city = at(...reg.city.at).setY(y0);
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.25, 24), new THREE.MeshStandardMaterial({ color: 0xb6463b }));
+      pin.position.copy(city); this.scene.add(pin);
+      this.mark(`${reg.city.name.toUpperCase()} ✈\uFE0E`, city, "city");
+      const box = new THREE.Box3(); for (const t of tiles) box.expandByPoint(t.base); box.expandByPoint(city);
+      this.homes[reg.id] = { id: reg.id, target: box.getCenter(new THREE.Vector3()), polar: 0.55, az: reg.az, fit: reg.fit || 1, tiles, city };
+    }
+    this.setRegion(this.homes[region] ? region : Object.keys(this.homes)[0], false);
+  }
+  // Open on a region: its sheet from its home angle (Colorado seen from the east, as if driving in from
+  // Denver: Denver at the bottom, Aspen at the top; Utah from the south), the sun and its shadows over it.
+  setRegion(id, glide = true) {
+    const h = this.homes?.[id]; if (!h) return;
+    this.region = id; this.home = h; this._fit = null; // measured again for this region
+    this.sun.target.position.copy(h.target); this.sun.position.copy(h.target).add(new THREE.Vector3(-60, 100, -48));
+    if (this.picked) { this.picked = null; for (const x of this.tiles) x.userData.tag.classList.remove("on"); }
+    this.moved = false;
+    this.view(h.target, this.fitDist(), h.polar, h.az, glide);
+    this.onRegion?.(id);
   }
   // A label pinned to a point on the map.
   // A town's label sits on its frame's edge nearest the top of the screen (rect: x0, x1, z0, z1).
@@ -255,9 +279,9 @@ export class Collection {
   // the heading and the bottom for the card.
   fitDist() {
     if (this._fit && this._fit.a === this.camera.aspect) return this._fit.d;
-    const cam = this.camera.clone(), v = new THREE.Vector3(), { target, polar, az } = this.home, pts = [];
-    for (const t of this.tiles) for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pts.push(new THREE.Vector3(t.base.x + (dx * S) / 2, 0, t.base.z + (dz * S) / 2));
-    pts.push(at(...DENVER));
+    const cam = this.camera.clone(), v = new THREE.Vector3(), { target, polar, az, tiles, city } = this.home, pts = [];
+    for (const t of tiles) for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pts.push(new THREE.Vector3(t.base.x + (dx * S) / 2, 0, t.base.z + (dz * S) / 2));
+    pts.push(city.clone().setY(0));
     let d = 60;
     for (let it = 0; it < 6; it++) {
       cam.position.set(target.x + Math.sin(polar) * Math.sin(az) * d, target.y + Math.cos(polar) * d, target.z + Math.sin(polar) * Math.cos(az) * d);
@@ -265,7 +289,7 @@ export class Collection {
       let m = 0; for (const p of pts) { v.copy(p).project(cam); m = Math.max(m, Math.abs(v.x) / 1.0, Math.abs(v.y) / 0.78); }
       d *= m;
     }
-    this._fit = { a: this.camera.aspect, d: Math.min(this.controls.maxDistance, d) };
+    this._fit = { a: this.camera.aspect, d: Math.min(this.controls.maxDistance, d * this.home.fit) };
     return this._fit.d;
   }
 
@@ -278,6 +302,8 @@ export class Collection {
   }
   tap(e) { if (this.pets.tap(e)) return; const t = this.under(e); if (t) this.pick(t); }
   pick(t) {
+    if (regionOf(t.userData).id !== this.region) { this.region = regionOf(t.userData).id; this.home = this.homes[this.region]; this._fit = null; this.onRegion?.(this.region); } // panned across to the other sheet
+    this.sun.target.position.copy(t.base); this.sun.position.copy(t.base).add(new THREE.Vector3(-60, 100, -48));
     this.picked = t;
     for (const x of this.tiles) x.userData.tag.classList.toggle("on", x === t);
     const az = Math.atan2(this.camera.position.x - this.controls.target.x, this.camera.position.z - this.controls.target.z);
@@ -286,7 +312,7 @@ export class Collection {
   }
   // The town a resort is by, for the title over an opened tile.
   townOf(id) { return TOWNS.find((tw) => tw.ids.includes(id))?.en || ""; }
-  overview() { this.picked = null; this.moved = false; for (const x of this.tiles) x.userData.tag.classList.remove("on"); this.view(this.home.target, this.fitDist(), this.home.polar, this.home.az); }
+  overview() { this.setRegion(this.region); }
 
   resize() {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;

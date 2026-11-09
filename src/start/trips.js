@@ -1,4 +1,5 @@
-// Trips, as a quiet watercolour page: the boarding passes to Denver (one per city people fly from, a deck
+// Trips, as a quiet watercolour page: the boarding passes to Denver or Salt Lake City (the trip's region's
+// city, src/core/regions.js; one per city people fly from, a deck
 // held by a paperclip: swipe up or down to deal the next), a lift ticket for each mountain you might ski
 // (its painting grey until the forecast is out, then split into one panel per day in that day's weather),
 // the dates, the crew. Tap a mountain for its guide.
@@ -6,17 +7,20 @@
 // sees the same plan, live. Each section has an owner; anyone else's edit becomes a proposal the owner
 // accepts or declines. A copy is kept on this phone for offline. Older trips stay on this phone until
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=47";
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=48";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
-import { daysOf } from "../ride/roadbook.js?v=27";
-import { myLook, sameLook } from "../core/look.js?v=18";
+import { daysOf } from "../ride/roadbook.js?v=28";
+import { myLook, sameLook } from "../core/look.js?v=19";
+import { REGIONS, regionOf, regionFor } from "../core/regions.js?v=1";
 
 const KEY = "prerunTrips";
 const PASSES = { ikon: "Ikon", epic: "Epic", day: "日票", none: "还没买" };
-// Which resorts each pass opens here. All nine built so far are Ikon resorts; Epic's aren't built yet.
+// Which resorts each pass opens here. All built so far (Colorado's nine, Utah's six) are Ikon resorts; Epic's
+// aren't built yet.
 const OPENS = { ikon: () => true, epic: () => false, day: () => true, none: () => true };
 const C = { ink: "#22344d", pine: "#2f5446", wine: "#6e2f36", red: "#b6463b", card: "#fdfbf6", paper: "#f6f1e7", line: "#e6dccb", mute: "#8a8278" };
-// Each mountain in a line, three words for its card, and the drive from Denver (hours).
+// Each mountain in a line, three words for its card, and the drive from its region's city (hours: Denver, or
+// Salt Lake City for Utah's).
 const ABOUT = {
   copper: { zh: "地形天然按难度分开：西边简单、中间中级、东边难，不太会误入难道。", en: "The terrain sorts itself by level: easy to the west, blue in the middle, hard to the east.", words: "Sorted by Level · Union Creek · Copper Bowl", drive: 1.5 },
   winterpark: { zh: "两座山连在一起：Winter Park 的长蓝道，和 Mary Jane 出名的猫跳。", en: "Two mountains in one: long groomers, and Mary Jane's famous bumps.", words: "Mary Jane · Bumps · Long Groomers", drive: 1.5 },
@@ -27,7 +31,15 @@ const ABOUT = {
   aspenmountain: { zh: "就在 Aspen 镇上，没有绿道，中级和以上。", en: "Right above Aspen town: no greens, intermediate and up.", words: "Town Lift · No Greens · Ajax", drive: 4 },
   highlands: { zh: "以 Highland Bowl 出名，要徒步上去的高山大碗。", en: "Home of Highland Bowl, a hike-to alpine bowl.", words: "Highland Bowl · Hike-to · Steeps", drive: 4 },
   buttermilk: { zh: "缓、宽，适合初学，也是 X Games 的场地。", en: "Gentle and wide for learning, and home of the X Games.", words: "Gentle · Learn Here · X Games", drive: 4 },
+  alta: { zh: "Little Cottonwood 最里面的老雪场，雪多出名；只许双板，单板不能上缆车。", en: "The old resort at the top of Little Cottonwood, famous for its snow; skiers only, no snowboards on the lifts.", words: "Skiers Only · Deep Snow · Hike-to", drive: 0.75 },
+  snowbird: { zh: "坐 Aerial Tram 上 Hidden Peak，又陡又深，雪季常常开到五月。", en: "The Aerial Tram to Hidden Peak: steep and deep, often open into May.", words: "Aerial Tram · Mineral Basin · Steep", drive: 0.75 },
+  brighton: { zh: "Big Cottonwood 最里面，单板的老家，有夜场。", en: "At the top of Big Cottonwood: a snowboarders' home hill, with night skiing.", words: "Board Friendly · Night Skiing · Trees", drive: 0.75 },
+  solitude: { zh: "人少、安静，Honeycomb Canyon 里有大片的林子和野雪。", en: "Quiet and uncrowded, with trees and open powder in Honeycomb Canyon.", words: "Quiet · Honeycomb Canyon · Trees", drive: 0.75 },
+  deervalley: { zh: "Park City 旁边，压雪道和服务出名；只许双板，单板不能上缆车。", en: "Next to Park City, known for its grooming and service; skiers only, no snowboards on the lifts.", words: "Skiers Only · Groomers · Park City", drive: 0.75 },
+  snowbasin: { zh: "Ogden 东边，2002 冬奥会速降的场地，大而不挤。", en: "East of Ogden: the 2002 Olympic downhill, big and uncrowded.", words: "Olympic Downhill · Big · Uncrowded", drive: 1 },
 };
+// The drive, in words: minutes under an hour, else hours.
+const driveWords = (h) => (h < 1 ? (EN_ON ? `~${Math.round(h * 60)} min drive` : `开车约 ${Math.round(h * 60)} 分钟`) : EN_ON ? `~${h} h drive` : `开车约 ${h} 小时`);
 export const CITY = { SFO: "San Francisco", LAX: "Los Angeles", SEA: "Seattle", JFK: "New York", EWR: "Newark", LGA: "New York", BOS: "Boston", ORD: "Chicago", IAH: "Houston", DFW: "Dallas", ATL: "Atlanta", MIA: "Miami", SAN: "San Diego", PDX: "Portland", SJC: "San Jose", OAK: "Oakland", PHX: "Phoenix", SLC: "Salt Lake City", MSP: "Minneapolis", DCA: "Washington", IAD: "Washington", AUS: "Austin", YVR: "Vancouver", YYZ: "Toronto", PEK: "Beijing", PVG: "Shanghai", SHA: "Shanghai", CAN: "Guangzhou", SZX: "Shenzhen", HKG: "Hong Kong", TPE: "Taipei", NRT: "Tokyo", HND: "Tokyo", ICN: "Seoul", LHR: "London", DEN: "Denver" };
 const BANDS = [C.ink, C.pine, C.wine];
 // What to carry for a hike-to (from guides to Highland Bowl and the like).
@@ -336,21 +348,23 @@ export class Trips {
     for (const p of tr.people.length ? tr.people : [{ name: this.me, from: "" }]) { const k = p.from || "?"; if (!by.has(k)) by.set(k, []); by.get(k).push(p.name); }
     return [...by].map(([from, names]) => ({ from, names }));
   }
+  // The city a trip flies into: its region's (most of its mountains'), Denver when none is picked.
+  hub(tr) { return regionFor(this.maybeOf(tr), this.byId).city; }
   pass(tr, g, k, n) {
-    const band = BANDS[k % 3], seat = g.names.length > 1 ? `14A–${String.fromCharCode(64 + Math.min(6, g.names.length))}` : "22C";
+    const hub = this.hub(tr), band = BANDS[k % 3], seat = g.names.length > 1 ? `14A–${String.fromCharCode(64 + Math.min(6, g.names.length))}` : "22C";
     const names = esc(g.names.map((x) => (x === this.me && EN_ON ? t("我") : x)).join(" · "));
     const unknown = g.from === "?", pass = tr.passes.map((p) => ({ ikon: "IKON", epic: "EPIC", day: "DAY" })[p] || "—").join("/");
     return `<div style="flex:1;min-width:0;display:flex;flex-direction:column">
-        <div class="band" style="background:${band}"><span>✈\uFE0E PRE-RUN AIR</span><span>${unknown ? "" : `${g.from} → `}DEN · ${names}</span></div>
+        <div class="band" style="background:${band}"><span>✈\uFE0E PRE-RUN AIR</span><span>${unknown ? "" : `${g.from} → `}${hub.code} · ${names}</span></div>
         <div style="flex:1;padding:5px 10px 6px;display:flex;flex-direction:column;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:6px">
             <div><div class="code">${unknown ? "???" : g.from}</div><div class="city">${unknown ? t("在「改一改」里填从哪飞") : esc(CITY[g.from] || "")}</div></div>
             <div style="flex:1;display:flex;align-items:center;margin-bottom:12px;color:${band}"><i style="flex:1;border-top:1px dashed #b9b0a3"></i><span style="font-size:12px;margin:0 3px">✈\uFE0E</span><i style="flex:1;border-top:1px dashed #b9b0a3"></i></div>
-            <div style="text-align:right"><div class="code" style="color:${C.red}">DEN</div><div class="city">Denver</div></div></div>
+            <div style="text-align:right"><div class="code" style="color:${C.red}">${hub.code}</div><div class="city">${hub.name}</div></div></div>
           <div class="grid">${[["PASSENGER", names], ["FLIGHT", `PR ${1118 + k * 7}`], ["DATE", short(tr.from)], ["SEAT", seat], ["PASS", pass]].map(([a, v]) => `<div><div class="lab">${a}</div><b translate="no">${v}</b></div>`).join("")}</div>
           <div class="bars"></div></div></div>
       <div class="stub"><div style="height:22px;background:${band};color:#f6f1e7;font-size:9px;line-height:22px;letter-spacing:.14em;text-align:center">${g.names.length} PAX</div>
-        <div style="padding:6px 8px"><div class="lab">TO</div><div style="font-weight:600;font-size:15px">DEN</div><div class="lab">SEAT</div><div style="font-weight:500;font-size:12px">${seat}</div><div style="font-size:8px;color:#9a9188;margin-top:4px">${k + 1} / ${n}</div></div></div>`;
+        <div style="padding:6px 8px"><div class="lab">TO</div><div style="font-weight:600;font-size:15px">${hub.code}</div><div class="lab">SEAT</div><div style="font-weight:500;font-size:12px">${seat}</div><div style="font-size:8px;color:#9a9188;margin-top:4px">${k + 1} / ${n}</div></div></div>`;
   }
   // The passes as a deck under one paperclip, the others' bands peeking above; a swipe deals the next.
   deck(tr, el) {
@@ -796,11 +810,11 @@ export class Trips {
     const total = lv.reduce((s, x) => s + x[2], 0);
     const m = (v) => `${v.toLocaleString("en-US")} m`;
     el.innerHTML = `<div class="s"><button class="x" aria-label="close">×</button><div class="hero" style="background-image:url(${paintUrl(id)})"><div class="t"><div class="kicker">RESORT GUIDE</div><div class="h1" style="margin:0;font-size:28px">${esc(r.name)}</div></div></div>
-      <div class="b"><div class="quote">“${esc(EN_ON ? a.en : a.zh)}”</div>
+      <div class="b"><div class="quote">“${esc(EN_ON ? a.en : a.zh)}”</div>${r.skiOnly ? `<div class="note" style="font-size:14px;color:${C.wine}">${t("这座山只许双板：单板不能上缆车。在这里预滑能认路，但去的那天要穿双板。")}</div>` : ""}
         ${SEC("snowreport", t("这几天的雪"))}<div class="wxbox"><div class="wish">Manifest for big snow<small>${t("还太远，天气预报出来（出发前 2 周内）就会写在这里")}</small></div></div>
         ${st ? `${SEC("difficulty", t("适合谁"))}<div class="bar">${lv.map((x) => `<i style="flex:${x[2]};background:${x[3]}"></i>`).join("")}</div><div class="legend">${lv.map((x) => `<span><b style="color:${x[3]}">${x[0]}</b> ${t(x[1])} ${x[2]}</span>`).join("")}</div>
           <div class="note" style="font-size:15px;color:#4a453f">${EN_ON ? `${st.runs.easy + st.runs.intermediate} of ${total} named runs are green or blue.` : `${total} 条有名字的雪道里，绿道和蓝道有 ${st.runs.easy + st.runs.intermediate} 条。`}</div>
-        ${SEC("alpine", t("数字"))}<div class="nums">${[["山顶", m(st.top), "alpine"], ["山脚", m(st.base), "lodge"], ["落差", m(st.top - st.base), "difficulty"], ["雪道", total, "trailmap"], ["缆车", st.lifts, "lift"], ["从 Denver", EN_ON ? `~${a.drive} h drive` : `开车约 ${a.drive} 小时`, "trees"]].map(([k, v, ic]) => `<div>${ICON(ic, "ni")}<small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
+        ${SEC("alpine", t("数字"))}<div class="nums">${[["山顶", m(st.top), "alpine"], ["山脚", m(st.base), "lodge"], ["落差", m(st.top - st.base), "difficulty"], ["雪道", total, "trailmap"], ["缆车", st.lifts, "lift"], [t("从 {city}", { city: regionOf(r).city.name }), driveWords(a.drive), "trees"]].map(([k, v, ic]) => `<div>${ICON(ic, "ni")}<small>${t(k)}</small><b>${v}</b></div>`).join("")}</div>` : ""}
         ${st?.flats?.length ? `${SEC("groomed", t("单板注意"))}<div class="note" style="font-size:15px;color:#4a453f;margin-top:0">${EN_ON ? "Flats where a board slows (carry speed into them):" : "这些地方比较平，单板容易减速，要提前带速度："}</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">${st.flats.map(([n, , m]) => `<span style="font-size:13px;padding:2px 10px;background:#fbf1dc;border-left:3px solid #c9a24a">${esc(n)} · ${m} m</span>`).join("")}</div>` : ""}
         <div class="hikes"></div>
@@ -843,7 +857,7 @@ export class Trips {
         <div class="note">${t("可以多选 · 一起去的人雪卡不一样也行")}</div>
         <div class="sec">② ${t("几号到几号")}</div><div class="cal"></div><div class="note">${t("点第一天，再点最后一天")}</div>
         <div class="sec">③ ${t("可能去哪些山")}</div>
-        <div class="tiles">${this.resorts.map((r) => { const ok = open.includes(r.id); return `<button class="tile ${!ok ? "no" : d.maybe.includes(r.id) ? "on" : d.maybe.length ? "off" : ""}" data-id="${r.id}" style="background-image:url(${paintUrl(r.id)})" ${ok ? "" : "disabled"}><span>${esc(this.name(r.id))}</span></button>`; }).join("")}</div>
+        ${REGIONS.map((g) => [g, this.resorts.filter((r) => regionOf(r) === g)]).filter(([, rs]) => rs.length).map(([g, rs], i, all) => `${all.length > 1 ? `<div class="note" style="margin:${i ? 12 : 4}px 0 6px;font:600 15px ${SERIF};color:${C.ink}">${EN_ON ? g.en : g.state} <small style="font-weight:400;color:${C.mute}">· ${g.city.code}</small></div>` : ""}<div class="tiles">${rs.map((r) => { const ok = open.includes(r.id); return `<button class="tile ${!ok ? "no" : d.maybe.includes(r.id) ? "on" : d.maybe.length ? "off" : ""}" data-id="${r.id}" style="background-image:url(${paintUrl(r.id)})" ${ok ? "" : "disabled"}><span>${esc(this.name(r.id))}</span></button>`; }).join("")}</div>`).join("")}
         ${d.passes.includes("epic") ? `<div class="note">${t("这些 Epic 雪场还没做：Vail、Breckenridge、Keystone、Beaver Creek")}</div>` : ""}
         <div class="chips" style="margin-top:10px"><button class="chip ${d.maybe.length ? "" : "on"}" data-any>${t("还没想好，都行")}</button></div>
         <div class="sec">④ ${t("你从哪飞（印在机票上）")}</div>

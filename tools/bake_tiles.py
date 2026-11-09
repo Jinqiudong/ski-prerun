@@ -27,7 +27,13 @@ def sample(grid, bounds, xs, zs):
     return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + e * u) * v
 
 
-def paint(d, ht, xs, zs, rng, mask=None, crowns=0):
+# The woods' upper edge: about 3,480 m in Colorado; a resort with its own treeline in tools/resorts.json (the
+# Wasatch's is lower) has it 80 m under that.
+CFG = json.load(open("tools/resorts.json"))
+woods_top = lambda rid: CFG.get(rid, {}).get("treeline", 3560) - 80
+
+
+def paint(d, ht, xs, zs, rng, mask=None, crowns=0, top=3480):
     """The texture over xs by zs (heights ht): snow lit by the sun, cool in the shade; woods; rock where it's
     steep. mask: how much of each pixel is mapped woodland (0..1), or None for woods from clumps alone.
     crowns: the grain of the woods in pixels (a spruce's crown), for a picture fine enough to show one."""
@@ -39,7 +45,7 @@ def paint(d, ht, xs, zs, rng, mask=None, crowns=0):
     slope = np.degrees(np.arccos(np.clip(n[..., 1], -1, 1)))
     snow_lit, snow_shade = np.array([0.97, 0.97, 0.96]), np.array([0.66, 0.72, 0.82])
     col = snow_shade + (snow_lit - snow_shade) * (sun[..., None] ** 0.8)
-    # Woods grow below the treeline (about 3,500 m here) where it isn't too steep, in clumps; the runs are
+    # Woods grow below the treeline (top: about 3,500 m in Colorado) where it isn't too steep, in clumps; the runs are
     # cut through them as white ribbons, the way a resort looks from the air.
     speck = rng.random((rows, cols))
     if crowns:  # grains a crown wide instead of single pixels, spread back over 0..1
@@ -48,7 +54,7 @@ def paint(d, ht, xs, zs, rng, mask=None, crowns=0):
     noise = lambda k: np.asarray(Image.fromarray((rng.random((k, k)) * 255).astype(np.uint8)).resize((cols, rows), Image.BICUBIC)).astype(np.float32) / 255
     clump = noise(10) * 0.65 + noise(40) * 0.35
     elev = d["hmin"] + ht
-    line = 3480 + (clump - 0.5) * 160
+    line = top + (clump - 0.5) * 160
     cut = Image.new("L", (cols, rows), 0); g = ImageDraw.Draw(cut)
     px = lambda x, z: ((x - xs[0]) / (xs[-1] - xs[0]) * (cols - 1), (z - zs[0]) / (zs[-1] - zs[0]) * (rows - 1))
     for run in d["runs"]:
@@ -99,7 +105,7 @@ def tiles():
         out[r["id"]] = {"size": round(2 * half), "grid": N, "lo": round(float(h.min()), 1),
                         "heights": base64.b64encode(np.round((h - h.min()) * 2).astype("<u2").tobytes()).decode()}
         xs, zs = square(TEX)
-        paint(d, sample(H, d["bounds"], xs, zs), xs, zs, np.random.default_rng(1)).save(f"assets/tiles/{r['id']}.jpg", quality=84)
+        paint(d, sample(H, d["bounds"], xs, zs), xs, zs, np.random.default_rng(1), top=woods_top(r["id"])).save(f"assets/tiles/{r['id']}.jpg", quality=84)
         print(r["id"], f"{2 * half / 1000:.1f} km", f"{h.max() - h.min():.0f} m relief")
     json.dump(out, open("data/tiles.json", "w"), separators=(",", ":"))
 
@@ -115,7 +121,7 @@ def aerial():
         # Heights resampled smoothly (bicubic), so the light shows no facets from the height grid's cells.
         ht = np.asarray(Image.fromarray(H).resize((cols, rows), Image.BICUBIC))
         mask = np.asarray(Image.fromarray(bits * 255).resize((cols, rows), Image.BILINEAR).filter(ImageFilter.GaussianBlur(1.5))).astype(np.float32) / 255
-        paint(d, ht, xs, zs, np.random.default_rng(1), mask, crowns=1.5 / (xs[1] - xs[0])).save(f"assets/aerial/{r['id']}.jpg", quality=80, optimize=True)
+        paint(d, ht, xs, zs, np.random.default_rng(1), mask, crowns=1.5 / (xs[1] - xs[0]), top=woods_top(r["id"])).save(f"assets/aerial/{r['id']}.jpg", quality=80, optimize=True)
         out[r["id"]] = {"bounds": d["bounds"], "size": [cols, rows]}
         print(r["id"], f"{cols}x{rows}", f"{(x1 - x0) / (cols - 1):.1f} m/px")
     json.dump(out, open("data/aerial.json", "w"), separators=(",", ":"))

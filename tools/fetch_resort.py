@@ -4,6 +4,11 @@ usage: python3 tools/fetch_resort.py <id> <work dir>
 - `area` is the resort's ski-area outline bounds from OpenStreetMap (landuse=winter_sports); the baked
   box adds ~700 m around it so the runs' surroundings show.
 - Pistes, lifts, restaurants and woods come from the Overpass API; terrain from AWS Terrain Tiles (z14).
+- `outline` (optional) is the OSM way id of that ski-area outline. Where a neighbour's runs reach into the box
+  (Alta and Snowbird, Brighton and Solitude, Deer Valley and Park City), only the runs and lifts that lie
+  mostly inside it (grown by 200 m) are kept.
+- `treeline` (m) and `grid` (heightmap columns, rows) are passed to bake.py; a big area (Deer Valley) takes a
+  coarser grid so its file stays the size of the others.
 Writes data/<id>.json and data/<id>-far.json.
 """
 import functools, json, math, subprocess, sys, time, urllib.parse, urllib.request
@@ -39,6 +44,8 @@ print(f"{rid}: box {bbox}")
 overpass('(way["piste:type"="downhill"]BBOX;way["aerialway"]BBOX;);out geom;', work / "osm.json")
 overpass('(node["amenity"~"restaurant|cafe|bar|fast_food"]BBOX;way["amenity"~"restaurant|cafe|bar|fast_food"]BBOX;);out center tags;', work / "poi.json")
 overpass('(nwr["amenity"="parking"]BBOX;nwr["building"]["name"]BBOX;nwr["tourism"]["name"]BBOX;);out center tags;', work / "base.json")
+if cfg.get("outline"):
+    overpass(f'way({cfg["outline"]});out geom;', work / "outline.json")
 overpass('(way["natural"="wood"]BBOX;way["landuse"="forest"]BBOX;relation["natural"="wood"]BBOX;relation["landuse"="forest"]BBOX;);out geom;', work / "forest.json")
 
 Z = 14
@@ -56,7 +63,8 @@ for tx in range(tx0, tx1 + 1):
 print(f"  {(tx1 - tx0 + 1) * (ty1 - ty0 + 1)} terrain tiles")
 
 conf = work / "resort.json"
-conf.write_text(json.dumps({"name": cfg["name"], "bbox": bbox, "villages": cfg.get("villages", []), **({"treeline": cfg["treeline"]} if "treeline" in cfg else {})}))
+outline = [[g["lat"], g["lon"]] for g in json.load(open(work / "outline.json"))["elements"][0]["geometry"]] if cfg.get("outline") else None
+conf.write_text(json.dumps({"name": cfg["name"], "bbox": bbox, "villages": cfg.get("villages", []), **{k: cfg[k] for k in ("treeline", "grid") if k in cfg}, **({"outline": outline} if outline else {})}))
 data = here.parent / "data"
 subprocess.run([sys.executable, str(here / "bake.py"), str(work / "osm.json"), str(tiles), str(data / f"{rid}.json"), str(work / "poi.json"), str(work / "forest.json"), str(conf), str(work / "base.json")], check=True)
 subprocess.run([sys.executable, str(here / "bake_far.py"), str(data / f"{rid}.json"), str(data / f"{rid}-far.json")], check=True)

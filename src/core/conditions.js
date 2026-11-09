@@ -4,7 +4,7 @@
 // lift goes up at 17:00 in falling snow; change it on the chair and the resort page shows it when you go back.
 //   { live: true }                                   the real time and the forecast (the default)
 //   { live: false, hour: 0..23.75, sky: "clear" | "cloudy" | "overcast" | "snow" }
-// The hour is local to the resort (all Colorado so far: America/Denver). 雪 means snow falling now and a
+// The hour is local to the resort (Colorado and Utah: both America/Denver). 雪 means snow falling now and a
 // recent snowfall of at least SNOW_RECENT_CM over three days, so a chosen snow day has powder (snow-core.js
 // turns that into ~0.8 of a full powder day). Another sky keeps the real recent snowfall: picking 晴 the day
 // after a storm still has the storm's powder (a bluebird day).

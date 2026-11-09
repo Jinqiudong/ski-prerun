@@ -1,7 +1,7 @@
 // The conditions in the ride's 雪况 pill: the hour, the sky and 实时, the same choice as the resort page's
 // weather bar (src/core/conditions.js holds the rules and the record). The ride applies each change: the
 // sun, the sky and the falling snow at once; powder from the next lift (it is worked out once per ride).
-import { choose, hourIn, fmtHour, normalize, LIVE, TZ } from "../core/conditions.js?v=1";
+import { choose, hourIn, fmtHour, normalize, LIVE, TZ } from "../core/conditions.js?v=2";
 
 const SKY = [["clear", "sunny", "晴"], ["cloudy", "partly", "多云"], ["overcast", "cloudy", "阴"], ["snow", "snow_now", "雪"]];
 

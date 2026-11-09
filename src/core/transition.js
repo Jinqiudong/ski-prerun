@@ -1,5 +1,6 @@
 // Two short transitions, in the opening's style (frosted paper, serif, navy ink, patrol red, Oswald caps):
-//   flyIn()    on the resort page while it loads: a little plane from Denver over the painted map, a push-in,
+//   flyIn()    on the resort page while it loads: a little plane from the region's city (Denver, Salt Lake City)
+//              over its painted map (src/core/regions.js), a push-in,
 //              and a "LANDED" stamp over the resort's watercolour with today's facts; it ends when the page
 //              is ready (never before MIN), then fades into it.
 //   liftRide() on the ride page while it loads: the lift ticket gets punched, a chair slides across, into the ride.
@@ -7,7 +8,8 @@
 // Tap to skip. Shorter once you've seen one (a count per transition, kept on this phone). prefers-reduced-motion
 // gets a plain fade. None under navigator.webdriver (the headless tests) unless the page has ?transition=force.
 // Pure DOM, CSS and a 2D canvas: no three.js, so it can start before the page's heavy modules arrive.
-import { EN_ON } from "./i18n.js?v=47";
+import { EN_ON } from "./i18n.js?v=48";
+import { regionOf } from "./regions.js?v=1";
 
 // ---- The words. The owner adds lines here: a fixed pool, one picked at random; "when" limits a line to
 // when it is true ("bubble": only on a chair with a bubble). English for everything.
@@ -48,9 +50,8 @@ const SKY = { clear: ["蓝鸟天", "bluebird"], night: ["晴夜", "clear night"]
 const LEVEL = { easy: ["绿道", "Green"], intermediate: ["蓝道", "Blue"], advanced: ["黑道", "Black"], expert: ["双黑", "Double black"] };
 const TURN = { 左转: "turn left", 右转: "turn right", 靠左: "keep left", 靠右: "keep right" };
 // Three letters for each resort, for the flight label.
-const CODE = { copper: "CPR", winterpark: "WPK", steamboat: "STM", abasin: "ABA", eldora: "ELD", snowmass: "SMS", aspenmountain: "ASP", highlands: "HLD", buttermilk: "BMK" };
-const MAP = { S: 38.98, N: 40.72, W: -107.4, E: -104.78 }; // the painted map's bounds (src/start/collection.js)
-const DEN = [39.7385, -104.9903];
+const CODE = { copper: "CPR", winterpark: "WPK", steamboat: "STM", abasin: "ABA", eldora: "ELD", snowmass: "SMS", aspenmountain: "ASP", highlands: "HLD", buttermilk: "BMK",
+  alta: "ALT", snowbird: "SBD", brighton: "BRT", solitude: "SOL", deervalley: "DVR", snowbasin: "SBS" };
 
 const say = (k, vars = {}) => { let s = WORDS[k][EN_ON ? "en" : "zh"]; for (const [a, b] of Object.entries(vars)) s = s.split(`{${a}}`).join(b); return s; };
 const line = (l) => (EN_ON ? l.en : l.zh);
@@ -175,9 +176,9 @@ export async function flyIn() {
   if (!r) return uncover();
   const F = seen("fly") ? 0.8 : 1, MIN = 3200 * F, quiet = still();
   const T = overlay(quiet ? "still" : "");
-  const name = short(r.name), facts = [];
+  const name = short(r.name), facts = [], reg = regionOf(r);
   T.box.innerHTML = `<canvas class="map"></canvas>
-    <div class="kick fade"><i>DEN → ${CODE[id] || id.slice(0, 3).toUpperCase()}${miles(drives, id) ? ` · ${miles(drives, id)} MI` : ""}</i><b>${say("takeoff")}</b></div>
+    <div class="kick fade"><i>${reg.city.code} → ${CODE[id] || id.slice(0, 3).toUpperCase()}${miles(drives, id, reg.city.key) ? ` · ${miles(drives, id, reg.city.key)} MI` : ""}</i><b>${say("takeoff")}</b></div>
     <div class="say fade hide">${(() => { const l = pick(COPY.filter((c) => !c.when)); return EN_ON ? `<p>${esc(l.en)}</p>` : `<p>${esc(l.zh).replace("，", "<br>")}</p><small>${esc(l.en)}</small>`; })()}</div>
     <div class="land fade hide"><div class="wc" style="background-image:url(${ROOT()}assets/wc/${id}.jpg?v=1)"></div><div class="mist"></div>
       <div class="stamp"><i>${say("landed")}</i><b>${esc(name)}</b><small>${r.stats?.top ? `${r.stats.top.toLocaleString("en-US")} m` : ""}</small></div><div class="facts"></div></div>
@@ -197,7 +198,7 @@ export async function flyIn() {
   todayAt(r).then((w) => { if (!w) return; facts.unshift(...[w.sky && { html: say("weather", w.sky) }, w.snow && { html: say("snow", { where: esc(name), cm: w.snow }) }].filter(Boolean)); show(); });
   const fr = friendsAt(id); if (fr) facts.push({ html: say("friends", { names: fr }), cls: "fr" });
   const skied = json(store(localStorage, "prerunLog"))?.[id]?.stats?.touched; if (skied > 0) facts.push({ html: say("skied", { resort: esc(name), n: skied }) });
-  if (!quiet) flight(T, $(".map"), r, F);
+  if (!quiet) flight(T, $(".map"), r, F, reg);
   const land = () => { landed = true; $(".kick").classList.add("hide"); $(".say").classList.add("hide"); on($(".land")); $(".land").classList.remove("hide"); show(); };
   if (quiet) land();
   await steps(T, quiet ? [] : [[1000 * F, () => $(".kick").classList.add("hide")], [1150 * F, () => { $(".say").classList.remove("hide"); on($(".say")); }],
@@ -207,9 +208,9 @@ export async function flyIn() {
   if (T.live()) { $(".tip").classList.add("wait"); await Promise.race([ready, T.ended, wait(20000)]); }
   T.finish(quiet ? 400 : 600);
 }
-// Miles from Denver by road (data/drives.json, the shortest way along its legs).
-function miles(drives, id) {
-  const dist = { denver: 0 }, todo = new Set(["denver"]);
+// Miles from the region's city by road (data/drives.json, the shortest way along its legs).
+function miles(drives, id, from = "denver") {
+  const dist = { [from]: 0 }, todo = new Set([from]);
   while (todo.size) {
     const a = [...todo].sort((x, y) => dist[x] - dist[y])[0]; todo.delete(a);
     for (const d of drives) for (const [p, q] of [[d.a, d.b], [d.b, d.a]]) if (p === a && (dist[q] ?? Infinity) > dist[a] + d.km) { dist[q] = dist[a] + d.km; todo.add(q); }
@@ -237,16 +238,16 @@ function friendsAt(id) {
   }
   return null;
 }
-// The painted map: the plane lifts off Denver, a red dashed route drawn behind it, and the view follows
-// and pushes in toward the resort.
-function flight(T, cv, r, F) {
-  const img = new Image(); img.src = `${ROOT()}assets/wc/colorado.jpg?v=4`; // the start page's map: likely cached
+// The painted map: the plane lifts off the region's city, a red dashed route drawn behind it, and the view
+// follows and pushes in toward the resort.
+function flight(T, cv, r, F, reg) {
+  const MAP = reg.map, img = new Image(); img.src = `${ROOT()}${MAP.url}`; // the start page's map: likely cached
   const dpr = Math.min(2, devicePixelRatio || 1), g = cv.getContext("2d");
   const size = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
   size(); addEventListener("resize", size);
-  const IW = 1600, IH = 1383; // colorado.jpg
+  const [IW, IH] = MAP.size;
   const P = (lat, lon) => [((lon - MAP.W) / (MAP.E - MAP.W)) * IW, ((MAP.N - lat) / (MAP.N - MAP.S)) * IH];
-  const a = P(...DEN), b = P(r.lat, r.lon), len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const a = P(...reg.city.at), b = P(r.lat, r.lon), len = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const c = [(a[0] + b[0]) / 2 + ((a[1] - b[1]) / len) * len * 0.16, (a[1] + b[1]) / 2 + ((b[0] - a[0]) / len) * len * 0.16]; // a gentle arc
   const at = (u) => [(1 - u) ** 2 * a[0] + 2 * u * (1 - u) * c[0] + u * u * b[0], (1 - u) ** 2 * a[1] + 2 * u * (1 - u) * c[1] + u * u * b[1]];
   const ease = (x) => (x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x));
@@ -256,8 +257,9 @@ function flight(T, cv, r, F) {
     if (t0 === null) { if (!img.complete && now - born < 700) return requestAnimationFrame(frame); t0 = now; } // the map first (cached, mostly)
     const t = Math.min(1, (now - t0) / D), W = cv.width, H = cv.height;
     const u = 0.04 + 0.95 * ease(t), p = at(u), q = at(Math.min(1, u + 0.01)), push = ease((t - 0.4) / 0.6), follow = ease(t / 0.75);
-    // the view: Denver and the plane at first, then closing on the plane, the map growing
-    const s = Math.max(W / IW, H / IH) * (1 + 0.9 * push), k = 0.45 + 0.55 * follow;
+    // the view: the city and the plane at first, then closing on the plane, the map growing
+    // at first about 190 km of the map from top to bottom (or the whole sheet, if that's less), growing
+    const s = Math.max(W / IW, H / IH, H / (190 * IH / ((MAP.N - MAP.S) * 111))) * (1 + 0.9 * push), k = 0.45 + 0.55 * follow;
     let cx = a[0] + (p[0] - a[0]) * k, cy = a[1] + (p[1] - a[1]) * k + (H / s) * 0.08 * (1 - push);
     // keep the map on screen, but let a resort near its edge come off it a little (the edge feathered)
     const mx = (W / 2 / s) * (1 - 0.25 * follow), my = (H / 2 / s) * (1 - 0.35 * follow);
@@ -275,11 +277,11 @@ function flight(T, cv, r, F) {
     g.save(); g.strokeStyle = "#b6463b"; g.lineWidth = 2.2 * dpr; g.setLineDash([5 * dpr, 6 * dpr]); g.lineCap = "round"; g.beginPath();
     for (let i = 0; i <= 60; i++) { const v = (u * i) / 60, [x, y] = at(v); i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y)); }
     g.stroke(); g.restore();
-    // Denver: a red dot with a halo, its name
+    // the city: a red dot with a halo, its name
     g.fillStyle = "rgba(182,70,59,.22)"; g.beginPath(); g.arc(X(a[0]), Y(a[1]), 13 * dpr, 0, 7); g.fill();
     g.fillStyle = "#b6463b"; g.beginPath(); g.arc(X(a[0]), Y(a[1]), 6 * dpr, 0, 7); g.fill();
     g.font = `600 ${12 * dpr}px Oswald, sans-serif`; g.textBaseline = "middle"; g.letterSpacing = `${2 * dpr}px`;
-    g.fillText("DENVER", X(a[0]) + 14 * dpr, Y(a[1]));
+    g.fillText(reg.city.name.toUpperCase(), X(a[0]) + 14 * dpr, Y(a[1]));
     // the resort, a navy ring that appears as we close in
     g.globalAlpha = push; g.strokeStyle = "#22344d"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(X(b[0]), Y(b[1]), 8 * dpr, 0, 7); g.stroke(); g.globalAlpha = 1;
     // the plane, its shadow on the snow further off the higher it flies

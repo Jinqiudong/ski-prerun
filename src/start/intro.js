@@ -1,8 +1,10 @@
 // The opening: a snowy valley from above, clouds drifting over; around it a frosted pane with snowboarders
 // carving across its far side; and, on a tap of the speaker, the hiss of their boards and a quiet tune. Once
 // per visit, while the rider model loads. With a trip near (on now, coming up, or just over), the opening is
-// about that trip instead: its crew's little planes on their way to Denver (see tripIntro).
-import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=47";
+// about that trip instead: its crew's little planes on their way to Denver, or Salt Lake City for a trip to
+// Utah's mountains (the trip's region, src/core/regions.js; see tripIntro).
+import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=48";
+import { regionFor } from "../core/regions.js?v=1";
 import { pickTrip, progress, resortsOf, resortOn, crewOf, spread, bearing, ymd, between, LOOK_BACK } from "./trip-intro.js?v=1";
 
 const CSS = `
@@ -178,19 +180,20 @@ function stage(box, st, mood, still) {
 //   during  "day 2 · Copper today", the planes parked at Denver, a tap straight to the mountain
 //   after   the week after: the planes fly home over the whole way, a tap to the Memory tab
 async function tripData(P) {
-  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=46"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
+  const [{ AIRPORTS, CITY }, resorts] = await Promise.all([import("./trips.js?v=47"), fetch("data/resorts.json").then((r) => r.json()).catch(() => [])]);
   const tr = P.trip, today = ymd(new Date()), byId = Object.fromEntries((Array.isArray(resorts) ? resorts : []).map((r) => [r.id, r]));
   const crew = crewOf(tr, { mine: myAvatar(), avatars: AVATARS }).slice(0, 6);
   if (!crew.length) crew.push({ name: "", from: "", face: myAvatar(), me: true, note: "" });
   const day = P.phase === "travel" || P.phase === "during" ? resortOn(tr, today) : null;
-  return { ...P, tr, today, byId, crew, AIRPORTS, CITY, plan: resortsOf(tr).filter((id) => byId[id]), dayR: byId[day] ? day : null };
+  const plan = resortsOf(tr).filter((id) => byId[id]), reg = regionFor(plan, byId);
+  return { ...P, tr, today, byId, crew, AIRPORTS, CITY, plan, dayR: byId[day] ? day : null, reg, hub: reg.city };
 }
 const shortName = (r) => r.name.replace(/ Mountain$| Basin$/, "");
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const fmtDay = (d) => { const x = new Date(d + "T00:00:00"); return EN_ON ? `${MON[x.getMonth()]} ${x.getDate()}` : `${x.getMonth() + 1} 月 ${x.getDate()} 日`; };
 
 function tripIntro(box, st, D, hooks, still) {
-  const { tr, phase, byId, crew, plan, dayR } = D;
+  const { tr, phase, byId, crew, plan, dayR, reg, hub } = D;
   const name = `<span translate="no">${esc(tr.name || "Ski trip")}</span>`, rn = (id) => esc(shortName(byId[id]));
   const list = plan.map(rn).join(" · ");
   const stamp = (n) => `<img class="stamp" src="assets/icons/${n}.png?v=1" alt="">`;
@@ -200,15 +203,15 @@ function tripIntro(box, st, D, hooks, still) {
     soon: () => `${stamp("st_booked")}<button class="cd" data-open><b>${D.left === 1 ? t("明天出发 · {name}", { name }) : t("还有 {n} 天 · {name}", { n: D.left, name })}</b><i>${t("打开行程 ›")}</i></button>
       <p>${plan.length ? t("计划去 {list}", { list }) : t("看雪定山")}</p><p class="wx"></p>${hint}${enter}`,
     travel: () => `${stamp("st_ontrip")}<div class="swap"><div class="c1"><b>${t("今天出发！")}</b><p>${name}</p></div>
-      <div class="c2"><b>${t("欢迎来到科罗拉多")}</b><p>${dayR ? t("今天的计划：{resort}", { resort: rn(dayR) }) : t("今天还没定去哪")}</p><p class="wx"></p>${go}</div></div>${enter}`,
+      <div class="c2"><b>${t(reg.id === "co" ? "欢迎来到科罗拉多" : "欢迎来到{region}", { region: EN_ON ? reg.en : reg.state })}</b><p>${dayR ? t("今天的计划：{resort}", { resort: rn(dayR) }) : t("今天还没定去哪")}</p><p class="wx"></p>${go}</div></div>${enter}`,
     during: () => `${stamp("st_ontrip")}<b>${dayR ? t("第 {n} 天 · 今天去 {resort}", { n: D.day, resort: rn(dayR) }) : t("第 {n} 天 · 今天还没定去哪", { n: D.day })}</b><p>${name}</p><p class="wx"></p>${go}${hint}${enter}`,
     after: () => `${stamp("st_done")}<b>${t("这趟滑完了")}</b><p>${name} · ${fmtDay(tr.from)}${tr.to !== tr.from ? ` – ${fmtDay(tr.to)}` : ""}</p>${plan.length ? `<p>${t("这趟的山：{list}", { list })}</p>` : ""}<button class="act" data-memory>${t("看看记录 ›")}</button>${enter}`,
   }[phase]();
   box.innerHTML = `<canvas class="bgc"></canvas><canvas class="valley" width="680" height="800"></canvas><div class="fleet"></div><div class="cap trip">${cap}</div><div class="who" hidden></div>${SND}`;
   const S = stage(box, st, MOODS.trip, still), $ = (s) => box.querySelector(s);
-  const fleet = { phase, planes: [], cities: [] };
+  const fleet = { phase, planes: [], cities: [], hub: hub.code };
   const V = valley($(".valley"), "trip", fleet, S.alive);
-  layFleet(fleet, V, crew, D.AIRPORTS);
+  layFleet(fleet, V, crew, D.AIRPORTS, hub.code);
   // The buttons: each fades the opening out, then opens its page.
   const H = { open: hooks.open || (() => { location.href = "start.html?tab=trip"; }), go: hooks.go || ((id) => { location.href = `mountain/?resort=${encodeURIComponent(id)}`; }), memory: hooks.memory || (() => { location.href = "start.html?tab=log"; }) };
   for (const b of box.querySelectorAll("[data-open]")) b.onclick = (e) => { e.stopPropagation(); S.end(() => H.open(tr.id)); };
@@ -222,7 +225,7 @@ function tripIntro(box, st, D, hooks, still) {
     const temp = `${Math.round(w.lo)}° / ${Math.round(w.hi)}°`.replace(/-/g, "−"), snow = w.cm >= 1 ? t(" · 新雪 {cm} 厘米", { cm: Math.round(w.cm) }) : "";
     el.innerHTML = `<img src="assets/icons/${wxIcon(w)}.png?v=1" alt="">${t(phase === "soon" ? "第一天 · {resort} · {sky} {temp}" : "今天 · {resort} · {sky} {temp}", { resort: rn(wxAt), sky: t(WXWORD[wxIcon(w)]), temp })}${snow}`;
   });
-  // The planes (and anyone already in Denver), over the pane so a finger can find them.
+  // The planes (and anyone already in the hub city), over the pane so a finger can find them.
   const layer = $(".fleet"), who = $(".who");
   const JET = `<svg class="jet" viewBox="-24 -24 48 48"><path d="M7 0 L-4 -19 L-9.5 -19 L-4.5 0 L-9.5 19 L-4 19 Z M-15.5 -7 h4 v14 h-4 Z" fill="#22344d"/><ellipse rx="19" ry="4.2" fill="#22344d"/><rect x="-3" y="-0.9" width="14" height="1.8" fill="#fdfbf6"/></svg>`;
   const dom = (p, local) => { const el = document.createElement("div"); el.className = `pl${local ? " local" : ""}`; el.innerHTML = `<div class="wob">${local ? "" : JET}<img class="av" src="assets/icons/${p.face}.png?v=1" alt=""></div>`; layer.append(el); wiggle(el, () => card(p, el)); return el; };
@@ -231,7 +234,7 @@ function tripIntro(box, st, D, hooks, still) {
   // Tap a plane: who it is, from where, and their travel note.
   const card = (p, el) => {
     const nm = p.me && (!p.name || p.name === "我") ? t("我") : p.name || "—", city = D.CITY[p.from] || "";
-    who.innerHTML = `<img src="assets/icons/${p.face}.png?v=1" alt=""><div><b translate="no">${esc(nm)}</b>${p.me && nm !== t("我") ? `<em>${t("我")}</em>` : ""}<small>${p.from === "DEN" ? t("已经在 Denver") : p.from ? `${p.from}${city ? ` · ${esc(city)}` : ""} → DEN` : t("还没填从哪飞")}</small>${p.note ? `<i translate="no">${esc(p.note)}</i>` : ""}</div>`;
+    who.innerHTML = `<img src="assets/icons/${p.face}.png?v=1" alt=""><div><b translate="no">${esc(nm)}</b>${p.me && nm !== t("我") ? `<em>${t("我")}</em>` : ""}<small>${p.from === hub.code ? t("已经在 {city}", { city: hub.name }) : p.from ? `${p.from}${city ? ` · ${esc(city)}` : ""} → ${hub.code}` : t("还没填从哪飞")}</small>${p.note ? `<i translate="no">${esc(p.note)}</i>` : ""}</div>`;
     who.hidden = false;
     const r = el.getBoundingClientRect(), w = who.offsetWidth, h = who.offsetHeight;
     who.style.left = `${Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2))}px`;
@@ -265,15 +268,16 @@ function tripIntro(box, st, D, hooks, still) {
 }
 
 // The routes on the pane: one per city the crew flies from, from the pane's edge on that city's side into
-// Denver (cities that lie close together pushed apart); friends from one city side by side on it.
-function layFleet(fleet, V, crew, AIRPORTS) {
+// the hub (Denver, Salt Lake City; cities that lie close together pushed apart); friends from one city side by
+// side on it.
+function layFleet(fleet, V, crew, AIRPORTS, HUB = "DEN") {
   const [x0, y0] = V.den, W = V.W, H = V.H, by = new Map();
-  for (const p of crew) { const k = p.from === "DEN" ? "DEN" : AIRPORTS[p.from] ? p.from : "?"; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
-  fleet.local = by.get("DEN") || []; by.delete("DEN");
+  for (const p of crew) { const k = p.from === HUB ? HUB : AIRPORTS[p.from] ? p.from : "?"; if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
+  fleet.local = by.get(HUB) || []; by.delete(HUB);
   // Denver sits low on the pane, so the cities fan out above it: east and west lean up toward the top, as
   // a map's bearings squeezed into the upper half (no airport yet: from the west).
   const fan = (a) => { const w = ((a + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI / 2; return Math.PI / 2 + (Math.max(-0.5, Math.min(Math.PI + 0.5, w)) - Math.PI / 2) * 0.62; }; // south-west stays west
-  const keys = [...by.keys()], ang = spread(keys.map((k) => fan(k === "?" ? Math.PI * 0.82 : bearing(AIRPORTS[k], AIRPORTS.DEN))), 0.42, 0.12, Math.PI - 0.12);
+  const keys = [...by.keys()], ang = spread(keys.map((k) => fan(k === "?" ? Math.PI * 0.82 : bearing(AIRPORTS[k], AIRPORTS[HUB] || AIRPORTS.DEN))), 0.42, 0.12, Math.PI - 0.12);
   const reach = (v, lo, hi, o) => (v > 1e-6 ? (hi - o) / v : v < -1e-6 ? (lo - o) / v : Infinity);
   const legs = [];
   keys.forEach((k, g) => {
@@ -615,7 +619,7 @@ function routes(t) {
   // Denver
   g.fillStyle = `rgba(182,70,59,${0.18 + 0.08 * Math.sin(t * 2)})`; g.beginPath(); g.arc(den.x, den.y, 18, 0, 7); g.fill();
   g.fillStyle = "#b6463b"; g.beginPath(); g.arc(den.x, den.y, 8, 0, 7); g.fill();
-  g.textAlign = "left"; g.lineWidth = 5; g.strokeStyle = "rgba(253,251,246,.85)"; g.strokeText("DEN", den.x + 22, den.y + 2); g.fillStyle = "#b6463b"; g.fillText("DEN", den.x + 22, den.y + 2);
+  g.textAlign = "left"; g.lineWidth = 5; g.strokeStyle = "rgba(253,251,246,.85)"; const hub = fleet?.hub || "DEN"; g.strokeText(hub, den.x + 22, den.y + 2); g.fillStyle = "#b6463b"; g.fillText(hub, den.x + 22, den.y + 2);
   g.textBaseline = "alphabetic";
 }
 const FLAKES = 60 * (SC.snow || 1);
@@ -639,7 +643,7 @@ function frame(now) {
   for (let i = 0; i < FLAKES; i++) { const x = (P[i % 512] * W + t * 8 * (1 + P[(i + 60) % 512]) + i * 37) % W, y = (P[i + 120] * H + t * 30 * (1 + P[i + 200])) % H; g.beginPath(); g.arc(x, y, 1.2 + P[i + 300] * 1.4, 0, 7); g.fill(); }
   // landed: a stamp at Denver, counting them in
   const FP = fleet?.planes || [], landed = FP.filter((p) => p.down).length;
-  if (scene === "trip" && fleet.phase === "travel" && landed) { g.fillStyle = "rgba(253,251,246,.92)"; g.fillRect(den.x - 48, den.y + 34, 96, 24); g.fillStyle = "#b6463b"; g.font = "600 21px 'Cormorant Garamond', serif"; g.textAlign = "center"; g.fillText(`DEN · ${landed}/${FP.length}`, den.x, den.y + 52); }
+  if (scene === "trip" && fleet.phase === "travel" && landed) { g.fillStyle = "rgba(253,251,246,.92)"; g.fillRect(den.x - 48, den.y + 34, 96, 24); g.fillStyle = "#b6463b"; g.font = "600 21px 'Cormorant Garamond', serif"; g.textAlign = "center"; g.fillText(`${fleet.hub || "DEN"} · ${landed}/${FP.length}`, den.x, den.y + 52); }
   g.restore();
   if (alive()) requestAnimationFrame(frame);
 }

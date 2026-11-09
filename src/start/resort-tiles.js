@@ -8,6 +8,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 export const ANIMALS = {
   copper: "pika", winterpark: "moose", steamboat: "elk", abasin: "sheep", eldora: "fox",
   snowmass: "marmot", aspenmountain: "bear", highlands: "ptarmigan", buttermilk: "hare",
+  // Utah: snowshoe hares at Alta, mountain goats on Snowbird's ridges (the bighorn model stands in), moose in
+  // Big Cottonwood, foxes at Solitude, deer-country elk at Deer Valley, black bears above Ogden Valley.
+  alta: "hare", snowbird: "sheep", brighton: "moose", solitude: "fox", deervalley: "elk", snowbasin: "bear",
 };
 // How tall each animal stands (scene units; a tile is 12).
 const TALL = { moose: 2.5, elk: 2.5, sheep: 1.8, fox: 1.25, pika: 1.0, marmot: 1.0, hare: 1.0, ptarmigan: 0.9, bear: 1.9 };

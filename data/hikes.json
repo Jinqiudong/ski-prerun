@@ -1,7 +1,7 @@
 {
   "_note": "Hike-to terrain, gathered Nov 2026 from resort guides, Aspen Sojourner, OnTheSnow, Powderhounds, FATMAP route notes and trip reports. Times and gains vary by source and day: shown as 'about', and always 'check the resort's daily report'.",
   "highlands": [{
-    "id": "highland-bowl", "name": "Highland Bowl", "zh": "Highland Bowl 徒步",
+    "id": "highland-bowl", "name": "Highland Bowl", "zh": "Highland Bowl 徒步", "flags": true,
     "from": "Loge Peak", "summit": [3777, 12392], "gain": 240, "mins": [25, 60], "snowcat": "条件允许时有免费雪猫，从 Loge Peak 顶送到第一个门，能省大约三分之一的路",
     "snowcatEn": "When conditions allow, a free snowcat runs from the top of Loge Peak to the first gate, saving about a third of the walk",
     "zhWhy": "科罗拉多最有名的徒步滑雪：沿山脊的靴印台阶走上去，山顶挂着经幡，下面是整个 Highland Bowl。",
@@ -45,5 +45,14 @@
     "from": "Three Bears", "mins": [0, 15],
     "zhWhy": "以前要坐雪猫或沿 Copper Bowl 西脊走上去，2019 年起有 Three Bears 缆车。朝北，雪保存得久。", "enWhy": "Once a snowcat or a hike up Copper Bowl's west ridge; since 2019 the Three Bears lift reaches it. North-facing, it holds snow.",
     "tips": ["只有专家道"], "tipsEn": ["Experts only"]
+  }],
+  "alta": [{
+    "id": "baldy-chutes", "name": "Baldy Chutes", "zh": "Mount Baldy 徒步（Baldy Chutes）",
+    "from": "Sugarloaf", "summit": [3370, 11056], "gain": 150, "mins": [20, 45],
+    "zhWhy": "Alta 最有名的徒步：从 Sugarloaf 顶沿 East Baldy Traverse 过去，再沿靴印台阶走上 Mount Baldy 的山脊，下面是几条又窄又陡的雪沟。",
+    "enWhy": "Alta's best-known hike: from the top of Sugarloaf along the East Baldy Traverse, then up the boot-packed steps onto Mount Baldy's ridge, with narrow, steep chutes below.",
+    "down": ["Main Chute", "Little Chute", "Baldy Chutes", "East Baldy"],
+    "tips": ["要做完雪崩控制才开：看门口的牌子", "台阶很窄，按自己的节奏走", "下面的雪沟很陡，只适合专家", "Alta 只许双板：这条线是给滑双板的人的"],
+    "tipsEn": ["It opens only after avalanche work: check the gate", "The steps are narrow: keep your own pace", "The chutes below are steep: experts only", "Alta is skiers only: this line is for skiers"]
   }]
 }
