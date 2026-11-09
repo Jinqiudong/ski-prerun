@@ -4,7 +4,7 @@
 //     the frame's own history is the back button's, as it was before the shell.
 //   - The tab's title follows the page's.
 //   - A tap in the page counts for the shell's sound too (iOS starts sound only from a tap).
-import { startVoice } from "./voice.js?v=2";
+import { startVoice } from "./voice.js?v=3";
 
 const S = globalThis.prerunShell, frame = document.getElementById("app");
 const root = new URL("./", location.href).href;

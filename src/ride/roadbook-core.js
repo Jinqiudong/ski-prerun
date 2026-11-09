@@ -2,7 +2,7 @@
 // top and the way down after it: the runs you came to ski (real) and the ones that only take you somewhere
 // (connectors). Legs group by area (the base each lift leaves from) and a leg that skis from one area to
 // another is a transfer. Old days (before legs were recorded) are read too.
-import { PACE } from "../core/route.js?v=6";
+import { PACE } from "../core/route.js?v=7";
 
 // What is written while riding (src/ride/ride.js), per day in localStorage prerunBook:
 //   { k: "base", name }                      the base picked on the resort page

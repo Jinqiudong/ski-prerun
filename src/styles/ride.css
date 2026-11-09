@@ -51,24 +51,7 @@
     .rtag.pin { z-index: 2; font-size: 13px; background: rgba(255,255,255,.92); color: #142033; border-color: #f2b632; }
     .rtag small { font-weight: 500; opacity: .75; margin-left: 2px; }
     .rtag.dest { pointer-events: none; z-index: 3; font-size: 14px; background: #f2b632; color: #1d1606; border-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
-    #pickTabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
-    #pickTabs button { font: inherit; font-size: 13px; font-weight: 600; color: #f4f7fb; background: rgba(14,22,34,.7); border: 1px solid rgba(255,255,255,.2); border-radius: 999px; padding: 6px 12px; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-    #pickTabs button.on { background: #fff; color: #142033; }
-    .rcard .r1 .t { margin-left: auto; font-size: 13px; color: #f2b632; font-weight: 600; }
-    .rcard .steps { font-size: 13px; line-height: 1.5; color: #e9f1ff; }
-    .rcard .steps .lift { color: #f2b632; font-weight: 600; }
-    .rcard .warn { color: #ffb4a8; }
-    .rcard small.to { color: #f2d28a; }
-    #pick { position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom)); }
-    #runCards { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 calc(50vw - min(39vw, 160px)); scrollbar-width: none; touch-action: pan-x; }
-    #runCards::-webkit-scrollbar { display: none; }
-    .rcard { flex: 0 0 min(78vw, 320px); scroll-snap-align: center; box-sizing: border-box; padding: 10px 12px; border-radius: 16px; background: rgba(14,22,34,.72); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); display: grid; gap: 4px; opacity: .8; transform: scale(.96); transition: transform .25s, opacity .25s; }
-    .rcard.on { opacity: 1; transform: none; border-color: #2f7fe8; }
-    .rcard .r1 { display: flex; align-items: center; gap: 6px; font-size: 16px; }
-    .rcard small { color: #b9c4d3; font-size: 12px; }
-    .rcard canvas { width: 100%; height: 40px; }
-    .rcard .go { margin-top: 4px; font: inherit; font-size: 15px; font-weight: 600; color: #fff; background: #2f7fe8; border: 0; border-radius: 10px; padding: 9px; cursor: pointer; }
-    .rcard:not(.on) .go { background: rgba(47,127,232,.45); }
+    #pick { position: fixed; left: 0; right: 0; bottom: 0; }
     .pickLinks { display: flex; justify-content: center; gap: 18px; margin-top: 8px; font-size: 13px; }
     .pickLinks a { color: #e9f1ff; text-decoration: none; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
     .lv { display: inline-block; width: 11px; height: 11px; margin-right: 4px; }
@@ -103,7 +86,6 @@
     .sheet .opts { display: grid; gap: 8px; }
     .sheet button.opt { text-align: left; }
     .sheet button.opt small { display: block; color: #b9c4d3; font-size: 12px; font-weight: 400; }
-    .rcard .doc { font: inherit; font-size: 13px; color: #cfe0ff; background: none; border: 0; padding: 2px 0; text-align: left; cursor: pointer; }
     /* The route guide as a paper roadbook: two wooden rods, the paper unrolls between them; bigger or smaller. */
     #guide.scroll { background: none; border: 0; padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible; max-height: none; filter: drop-shadow(0 8px 18px rgba(0,0,0,.45)); }
     #guide .rod { position: relative; height: 18px; margin: 0 -6px; border-radius: 9px; background: linear-gradient(#5c3516, #b47b43 40%, #e0ae73 55%, #8a5428 75%, #4d2b11); z-index: 1; }
@@ -138,8 +120,4 @@
   
     /* The snow's cues and conditions: the moguls and powder icons in the HUD's line and on the run cards. */
     .cueIco { width: 24px; height: 24px; vertical-align: -6px; margin-right: 4px; }
-    .rtag .cueIco, .rcard .cueIco, #pickTabs .cueIco, #arrive .cueIco, #desc .cueIco { width: 20px; height: 20px; vertical-align: -5px; margin-right: 3px; }
-    .rcard .r1 .cueIco { width: 26px; height: 26px; vertical-align: middle; }
-    .rcard .chips { display: flex; flex-wrap: wrap; gap: 4px 8px; }
-    .rcard .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: inherit; background: rgba(140,160,190,.16); border-radius: 999px; padding: 1px 10px 1px 3px; }
-    .rcard .chip img { width: 22px; height: 22px; }
+    .rtag .cueIco, #pick .cueIco, #arrive .cueIco, #desc .cueIco { width: 20px; height: 20px; vertical-align: -5px; margin-right: 3px; }
