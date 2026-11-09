@@ -6,7 +6,7 @@
 // world round the nearest chairlift and hands over here (topOfLift st.practice); progress is localStorage
 // prerunPractice.
 import * as THREE from "three";
-import { Rider, Tracks, Spray } from "./board.js?v=14";
+import { Rider, Tracks, Spray } from "./board.js?v=15";
 import { poseBoarder, myRider } from "../rider/boarder.js?v=24";
 import { Runner } from "./runner.js?v=1";
 import { guideAnimal } from "./guide-core.js?v=5";
