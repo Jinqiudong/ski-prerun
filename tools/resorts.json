@@ -16,7 +16,11 @@
         "Mary Jane Base",
         "Super Gauge Express"
       ]
-    ]
+    ],
+    "exclude": [
+      1214436867
+    ],
+    "exclude_why": "Tubing: the tubing hill's carpet, not a ski lift."
   },
   "steamboat": {
     "name": "Steamboat",
@@ -80,7 +84,12 @@
         "Two Creeks",
         "Two Creeks"
       ]
-    ]
+    ],
+    "exclude": [
+      1210150814,
+      1210150815
+    ],
+    "exclude_why": "Pines Upper / Pines Lower: private platters for The Pines homes (liftblog), not the resort's; unreachable from any base."
   },
   "aspenmountain": {
     "name": "Aspen Mountain",
@@ -110,7 +119,12 @@
         "Highlands Village",
         "Exhibition"
       ]
-    ]
+    ],
+    "exclude": [
+      1211521065,
+      1212154522
+    ],
+    "exclude_why": "1211521065: an unnamed rope tow inside Buttermilk's ski area (OSM landuse=winter_sports), caught by Highlands' box. 1212154522: Five Trees, a private double for the Five Trees homes (OSM access=private, liftblog)."
   },
   "buttermilk": {
     "name": "Buttermilk",
@@ -129,6 +143,10 @@
         "Tiehack",
         "Tiehack Express"
       ]
-    ]
+    ],
+    "exclude": [
+      1212154522
+    ],
+    "exclude_why": "1212154522: Five Trees, a private double for the Five Trees homes between Highlands and Buttermilk (OSM access=private, liftblog)."
   }
 }

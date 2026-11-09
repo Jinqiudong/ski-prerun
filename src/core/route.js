@@ -9,6 +9,9 @@ const LIFT_WAIT = 90; // seconds in line and boarding
 // The planner's pace, for estimates shown to the rider (labelled 估算: not measured).
 export const PACE = { run: RUN_SPEED, lift: LIFT_SPEED, wait: LIFT_WAIT };
 const JOIN = 80; // meters: close enough to skate from one element onto another
+// The longest skate link. A run's join points are placed out to the same distance: a run ending 80-104 m from
+// the middle of another run had no point there to skate onto (Copper's Three Bears top had no way down).
+const SKATE = JOIN * 1.3;
 
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -39,7 +42,7 @@ export function buildGraph(resort, heightAt) {
     const last = run.pts.length - 1;
     const keys = new Set([0, last]);
     for (const end of ends) {
-      let best = -1, bestD = JOIN;
+      let best = -1, bestD = SKATE;
       run.pts.forEach((p, i) => {
         const d = dist(p, end);
         if (d < bestD) { bestD = d; best = i; }
@@ -71,7 +74,7 @@ export function buildGraph(resort, heightAt) {
     for (const b of enterable) {
       if (a === b || (a.run && a.run === b.run)) continue;
       const d = Math.hypot(a.x - b.x, a.z - b.z);
-      if (d < JOIN * 1.3 && b.y <= a.y + 6) edges[a.id].push({ to: b.id, cost: 10 + d / 2, leg: { type: "skate", length: d } });
+      if (d < SKATE && b.y <= a.y + 6) edges[a.id].push({ to: b.id, cost: 10 + d / 2, leg: { type: "skate", length: d } });
     }
   }
   return { nodes, edges, runNodes, liftNodes };

@@ -12,7 +12,7 @@
   }],
   "abasin": [{
     "id": "east-wall", "name": "Upper East Wall", "zh": "East Wall 上半段徒步",
-    "from": "Lenawee Mountain", "mins": [20, 30], "gain": 150,
+    "from": "Lenawee Express", "mins": [20, 30], "gain": 150,
     "zhWhy": "只能走上去的双黑道，大约二月才开，要做雪崩控制。", "enWhy": "Double-black terrain you can only walk to; it usually opens around February, after avalanche work.",
     "tips": ["看当天开没开：门口有牌子", "下来是很陡的雪沟"], "tipsEn": ["Check it's open: the gate is signed", "It's steep gullies on the way down"]
   }, {
@@ -26,7 +26,7 @@
     "from": "Panoramic Express", "mins": [20, 30], "km": 1.6, "snowcat": "可以坐雪猫 Cirque Sled，在 Panoramic Express 顶上一点上车",
     "snowcatEn": "Or ride the Cirque Sled snowcat, which loads just above the Panoramic Express",
     "zhWhy": "Parsenn Bowl 后面像野雪一样的大冰斗，先滑行加走大约 1.6 公里过去。", "enWhy": "A backcountry-like cirque behind Parsenn Bowl, a skate and walk of about a mile from the top of Panoramic.",
-    "tips": ["一般二月中下旬才开，看门口的牌子", "出来是很长的平路，单板要带速度，回 Eagle Wind / Pioneer"], "tipsEn": ["It usually opens mid to late February: check the gate", "The way out is a long runout: carry speed on a board"]
+    "tips": ["一般二月中下旬才开，看门口的牌子", "出来是很长的平路，单板要带速度，回 Eagle Wind / Wild Spur"], "tipsEn": ["It usually opens mid to late February: check the gate", "The way out is a long runout: carry speed on a board"]
   }],
   "snowmass": [{
     "id": "hanging-valley", "name": "Hanging Valley Wall", "zh": "Hanging Valley Wall 短徒步",

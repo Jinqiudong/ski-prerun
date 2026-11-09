@@ -231,7 +231,7 @@
         "advanced": 25,
         "expert": 37
       },
-      "lifts": 18,
+      "lifts": 16,
       "flats": [
         [
           "Coffee Pot",
@@ -307,7 +307,7 @@
     "lat": 39.1539,
     "lon": -106.8643,
     "stats": {
-      "base": 2459,
+      "base": 2470,
       "top": 3528,
       "runs": {
         "easy": 2,
@@ -315,7 +315,7 @@
         "advanced": 21,
         "expert": 53
       },
-      "lifts": 7,
+      "lifts": 5,
       "flats": [
         [
           "T-Lazy Catwalk",
@@ -352,7 +352,7 @@
         "advanced": 17,
         "expert": 6
       },
-      "lifts": 7,
+      "lifts": 6,
       "flats": []
     }
   }
