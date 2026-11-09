@@ -21,10 +21,11 @@ import { navRow } from "../core/nav.js?v=24";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=20";
 import { dropIn } from "../core/transition.js?v=17";
-import { Facilities } from "./kitworld.js?v=5";
+import { Facilities } from "./kitworld.js?v=6";
 import { rideTogether } from "./together.js?v=21";
 import { startParty } from "../core/party.js?v=17";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
+import { clearRope, ropeY } from "./lift-core.js?v=1";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
 import { Guide } from "./guide.js?v=13";
@@ -81,7 +82,8 @@ function setLiftKind(lift, research, index) {
 // The bubble hinges at the restraint bar's pivots and swings up and back when raised.
 const BUBBLE_PIVOT = new THREE.Vector3(), BUBBLE_UP = -2.0;
 
-function liftLine(T, lift) {
+// `drop`: how far the carrier hangs under the rope (its lowest point), so the rope keeps it off the ground.
+function liftLine(T, lift, drop = 3.5) {
   const ground = lift.pts.map(([x, z]) => new THREE.Vector3(x, T.heightAt(x, z), z));
   // Towers along the ground line, then ropes from tower top to tower top with a little sag.
   const dense = [];
@@ -124,14 +126,24 @@ function liftLine(T, lift) {
   while (towers.length > 4 && towers[towers.length - 3].s > total - 40) towers.splice(towers.length - 3, 1);
   const dir = new THREE.Vector3().subVectors(ground[ground.length - 1], ground[0]).setY(0).normalize();
   const side = new THREE.Vector3(dir.z, 0, -dir.x);
+  // A tower on every knoll the straight rope would drag the carriers through (lift-core.js clearRope): the
+  // highest ground under either rope, the carrier's own drop under it.
+  const under = (s) => { const c = pointAtS(s); let h = -Infinity; for (const o of [-HALF_GAUGE, 0, HALF_GAUGE]) h = Math.max(h, T.heightAt(c.x + side.x * o, c.z + side.z * o)); return h; };
+  const ropeH = SPEC.towerRope || ROPE_H;
+  const cleared = clearRope(towers.map((t) => ({ s: t.s, y: t.p.y, h: t.h, station: t.station })), total, under, drop, { ropeH });
+  if (cleared.short > 0) console.warn(`${lift.name}: the rope is ${cleared.short.toFixed(1)} m short of clearing the ground`);
+  const plain = towers.slice();
+  towers.length = 0;
+  for (const c of cleared.towers) {
+    const p = c.added ? pointAtS(c.s).setY(c.y) : plain.find((t) => t.s === c.s)?.p;
+    towers.push({ s: c.s, p, h: c.h, station: c.station, added: c.added, raised: c.raised });
+  }
+  const pure = cleared.towers;
   const ropeAt = (s, off) => {
     let k = 1;
     while (k < towers.length - 1 && towers[k].s < s) k++;
-    const a = towers[k - 1], b = towers[k], t = (s - a.s) / (b.s - a.s || 1), span = b.s - a.s;
-    const p = a.p.clone().lerp(b.p, t);
-    const ha = a.h ?? ROPE_H, hb = b.h ?? ROPE_H;
-    p.y += ha + (hb - ha) * t - (a.station || b.station ? 0 : span * 0.014 * 4 * t * (1 - t)); // sag between towers
-    return p.addScaledVector(side, off);
+    const a = towers[k - 1], b = towers[k], t = (s - a.s) / (b.s - a.s || 1);
+    return a.p.clone().lerp(b.p, t).setY(ropeY(pure, s, ropeH)).addScaledVector(side, off); // sag between towers
   };
   const up = [], down = [];
   for (let s = 0; s <= total; s += 2) { up.push(ropeAt(s, HALF_GAUGE)); down.push(ropeAt(total - s, -HALF_GAUGE)); }
@@ -2525,7 +2537,9 @@ async function main() {
   const [carrier, base, shaft, head, bottom, top0] = await kits([SPEC.carrier, "tower_base", "tower_shaft", "tower_head", SPEC.bottom, SPEC.top]);
   $("liftName").textContent = TRIP ? lift.name : `${lift.name} · 画面样稿`;
   $("bubble").hidden = !HAS_BUBBLE || CABIN; // a cabin's glass is fixed
-  const line = liftLine(T, lift);
+  // How far the carrier hangs under the rope: its lowest point (a cabin's floor, a chair's footrest).
+  const drop = Math.max(2.5, ...Object.values(carrier.parts || {}).filter((q) => q?.geometry).map((q) => { q.geometry.boundingBox || q.geometry.computeBoundingBox(); return -q.geometry.boundingBox.min.y; }));
+  const line = liftLine(T, lift, drop);
   const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]), when: effective(COND).date };
   ctx.tex.cord.repeat.set(1, 1);
   build(ctx);

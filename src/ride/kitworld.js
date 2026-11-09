@@ -81,7 +81,7 @@ export class Facilities {
     this.myTowers = [];
     const mine = line.towers.slice(1, -1).filter((t) => !t.station);
     if (spec.tower) this.latticePool(spec.tower).then((pool) => { for (const t of mine) pool.add(compose(t.p.x, t.p.y, t.p.z, yaw, 1, (t.h || spec.towerRope) / spec.towerRope, 1), spec.towerColor); this.lastRefresh.set(1e9, 0, 0); });
-    else for (const t of mine) this.towerPool().add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8), spec.towerColor, spec.towerBaseColor);
+    else for (const t of mine) this.towerPool().add(compose(t.p.x, t.p.y, t.p.z, yaw, g / 2.8, (t.h || ROPE_H) / ROPE_H, g / 2.8), spec.towerColor, spec.towerBaseColor); // a tower raised over a knoll (lift-core.js) drawn taller
     for (const t of mine) this.myTowers.push(t.p);
     // Terminals at both ends, on plinths where the ground falls away, the lift's name on the board.
     const term = (info) => {
