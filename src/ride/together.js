@@ -24,7 +24,7 @@ import { t, myAvatar } from "../core/i18n.js?v=50";
 import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=24";
 import { ymd } from "../start/trip-intro.js?v=1";
 import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=8";
-import { voiceHere } from "../core/voice.js?v=17";
+import { voiceHere } from "../core/voice.js?v=18";
 
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = HOLD_MAX;
 const SIT = 900, SETTLE = 2400; // sitting down (ms); the boarding moment before a held chair goes

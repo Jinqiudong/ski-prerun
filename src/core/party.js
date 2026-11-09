@@ -26,7 +26,7 @@ import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "./i18n.js?v=50";
 import { rideTrip } from "../ride/together-core.js?v=8";
 import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=2";
-import { voiceHere, startVoice } from "./voice.js?v=17";
+import { voiceHere, startVoice } from "./voice.js?v=18";
 import { micSpot } from "./voice-core.js?v=1";
 import { duck } from "../audio/engine.js?v=5";
 

@@ -85,7 +85,9 @@ export function startVoice({ root = "" } = {}) {
   }
   // Where it sits: an edge and a height (a fraction of the screen), as the page asks (voice-core MIC_SPOTS).
   function place(s = spot) {
-    spot = s && (s.edge === "left" || s.edge === "right") ? s : spot;
+    // Copied: an object made by the page in the frame would keep that page's whole window (its scene, its
+    // pictures) alive up here after the frame has moved on.
+    spot = s && (s.edge === "left" || s.edge === "right") ? { edge: s.edge, y: Number(s.y) || 0.5 } : spot;
     btn.classList.remove("left", "right"); btn.classList.add(spot.edge);
     const h = innerHeight, top = Math.round(Math.max(60, Math.min(h - 80, spot.y * h)) - 33);
     btn.style.top = `${top}px`;
