@@ -12,11 +12,9 @@
     #head button { pointer-events: auto; text-shadow: none; }
     #head b { font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 3px; }
     #head .side { display: grid; justify-items: end; gap: 14px; }
-    /* 单板 / 双板: one pill, two halves; the one ridden filled, as the pose chips */
-    #sport { padding: 3px; gap: 2px; margin-top: -4px; } #sport[hidden] { display: none; }
-    #sport button { display: inline-flex; align-items: center; gap: 3px; font: 13px "Noto Serif SC", serif; color: var(--navy); background: none; border: 0; border-radius: 999px; padding: 3px 10px 3px 4px; cursor: pointer; }
-    #sport button img { width: 24px; height: 24px; object-fit: contain; }
-    #sport button.on { background: var(--navy); color: #fdfbf6; } #sport button.on img { background: #fdfbf6; border-radius: 50%; }
+    /* 单板 / 双板: the 雪板 sheet's first row, each with its painted icon */
+    #wbody .seg.sport { margin-bottom: 12px; } #wbody .seg.sport button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 0; }
+    #wbody .seg.sport img { width: 30px; height: 30px; object-fit: contain; } #wbody .seg.sport button.on img { background: #fdfbf6; border-radius: 50%; }
     /* your avatar, top right: tap for settings (pick another avatar there) */
     #setBtn { position: relative; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 3px solid #fffdf8; background: #e6ebee; box-shadow: 0 4px 10px rgba(40,30,20,.2); cursor: pointer; }
     #setBtn img { width: 100%; height: 100%; border-radius: 50%; display: block; }

@@ -5,31 +5,31 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=14";
-import { addStep, thinPath, openBookPage } from "./roadbook.js?v=27";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=28";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=1";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=17";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=18";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=17";
+import { PaintedMap } from "./paintedmap.js?v=18";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=47";
-import { navRow } from "../core/nav.js?v=24";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=48";
+import { navRow } from "../core/nav.js?v=25";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=20";
-import { dropIn } from "../core/transition.js?v=17";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=21";
+import { dropIn } from "../core/transition.js?v=18";
 import { Facilities } from "./kitworld.js?v=5";
-import { rideTogether } from "./together.js?v=21";
-import { startParty } from "../core/party.js?v=17";
+import { rideTogether } from "./together.js?v=22";
+import { startParty } from "../core/party.js?v=18";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=14";
+import { Guide } from "./guide.js?v=15";
 import { bunnySpot, worldLift } from "./practice-core.js?v=2";
-import { startPractice, spotTitle } from "./practice.js?v=11";
+import { startPractice, spotTitle } from "./practice.js?v=12";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
@@ -1385,6 +1385,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
   // Each trick's painted icon (assets/icons/trick_*.png; tools/draw_icons.mjs); the animals' own tricks get the wheel's.
   const ICON = { ollie: "trick_ollie", spin: "trick_spin", indy: "trick_indy", melon: "trick_melon", tailGrab: "trick_tailgrab", nose: "trick_nose", tailPress: "trick_tailpress", hop: "trick_ski_hop", spread: "trick_ski_spread" };
+  const trName = (n) => t(n); // (the skier's tricks are named in Chinese; i18n.js, `t` being a trick in the loops below)
   const trickIco = (key) => `assets/icons/${ICON[key] || "trick"}.png?v=1`;
   const wheel = $("trickWheel"), tbtn = $("trickBtn");
   let wheelOpen = null;
@@ -1399,7 +1400,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const a = Math.PI * (0.45 + (i / Math.max(1, list.length - 1)) * 0.65), el = document.createElement("div");
       el.className = "opt"; el.dataset.key = t.key;
       el.style.left = `${cx + Math.cos(a) * R}px`; el.style.top = `${cy - Math.sin(a) * R}px`;
-      el.innerHTML = `<div><img src="${trickIco(t.key)}" alt="">${t.name}</div>`;
+      el.innerHTML = `<div><img src="${trickIco(t.key)}" alt="">${trName(t.name)}</div>`;
       el.onclick = () => { doTrick(t.key); closeWheel(); };
       wheel.append(el);
     });
@@ -1412,7 +1413,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function doTrick(key) {
     if (!startTrick(ctx.rider, key)) return;
     const t = tricksOf(ctx.rider).find((x) => x.key === key);
-    flashCue(`<img class="cueIco" src="${trickIco(key)}" alt="">${t.name}!`); navigator.vibrate?.(25);
+    flashCue(`<img class="cueIco" src="${trickIco(key)}" alt="">${trName(t.name)}!`); navigator.vibrate?.(25);
   }
   tbtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (wheelOpen) { closeWheel(); return; } openWheel(e); tbtn.setPointerCapture?.(e.pointerId); });
   tbtn.addEventListener("pointermove", (e) => {
