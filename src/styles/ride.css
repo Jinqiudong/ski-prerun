@@ -39,6 +39,7 @@
     #bigMap .pickCard .two { display: flex; gap: 8px; } #bigMap .pickCard .two button { flex: 1; padding: 10px; }
     #bigMap .pickCard .go { background: #7a4b25; color: #fff8ea; border-color: #7a4b25; font-weight: 600; }
     #runTags .rtag.me { background: none; border: 0; box-shadow: none; padding: 0; }
+    #runTags .rtag.me::after { content: ""; position: absolute; left: 50%; bottom: -3px; width: 46px; height: 12px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(40,30,20,.3), rgba(40,30,20,0)); z-index: -1; } /* standing on the map */
     #runTags .rtag.me > img { height: 72px; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); animation: hop 0.9s ease-in-out infinite; font-size: 40px; line-height: 72px; text-align: center; }
     @keyframes hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-9px); } }
     body.picking #credit { display: none; }

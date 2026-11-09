@@ -33,7 +33,7 @@ button { font-family: "Cormorant Garamond", "Noto Serif SC", serif; }
 .rtag.on { background: var(--navy) !important; color: #fdfbf6 !important; border-color: var(--navy) !important; }
 .rtag.dest { background: var(--red) !important; color: #fdfbf6 !important; border-color: #fdfbf6 !important; }
 .rtag.via { background: var(--pine) !important; color: #fdfbf6 !important; border-color: #fdfbf6 !important; }
-.rtag.me { background: var(--red) !important; }
+.rtag.me { background: none !important; border: 0 !important; box-shadow: none !important; } /* you: your own figure, no box */
 #pickTabs button { color: var(--navy) !important; background: var(--card) !important; border: 1px solid #cbbfa9 !important; }
 #pickTabs button.on { background: var(--navy) !important; color: #fdfbf6 !important; }
 .rcard { background: var(--card) !important; color: var(--ink) !important; border: 1px solid transparent !important; border-radius: 6px !important; box-shadow: 0 6px 16px rgba(40, 30, 20, .18); }

@@ -39,10 +39,10 @@
     #poses button { flex: none; font: 14px "Noto Serif SC", serif; color: var(--navy); background: rgba(253,251,246,.95); border: 0; border-radius: 999px; padding: 7px 14px; box-shadow: 0 3px 8px rgba(40,30,20,.14); cursor: pointer; }
     #poses button.on { background: var(--navy); color: #fdfbf6; }
     #entryClose { border: 0; background: none; padding: 2px 0 2px 8px; font: 12px "Noto Serif SC", serif; color: var(--navy); cursor: pointer; letter-spacing: 0; }
-    #entries { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
-    #entries .ecard { flex: none; position: relative; width: 98px; padding: 8px 6px; border: 0; border-radius: 14px; background: rgba(253,251,246,.97); box-shadow: 0 4px 12px rgba(40,30,20,.15); display: grid; justify-items: center; gap: 2px; font: 13px "Noto Serif SC", serif; color: var(--navy); cursor: pointer; }
+    #entries { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px 0 8px; } /* all of them in sight, no scrolling */
+    #entries .ecard { position: relative; min-width: 0; padding: 6px 4px; border: 0; border-radius: 14px; background: rgba(253,251,246,.97); box-shadow: 0 4px 12px rgba(40,30,20,.15); display: grid; justify-items: center; gap: 2px; font: 13px "Noto Serif SC", serif; color: var(--navy); cursor: pointer; }
     #entries .ecard.on { box-shadow: 0 0 0 2.5px var(--navy), 0 4px 12px rgba(40,30,20,.15); }
-    #entries svg { width: 78px; height: 52px; fill: none; stroke: var(--navy); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    #entries svg { width: 100%; max-width: 66px; height: 44px; fill: none; stroke: var(--navy); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
     #entries .st { position: absolute; top: 4px; right: 7px; font-style: normal; color: var(--red); font-size: 14px; }
     #goBtn { position: absolute; right: 14px; bottom: -4px; width: 72px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; justify-items: center; gap: 2px; font: 12px "Noto Serif SC", serif; color: var(--muted); letter-spacing: 1px; text-shadow: 0 0 6px rgba(253,251,246,.9); }
     #goBtn i { display: block; width: 66px; height: 66px; border-radius: 50%; background: #fbf7ef; box-shadow: 0 4px 12px rgba(40,30,20,.28), 0 0 0 3px var(--navy); overflow: hidden; }
