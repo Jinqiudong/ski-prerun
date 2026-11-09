@@ -469,8 +469,10 @@ export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
     else { const k = Math.min(1, f / 0.12, (1 - f) / 0.12); for (const key of Object.keys(w)) w[key] *= 1 - k; w[gs.key] = k; at(a, f); }
   }
   weights(u, w);
+  if (u.SA) skiWeightsOn(u, {}); // a skier: none of the riding clips (Ski_Stand left on from the lift's ramp turned the hips and skis 45°)
   mix(u);
   if (!A_(u, "lookL")) { turn(B.spine, F, Y, lookYaw * 0.25); turn(B.head, F, Y, Math.max(-1, Math.min(1, lookYaw * 0.75))); }
+  if (u.kind === "ski" && u.real) sitSquare(u, root);
   radioOver(u, dt);
   if (u.gear) placePoles(u.C, u.gear, null, { hidden: true }); // poles put away on the chair; the skis hang off the boots
   root.updateMatrixWorld(true);
@@ -484,6 +486,14 @@ export function sitBoarder(root, lookYaw = 0, seat = SEAT, talk = 0) {
     u.model.position.add(f.sub(o));
   }
   finish(root);
+}
+// A skier on the chair sits square (Ski_Chair_Sit: hips and chest the way the chair goes, shins hanging, skis
+// parallel and straight ahead); the clip lets the skis' tips drop 22°, so the feet are turned up a little at the
+// ankle (SKI_TIPS_UP) to bring the tips just above level.
+const SKI_TIPS_UP = 0.46, X_ = new THREE.Vector3(1, 0, 0);
+function sitSquare(u, root) {
+  root.updateMatrixWorld(true);
+  for (const f of [u.B.footL, u.B.footR]) turn(f, root, X_, -SKI_TIPS_UP); // about the chair's cross axis: toes up
 }
 // On the chair: a wave (Chairlift_Wave) or pointing ahead (Chairlift_Point), once.
 export function gestureBoarder(root, key = "wave") {
