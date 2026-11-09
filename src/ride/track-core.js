@@ -5,10 +5,10 @@ export const TRACK = {
   carve: 0.05, // m, half-width of a carved line (soft-edged: the dark core is about the edge's few cm)
   board: 0.78, // m, half the board's length: a skid's smear is this × sin(slip) across each side
   ski: 0.5, // m, half a ski's length that scrapes in a skid or a hockey stop
-  powder: 0.22, // m, extra half-width in deep powder (a trench)
+  powder: 0.09, // m, extra half-width in deep powder: a soft groove a little wider than the carve, not a band
   ink: 0.16, // how much a carved line darkens the snow at its middle
   smear: 0.22, // ...and a scraped smear (wide and soft-edged, so it needs a little more to show on corduroy)
-  trench: 0.22, // ...and a powder trench at full depth
+  trench: 0.1, // ...and a powder groove at full depth: a soft shadow, lighter than a line on hard snow
   step: 0.5, // m between points
   lift: 0.05, // m over the snow (with a polygon offset: no z-fighting with the ground)
 };
@@ -17,7 +17,8 @@ export const TRACK = {
 // into a hockey stop (a skier's skidded turns still leave two thin lines: only a stop scrapes them wide).
 export function trackShape({ slip = 0, soft = 0, ski = false, hockey = 0 } = {}) {
   const s = Math.abs(Math.sin(slip)) * (ski ? Math.min(1, Math.max(0, hockey)) : 1), base = ski ? SKI_TRACK.width : TRACK.carve;
-  const smear = Math.max(base, (ski ? TRACK.ski : TRACK.board) * s);
+  const p0 = Math.min(1, Math.max(0, soft));
+  const smear = Math.max(base, (ski ? TRACK.ski : TRACK.board) * s * (1 - 0.5 * p0)); // the board floats in powder: a slide scrapes less wide
   const k = Math.min(1, (smear - base) / 0.25); // 0 carved .. 1 skidding
   const p = Math.min(1, Math.max(0, soft));
   return {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { carveDepth, depthStep, slew, carveLayer, alignOf, leanScale, twoBone, SHAPES, EDGE_FLAT, ALIGN_AT, HIP_BEND, NEUTRAL_BEND, NEUTRAL_RISE, RISE_S, LEAVE_S, HIP_SPEED, TRUNK_SPEED } from "../src/rider/carve-core.js";
+import { armTargets, ARM_SPEED, hipSlew, HIP_SPEED as HS, HIP_RISE, carveDepth, depthStep, slew, carveLayer, alignOf, leanScale, twoBone, SHAPES, EDGE_FLAT, ALIGN_AT, HIP_BEND, NEUTRAL_BEND, NEUTRAL_RISE, RISE_S, LEAVE_S, HIP_SPEED, TRUNK_SPEED } from "../src/rider/carve-core.js";
 
 const near = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
 const KMH = (v) => v / 3.6;
@@ -41,9 +41,7 @@ test("layer: toe side drives the hips in over the toes, in line with the thighs;
   assert.ok(toe.align === 1 && toe.alignToe === 1 && toe.bend <= 10 * Math.PI / 180, "toe: pelvis and trunk in line with the thighs, no butt out");
   assert.ok(heel.hipIn < 0 && heel.hipDown > 0.05, "heel: hips back and low");
   assert.ok(heel.trunk > 0.2 && heel.trunkK === 1, "heel: chest up, forward over the knees");
-  assert.ok(heel.armIn > 0.5, "heel: arms forward");
-  assert.ok(toe.armDown > 0.4, "toe: hands low");
-  for (const k of ["hipIn", "hipDown", "twist", "armIn", "armDown", "trunkK", "upright"]) near(flat[k], 0);
+  for (const k of ["hipIn", "hipDown", "twist", "trunkK", "upright"]) near(flat[k], 0);
 });
 
 test("toe side: in line with the thighs from the first bit of edge", () => {
@@ -64,7 +62,7 @@ test("between the edges: a tall, centred stance", () => {
   // through the switch nothing jumps: each value moves little from a small toe to a small heel depth (the
   // toe line's align, eased over time by boarder.js, is still about 0 there)
   const a = carveLayer(0.01, 0, 0.02, 1), b = carveLayer(0, 0.01, 0, 1);
-  for (const k of ["hipIn", "hipDown", "twist", "armIn", "armDown"]) assert.ok(Math.abs(a[k] - b[k]) < 0.02, k);
+  for (const k of ["hipIn", "hipDown", "twist"]) assert.ok(Math.abs(a[k] - b[k]) < 0.02, k);
 });
 
 test("heel sit: moderate on a medium turn, deep only at the top end", () => {
@@ -86,4 +84,26 @@ test("two-bone leg: law of cosines, held within reach", () => {
   near(twoBone(0.4, 0.4, 2).knee, 0, 0.05); // out of reach: straight
   const f = twoBone(0.4, 0.4, 0.01);
   near(f.d, 0.3 * 0.8); // folded no further than 30% of the leg
+});
+
+test("arms: relaxed and quiet, never out sideways at shoulder height or pointing back", () => {
+  for (const [toe, heel] of [[0, 0], [1, 0], [0, 1], [0.5, 0], [0, 0.5], [0.2, 0]]) for (const pet of [false, true]) {
+    const a = armTargets(toe, heel, pet);
+    for (const k of ["lead", "rear"]) {
+      const [toes, up, nose] = a[k].upper;
+      assert.ok(up < -0.3, `${k} below the shoulder (${toe},${heel})`);
+      assert.ok(nose > -0.3, `${k} not pointing back`);
+      assert.ok(a[k].elbow > 0.2 && a[k].elbow < 1.2, "a soft elbow");
+    }
+    assert.ok(a.lead.upper[2] > a.rear.upper[2], "the lead arm toward the nose, the rear one by the back hip");
+  }
+  const heel = armTargets(0, 1), toe = armTargets(1, 0);
+  assert.ok(heel.lead.upper[0] > 0.5 && heel.rear.upper[0] > 0.5, "heel side: both arms forward");
+  assert.ok(toe.lead.upper[1] < -0.6 && toe.rear.upper[1] < -0.6 && toe.lead.upper[0] > 0.3, "toe side: hands low and forward");
+  assert.ok(ARM_SPEED <= 3);
+});
+
+test("hips: sink no faster than HIP_SPEED, rise a little quicker", () => {
+  near(hipSlew(0.8, 0.2, 0.1), 0.8 - HS * 0.1); near(hipSlew(0.3, 0.9, 0.1), 0.3 + HIP_RISE * 0.1);
+  assert.ok(HIP_RISE >= HS);
 });

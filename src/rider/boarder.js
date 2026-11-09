@@ -8,7 +8,9 @@ import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
 import { myRiderLook } from "../core/look.js?v=21";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
-import { carveDepth, depthStep, carveLayer, alignOf, leanScale, twoBone, slew, HIP_SPEED, TRUNK_SPEED, PELVIS_SPEED, NEUTRAL_TRUNK } from "./carve-core.js?v=4";
+import { jointFrame, limitJoint, limitHinge, decompose, limitsOf, sideOf, rangesFor, HINGES } from "./joint-core.js?v=1";
+import { armTargets, ARM_SPEED } from "./carve-core.js?v=5";
+import { carveDepth, depthStep, carveLayer, alignOf, leanScale, twoBone, slew, hipSlew, TRUNK_SPEED, PELVIS_SPEED, NEUTRAL_TRUNK } from "./carve-core.js?v=5";
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 import { SKI_CLIPS, skiTricks, skiWeights, newPlant, plantStep, standinParams, sportOf, extraLean, fallSide } from "./ski-core.js?v=1";
 import { dressSkier, poseSkiBody, placePoles, tintSkiGear, SKI_STACK } from "./skier.js?v=1";
@@ -163,10 +165,105 @@ export async function boarderModel(friend = null) {
   for (const l of legs) { l.l1 = wp(l.thigh).distanceTo(wp(l.shin)); l.l2 = wp(l.shin).distanceTo(wp(l.foot)); }
   const legLen = legs.length ? (legs[0].l1 + legs[0].l2) : 0.85;
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ, legs, legLen,
+  const joints = jointsOf(bones, B);
+  for (const l of legs) l.hinge = joints.find((j) => j.bone === l.shin)?.f.hinge?.h || null; // the knee's hinge, in the thigh's space
+  const elbowH = Object.fromEntries(joints.filter((j) => j.f.hinge && /^Forearm/.test(j.name)).map((j) => [j.name, j.f.hinge.h])); // the elbows' hinges, in the upper arms' space
+  const chestFront = new THREE.Vector3(0, 1, 0).applyQuaternion(B.footL.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(B.chest.getWorldQuaternion(new THREE.Quaternion()).invert()); // the body's front, in the chest's space
+  const handRest = Object.fromEntries(["HandL", "HandR"].filter((n) => C.bones[n]).map((n) => [n, C.bones[n].quaternion.clone()]));
+  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ, legs, legLen, joints, handRest, elbowH, chestFront,
     edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0, radio: 0, toeD: 0, heelD: 0 } };
   return root;
 }
+// The skeleton's joints at rest (the rig's own axes, measured here, not assumed): each limited bone's frame
+// (joint-core.js) and its ranges, the right side's mirrored. The body's front is where the toes point.
+function jointsOf(bones, B) {
+  const front = new THREE.Vector3(0, 1, 0).applyQuaternion(B.footL.getWorldQuaternion(new THREE.Quaternion()));
+  const out = [], q = new THREE.Quaternion();
+  for (const bn of bones) {
+    const lim = limitsOf(bn.name); if (!lim || !bn.parent?.isBone) continue;
+    const kid = bn.children.find((c) => c.isBone);
+    const axis = kid ? kid.position.clone().normalize().toArray() : [0, 1, 0];
+    const f = front.clone().applyQuaternion(bn.parent.getWorldQuaternion(q).invert()).toArray();
+    const hinge = HINGES[bn.name.replace(/[._]?[LR]$/, "")];
+    out.push({ bone: bn, name: bn.name, f: jointFrame(bn.quaternion.toArray(), axis, f, hinge ? bn.position.clone().normalize().toArray() : null),
+      rng: rangesFor(lim, sideOf(bn.name)), hinge, logOnly: !!lim.logOnly });
+  }
+  return out;
+}
+// Every limited bone kept within a person's range (parents first), counting what was out of range in
+// u.jointStats[stage] when a test asks for it. clamp false: count only.
+function limitJoints(u, stage = "final", clamp = true) {
+  const st = u.jointStats; if (!clamp && !st) return;
+  const tally = st && (st[stage] ||= {});
+  for (const j of u.joints) {
+    const qa = j.bone.quaternion.toArray();
+    let q, hit;
+    if (j.hinge) { // its twist, then its bend
+      const tw = limitJoint(qa, j.f, { fwd: [-9, 9], side: [-9, 9], twist: j.rng.twist }), hg = limitHinge(tw.q, j.f, j.hinge.lo, j.hinge.hi, j.hinge.off);
+      q = hg.q; hit = [tw.hit, hg.hit].filter(Boolean).join(",");
+    } else ({ q, hit } = limitJoint(qa, j.f, j.rng));
+    if (!hit) continue;
+    if (tally) for (const h of hit.split(",")) tally[`${j.name} ${h}`] = (tally[`${j.name} ${h}`] || 0) + 1;
+    if (clamp && !j.logOnly) { j.bone.quaternion.fromArray(q); j.bone.updateMatrixWorld(true); }
+  }
+  if (st) st.frames = (st.frames || 0) + (stage === "final" ? 1 : 0);
+}
+
+// The arms while riding (carve-core.js armTargets): relaxed and quiet, the lead arm forward over the nose and
+// the rear arm low by the back hip, elbows soft, hands loose; on the heel side both forward, on the toe side
+// low and forward. Each upper arm and forearm follows its target smoothly and turns no faster than ARM_SPEED,
+// in the chest's frame (so they ride along with the body, not fling with it). w: how much of it (none in a
+// trick or a fall, whose clips' arms show).
+function armsBody(u, dt, toe, heel, w) {
+  const B = u.B, F = u.lean, s = u.s, prev = (s.arms ||= {});
+  if (w < 0.01) { s.arms = {}; return; } // a trick or a fall: its clip's arms; afterwards they ease back from there
+  const leadL = u.lead === "L", T = armTargets(toe, heel, !!u.C?.pet);
+  // The arms follow the body: their frame is the chest's (its front, the toes' side; up along the trunk; the nose
+  // squared to both), not the board's, which on a deep heel edge tips the toes' side up into the sky.
+  const cf = u.chestFront.clone().applyQuaternion(B.chest.getWorldQuaternion(_wq)).normalize();
+  const cu = wpos(B.neck, new THREE.Vector3()).sub(wpos(B.spine, new THREE.Vector3())); cu.addScaledVector(cf, -cu.dot(cf)).normalize();
+  const cn = new THREE.Vector3(0, 0, 1).transformDirection(F.matrixWorld); cn.addScaledVector(cf, -cn.dot(cf)).addScaledVector(cu, -cn.dot(cu)).normalize();
+  const toWorld = (v) => new THREE.Vector3().addScaledVector(cf, v[0]).addScaledVector(cu, v[1]).addScaledVector(cn, v[2]).normalize(); // [toes, up, nose] → world
+  const inv = F.matrixWorld.clone().invert(), max = ARM_SPEED * dt;
+  const dirOf = (b, kid) => wpos(kid, new THREE.Vector3()).sub(wpos(b, new THREE.Vector3())).normalize();
+  for (const [arm, fore, hand, isLead] of [[B.armL, B.foreL, u.C.bones.HandL, leadL], [B.armR, B.foreR, u.C.bones.HandR, !leadL]]) {
+    if (!arm || !fore || !hand) continue;
+    const t = isLead ? T.lead : T.rear;
+    for (const b of [arm, fore]) {
+      const kid = b === arm ? fore : hand, now = dirOf(b, kid);
+      let goal;
+      if (b === arm) {
+        goal = toWorld(t.upper);
+        const back = goal.dot(cf); // never behind the chest's plane by more than ~17°
+        if (back < -0.3) goal.addScaledVector(cf, -0.3 - back).normalize();
+      }
+      else { // the forearm: bent softly off the upper arm's line, toward the target's side
+        const upper = dirOf(arm, fore), side = toWorld(t.bendTo);
+        side.addScaledVector(upper, -side.dot(upper)).normalize();
+        goal = upper.multiplyScalar(Math.cos(t.elbow)).addScaledVector(side, Math.sin(t.elbow));
+      }
+      goal.lerp(now, 1 - w).normalize(); // partly the clip's, while a push or a trick blends in
+      // from where it was last frame (kept in the board's frame), eased toward the goal, no faster than ARM_SPEED
+      const last = prev[b.name] ? prev[b.name].clone().transformDirection(F.matrixWorld) : now.clone();
+      const eased = last.clone().lerp(goal, Math.min(1, dt * 9)).normalize(), ang = last.angleTo(eased);
+      const next = ang > max ? last.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3().crossVectors(last, eased).normalize(), max)) : eased;
+      const eh = u.elbowH?.[fore.name];
+      if (b === fore && eh) { // roll the upper arm so the elbow's hinge lies across the bend: the forearm then bends on it
+        const ud = dirOf(arm, fore), want = new THREE.Vector3().crossVectors(ud, next);
+        if (want.lengthSq() > 1e-4) {
+          const hw = new THREE.Vector3().fromArray(eh).applyQuaternion(arm.getWorldQuaternion(_wq));
+          hw.addScaledVector(ud, -hw.dot(ud)); want.addScaledVector(ud, -want.dot(ud));
+          if (hw.lengthSq() > 1e-6) aim(arm, hw, want);
+        }
+      }
+      aim(b, b === fore ? dirOf(fore, hand) : now, next);
+      prev[b.name] = next.clone().transformDirection(inv);
+    }
+    const rest = u.handRest?.[hand.name]; if (rest) hand.quaternion.slerp(rest, 0.6 * w); // the hand loose
+  }
+}
+
+
 // A friend's rider gone: its own materials, skeleton and mixer go too (the geometry and textures are shared).
 export function disposeBoarder(root) {
   if (root?.userData?.kind === "animal") return disposeAnimal(root);
@@ -237,6 +334,16 @@ function legsTo(u, feet, across) {
     if (v.lengthSq() < 1e-8) v.copy(across); v.normalize();
     const K = H.clone().addScaledVector(dir, Math.cos(hip) * l.l1).addScaledVector(v, Math.sin(hip) * l.l1);
     aim(l.thigh, K0.clone().sub(H), K.clone().sub(H));
+    // Roll the thigh about its length so the knee's hinge (the rig's, measured at rest) lies across the plane
+    // the leg now bends in: then the shin turns on the hinge alone, never sideways at the knee.
+    if (l.hinge) {
+      const td = K.clone().sub(H).normalize(), want = new THREE.Vector3().crossVectors(td, P.clone().sub(K).normalize());
+      if (want.lengthSq() > 1e-4) {
+        const hw = new THREE.Vector3().fromArray(l.hinge).applyQuaternion(l.thigh.getWorldQuaternion(_wq));
+        hw.addScaledVector(td, -hw.dot(td)); want.addScaledVector(td, -want.dot(td));
+        if (hw.lengthSq() > 1e-6) aim(l.thigh, hw, want); // a turn about td only: both are square to it
+      }
+    }
     const Kn = wpos(l.shin, new THREE.Vector3());
     aim(l.shin, wpos(l.foot, _e).sub(Kn), P.clone().sub(Kn));
     l.foot.parent.getWorldQuaternion(_pq); l.foot.quaternion.copy(_pq.invert().multiply(feet[i].q)); l.foot.updateMatrixWorld(true);
@@ -278,18 +385,10 @@ function carveBody(u, toe, heel, align = null, neutral = 0) {
     turn(B.spine, F, Z, -tx * fix * 0.55);
     turn(B.chest, F, Z, -tx * fix * 0.45);
   }
-  // Arms: each upper arm's direction pulled toward the toes and down, by its own length.
-  const ak = u.C?.pet ? 0.5 : 1; // the capybara's short arms: half as far
-  for (const [arm, fore] of [[B.armL, B.foreL], [B.armR, B.foreR]]) {
-    if (!arm || !fore) continue;
-    const a = wpos(fore, new THREE.Vector3()).sub(wpos(arm, _c)), n = a.length(); if (n < 1e-5) continue;
-    a.divideScalar(n);
-    aim(arm, a, a.clone().addScaledVector(across, L.armIn * ak).addScaledVector(up, -L.armDown * ak));
-  }
   return L.alignToe;
 }
 
-// The body's speed limits (carve-core.js HIP_SPEED, PELVIS_SPEED, TRUNK_SPEED), measured in the world, laid
+// The body's speed limits (carve-core.js HIP_SPEED / HIP_RISE, PELVIS_SPEED, TRUNK_SPEED), measured in the world, laid
 // last over whatever the clips and the carving body asked for: the hips' height over the snow, then the
 // pelvis's and the trunk's tilt toward the toes or the heels, each moved from where it was last frame by no
 // more than its speed allows (the legs bent again to keep the feet on the board). So a quick roll from edge
@@ -309,7 +408,7 @@ function slewBody(root, u, dt, off) {
   if (!(fresh || off)) {
     const feet = feetOf(u);
     // Hips: up or down along the world's up, no further than the legs reach.
-    const h = hipH(), want = slew(s.slewH, h, HIP_SPEED * dt);
+    const fast = 1 + 3 * Math.min(1, s.skid), h = hipH(), want = hipSlew(s.slewH, h, dt * fast); // a skid's own clip blend is smooth; held, the legs would overreach
     if (Math.abs(want - h) > 1e-4) {
       const hp = wpos(B.hips, new THREE.Vector3()); hp.y += want - h;
       for (const [i, l] of u.legs.entries()) { // keep within reach of each foot
@@ -321,11 +420,11 @@ function slewBody(root, u, dt, off) {
     }
     // Pelvis, then trunk: tipped about the board's long axis back toward where they were.
     for (let i = 0; i < 3; i++) {
-      const p = pelvis(), pw = slew(s.slewP, p, PELVIS_SPEED * dt);
+      const p = pelvis(), pw = slew(s.slewP, p, PELVIS_SPEED * dt * fast);
       if (Math.abs(pw - p) > 5e-4) { turn(B.hips, u.lean, Z, -tx * (pw - p)); legsTo(u, feet, across); } else break;
     }
     for (let i = 0; i < 8; i++) { // a few times round: the board's long axis is not quite square to the level toe side
-      const t = trunk(), tw = slew(s.slewT, t, TRUNK_SPEED * dt);
+      const t = trunk(), tw = slew(s.slewT, t, TRUNK_SPEED * dt * fast);
       if (Math.abs(tw - t) > 5e-4) { turn(B.spine, u.lean, Z, -tx * (tw - t) * 0.55); turn(B.chest, u.lean, Z, -tx * (tw - t) * 0.45); } else break;
     }
   }
@@ -421,6 +520,7 @@ export function poseBoarder(root, r) {
   if (push > 0.01) { u.pushT = (u.pushT + dt * 0.9) % 1; at(u.A.push, u.pushT); } // a push every ~1.1 s
   u.lean.position.set(0, 0, 0); u.lean.rotation.set(0, 0, 0); u.yaw.rotation.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
   mix(u);
+  limitJoints(u, "clips", false);
   // Skid: the board swings so the toes face the way you are going and the heel edge trails uphill.
   u.yaw.rotation.y = -tx * 1.2 * s.skid * (1 - down);
   // About the board's long axis; + leans toward -x. Deep on the toe side the body shows a little less of it
@@ -433,17 +533,22 @@ export function poseBoarder(root, r) {
   const aT = alignOf(s.toeD); s.align = damp(s.align || 0, aT, aT < (s.align || 0) ? 14 : 7, dt); // the toe side's hips into line with the thighs, eased (out quicker)
   const ride = (1 - Math.min(1, s.skid * 1.5)) * (1 - push) * (1 - k);
   const aligned = carveBody(u, s.toeD * (1 - k), s.heelD * (1 - k), s.align * (1 - k), ride); // a trick or a fall takes over at once
+  limitJoints(u, "carveBody", false);
   // Angulation: the chest comes back toward upright by part of the inclination (the clips are posed on a
   // flat board; the inclination comes from tilting the whole rider).
   // (Not on the toe side once the trunk is in line with the thighs: it would bend it back at the hip.)
   turn(u.B.spine, u.lean, Z, -tilt * 0.18 * (1 - aligned));
   turn(u.B.chest, u.lean, Z, -tilt * 0.14 * (1 - aligned));
   slewBody(root, u, dt, k > 0.01);
+  limitJoints(u, "slewBody", false);
+  armsBody(u, dt, s.toeD, s.heelD, (1 - k) * (1 - push));
+  limitJoints(u, "arms", false);
   if (daze) turn(u.B.head, u.lean, Y, daze);
   // The radio to the mouth (talkBoarder): its arm and head over the riding pose, the radio in the hand.
   const rk = s.radio * (1 - down);
   if (rk > 0.01) for (const [b, q] of u.radio) b.quaternion.slerp(q, rk);
   holdProp(u.C, rk > 0.5 ? "Radio_Talk_Ride" : null);
+  limitJoints(u); // last: a person's joint ranges, whatever every layer above asked for
   if (lift) { root.position.addScaledVector(r.n, lift); }
   finish(root);
 }

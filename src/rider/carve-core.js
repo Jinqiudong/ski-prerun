@@ -37,24 +37,28 @@ export const slew = (prev, want, maxStep) => prev + clamp(want - prev, -maxStep,
 // the trunk tipping toward the toes or the heels (rad/s), in the world (so the board can roll under a body
 // that stays centred, crossing under, rather than the body flipping with it).
 export const HIP_SPEED = 0.6, TRUNK_SPEED = 2, PELVIS_SPEED = 2.5;
+// Rising out of a deep sit may be quicker than sinking into one: held low while the board rolls to the toe
+// edge at speed, the shins would fold over the boots past what an ankle in a boot can (joint-core.js Foot).
+export const HIP_RISE = 1.1;
+// The hips' allowed move this frame: down by HIP_SPEED, up by HIP_RISE (m/s).
+export const hipSlew = (prev, want, dt) => prev + clamp(want - prev, -HIP_SPEED * dt, HIP_RISE * dt);
 
 // The shape at full depth on each side.
 //   hipIn: hips toward the toes (− : toward the heels), leg lengths; hipDown: hips toward the board.
 //   trunk: (heel side) the trunk's tilt toward the toes (rad), measured on the board (hips to neck), that
 //   the trunk is brought to; on the toe side the trunk follows the thighs instead (align); twist: the chest turned to face the toes more (− : opened toward the nose), rad.
-//   armIn / armDown: added to each upper arm's direction, toward the toes and down (unit-ish), then aimed.
 //   sit: (heel side) how far the hips sink as into a chair, full by SIT_AT of depth: a moderate turn is
 //   already a clear sit; the deepest sit comes from the heel carve clip and the inclination on a hard one.
 //   lean: how much of the physics' inclination the rider's body shows. On the toe side at full lean (about
 //   46°) the shins would lie near the snow and it reads as kneeling; leaned 20% less (about 37°), with the
 //   legs extended (hipDown < 0) and the hips driven in, it reads as a laid-out carve, knees off the snow.
 export const SHAPES = {
-  toe: { hipIn: 0.27, hipDown: -0.09, lean: 0.8, twist: 0.14, armIn: 0.55, armDown: 0.7 },
-  heel: { hipIn: -0.16, hipDown: 0, sit: 0.09, trunk: 0.45, lean: 1, twist: -0.16, armIn: 0.9, armDown: 0.1 },
+  toe: { hipIn: 0.27, hipDown: -0.09, lean: 0.8, twist: 0.14 },
+  heel: { hipIn: -0.16, hipDown: 0, sit: 0.09, trunk: 0.45, lean: 1, twist: -0.16 },
 };
 
 // The layer for a moment of the ride: toe and heel depths (0..1, at most one of them non-zero, but a blend
-// is fine) to { hipIn, hipDown, twist, armIn, armDown } scaled by depth; the trunk's tilt `trunk` and how
+// is fine) to { hipIn, hipDown, twist } scaled by depth; the trunk's tilt `trunk` and how
 // far it is brought to it (`trunkK`, the heel side's); and `align` with `bend`: how far the pelvis and the
 // trunk are brought into line with the thighs and the bend left at the hip.
 // On the toe side the hips are driven forward from the first bit of edge, not only on a deep carve (the
@@ -74,8 +78,8 @@ export function carveLayer(toe, heel, alignTo = null, neutral = 0) {
   const T = SHAPES.toe, H = SHAPES.heel;
   const align = (alignTo ?? alignOf(toe)) * (1 - clamp(heel / 0.08, 0, 1)), drive = 0.55 * align + 0.45 * clamp(toe, 0, 1);
   const hw = clamp(heel / HEEL_TRUNK_AT, 0, 1), flat = clamp(1 - (toe + heel) / 0.3, 0, 1);
-  const out = { hipIn: 0, hipDown: 0, twist: 0, armIn: 0, armDown: 0, trunk: H.trunk, trunkK: hw, align: 0, bend: 0, alignToe: 0, upright: 0 };
-  for (const key of ["hipDown", "twist", "armIn", "armDown"]) out[key] = T[key] * toe + H[key] * heel;
+  const out = { hipIn: 0, hipDown: 0, twist: 0, trunk: H.trunk, trunkK: hw, align: 0, bend: 0, alignToe: 0, upright: 0 };
+  for (const key of ["hipDown", "twist"]) out[key] = T[key] * toe + H[key] * heel;
   out.hipDown += NEUTRAL_RISE * clamp(neutral, 0, 1) * flat + H.sit * clamp(heel / SIT_AT, 0, 1);
   out.hipIn = T.hipIn * drive + H.hipIn * heel;
   out.align = (align + (1 - align) * clamp(neutral, 0, 1)) * (1 - hw);
@@ -100,4 +104,27 @@ export function twoBone(l1, l2, d, fold = 0.3) {
   const hip = Math.acos(clamp((l1 * l1 + dd * dd - l2 * l2) / (2 * l1 * dd), -1, 1));
   const knee = Math.PI - Math.acos(clamp((l1 * l1 + l2 * l2 - dd * dd) / (2 * l1 * l2), -1, 1));
   return { d: dd, hip, knee };
+}
+
+// The arms while riding, relaxed and quiet (boarder.js armsBody). Directions in the board's frame as [toward the
+// toes, up, toward the nose]: each upper arm's (from the shoulder), the side its forearm bends toward and the
+// elbow's soft bend (rad). Riding along: the lead arm forward over the nose, the rear arm low by the back hip;
+// on the heel side both forward (out in front of the chest, the toes' side) for balance; on the toe side the
+// hands low and forward. Never out sideways at shoulder height, never pointing back. A rigged animal's short
+// arms stay nearer its sides.
+const ARMS = {
+  ride: { lead: [0.3, -0.75, 0.6], rear: [0.15, -0.95, -0.2] },
+  toe: { lead: [0.5, -0.75, 0.45], rear: [0.35, -0.9, -0.05] },
+  heel: { lead: [0.7, -0.4, 0.5], rear: [0.75, -0.5, 0.1] },
+};
+export const ARM_SPEED = 3; // rad/s, each upper arm and forearm
+const unit = (v) => { const n = Math.hypot(...v) || 1; return v.map((x) => x / n); };
+export function armTargets(toe = 0, heel = 0, pet = false) {
+  const t = clamp(toe / 0.3, 0, 1), h = clamp(heel / 0.3, 0, 1), r = Math.max(0, 1 - t - h);
+  const mix = (k) => unit([0, 1, 2].map((i) => ARMS.ride[k][i] * r + ARMS.toe[k][i] * t + ARMS.heel[k][i] * h));
+  const side = (v) => (pet ? unit([v[0] * 0.6, v[1] - 0.3, v[2] * 0.6]) : v);
+  return {
+    lead: { upper: side(mix("lead")), bendTo: [0.6, 0.2, 0.8], elbow: 0.5 },
+    rear: { upper: side(mix("rear")), bendTo: [0.8, 0.3, 0.2], elbow: 0.45 },
+  };
 }

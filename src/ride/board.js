@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { DEG, wrap, fallLine, dropAlong, gravityAlong, slipAngle, brakeOf, edgeGrip, pivotFor, brakeDecel, edgeTrails, scrubOf, SKI, skiMode, skiSide, skiPivot, ploughOf, ploughDecel } from "./edge-core.js?v=2";
 
 export { governor, skiGovernor } from "./edge-core.js?v=2";
-import { SKI_TRACK, TRACK, trackShape } from "./track-core.js?v=1";
+import { SKI_TRACK, TRACK, trackShape } from "./track-core.js?v=2";
 export { SKI_TRACK, TRACK, trackShape };
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
