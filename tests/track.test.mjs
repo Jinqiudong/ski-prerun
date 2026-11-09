@@ -18,10 +18,13 @@ test("a skid smears it wide; side-on it is the board's length", () => {
   assert.equal(trackShape({ slip: -60 * DEG }).half, s.half); // either way across
 });
 
-test("powder digs a wider, darker trench", () => {
+test("powder leaves a soft groove: a little wider than the carve, lighter, never a wide dark band", () => {
   const g = trackShape({}), p = trackShape({ soft: 1 });
-  assert.ok(p.half > g.half + 0.15);
-  assert.ok(p.ink > g.ink);
+  assert.ok(p.half > g.half + 0.05, "wider than the carved line");
+  assert.ok(p.half * 2 <= 0.3, `groove ${p.half * 2} m wide`);
+  assert.ok(p.ink < g.ink && p.ink > 0.05, "a soft shadow, lighter than a line on hard snow");
+  const ps = trackShape({ soft: 1, slip: 40 * DEG }), gs = trackShape({ slip: 40 * DEG });
+  assert.ok(ps.half < gs.half + TRACK.powder, "a slide in powder scrapes less wide");
 });
 
 test("skis: two thin lines, each thinner than a board's", () => {
