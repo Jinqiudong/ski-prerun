@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { carveDepth, carveLayer, leanScale, twoBone, SHAPES, EDGE_FLAT } from "../src/rider/carve-core.js";
+import { carveDepth, carveLayer, alignOf, leanScale, twoBone, SHAPES, EDGE_FLAT, ALIGN_AT, HIP_BEND } from "../src/rider/carve-core.js";
 
 const near = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
 
@@ -19,7 +19,7 @@ test("depth: none on a flat board, more with edge and speed, all of it on a hard
 test("layer: toe side drives the hips in over the toes and stands tall; heel side sits low and back", () => {
   const toe = carveLayer(1, 0), heel = carveLayer(0, 1), flat = carveLayer(0, 0);
   assert.ok(toe.hipIn > 0.15 && toe.hipDown <= 0, "toe: hips forward, legs extended, not dropped");
-  assert.ok(toe.trunk < 0, "toe: chest stacked back over the hips, not folded forward");
+  assert.ok(toe.align === 1 && toe.bend <= 10 * Math.PI / 180, "toe: pelvis and trunk in line with the thighs, no butt out");
   assert.ok(heel.hipIn < 0 && heel.hipDown > 0.03, "heel: hips back and low");
   assert.ok(heel.trunk > 0.2, "heel: chest up, forward over the knees");
   assert.ok(heel.armIn > 0.5, "heel: arms forward");
@@ -27,9 +27,20 @@ test("layer: toe side drives the hips in over the toes and stands tall; heel sid
   for (const k of ["hipIn", "hipDown", "twist", "armIn", "armDown", "trunkK"]) near(flat[k], 0);
 });
 
+test("toe side: in line with the thighs from a gentle turn on, and the hips driven forward with it", () => {
+  const gentle = carveLayer(0.37, 0); // about a 13° edge
+  assert.ok(gentle.align > 0.9, `align ${gentle.align}`);
+  assert.ok(gentle.hipIn > SHAPES.toe.hipIn * 0.6, "the hips forward already on a gentle turn");
+  near(alignOf(0), 0); near(alignOf(ALIGN_AT), 1); near(alignOf(ALIGN_AT / 2), 0.5);
+  near(carveLayer(0.2, 0, 0.3).align, 0.3); // eased by the caller
+  assert.ok(HIP_BEND > 0 && HIP_BEND <= 10 * Math.PI / 180);
+  near(carveLayer(0, 0.7).align, 0); // heel side: unchanged, its own trunk tilt
+  near(carveLayer(0, 0.7).trunkK, 0.7); near(carveLayer(0, 0.7).trunk, SHAPES.heel.trunk);
+});
+
 test("layer scales with depth and blends through flat without a jump", () => {
-  const half = carveLayer(0.5, 0);
-  near(half.hipIn, SHAPES.toe.hipIn * 0.5); near(half.trunkK, 0.5); near(half.trunk, SHAPES.toe.trunk);
+  const half = carveLayer(0, 0.5);
+  near(half.hipIn, SHAPES.heel.hipIn * 0.5); near(half.trunkK, 0.5);
   const a = carveLayer(0.01, 0), b = carveLayer(0, 0.01);
   for (const k of ["hipIn", "hipDown", "twist", "armIn", "armDown"]) assert.ok(Math.abs(a[k] - b[k]) < 0.02, k);
 });

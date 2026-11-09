@@ -21,7 +21,7 @@
 import * as THREE from "three";
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "../core/i18n.js?v=50";
-import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=24";
+import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=25";
 import { ymd } from "../start/trip-intro.js?v=1";
 import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=8";
 import { voiceHere } from "../core/voice.js?v=18";
