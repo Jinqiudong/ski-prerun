@@ -57,7 +57,9 @@ export function liftSpec(lift, research, known, index = null) {
   const bubble = !!(r.bubble ?? (known ? known.bubble : lift.bubble));
   const typed = [r.model, r.carrier, r.type].find((t) => CARRIERS.includes(t));
   const type = r.type; // the research's lift type
-  const cabin = typed ? /^gondola|cabriolet/.test(typed) : type ? type === "gondola" || type === "cabriolet" : lift.kind === "gondola" || lift.kind === "cable_car";
+  // A tram (aerialway=cable_car: Snowbird's Aerial Tram, Snowbasin's Allen Peak Tram) has no kit model of its
+  // own yet: it is drawn as gondola cabins on a loop, and ridden like one (it really runs to and fro).
+  const cabin = typed ? /^gondola|cabriolet/.test(typed) : type ? type === "gondola" || type === "cabriolet" || type === "tram" : lift.kind === "gondola" || lift.kind === "cable_car";
   const surface = type ? ["platter", "tbar", "rope_tow", "j-bar"].includes(type) : ["t-bar", "j-bar", "platter", "drag_lift", "rope_tow"].includes(lift.kind);
   const detachable = !!(type ? type === "detach_chair" || cabin || type === "chondola" : r.detachable ?? lift.detachable ?? (cabin || seats >= 6 || bubble || /express/i.test(lift.name)));
   let carrier = typed;

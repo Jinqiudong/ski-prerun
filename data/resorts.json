@@ -355,5 +355,249 @@
       "lifts": 6,
       "flats": []
     }
+  },
+  {
+    "id": "alta",
+    "name": "Alta",
+    "zh": "阿尔塔",
+    "state": "犹他",
+    "ready": true,
+    "lat": 40.5832,
+    "lon": -111.6245,
+    "skiOnly": true,
+    "stats": {
+      "base": 2607,
+      "top": 3214,
+      "runs": {
+        "easy": 6,
+        "intermediate": 29,
+        "advanced": 71,
+        "expert": 8
+      },
+      "lifts": 9,
+      "flats": [
+        [
+          "Catherine's Out Run",
+          "advanced",
+          212
+        ],
+        [
+          "Sidewinder",
+          "advanced",
+          168
+        ],
+        [
+          "Last Chance",
+          "advanced",
+          156
+        ],
+        [
+          "Devil's Way",
+          "intermediate",
+          132
+        ]
+      ]
+    }
+  },
+  {
+    "id": "snowbird",
+    "name": "Snowbird",
+    "zh": "雪鸟",
+    "state": "犹他",
+    "ready": true,
+    "lat": 40.5679,
+    "lon": -111.6499,
+    "stats": {
+      "base": 2361,
+      "top": 3343,
+      "runs": {
+        "easy": 15,
+        "intermediate": 45,
+        "advanced": 77,
+        "expert": 49
+      },
+      "lifts": 11,
+      "flats": [
+        [
+          "West 2nd South Long",
+          "easy",
+          192
+        ],
+        [
+          "Red Lens Line",
+          "advanced",
+          155
+        ],
+        [
+          "Bananas",
+          "intermediate",
+          144
+        ],
+        [
+          "Lower Primrose Path",
+          "advanced",
+          132
+        ]
+      ]
+    }
+  },
+  {
+    "id": "brighton",
+    "name": "Brighton",
+    "zh": "布莱顿",
+    "state": "犹他",
+    "ready": true,
+    "lat": 40.5921,
+    "lon": -111.5804,
+    "stats": {
+      "base": 2670,
+      "top": 3190,
+      "runs": {
+        "easy": 11,
+        "intermediate": 28,
+        "advanced": 17,
+        "expert": 5
+      },
+      "lifts": 6,
+      "flats": [
+        [
+          "Milly Access",
+          "intermediate",
+          192
+        ],
+        [
+          "Krista's",
+          "intermediate",
+          132
+        ],
+        [
+          "Majestic Access",
+          "intermediate",
+          131
+        ]
+      ]
+    }
+  },
+  {
+    "id": "solitude",
+    "name": "Solitude",
+    "zh": "索利图德",
+    "state": "犹他",
+    "ready": true,
+    "lat": 40.6133,
+    "lon": -111.6041,
+    "stats": {
+      "base": 2444,
+      "top": 3056,
+      "runs": {
+        "easy": 5,
+        "intermediate": 36,
+        "advanced": 26,
+        "expert": 12
+      },
+      "lifts": 8,
+      "flats": [
+        [
+          "Dynamite",
+          "intermediate",
+          156
+        ],
+        [
+          "Honeycomb Return",
+          "intermediate",
+          144
+        ]
+      ]
+    }
+  },
+  {
+    "id": "deervalley",
+    "name": "Deer Valley",
+    "zh": "鹿谷",
+    "state": "犹他",
+    "ready": true,
+    "lat": 40.6114,
+    "lon": -111.4822,
+    "skiOnly": true,
+    "stats": {
+      "base": 1962,
+      "top": 2913,
+      "runs": {
+        "easy": 55,
+        "intermediate": 96,
+        "advanced": 66,
+        "expert": 12
+      },
+      "lifts": 34,
+      "flats": [
+        [
+          "Green Monster",
+          "easy",
+          370
+        ],
+        [
+          "Woodside",
+          "easy",
+          238
+        ],
+        [
+          "Hidden Treasure",
+          "intermediate",
+          228
+        ],
+        [
+          "Homeward Bound",
+          "easy",
+          216
+        ],
+        [
+          "Banner",
+          "easy",
+          192
+        ],
+        [
+          "Evening Star",
+          "intermediate",
+          168
+        ]
+      ]
+    }
+  },
+  {
+    "id": "snowbasin",
+    "name": "Snowbasin",
+    "zh": "雪盆",
+    "state": "犹他",
+    "ready": true,
+    "lat": 41.2004,
+    "lon": -111.8627,
+    "stats": {
+      "base": 1951,
+      "top": 2849,
+      "runs": {
+        "easy": 9,
+        "intermediate": 47,
+        "advanced": 62,
+        "expert": 15
+      },
+      "lifts": 11,
+      "flats": [
+        [
+          "Wildflower Finish",
+          "advanced",
+          168
+        ],
+        [
+          "Slo Road",
+          "easy",
+          167
+        ],
+        [
+          "Squirrel",
+          "easy",
+          132
+        ]
+      ]
+    }
   }
 ]

@@ -5,7 +5,7 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=28";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=29";
 import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
 import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";
@@ -13,11 +13,12 @@ import { makeEntrance } from "./entrance.js?v=26";
 import { skiStage, colorSkis, tintSkiGear, SKI_COLORS } from "../rider/skier.js?v=1";
 import { addSki } from "../rider/ski.js?v=2";
 import { sportOf } from "../rider/ski-core.js?v=1";
-import { openBookPage, locateIn } from "../ride/roadbook.js?v=31";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=50";
-import { playIntro } from "./intro.js?v=37";
-import { flyTo } from "../core/transition.js?v=20";
-import { startParty } from "../core/party.js?v=22";
+import { openBookPage, locateIn } from "../ride/roadbook.js?v=32";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=51";
+import { playIntro } from "./intro.js?v=38";
+import { flyTo } from "../core/transition.js?v=21";
+import { startParty } from "../core/party.js?v=23";
+import { REGIONS, regionOf } from "../core/regions.js?v=1";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -607,12 +608,20 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=64");
+    const { Collection } = await import("./collection.js?v=65");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
     addEventListener("resize", () => collection.resize());
-    await collection.build(await resortList(), stats, logOf());
+    // The map opens on the region of the resort you were last at (src/core/regions.js); a chip per region
+    // under the heading flies to the other.
+    const list0 = await resortList(), last = list0.find((r) => r.id === st.resort);
+    const regs = REGIONS.filter((g) => list0.some((r) => regionOf(r) === g));
+    $("regions").hidden = regs.length < 2;
+    $("regions").innerHTML = regs.map((g) => `<button data-reg="${g.id}">${EN_ON ? g.en : g.state}<small>${list0.filter((r) => regionOf(r) === g).length}</small></button>`).join("");
+    for (const b of $("regions").children) b.onclick = () => { collection.setRegion(b.dataset.reg); $("worldCard").hidden = true; };
+    collection.onRegion = (id) => { for (const b of $("regions").children) b.classList.toggle("on", b.dataset.reg === id); };
+    await collection.build(list0, stats, regionOf(last).id);
     // Under the title, just how far you've got: mountains visited, and how much of all of them you've skied.
     { const list = await resortList(), been = list.filter((r) => stats[r.id]?.touched).length, all = list.reduce((a, r) => a + (stats[r.id]?.share || 0), 0) / Math.max(1, list.length);
       $("worldHead").querySelector("small").textContent = been ? t("去过 {a} 座 · {b} 座里滑了 {p}%", { a: been, b: list.length, p: Math.max(1, Math.round(all * 100)) }) : t("{b} 座山，还没开始", { b: list.length }); }
@@ -621,7 +630,7 @@ async function openWorld() {
     collection.onPick = (r) => { $("tabs").classList.add("shut");
       const s = logOf()[r.id]?.stats, card = $("worldCard");
       card.innerHTML = `<img class="st" src="assets/icons/${s?.touched ? "st_prerun" : "st_notyet"}.png?v=1" alt=""><b>${r.name}</b><small>${EN_ON ? "" : `${r.zh} · `}${s?.touched ? t("滑过 {a}/{b} 条雪道 · {km} 公里", { a: s.touched, b: s.runs, km: s.km.toFixed(1) }) : t("还没去过")}</small>
-        <div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
+        ${r.skiOnly ? `<small class="skionly">${t("只许双板 · 单板不能上缆车")}</small>` : ""}<div class="bar"><i style="width:${Math.round((s?.share || 0) * 100)}%"></i></div><button>${t(s?.touched ? "继续征服 ›" : "去这里 ›")}</button>`;
       card.querySelector("button").onclick = () => { st.resort = r.id; save(); flyTo(r.id); location.href = `mountain/?resort=${encodeURIComponent(r.id)}`; };
       card.hidden = false;
     };
@@ -643,7 +652,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=50");
+    const { Trips } = await import("./trips.js?v=51");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -653,7 +662,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=34");
+  const { renderMemory } = await import("./memory.js?v=35");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.

@@ -23,7 +23,7 @@ const EN = {
   "还没有。选一个默认人物，点「换装」改颜色、取名字，就会存到这里。": "None yet. Pick a rider, tap Dress to change colours and give it a name, and it's saved here.",
   // The opening, about your nearest trip
   "还有 {n} 天 · {name}": "{n} days to go · {name}", "明天出发 · {name}": "Tomorrow · {name}", "打开行程 ›": "Open the trip ›", "计划去 {list}": "Planned: {list}",
-  "轻点飞机，看看是谁": "Tap a plane to see who's in it", "欢迎来到科罗拉多": "Welcome to Colorado", "今天的计划：{resort}": "Today's plan: {resort}", "今天还没定去哪": "Nothing planned for today yet",
+  "轻点飞机，看看是谁": "Tap a plane to see who's in it", "欢迎来到科罗拉多": "Welcome to Colorado", "欢迎来到{region}": "Welcome to {region}", "已经在 {city}": "Already in {city}", "科罗拉多": "Colorado", "犹他": "Utah", "今天的计划：{resort}": "Today's plan: {resort}", "今天还没定去哪": "Nothing planned for today yet",
   "直接去 {resort} ›": "Straight to {resort} ›", "第 {n} 天 · 今天去 {resort}": "Day {n} · {resort} today", "第 {n} 天 · 今天还没定去哪": "Day {n} · nothing planned yet",
   "这趟滑完了": "That's a wrap", "这趟的山：{list}": "The mountains: {list}", "看看记录 ›": "See the memories ›", "已经在 Denver": "Already in Denver", "还没填从哪飞": "No airport yet",
   "第一天 · {resort} · {sky} {temp}": "Day one · {resort} · {sky} {temp}", "今天 · {resort} · {sky} {temp}": "Today · {resort} · {sky} {temp}", " · 新雪 {cm} 厘米": " · {cm} cm of snow",
@@ -132,7 +132,7 @@ const EN = {
   // Resort guide
   "这几天的雪": "Snow on your days", "适合谁": "Who it's for", "数字": "Numbers", "你的进度": "Your progress",
   "还太远，天气预报出来（出发前 2 周内）就会写在这里": "Too far out — the forecast shows up here about 2 weeks before",
-  "山顶": "Top", "山脚": "Base", "落差": "Vertical", "雪道": "Runs", "缆车": "Lifts", "从 Denver": "From Denver",
+  "山顶": "Top", "山脚": "Base", "落差": "Vertical", "雪道": "Runs", "缆车": "Lifts", "从 Denver": "From Denver", "从 {city}": "From {city}", "这座山只许双板：单板不能上缆车。在这里预滑能认路，但去的那天要穿双板。": "Skiers only: snowboards aren't allowed on the lifts here. Pre-running it still teaches you the way, but on the day you'll need skis.", "只许双板 · 单板不能上缆车": "Skiers only · no snowboards on the lifts", "只许双板": "Skiers only",
   "初级": "Easy", "中级": "Inter.", "高级": "Adv.", "专家": "Expert", "去预滑 ›": "Pre-run ›",
   "还没预滑过": "Not pre-run yet", "粉雪日": "powder day", "小雪": "flurries", "晴": "bluebird", "阴": "cloudy", "雪": "snow",
   // Memory

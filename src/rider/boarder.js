@@ -6,7 +6,7 @@
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
-import { myRiderLook } from "../core/look.js?v=21";
+import { myRiderLook } from "../core/look.js?v=22";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
 import { jointFrame, limitJoint, limitHinge, decompose, limitsOf, sideOf, rangesFor, HINGES } from "./joint-core.js?v=1";
 import { armTargets, ARM_SPEED } from "./carve-core.js?v=5";

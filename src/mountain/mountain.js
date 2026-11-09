@@ -8,14 +8,15 @@ import { markMoguls } from "../ride/snow-core.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=8";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=2";
-import { addStep } from "../ride/roadbook.js?v=31";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=50";
-import { openNav } from "../core/nav.js?v=27";
-import { liftTicket } from "../core/transition.js?v=20";
-import { startParty } from "../core/party.js?v=22";
+import { addStep } from "../ride/roadbook.js?v=32";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=51";
+import { openNav } from "../core/nav.js?v=28";
+import { liftTicket } from "../core/transition.js?v=21";
+import { startParty } from "../core/party.js?v=23";
 import { guard, pixelRatio, freeOnLeave } from "../core/detail.js?v=1";
 import { bunnySpot } from "../ride/practice-core.js?v=2";
-import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
+import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=2";
+import { regionOf } from "../core/regions.js?v=1";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
@@ -88,14 +89,16 @@ const RIDEABLE = ["chair_lift", "mixed_lift", "gondola", "cable_car"];
 async function main() {
   await status("下载地形…");
   const R = await fetch(`../data/${RESORT_ID}.json`).then((r) => r.json());
-  Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // all Colorado so far: Denver time
+  Object.assign(RESORT, { lat: R.origin.lat, lon: R.origin.lon, name: R.name }); // Colorado and Utah: both on Mountain Time (America/Denver)
   party.setRn(R.name);
   document.title = `${R.name} · 雪场预滑`;
   document.querySelector("#title b").textContent = R.name;
-  // The heights and the run counts, from the resort list (tools/resort_stats.py).
+  // The region over the name, the heights and the run counts, from the resort list (tools/resort_stats.py).
   fetch("../data/resorts.json").then((r) => r.json()).then((list) => {
-    const st = list.find((x) => x.id === RESORT_ID)?.stats; if (!st) return;
-    $("heights").textContent = `BASE ${st.base.toLocaleString("en-US")} m · SUMMIT ${st.top.toLocaleString("en-US")} m`;
+    const me = list.find((x) => x.id === RESORT_ID), st = me?.stats;
+    if (me) document.querySelector("#title i").textContent = regionOf(me).en.toUpperCase(); // COLORADO, UTAH
+    if (!st) return;
+    $("heights").textContent = `BASE ${st.base.toLocaleString("en-US")} m · SUMMIT ${st.top.toLocaleString("en-US")} m${me.skiOnly ? ` · ${tr("只许双板")}` : ""}`; // Alta, Deer Valley: no snowboards
     if (!$("counts")) return;
     const n = st.runs, rows = [["初级", n.easy, "background:#22b35a;border-radius:50%"], ["中级", n.intermediate, "background:#1f6fe5"], ["高级", n.advanced, "background:#15171c;transform:rotate(45deg) scale(.8)"], ["专家", n.expert, "background:#15171c;transform:rotate(45deg) scale(.8);box-shadow:5px -5px 0 #15171c;margin-right:9px"]];
     $("counts").innerHTML = rows.map(([k, v, css]) => `<span><i class="d" style="${css}"></i>${tr(k)} ${v}</span>`).join("");

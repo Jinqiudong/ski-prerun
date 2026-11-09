@@ -148,5 +148,143 @@
       1212154522
     ],
     "exclude_why": "1212154522: Five Trees, a private double for the Five Trees homes between Highlands and Buttermilk (OSM access=private, liftblog)."
+  },
+  "alta": {
+    "name": "Alta",
+    "area": [
+      40.564,
+      -111.6529,
+      40.6024,
+      -111.5961
+    ],
+    "villages": [
+      [
+        "Goldminer's Daughter Lodge",
+        "Collins"
+      ],
+      [
+        "Albion Day Lodge",
+        "Sunnyside"
+      ]
+    ],
+    "treeline": 3050,
+    "outline": 1023308077
+  },
+  "snowbird": {
+    "name": "Snowbird",
+    "area": [
+      40.548,
+      -111.6804,
+      40.5879,
+      -111.6193
+    ],
+    "villages": [
+      [
+        "Snowbird Center",
+        "Aerial Tram"
+      ],
+      [
+        "Creekside Lodge",
+        "Gadzoom"
+      ]
+    ],
+    "treeline": 3050,
+    "outline": 1023308078
+  },
+  "brighton": {
+    "name": "Brighton",
+    "area": [
+      40.5829,
+      -111.5998,
+      40.6012,
+      -111.561
+    ],
+    "villages": [
+      [
+        "Brighton Center",
+        "Crest Express"
+      ],
+      [
+        "Milly Chalet",
+        "Milly Express"
+      ]
+    ],
+    "treeline": 3050,
+    "outline": 682230007
+  },
+  "solitude": {
+    "name": "Solitude",
+    "area": [
+      40.5966,
+      -111.6179,
+      40.6301,
+      -111.5903
+    ],
+    "villages": [
+      [
+        "Moonbeam Lodge",
+        "Moonbeam Express"
+      ],
+      [
+        "Solitude Village",
+        "Apex Express"
+      ]
+    ],
+    "treeline": 3050,
+    "outline": 682230006
+  },
+  "deervalley": {
+    "name": "Deer Valley",
+    "area": [
+      40.5801,
+      -111.5286,
+      40.6427,
+      -111.4359
+    ],
+    "villages": [
+      [
+        "Snow Park Lodge",
+        "Carpenter Express"
+      ],
+      [
+        "Silver Lake Village",
+        "Sterling Express"
+      ],
+      [
+        "Jordanelle Base",
+        "Jordanelle Express Gondola"
+      ],
+      [
+        "East Village",
+        "East Village Gondola I"
+      ]
+    ],
+    "treeline": 3050,
+    "grid": [
+      560,
+      520
+    ],
+    "outline": 682241434
+  },
+  "snowbasin": {
+    "name": "Snowbasin",
+    "area": [
+      41.1818,
+      -111.8848,
+      41.219,
+      -111.8406
+    ],
+    "villages": [
+      [
+        "Earl's Lodge",
+        "Needles Express Gondola"
+      ],
+      [
+        "Wildcat Base",
+        "Wildcat"
+      ]
+    ],
+    "treeline": 3050,
+    "outline": 1201185853
   }
 }

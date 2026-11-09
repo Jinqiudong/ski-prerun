@@ -5,9 +5,9 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=16";
-import { addStep, thinPath, openBookPage } from "./roadbook.js?v=31";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=32";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=3";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=28";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=29";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=8";
 import { liftHub, findPlanned, crumbOf, viaNext, GO } from "./hub-core.js?v=2";
@@ -17,27 +17,27 @@ import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=20";
+import { PaintedMap } from "./paintedmap.js?v=21";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=50";
-import { navRow } from "../core/nav.js?v=27";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=51";
+import { navRow } from "../core/nav.js?v=28";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=23";
-import { dropIn } from "../core/transition.js?v=20";
-import { Facilities } from "./kitworld.js?v=7";
-import { rideTogether } from "./together.js?v=33";
-import { startParty } from "../core/party.js?v=22";
-import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=5";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=24";
+import { dropIn } from "../core/transition.js?v=21";
+import { Facilities } from "./kitworld.js?v=8";
+import { rideTogether } from "./together.js?v=34";
+import { startParty } from "../core/party.js?v=23";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=6";
 import { clearRope, ropeY } from "./lift-core.js?v=1";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit, runSurface, runPowder, runConds, wayConds, condWords, COND_ICON, COND_ZH } from "./snow-core.js?v=5";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=4";
-import { Guide } from "./guide.js?v=24";
+import { Guide } from "./guide.js?v=25";
 import { bunnySpot, worldLift } from "./practice-core.js?v=2";
-import { startPractice, spotTitle } from "./practice.js?v=21";
+import { startPractice, spotTitle } from "./practice.js?v=22";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
-import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
-import { condPill } from "./condpill.js?v=1";
+import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=2";
+import { condPill } from "./condpill.js?v=2";
 import { sPlan, sAt, alongPath } from "./sline-core.js?v=1";
 import { guard, pixelRatio, shadowSize, freeOnLeave } from "../core/detail.js?v=1";
 
@@ -961,8 +961,9 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
   const pathDir = (pts, i) => { const a = pts[Math.max(0, i - 2)], b = pts[Math.min(pts.length - 1, i + 2)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); };
   const nearestOn = (pts, x, z, from, to) => { let best = Infinity, bi = from; for (let i = from; i <= to; i++) { const d = (pts[i][0] - x) ** 2 + (pts[i][1] - z) ** 2; if (d < best) { best = d; bi = i; } } return { i: bi, d: Math.sqrt(best) }; };
-  // ---- Hike-to terrain from this lift's top (data/hikes.json; Highland Bowl so far): on foot with the board
-  // carried, up the ridge as a quick time-lapse to the summit's prayer flags, then down a line of the bowl.
+  // ---- Hike-to terrain from this lift's top (data/hikes.json: Highland Bowl, Alta's Baldy Chutes): on foot
+  // with the board carried, up the ridge as a quick time-lapse to the summit (Highland Bowl's prayer flags,
+  // where the hike has `flags`), then down one of its lines.
   let hike = null, hk = null;
   const HIKE_GEAR = ["能挂板的背包或板带", "多带水", "能量棒", "保暖中间层", "备用手套", "雪镜和墨镜", "防晒", "救援三件套（建议）"];
   ctx.condsChanged = () => { if (st.phase === "rise" || st.phase === "pick") paintSheet(); };
@@ -1003,7 +1004,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   }
   function startHike() {
     const hp = hike && hikePath(); if (!hp) return;
-    hk = { ...hp, d: 0, dist: [0], flags: prayerFlags(...hp.summit) };
+    hk = { ...hp, d: 0, dist: [0], flags: hike.flags ? prayerFlags(...hp.summit) : new THREE.Group() };
     aerial?.dispose(true); aerial = null; // the top's view from the air is done with: its memory back for the way down
     for (let i = 1; i < hp.pts.length; i++) hk.dist.push(hk.dist[i - 1] + Math.hypot(hp.pts[i][0] - hp.pts[i - 1][0], hp.pts[i][1] - hp.pts[i - 1][1]));
     world.add(hk.flags);
@@ -1048,7 +1049,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (hk.d >= total && !hk.top) {
       hk.top = true;
       $("arriveTitle").textContent = `到顶了 · ${alt.toLocaleString("en-US")} 米`;
-      $("arriveNote").textContent = "经幡在风里响。从碗里选一条滑下去：";
+      $("arriveNote").textContent = hike.flags ? "经幡在风里响。从碗里选一条滑下去：" : "到了。选一条滑下去：";
       $("arriveRow").innerHTML = hk.down.map((r, k) => `<button class="btn${k ? "" : " go"}" data-k="${k}">${LEVEL_MARK[r.level]}${r.name} ›</button>`).join("");
       for (const b of $("arriveRow").querySelectorAll("button")) b.onclick = () => startBowl(hk.down[+b.dataset.k]);
       $("arrive").hidden = false;
