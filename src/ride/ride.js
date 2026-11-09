@@ -4,7 +4,7 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=14";
+import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=15";
 import { addStep, thinPath, openBookPage } from "./roadbook.js?v=31";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=3";
 import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=24";
@@ -32,9 +32,9 @@ import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, de
 import { clearRope, ropeY } from "./lift-core.js?v=1";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit, runSurface, runPowder, runConds, wayConds, condWords, COND_ICON, COND_ZH } from "./snow-core.js?v=5";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=4";
-import { Guide } from "./guide.js?v=20";
+import { Guide } from "./guide.js?v=21";
 import { bunnySpot, worldLift } from "./practice-core.js?v=2";
-import { startPractice, spotTitle } from "./practice.js?v=17";
+import { startPractice, spotTitle } from "./practice.js?v=18";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";

@@ -4,6 +4,8 @@ import * as THREE from "three";
 import { DEG, wrap, fallLine, dropAlong, gravityAlong, slipAngle, brakeOf, edgeGrip, pivotFor, brakeDecel, edgeTrails, scrubOf, SKI, skiMode, skiSide, skiPivot, ploughOf, ploughDecel } from "./edge-core.js?v=2";
 
 export { governor, skiGovernor } from "./edge-core.js?v=2";
+import { SKI_TRACK, TRACK, trackShape } from "./track-core.js?v=1";
+export { SKI_TRACK, TRACK, trackShape };
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
 
@@ -106,7 +108,7 @@ export class Rider {
     // For the pose (boarder.js swings the board 1.2 rad × skid toward the heel side) and the spray.
     this.slip = slipS; this.edge = edge * (-Math.sign(this.steer) || 0); this.grip = grip;
     this.skid = Math.min(1, (ski || slipS * heel > 0 ? slip : 0.35 * slip) / 1.2);
-    this.ski = ski;
+    this.ski = ski; this.soft = soft;
     this.tuck = tuck;
     this.braking = this.brake > 0.35;
     this.dt = dt;
@@ -114,52 +116,94 @@ export class Rider {
   }
 }
 
-// The board's track in the snow behind the rider: one wide strip. { ski }: two narrow ones, a ski's width
-// each, side by side (SKI_TRACK), spreading apart in a plough (the tails pushed out).
-export const SKI_TRACK = { gap: 0.12, width: 0.05, plough: 0.14 };
+// The track in the snow behind the rider: a board's one carved line (TRACK.carve, a few cm), smeared wide when it
+// skids (the board's length across the way it slides) and a trench in deep powder; skis leave two thin lines
+// (SKI_TRACK), spreading apart in a plough (the tails pushed out). One buffer, one draw: each point lays three
+// vertices per line across the travel, and the shader darkens the snow under it (multiplied, like the run
+// ribbons, so it reads in any light): darkest along the middle with soft edges, fading out with the track's age
+// (metres since laid) and the distance from the camera. Nothing is laid in the air.
+const trackMat = () => new THREE.ShaderMaterial({
+  uniforms: { head: { value: 0 } },
+  vertexShader: `attribute vec3 tk; uniform float head; varying vec3 vT; varying float vD;
+    void main() { vT = vec3(tk.xy, head - tk.z); vec4 wp = modelMatrix * vec4(position, 1.0); vD = length(wp.xyz - cameraPosition); gl_Position = projectionMatrix * viewMatrix * wp; }`,
+  fragmentShader: `varying vec3 vT; varying float vD;
+    void main() {
+      float a = abs(vT.x), w = max(fwidth(vT.x), 1e-4);
+      float prof = 1.0 - smoothstep(0.15, 1.0, a); // a groove: dark down the middle, soft to nothing at the edges
+      float thin = min(1.0, 0.9 / w); // thinner than ~2 px far off: lighter, not a shimmering hard line
+      float fade = (1.0 - smoothstep(20.0, 160.0, vT.z)) * (1.0 - smoothstep(35.0, 110.0, vD));
+      float i = vT.y * prof * thin * fade;
+      gl_FragColor = vec4(1.0 - i * vec3(1.15, 1.0, 0.7), 1.0); // the blue of shaded snow, not grey
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.MultiplyBlending, premultipliedAlpha: true, toneMapped: false, fog: false,
+  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -6,
+});
+
 export class Tracks {
   constructor(scene, terrain, { ski = false } = {}) {
     this.terrain = terrain;
-    this.max = 600;
-    this.points = [];
-    this.strips = (ski ? [[-SKI_TRACK.gap, SKI_TRACK.width], [SKI_TRACK.gap, SKI_TRACK.width]] : [[0, 0.16]]).map(([offset, width]) => {
-      const pos = new Float32Array(this.max * 2 * 3);
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-      const idx = [];
-      for (let i = 0; i < this.max - 1; i++) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
-      geo.setIndex(idx);
-      geo.setDrawRange(0, 0);
-      // DoubleSide: the strip's triangles are wound facing down (they were culled, so no track showed at all)
-      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xb9c0dc, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
-      mesh.frustumCulled = false;
-      scene.add(mesh);
-      return { offset, width, pos, geo, mesh };
-    });
+    this.ski = ski;
+    this.lines = ski ? [-1, 1] : [0];
+    this.max = 500; // × TRACK.step: 250 m of track, though it has faded out well before
+    this.vp = this.lines.length * 3; // vertices per point: each line's two edges and its middle (a wide smear follows the snow)
+    this.n = 0; this.dist = 0; this.last = null; this.air = false;
+    const geo = (this.geo = new THREE.BufferGeometry());
+    this.pos = new Float32Array(this.max * this.vp * 3);
+    this.tk = new Float32Array(this.max * this.vp * 3); // across -1..1, darkness, metres along the track when laid
+    geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute("tk", new THREE.BufferAttribute(this.tk, 3).setUsage(THREE.DynamicDrawUsage));
+    const idx = [], vp = this.vp;
+    for (let i = 0; i < this.max - 1; i++) for (let l = 0; l < this.lines.length; l++) {
+      for (let q = 0; q < 2; q++) { const a = i * vp + l * 3 + q, c = a + vp; idx.push(a, c, a + 1, a + 1, c, c + 1); }
+    }
+    geo.setIndex(idx);
+    geo.setDrawRange(0, 0);
+    this.mesh = new THREE.Mesh(geo, trackMat());
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 1; // after the runs' ribbons (both multiply; the order only keeps it steady)
+    scene.add(this.mesh);
   }
 
-  clear() { this.points = []; for (const s of this.strips) s.geo.setDrawRange(0, 0); }
+  clear() { this.n = 0; this.last = null; this.air = false; this.geo.setDrawRange(0, 0); }
 
-  dispose(scene) { for (const s of this.strips) { scene.remove(s.mesh); s.geo.dispose(); } }
+  dispose(scene) { scene.remove(this.mesh); this.geo.dispose(); this.mesh.material.dispose(); }
 
-  // r.surf: the snow's surface over the terrain where the board is (moguls, powder), if any.
+  // r.surf: the snow's surface over the terrain where the board is (moguls, powder), if any. In the air (off a
+  // mogul) nothing is laid: the line ends, and starts again where you land.
   add(r) {
-    const last = this.points[this.points.length - 1];
-    if (last && Math.hypot(last.x - r.x, last.z - r.z) < 0.6) return;
-    if (this.points.length === this.max) this.points.shift();
-    this.points.push({ x: r.x, z: r.z, h: r.heading, dy: r.surf || 0, spread: 1 + ((r.plough || 0) * SKI_TRACK.plough) / SKI_TRACK.gap });
-    const n = this.points.length;
-    for (const s of this.strips) {
-      for (let i = 0; i < n; i++) {
-        const p = this.points[i], cx = Math.cos(p.h), sx = -Math.sin(p.h);
-        for (const [k, w] of [[0, -s.width], [1, s.width]]) {
-          const o = s.offset * (p.spread || 1) + w, x = p.x + cx * o, z = p.z + sx * o;
-          s.pos.set([x, this.terrain.heightAt(x, z) + p.dy + 0.04, z], (i * 2 + k) * 3);
-        }
-      }
-      s.geo.attributes.position.needsUpdate = true;
-      s.geo.setDrawRange(0, Math.max(0, n - 1) * 6);
+    const air = (r.bumpAir || 0) > 0.05;
+    if (air) { if (!this.air && this.last) this.push(r, 0); this.air = true; return; }
+    const last = this.last;
+    if (last) {
+      const d = Math.hypot(last.x - r.x, last.z - r.z);
+      if (d > 6) this.clear(); // moved on (placed beside a friend, a new start): a new track, no line across
+      else if (d < TRACK.step) return;
     }
+    if (this.air) { this.air = false; if (this.last) this.push(r, 0); } // the stretch over the air stays blank
+    this.push(r, 1);
+  }
+
+  // A point of the track here: on 1 inked, 0 blank (each line's ends fade in and out over a step).
+  push(r, on) {
+    if (this.last) this.dist += Math.hypot(this.last.x - r.x, this.last.z - r.z);
+    this.last = { x: r.x, z: r.z };
+    const vp = this.vp, stride = vp * 3;
+    if (this.n === this.max) { this.pos.copyWithin(0, stride); this.tk.copyWithin(0, stride); this.n--; }
+    const i = this.n++, h = r.heading, cx = Math.cos(h), sx = -Math.sin(h), T = this.terrain, dy = (r.surf || 0) + TRACK.lift;
+    const { half, ink } = trackShape({ slip: r.slip || 0, soft: r.soft || 0, ski: this.ski, hockey: r.hockey || 0 });
+    const spread = SKI_TRACK.gap + (r.plough || 0) * SKI_TRACK.plough;
+    this.lines.forEach((side, l) => {
+      const mid = side * spread;
+      for (let k = 0; k < 3; k++) {
+        const o = mid + (k - 1) * half, x = r.x + cx * o, z = r.z + sx * o, j = (i * vp + l * 3 + k) * 3;
+        this.pos[j] = x; this.pos[j + 1] = T.heightAt(x, z) + dy; this.pos[j + 2] = z;
+        this.tk[j] = k - 1; this.tk[j + 1] = ink * on; this.tk[j + 2] = this.dist;
+      }
+    });
+    this.mesh.material.uniforms.head.value = this.dist;
+    this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.tk.needsUpdate = true;
+    this.geo.setDrawRange(0, Math.max(0, this.n - 1) * 12 * this.lines.length);
   }
 }
 
