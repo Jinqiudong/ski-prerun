@@ -8,6 +8,7 @@ import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
 import { myRiderLook } from "../core/look.js?v=18";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
+import { carveDepth, carveLayer, twoBone } from "./carve-core.js?v=1";
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
@@ -151,9 +152,14 @@ export async function boarderModel(friend = null) {
   }
   // The leading foot (the one nearer the nose, +z): it stays strapped in on the chairlift.
   const lead = root.worldToLocal(B.footL.getWorldPosition(new THREE.Vector3())).z > 0 ? "L" : "R";
+  // The legs' bones (thigh, shin), for bending them so the feet stay on the board as the hips move.
+  const wp = (b) => b.getWorldPosition(new THREE.Vector3());
+  const legs = ["L", "R"].map((s) => ({ thigh: B["thigh" + s], shin: B["shin" + s], foot: B["foot" + s] })).filter((l) => l.thigh && l.shin && l.foot);
+  for (const l of legs) { l.l1 = wp(l.thigh).distanceTo(wp(l.shin)); l.l2 = wp(l.shin).distanceTo(wp(l.foot)); }
+  const legLen = legs.length ? (legs[0].l1 + legs[0].l2) : 0.85;
   const armZ = Math.sign(root.worldToLocal(B.armL.getWorldPosition(new THREE.Vector3())).z) || 1; // the left arm's end of the board
-  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ,
-    edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0, radio: 0 } };
+  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ, legs, legLen,
+    edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0, radio: 0, toeD: 0, heelD: 0 } };
   return root;
 }
 // A friend's rider gone: its own materials, skeleton and mixer go too (the geometry and textures are shared).
@@ -196,6 +202,67 @@ function turn(bone, frame, axis, angle) {
 }
 const Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 const A_ = (u, k) => !!u.A[k];
+
+// The carving body (carve-core.js) over the clips, worked out in the lean frame (the board on its edge: x
+// across it, the toes at toeX; y off its base; z to the nose): the hips move toward the toes and down (顶胯)
+// or back over the heels and well down (sitting), and the legs bend to keep the feet where they were on the
+// board; the trunk is brought to its tilt on that side, the chest turned to face the toes or opened to the
+// nose, and the arms go low and forward (toe side) or forward for balance (heel side).
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3();
+const _wq = new THREE.Quaternion(), _dq = new THREE.Quaternion(), _iq = new THREE.Quaternion();
+// Turn a bone (in the world) by the turn taking direction `from` to `to`, k of the way.
+function aim(bone, from, to, k = 1) {
+  if (from.lengthSq() < 1e-10 || to.lengthSq() < 1e-10) return;
+  _dq.setFromUnitVectors(_a.copy(from).normalize(), _b.copy(to).normalize());
+  if (k < 1) _dq.slerp(_iq.identity(), 1 - k);
+  bone.getWorldQuaternion(_wq).premultiply(_dq);
+  bone.parent.getWorldQuaternion(_pq);
+  bone.quaternion.copy(_pq.invert().multiply(_wq));
+  bone.updateMatrixWorld(true);
+}
+const wpos = (b, out) => b.getWorldPosition(out);
+function carveBody(u, toe, heel) {
+  if (toe + heel < 0.004 || !u.B.hips || u.legs.length < 2) return;
+  const L = carveLayer(toe, heel), F = u.lean, tx = u.toeX, B = u.B;
+  const across = new THREE.Vector3(tx, 0, 0).transformDirection(F.matrixWorld), up = new THREE.Vector3(0, 1, 0).transformDirection(F.matrixWorld);
+  // The feet where the clip put them (on the board), before the hips move.
+  const feet = u.legs.map((l) => ({ p: wpos(l.foot, new THREE.Vector3()), q: l.foot.getWorldQuaternion(new THREE.Quaternion()) }));
+  // Hips: toward the toes or the heels, and down.
+  const hp = wpos(B.hips, _c).addScaledVector(across, L.hipIn * u.legLen).addScaledVector(up, -L.hipDown * u.legLen);
+  B.hips.position.copy(B.hips.parent.worldToLocal(hp));
+  B.hips.updateMatrixWorld(true);
+  // Each leg bent to reach its foot again, in the plane the clip's knee was in.
+  u.legs.forEach((l, i) => {
+    const H = wpos(l.thigh, new THREE.Vector3()), K0 = wpos(l.shin, new THREE.Vector3()), P = feet[i].p;
+    const hf = _d.copy(P).sub(H), dist = hf.length(); if (dist < 1e-5) return;
+    const { hip } = twoBone(l.l1, l.l2, dist);
+    const dir = hf.clone().normalize(), side = K0.clone().sub(H);
+    const v = side.addScaledVector(dir, -side.dot(dir)); // the knee's side of the hip-to-foot line
+    if (v.lengthSq() < 1e-8) v.copy(across); v.normalize();
+    const K = H.clone().addScaledVector(dir, Math.cos(hip) * l.l1).addScaledVector(v, Math.sin(hip) * l.l1);
+    aim(l.thigh, K0.clone().sub(H), K.clone().sub(H));
+    const Kn = wpos(l.shin, new THREE.Vector3());
+    aim(l.shin, wpos(l.foot, _e).sub(Kn), P.clone().sub(Kn));
+    l.foot.parent.getWorldQuaternion(_pq); l.foot.quaternion.copy(_pq.invert().multiply(feet[i].q)); l.foot.updateMatrixWorld(true);
+  });
+  // The trunk: brought to its tilt toward the toes on the board, split between spine and chest.
+  // (The chest is turned first; twice round, as the spine's pivot sits above the hips.)
+  turn(B.chest, F, Y, tx * L.twist);
+  if (B.spine && B.neck) for (let i = 0; i < 2; i++) {
+    const t = wpos(B.neck, new THREE.Vector3()).sub(wpos(B.hips, _c));
+    const now = Math.atan2(t.dot(across), t.dot(up)), fix = (L.trunk - now) * L.trunkK;
+    turn(B.spine, F, Z, -tx * fix * 0.55);
+    turn(B.chest, F, Z, -tx * fix * 0.45);
+  }
+  // Arms: each upper arm's direction pulled toward the toes and down, by its own length.
+  const ak = u.C?.pet ? 0.5 : 1; // the capybara's short arms: half as far
+  for (const [arm, fore] of [[B.armL, B.foreL], [B.armR, B.foreR]]) {
+    if (!arm || !fore) continue;
+    const a = wpos(fore, new THREE.Vector3()).sub(wpos(arm, _c)), n = a.length(); if (n < 1e-5) continue;
+    a.divideScalar(n);
+    aim(arm, a, a.clone().addScaledVector(across, L.armIn * ak).addScaledVector(up, -L.armDown * ak));
+  }
+}
 
 // Pose from the physics state (board.js's Rider). The whole rider and board incline into the turn by the
 // angle that balances it, so the board rides its inside edge: the toe edge when the turn's inside is the
@@ -285,6 +352,12 @@ export function poseBoarder(root, r) {
   u.lean.rotation.z = tilt;
   u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);
+  // The carving body on top (carveBody): how deep into the toe or heel edge, by its angle and the speed; it
+  // gives way to a skid, a push, a trick and a fall.
+  const dEdge = carveDepth(s.edge * (1 - s.skid), r.speed ?? 10), onToe = -s.edge * tx > 0;
+  const give = (1 - Math.min(1, s.skid * 1.5)) * (1 - push) * (1 - k);
+  s.toeD = damp(s.toeD, onToe ? dEdge * give : 0, 10, dt); s.heelD = damp(s.heelD, onToe ? 0 : dEdge * give, 10, dt);
+  carveBody(u, s.toeD * (1 - k), s.heelD * (1 - k)); // a trick or a fall takes over at once
   // Angulation: the chest comes back toward upright by part of the inclination (the clips are posed on a
   // flat board; the inclination comes from tilting the whole rider).
   turn(u.B.spine, u.lean, Z, -tilt * 0.18);
