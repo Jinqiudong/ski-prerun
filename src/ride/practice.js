@@ -6,18 +6,18 @@
 // world round the nearest chairlift and hands over here (topOfLift st.practice); progress is localStorage
 // prerunPractice.
 import * as THREE from "three";
-import { Rider, Tracks, Spray } from "./board.js?v=13";
-import { poseBoarder, myRider } from "../rider/boarder.js?v=20";
+import { Rider, Tracks, Spray } from "./board.js?v=14";
+import { poseBoarder, myRider } from "../rider/boarder.js?v=21";
 import { Runner } from "./runner.js?v=1";
 import { guideAnimal } from "./guide-core.js?v=5";
 import { TREE, treeHit } from "./snow-core.js?v=3";
 import { ANIMAL_ZH } from "../rider/animal-core.js?v=2";
 import { ANIMALS } from "../start/resort-tiles.js?v=4";
-import { t } from "../core/i18n.js?v=48";
-import { fallLine } from "./edge-core.js?v=1";
+import { t } from "../core/i18n.js?v=49";
+import { fallLine } from "./edge-core.js?v=2";
 import { tiltRead, tiltZero } from "./tilt-core.js?v=2";
 import { sight } from "./snowfx.js?v=3";
-import { STEPS, stepOf, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress, saveProgress, nextStep, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM } from "./practice-core.js?v=1";
+import { stepsFor, stepOf as stepIn, goalText, newCheck, checkStep, edgeOf, alongLap, slipZone, loadProgress as loadIn, saveProgress as saveIn, nextStep as nextIn, SPEED_GOAL, LINKS, STOP_IN, STOP_FROM, PLOUGH_FROM, PLOUGH_IN } from "./practice-core.js?v=2";
 
 const CSS = `
 #prCard, #prGauge, #prPass, #prSheet .box, #prBubble { background: #fdfbf6; color: #22344d; border: 1px solid #d8ccb6; box-shadow: 0 6px 16px rgba(40,30,20,.22); font-family: "Noto Serif SC", serif; }
@@ -96,10 +96,13 @@ export function spotTitle(spot) {
 export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt, treeAt, resort, exits, storage = localStorage }) {
   if (!document.getElementById("prCss")) document.head.append(Object.assign(document.createElement("style"), { id: "prCss", textContent: CSS }));
   document.body.classList.add("practice");
-  const r = new Rider(T), tracks = new Tracks(scene, T), spray = new Spray(scene);
+  // On skis (双板) the lesson is the skier's (practice-core.js SKI_STEPS), with its own progress.
+  const ski = rider.userData.kind === "ski", sport = ski ? "ski" : "board", STEPS = stepsFor(sport);
+  const stepOf = (k) => stepIn(k, sport), nextStep = (p) => nextIn(p, sport), saveProgress = (st, p) => saveIn(st, p, sport);
+  const r = new Rider(T), tracks = new Tracks(scene, T, { ski }), spray = new Spray(scene);
   scene.attach(rider);
-  const prog = loadProgress(storage);
-  const heel = () => heelSide(rider);
+  const prog = loadIn(storage, sport);
+  const heel = () => (ski ? 1 : heelSide(rider)); // skis: +1 is a left turn (practice-core.js edgeOf)
   let key = prog.done.hold ? prog.at && prog.at !== "hold" ? prog.at : nextStep(prog) : "hold";
   let check = null, frozen = true, pass = null, endT = 0, stillT = 0, zero = null, lapN = 0;
   const [tx, tz] = spot.pts[Math.min(6, spot.pts.length - 1)], top = { x: tx, z: tz }; // ~24 m down from the lift's top: clear of its station
@@ -120,7 +123,7 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
   const n = (k) => STEPS.findIndex((s) => s.key === k) + 1;
   function drawCard() {
     const s = stepOf(key);
-    const ticks = key === "edge" ? [["heel", "脚跟刃"], ["toe", "脚尖刃"]] : key === "catch" ? [["caught", "感受吃刃"], ["clean", "干净停住"]] : [];
+    const ticks = key === "edge" ? (ski ? [["heel", "左转"], ["toe", "右转"]] : [["heel", "脚跟刃"], ["toe", "脚尖刃"]]) : key === "catch" ? [["caught", "感受吃刃"], ["clean", "干净停住"]] : [];
     card.innerHTML = `<div class="hd"><img src="${ICON(s.icon)}" alt=""><b>${t(s.title)}</b><small>${n(key)} / ${STEPS.length}</small><button class="list"><img src="${ICON("packing")}" alt="">${t("步骤")}</button></div>
       <p class="goal">${goalText(s, t)}</p>
       ${ticks.length ? `<div class="ticks">${ticks.map(([k, label]) => `<span data-k="${k}"><img src="${ICON("st_done")}" alt="">${t(label)}</span>`).join("")}</div>` : ""}
@@ -130,9 +133,9 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
     drawGauge();
   }
   function drawGauge() {
-    const parts = { hold: [], speed: ["spd", "bar"], edge: ["spd", "edge"], link: ["edge", "dots"], brake: ["spd", "ang"], catch: ["edge", "ang"], free: ["spd", "edge", "ang"] }[key];
+    const parts = { hold: [], speed: ["spd", "bar"], edge: ["spd", "edge"], link: ["edge", "dots"], brake: ["spd", "ang"], catch: ["edge", "ang"], plough: ["spd", "wedge"], free: ["spd", "edge", "ang"] }[key];
     gauge.hidden = !parts.length;
-    const lbl = (k) => t(edgeOf(k, heel()) > 0 ? "脚跟" : "脚尖");
+    const lbl = (k) => t(ski ? (edgeOf(k, heel()) > 0 ? "左" : "右") : edgeOf(k, heel()) > 0 ? "脚跟" : "脚尖");
     gauge.innerHTML = parts.map((p) => ({
       spd: `<div class="g spd"><b>0</b><small>km/h</small></div>`,
       bar: `<div class="g"><div class="bar"><i></i></div></div>`,
@@ -140,6 +143,8 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
       // board vs travel: a quarter dial, 0° along the way you go to 90° straight across; 45–90° brakes
       ang: `<div class="g ang"><svg viewBox="0 0 92 50"><path d="M6 46 A40 40 0 0 1 17.7 17.7" fill="none" stroke="#cdd6c3" stroke-width="9"/><path d="M17.7 17.7 A40 40 0 0 1 46 6" fill="none" stroke="#e6b4bb" stroke-width="9"/><path d="M38 6.8 A40 40 0 0 1 46 6" fill="none" stroke="#c0675c" stroke-width="9"/><line class="nd" x1="46" y1="46" x2="6" y2="46" stroke="#22344d" stroke-width="3" stroke-linecap="round"/><circle cx="46" cy="46" r="4" fill="#22344d"/><text x="2" y="38" font-size="8" fill="#6f747e">0</text><text x="12" y="13" font-size="8" fill="#6f747e">45</text><text x="50" y="10" font-size="8" fill="#6f747e">90</text></svg><span class="txt"><b>0°</b><span class="zl">${t("滑行")}</span></span></div>`,
       dots: `<div class="g"><span class="dots">${Array.from({ length: LINKS }, () => "<i></i>").join("")}</span></div>`,
+      // the skis' wedge (犁式): how far the tails are pushed out
+      wedge: `<div class="g wedge"><div class="bar"><i></i></div><small>${t("A 字")}</small></div>`,
     })[p]).join("") + (key === "hold" ? "" : `<button class="ret"><img src="${ICON("reset")}" alt="">${t("回坡顶")}</button>`);
     gauge.querySelector(".ret")?.addEventListener("click", () => toTop());
   }
@@ -149,7 +154,8 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
     if (!force && coach.clock - gaugeAt < 0.1) return; gaugeAt = coach.clock;
     const q = (s) => gauge.querySelector(s), kmh = Math.round(r.speed * 3.6);
     if (q(".spd b")) q(".spd b").textContent = kmh;
-    if (q(".bar i")) q(".bar i").style.width = `${clamp(check.best / SPEED_GOAL, 0, 1) * 100}%`;
+    if (q(".bar i") && !q(".wedge")) q(".bar i").style.width = `${clamp(check.best / SPEED_GOAL, 0, 1) * 100}%`;
+    if (q(".wedge .bar i")) q(".wedge .bar i").style.width = `${clamp(r.plough || 0, 0, 1) * 100}%`;
     if (q(".edge .track i")) {
       const s = clamp(r.steer, -1, 1), w = Math.abs(s) * 50;
       Object.assign(q(".edge .track i").style, { left: `${s < 0 ? 50 - w : 50}%`, width: `${w}%` });
@@ -170,9 +176,12 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
   function noteOf() {
     const L = check.last;
     if ((key === "brake" || key === "catch") && check.stop.at) return t("刹车中 · {m} 米", { m: check.stop.dist.toFixed(1) });
-    if ((key === "brake" || key === "catch") && L && !L.ok) return L.caught ? t("吃刃了！刹车时重心留在脚跟（上坡那条刃）") : L.maxSlip < 60 ? t("板子再横一点：这次最多 {d}°", { d: L.maxSlip }) : t("停住用了 {m} 米，要 {lim} 米内：早一点、狠一点", { m: L.dist, lim: STOP_IN });
+    if (key === "plough" && check.plough.at) return t("犁式刹车中 · {m} 米", { m: check.plough.dist.toFixed(1) });
+    if (key === "plough" && L && !L.ok) return L.across >= 45 ? t("这是急停：板子别横过来，板头并拢、板尾推开") : t("停住用了 {m} 米，要 {lim} 米内：A 字再大一点", { m: L.dist, lim: PLOUGH_IN });
+    if (key === "plough" && !check.plough.armed) return t("先滑到 {v} km/h", { v: PLOUGH_FROM });
+    if ((key === "brake" || key === "catch") && L && !L.ok) return L.caught ? t("吃刃了！刹车时重心留在脚跟（上坡那条刃）") : L.maxSlip < 60 ? t(ski ? "两支板再横一点：这次最多 {d}°" : "板子再横一点：这次最多 {d}°", { d: L.maxSlip }) : t("停住用了 {m} 米，要 {lim} 米内：早一点、狠一点", { m: L.dist, lim: STOP_IN });
     if ((key === "brake" || key === "catch") && !check.stop.armed) return t("先滑到 {v} km/h", { v: STOP_FROM });
-    if (key === "link" && check.turns.chain) return t("连续换刃 {k} / {n}", { k: check.turns.chain, n: LINKS });
+    if (key === "link" && check.turns.chain) return t(ski ? "连续转弯 {k} / {n}" : "连续换刃 {k} / {n}", { k: check.turns.chain, n: LINKS });
     return "";
   }
   function calibrate() {
@@ -220,6 +229,13 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
   }
   function passText() {
     const L = check.last;
+    if (ski) {
+      if (key === "speed") return t("{v} km/h！雪板朝下、放平，速度就上来了", { v: Math.round(check.best) });
+      if (key === "plough") return t("从 {v} km/h 用犁式停住，{m} 米：慢的时候、人多的时候都这样停", { v: L.from, m: L.dist });
+      if (key === "edge") return t("左转、右转都转过了滚落线。立刃越多，弯越急");
+      if (key === "link") return t("连续转弯 {n} 次：每个弯都转完，过了坡下再换", { n: LINKS });
+      if (key === "brake") return t("从 {v} km/h 停住只用了 {m} 米，雪板横到 {d}°", { v: L.from, m: L.dist, d: L.maxSlip });
+    }
     if (key === "speed") return t("{v} km/h！板头朝下、板放平，速度就上来了", { v: Math.round(check.best) });
     if (key === "edge") return t("脚跟、脚尖都转过了滚落线。立刃越多，弯越急");
     if (key === "link") return t("连续换刃 {n} 次：每个弯都压住，过了坡下再换", { n: LINKS });
@@ -275,7 +291,7 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
       }
     } else {
       const inp = check.done && key !== "hold" ? { steer: 0, pace: -1 } : input(dt); // passed: brought to a stop while the card is up
-      r.step(dt, { steer: inp.steer, pace: inp.pace, push: false, offPiste: false, guided: false, heel: heel(), catchable: Math.abs(inp.steer) > 0.02 });
+      r.step(dt, { steer: inp.steer, pace: inp.pace, push: false, offPiste: false, guided: false, heel: heel(), catchable: !ski && Math.abs(inp.steer) > 0.02, ski });
       // a trunk: glanced off round it (snow-core.js treeHit); straight on and fast, stopped, turned clear of it
       const tree = treeAt(r.x, r.z, TREE.r);
       if (tree) {
@@ -285,7 +301,7 @@ export function startPractice({ scene, camera, canvas, T, rider, snd, spot, tilt
       }
       r.surf = 0;
       if (!check.done) {
-        checkStep(check, { speed: r.speed, heading: r.heading, fall: r.fall, slip: r.slip, caught: r.caught, steer: r.steer, heel: heel(), x: r.x, z: r.z, dt });
+        checkStep(check, { speed: r.speed, heading: r.heading, fall: r.fall, slip: r.slip, caught: r.caught, steer: r.steer, heel: heel(), x: r.x, z: r.z, dt, plough: r.plough || 0 });
         if (check.done) done();
         else if (key === "catch" && check.parts.caught && !check.saidCaught) { check.saidCaught = true; say(t("绊了一下吧？这就是吃刃。再用脚跟刃停一次"), true, 4.5); }
       }

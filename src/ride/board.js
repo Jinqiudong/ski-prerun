@@ -1,9 +1,9 @@
-// Snowboard physics on the real slope, the track the board leaves in the snow, and the spray it kicks up.
-// (The rider, the model, and its poses are in src/rider/boarder.js.)
+// Snowboard (and ski) physics on the real slope, the track the board or the skis leave in the snow, and the
+// spray it kicks up. (The rider, the model, and its poses are in src/rider/boarder.js and skier.js.)
 import * as THREE from "three";
-import { DEG, wrap, fallLine, dropAlong, gravityAlong, slipAngle, brakeOf, edgeGrip, pivotFor, brakeDecel, edgeTrails, scrubOf } from "./edge-core.js?v=1";
+import { DEG, wrap, fallLine, dropAlong, gravityAlong, slipAngle, brakeOf, edgeGrip, pivotFor, brakeDecel, edgeTrails, scrubOf, SKI, skiMode, skiSide, skiPivot, ploughOf, ploughDecel } from "./edge-core.js?v=2";
 
-export { governor } from "./edge-core.js?v=1";
+export { governor, skiGovernor } from "./edge-core.js?v=2";
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
 
@@ -21,7 +21,7 @@ export class Rider {
   }
 
   place(x, z, heading, speed = 2) {
-    Object.assign(this, { x, z, heading, speed, steer: 0, lean: 0, cyaw: heading, yaw: heading, pivot: 0, slip: 0, brake: 0, caught: 0 });
+    Object.assign(this, { x, z, heading, speed, steer: 0, lean: 0, cyaw: heading, yaw: heading, pivot: 0, slip: 0, brake: 0, caught: 0, mode: "glide", side: 0, plough: 0, hockey: 0 });
     this.y = this.terrain.heightAt(x, z);
   }
 
@@ -34,7 +34,9 @@ export class Rider {
   // friction (moguls). heel ±1: the way the heel side turns the board's nose (the rider's stance, as the
   // model draws a skid). catchable: the steer is the rider's own, so setting the wrong edge in a slide
   // catches it (a wobble and lost speed, no fall).
-  step(dt, { steer, pace = 0, brake, push, offPiste, guided, soft = 0, rough = 0, heel = 1, catchable = false }) {
+  // ski: two skis instead of the board (edge-core.js skiMode): the brake is a plough, a skidded turn or a hockey
+  // stop, the same to either side (heel is not used), no caught edge; skating on the flat is quicker.
+  step(dt, { steer, pace = 0, brake, push, offPiste, guided, soft = 0, rough = 0, heel = 1, catchable = false, ski = false }) {
     const t = this.terrain, n = t.normalAt(this.x, this.z, this.n);
     const fl = fallLine(n); this.fall = fl.yaw; this.slope = fl.slope;
     if (brake) pace = -1;
@@ -58,27 +60,36 @@ export class Rider {
     // The travel follows the carved board: at once on a high edge, sliding round late on a flat base.
     this.heading = this.speed < 0.3 ? this.cyaw : this.heading + wrap(this.cyaw - this.heading) * Math.min(1, (3 + 9 * grip) * dt);
     this.cyaw = this.heading + wrap(this.cyaw - this.heading);
-    // Braking: the board swings across the travel on the heel edge (it trails: the uphill edge).
-    this.pivot = damp(this.pivot, heel * pivotFor(bk), 6, dt);
+    // Braking: the board swings across the travel on the heel edge (it trails: the uphill edge). Skis: a plough
+    // turns neither, a skid or a hockey stop swings both into the turn.
+    if (ski) {
+      this.mode = skiMode(bk, this.speed, this.steer, this.mode);
+      if (Math.abs(this.steer) > 0.15) this.side = -Math.sign(this.steer);
+      const side = skiSide(this.steer, this.side, wrap(this.heading - fl.yaw));
+      this.pivot = damp(this.pivot, skiPivot(this.mode, bk, side), this.mode === "hockey" ? 9 : 6, dt);
+      this.plough = damp(this.plough || 0, this.mode === "plough" ? ploughOf(bk) : 0, 6, dt);
+      this.hockey = damp(this.hockey || 0, this.mode === "hockey" ? 1 : 0, 8, dt);
+    } else this.pivot = damp(this.pivot, heel * pivotFor(bk), 6, dt);
     this.yaw = this.cyaw + this.pivot;
     const slipS = wrap(this.yaw - this.heading), slip = slipAngle(this.yaw, this.heading);
     const side = bk > 0.05 && !(catchable && Math.abs(this.steer) > 0.6) ? heel : -Math.sign(this.steer) || heel;
     const trails = edgeTrails(slipS, side);
-    if (!trails && slip > 45 * DEG && this.speed * Math.sin(slip) > 3 && this.caught <= 0) {
+    if (!ski && !trails && slip > 45 * DEG && this.speed * Math.sin(slip) > 3 && this.caught <= 0) {
       // Caught the downhill edge: a lurch, most of the speed gone, the board kicked back under you.
       this.caught = 1; this.speed *= 0.55; this.pivot *= 0.3;
     }
     this.caught = Math.max(0, this.caught - dt * 1.5);
-    this.brake = trails ? brakeOf(slip) : 0;
+    this.brake = trails || ski ? brakeOf(slip) : 0;
     // Gravity along the board's running length (nose or tail, whichever leads), carried into the travel.
     const run = Math.abs(slipS) > Math.PI / 2 ? this.yaw + Math.PI : this.yaw;
     const aG = gravityAlong(dropAlong(n, run)) * Math.cos(slip);
     const mu = 0.045 + scrubOf(slip, grip) + (offPiste ? 0.1 - 0.05 * soft : 0) + 0.035 * soft + rough; // the board floats in powder: less drag than off-piste crud
-    let a = aG - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - this.speed * rate * Math.abs(this.steer) * 0.02 - brakeDecel(this.brake, aG);
+    let a = aG - mu * 9.8 * n.y - 0.0032 * (1 - 0.4 * tuck) * this.speed * this.speed - this.speed * rate * Math.abs(this.steer) * 0.02 - brakeDecel(this.brake, aG) - (ski ? ploughDecel(this.plough, aG) : 0);
     // Skating or one-foot pushing only works on the flat: it cannot beat gravity up a slope.
     // Only where gravity won't do it (a flat, at a crawl): going downhill you ride, both feet strapped in.
-    this.pushing = push && this.speed < 3.4 && drop > -0.03 && drop < 0.04;
-    if (this.pushing) a += 1.2;
+    // Skis skate and pole along quicker than a board pushes with one foot out.
+    this.pushing = push && this.speed < (ski ? SKI.PUSH_V : 3.4) && drop > -0.03 && drop < 0.04;
+    if (this.pushing) a += ski ? SKI.PUSH_A : 1.2;
     this.speed = Math.max(0, Math.min(30, this.speed + a * dt));
     // Up a short rise you don't slide: you skate up a gentle one (about 8 km/h) and walk a steep one.
     const climb = drop > -0.08 ? 2.2 : 1.2;
@@ -94,7 +105,8 @@ export class Rider {
     this.lean = damp(this.lean, Math.atan((this.speed * rate) / 9.8) * Math.sign(this.steer), 6 - 3 * soft, dt) + Math.sin(this.t * 31) * 0.25 * this.caught * dt * 30;
     // For the pose (boarder.js swings the board 1.2 rad × skid toward the heel side) and the spray.
     this.slip = slipS; this.edge = edge * (-Math.sign(this.steer) || 0); this.grip = grip;
-    this.skid = Math.min(1, (slipS * heel > 0 ? slip : 0.35 * slip) / 1.2);
+    this.skid = Math.min(1, (ski || slipS * heel > 0 ? slip : 0.35 * slip) / 1.2);
+    this.ski = ski;
     this.tuck = tuck;
     this.braking = this.brake > 0.35;
     this.dt = dt;
@@ -102,13 +114,15 @@ export class Rider {
   }
 }
 
-// The board's track in the snow behind the rider: one wide strip.
+// The board's track in the snow behind the rider: one wide strip. { ski }: two narrow ones, a ski's width
+// each, side by side (SKI_TRACK), spreading apart in a plough (the tails pushed out).
+export const SKI_TRACK = { gap: 0.12, width: 0.05, plough: 0.14 };
 export class Tracks {
-  constructor(scene, terrain) {
+  constructor(scene, terrain, { ski = false } = {}) {
     this.terrain = terrain;
     this.max = 600;
     this.points = [];
-    this.strips = [[0, 0.16]].map(([offset, width]) => {
+    this.strips = (ski ? [[-SKI_TRACK.gap, SKI_TRACK.width], [SKI_TRACK.gap, SKI_TRACK.width]] : [[0, 0.16]]).map(([offset, width]) => {
       const pos = new Float32Array(this.max * 2 * 3);
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -116,7 +130,8 @@ export class Tracks {
       for (let i = 0; i < this.max - 1; i++) { const b = i * 2; idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
       geo.setIndex(idx);
       geo.setDrawRange(0, 0);
-      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xb9c0dc, transparent: true, opacity: 0.75, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
+      // DoubleSide: the strip's triangles are wound facing down (they were culled, so no track showed at all)
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xb9c0dc, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
       mesh.frustumCulled = false;
       scene.add(mesh);
       return { offset, width, pos, geo, mesh };
@@ -132,13 +147,13 @@ export class Tracks {
     const last = this.points[this.points.length - 1];
     if (last && Math.hypot(last.x - r.x, last.z - r.z) < 0.6) return;
     if (this.points.length === this.max) this.points.shift();
-    this.points.push({ x: r.x, z: r.z, h: r.heading, dy: r.surf || 0 });
+    this.points.push({ x: r.x, z: r.z, h: r.heading, dy: r.surf || 0, spread: 1 + ((r.plough || 0) * SKI_TRACK.plough) / SKI_TRACK.gap });
     const n = this.points.length;
     for (const s of this.strips) {
       for (let i = 0; i < n; i++) {
         const p = this.points[i], cx = Math.cos(p.h), sx = -Math.sin(p.h);
         for (const [k, w] of [[0, -s.width], [1, s.width]]) {
-          const x = p.x + cx * (s.offset + w), z = p.z + sx * (s.offset + w);
+          const o = s.offset * (p.spread || 1) + w, x = p.x + cx * o, z = p.z + sx * o;
           s.pos.set([x, this.terrain.heightAt(x, z) + p.dy + 0.04, z], (i * 2 + k) * 3);
         }
       }
@@ -180,8 +195,10 @@ export class Spray {
       const i = this.next = (this.next + 1) % this.n;
       const side = Math.sign(r.steer || 1);
       const sx = Math.cos(r.heading) * side, sz = -Math.sin(r.heading) * side;
+      // Skis: off the edges of the two skis (either one, a ski's gap to each side), not the board's middle.
+      const k = r.ski ? (Math.random() < 0.5 ? -1 : 1) * (0.12 + (r.plough || 0) * 0.14) : 0, ox = Math.cos(r.heading) * k, oz = -Math.sin(r.heading) * k, sp = r.ski ? 0.35 : 0.8;
       const out = (1.5 + Math.random() * 3) * (1 + plume * 0.4), fwd = r.speed * (0.3 + skid * 0.5) * (0.6 + Math.random() * 0.6);
-      this.pos.set([r.x + (Math.random() - 0.5) * 0.8, r.y + 0.08 + plume * 0.2, r.z + (Math.random() - 0.5) * 0.8], i * 3); // powder: from its surface
+      this.pos.set([r.x + ox + (Math.random() - 0.5) * sp, r.y + 0.08 + plume * 0.2, r.z + oz + (Math.random() - 0.5) * sp], i * 3); // powder: from its surface
       this.vel.set([sx * out * (1 - skid * 0.6) + fx * fwd + (Math.random() - 0.5) * 2, (1 + Math.random() * (2 + skid * 2.5)) * (1 + plume * 1.5), sz * out * (1 - skid * 0.6) + fz * fwd + (Math.random() - 0.5) * 2], i * 3);
       this.life[i] = (0.5 + Math.random() * (0.5 + skid * 0.5)) * (1 + plume * 1.1);
     }

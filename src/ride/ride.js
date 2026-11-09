@@ -4,10 +4,10 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
-import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
-import { addStep, thinPath, openBookPage } from "./roadbook.js?v=28";
+import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=14";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=29";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=2";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=20";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=21";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=7";
 import { liftHub, findPlanned, crumbOf, viaNext, GO } from "./hub-core.js?v=1";
@@ -17,24 +17,24 @@ import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=18";
+import { PaintedMap } from "./paintedmap.js?v=19";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=48";
-import { navRow } from "../core/nav.js?v=25";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=49";
+import { navRow } from "../core/nav.js?v=26";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=21";
-import { dropIn } from "../core/transition.js?v=18";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=22";
+import { dropIn } from "../core/transition.js?v=19";
 import { Facilities } from "./kitworld.js?v=6";
-import { rideTogether } from "./together.js?v=25";
-import { startParty } from "../core/party.js?v=19";
+import { rideTogether } from "./together.js?v=26";
+import { startParty } from "../core/party.js?v=20";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { clearRope, ropeY } from "./lift-core.js?v=1";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=16";
-import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=13";
+import { Guide } from "./guide.js?v=17";
+import { bunnySpot, worldLift } from "./practice-core.js?v=2";
+import { startPractice, spotTitle } from "./practice.js?v=14";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
@@ -755,6 +755,7 @@ const fmtMin = (s) => `${Math.max(1, Math.round(s / 60))} 分钟`;
 // At the top: get off, rise above the summit, and plan where to go — a base, the next lift, or just a run.
 function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   const st = { phase: null, t0: 0, focus: new THREE.Vector3(), pick: null };
+  const onSkis = () => ctx.rider?.userData?.kind === "ski"; // on skis (双板): their tracks, speed control and tips
   const g1 = line.ground[line.ground.length - 1];
   const myLevel = (() => { try { const l = JSON.parse(localStorage.getItem("prerun") || "{}").level; return LEVELS.includes(l) ? l : "intermediate"; } catch { return "intermediate"; } })();
   const bigLift = (l) => l.kind !== "magic_carpet" && (l.rise ?? 100) >= 40;
@@ -1027,7 +1028,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const h0 = at ? at.h : pathDir(path, i0);
     camera.position.set(phys.x - Math.sin(h0) * 7, phys.y + 3, phys.z - Math.cos(h0) * 7);
     tracks?.dispose(scene);
-    tracks = new Tracks(scene, T);
+    tracks = new Tracks(scene, T, { ski: onSkis() }); // skis: two lines
     spray ||= new Spray(scene);
     pspray ||= new Spray(scene, { n: 900, size: 0.85, opacity: 0.6, color: 0xd6e0f0 }); // powder's plumes, a little blue so they read on the snow
     crash = null; shake = 0; stall = 0; passTree = null; camH = null; fx.dizzy(0); for (const k of Object.keys(bump)) delete bump[k];
@@ -1232,6 +1233,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   addEventListener("pointerup", touchEnd);
   addEventListener("pointercancel", touchEnd);
   st.setAuto = (on) => { auto = on; };
+  st.pace = (v) => { touching = v != null; paceIn = v || 0; }; // testing: a finger held dragging up (−) or down (+), or let go (null)
   // The phone's tilt as riding input, from a reference pose that follows how you hold the phone (tilt-core.js).
   let tiltAt = 0, tiltOff = 9;
   const tiltNow = () => {
@@ -1365,7 +1367,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // The trick wheel (like an emote wheel): hold the button, the tricks fan out around it; slide onto one
   // and let go to do it. A tap opens it and leaves it open for a tap on a trick.
   // Each trick's painted icon (assets/icons/trick_*.png; tools/draw_icons.mjs); the animals' own tricks get the wheel's.
-  const ICON = { ollie: "trick_ollie", spin: "trick_spin", indy: "trick_indy", melon: "trick_melon", tailGrab: "trick_tailgrab", nose: "trick_nose", tailPress: "trick_tailpress" };
+  const ICON = { ollie: "trick_ollie", spin: "trick_spin", indy: "trick_indy", melon: "trick_melon", tailGrab: "trick_tailgrab", nose: "trick_nose", tailPress: "trick_tailpress", hop: "trick_ski_hop", spread: "trick_ski_spread" };
+  const trName = (n) => t(n); // (the skier's tricks are named in Chinese; i18n.js, `t` being a trick in the loops below)
   const trickIco = (key) => `assets/icons/${ICON[key] || "trick"}.png?v=1`;
   const wheel = $("trickWheel"), tbtn = $("trickBtn");
   let wheelOpen = null;
@@ -1380,7 +1383,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const a = Math.PI * (0.45 + (i / Math.max(1, list.length - 1)) * 0.65), el = document.createElement("div");
       el.className = "opt"; el.dataset.key = t.key;
       el.style.left = `${cx + Math.cos(a) * R}px`; el.style.top = `${cy - Math.sin(a) * R}px`;
-      el.innerHTML = `<div><img src="${trickIco(t.key)}" alt="">${t.name}</div>`;
+      el.innerHTML = `<div><img src="${trickIco(t.key)}" alt="">${trName(t.name)}</div>`;
       el.onclick = () => { doTrick(t.key); closeWheel(); };
       wheel.append(el);
     });
@@ -1393,7 +1396,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function doTrick(key) {
     if (!startTrick(ctx.rider, key)) return;
     const t = tricksOf(ctx.rider).find((x) => x.key === key);
-    flashCue(`<img class="cueIco" src="${trickIco(key)}" alt="">${t.name}!`); navigator.vibrate?.(25);
+    flashCue(`<img class="cueIco" src="${trickIco(key)}" alt="">${trName(t.name)}!`); navigator.vibrate?.(25);
   }
   tbtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (wheelOpen) { closeWheel(); return; } openWheel(e); tbtn.setPointerCapture?.(e.pointerId); });
   tbtn.addEventListener("pointermove", (e) => {
@@ -1415,7 +1418,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   function stepSki(dt) {
     if (pmap.isOpen) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map
     if (spawn) { snd?.ski(phys, { paused: true, dt }); spawnStep(dt); return; }
-    const P = chosen, path = P.path, r = phys, last = path.length - 1;
+    const P = chosen, path = P.path, r = phys, last = path.length - 1, ski = onSkis();
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
     if (near.d < 70) prog = Math.max(prog, near.i);
     const k = segAt(P, prog), seg = P.segs[k], nextSeg = P.segs[k + 1];
@@ -1460,13 +1463,14 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const flat = P.flats.find((f) => f.kind === "flat" && prog >= f.a && prog <= f.b);
     const flatAhead = P.flats.find((f) => f.kind === "flat" && f.a > prog && P.dist[f.a] - P.dist[prog] < 140);
     const rise = P.flats.find((f) => f.kind === "up" && f.a > prog && P.dist[f.a] - P.dist[prog] < 80);
-    for (const f of [flatAhead, rise]) if (f && !f.told) { f.told = true; flashCue(f.kind === "flat" ? `前面 ${fmtLen(f.m)} 平路 · 别刹车，带速度，板放平` : `前面 ${fmtLen(f.m)} 上坡 · 要走上去`); }
+    for (const f of [flatAhead, rise]) if (f && !f.told) { f.told = true; flashCue(f.kind === "flat" ? `前面 ${fmtLen(f.m)} 平路 · 别刹车，带速度，${ski ? "雪板放平，慢了就撑杖滑" : "板放平"}` : `前面 ${fmtLen(f.m)} 上坡 · ${ski ? "要侧着踩上去" : "要走上去"}`); }
     // Moguls ahead on the way (蘑菇道): once for each mogul run, as it comes up.
     const mg = P.segs.find((g) => g.run.moguls && !mogTold.has(g.run) && P.dist[g.at] - P.dist[prog] < 160 && P.dist[g.at] - P.dist[prog] > -40);
     if (mg) { mogTold.add(mg.run); mogTold.add("any"); flashCue(`${ICO("moguls")}<b>${t("前方蘑菇道")}</b> · ${mg.run.name || ""}<br><small>${t("放慢一点，膝盖放软，一个一个绕过去")}</small>`); }
     roadCue(P);
     if (flat && !touching) { steer *= 0.35; if (tl && Math.abs(tl.steer) < 0.3) steer = clamp(steer, -0.12, 0.12); }
     // Which way a heel-side skid turns the board's nose, as boarder.js / animal.js draw it (mirrored if goofy).
+    // (Skis have no heel side: their speed control is the same both ways, edge-core.js skiGovernor.)
     const heelSide = (o) => (o.userData.kind === "animal" ? -1 : -(o.userData.toeX || 1)) * (o.userData.goofy ? -1 : 1);
     // Speed: an easy pace for the run's level unless you drag or tilt for more or less. Past it the board
     // swings on across the way you go at the end of the heel-side turns (the linked turns' skidded half;
@@ -1476,7 +1480,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const asked = touching && Math.abs(paceIn) > 0.15 ? paceIn : !auto && tl && Math.abs(tl.pace) > 0.15 ? tl.pace : 0;
     // A toe-side turn carves on. Your own tilted turns are the same both ways: a heel-side one braking at the
     // easy pace felt like the phone braking whenever you tipped it that way.
-    const heel = heelSide(ctx.rider), gov = governor(r.speed, cap, !own && !(Math.abs(steer) > 0.08 && -Math.sign(steer) !== heel));
+    const heel = heelSide(ctx.rider), gov = ski ? skiGovernor(r.speed, cap) : governor(r.speed, cap, !own && !(Math.abs(steer) > 0.08 && -Math.sign(steer) !== heel));
     let pace = asked > 0 ? (r.speed > cap * 1.6 ? -0.5 : asked) : Math.min(asked, -gov);
     if (flat && pace > -0.6) pace = Math.max(pace, 0.8); // tucked through a flat unless you really brake
     // On a flat or a short rise (common near lift tops) you skate, or walk up it. Gravity does the rest;
@@ -1494,7 +1498,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
         r.heading = r.cyaw = r.yaw = crash.up; r.pivot = 0; r.speed = 1.5;
         passTree = { tree: crash.tree, t: 1.5 }; crash = null;
       }
-    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0, heel, catchable: own });
+    } else r.step(dt, { steer: parked ? 0 : steer, pace, push: pace >= 0 && r.speed < 4, offPiste: near.d > 45, guided: true, soft: pw, rough: onMogul ? 0.05 : 0, heel, catchable: own && !ski, ski });
     if (stall > 1.4 && !crash) { r.speed = Math.max(r.speed, 1.4); r.pushing = true; }
     // Into a tree (snow-core.js treeHit): a glancing hit deflects you round the trunk with most of your speed.
     // Straight on and fast it's a crash: down, a dazed moment with stars round your head, the tree's snow
@@ -1748,11 +1752,12 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       html.push(`<li>${t}${warn ? `<br><span class="warn">${warn}</span>` : ""}</li>`);
     });
     if (js.length) html.push("</ol>");
-    // For a snowboard: where it goes flat or climbs, and what to do.
+    // For a snowboard (or skis): where it goes flat or climbs, and what to do.
     if (P.flats.length) {
-      lines.push("", "单板注意："); html.push("<h3>单板注意 · 平路和上坡</h3><ol>");
+      const ski = onSkis(), who = ski ? "双板" : "单板";
+      lines.push("", `${who}注意：`); html.push(`<h3>${who}注意 · 平路和上坡</h3><ol>`);
       for (const f of P.flats) {
-        const t = f.kind === "flat" ? `出发后约 ${fmtLen(f.at)}，${runName(f.run)} 有 ${fmtLen(f.m)} 平路：之前别刹车，带着速度进去，板放平别转弯，不够就单脚蹬` : `出发后约 ${fmtLen(f.at)}，${runName(f.run)} 有 ${fmtLen(f.m)} 往上的坡：要解开后脚走上去`;
+        const t = f.kind === "flat" ? `出发后约 ${fmtLen(f.at)}，${runName(f.run)} 有 ${fmtLen(f.m)} 平路：之前别刹车，带着速度进去，${ski ? "雪板放平别转弯，慢了就撑杖或者蹬冰刀步" : "板放平别转弯，不够就单脚蹬"}` : `出发后约 ${fmtLen(f.at)}，${runName(f.run)} 有 ${fmtLen(f.m)} 往上的坡：${ski ? "雪板横过来侧着踩上去，或者八字步爬上去" : "要解开后脚走上去"}`;
         lines.push(`- ${t}`); html.push(`<li>${t}</li>`);
       }
       html.push("</ol>");
@@ -2620,7 +2625,7 @@ async function main() {
   const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
   // Off the chair: at the top, or riding together, landing beside a friend somewhere else.
-  function offLift() { arrived = true; skipping = null; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco").src = "assets/icons/snowboard.png?v=1"; $("bubble").hidden = true; $("bubbleHint").hidden = true; hintOn = false; }
+  function offLift() { arrived = true; skipping = null; $("fast").hidden = $("skip").hidden = true; $("rideBar").hidden = true; document.body.classList.remove("riding"); $("liftIco").src = `assets/icons/${ctx.rider?.userData?.kind === "ski" ? "ski" : "snowboard"}.png?v=1`; $("bubble").hidden = true; $("bubbleHint").hidden = true; hintOn = false; }
   // Riding together (together.js): friends on the same shared trip, live. Nothing at all when riding alone.
   const together = rideTogether({ scene, camera, renderer, T, R, lift, line, ctx, top, along, resort: RESORT, trip: TRIP, d0, d1,
     get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,

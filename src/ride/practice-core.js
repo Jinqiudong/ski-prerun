@@ -2,7 +2,7 @@
 // resort's bunny hill is, the steps of the lesson and what passes each one, measured from the board's physics
 // (board.js Rider: speed, heading, the fall line, the board across the travel, the edge set, a caught edge).
 // practice.js draws it and runs it in the ride. Angles in radians; yaw 0 = +z, as board.js measures it.
-import { DEG, wrap, brakeOf } from "./edge-core.js?v=1";
+import { DEG, wrap, brakeOf } from "./edge-core.js?v=2";
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -114,8 +114,23 @@ export const STEPS = [
   { key: "catch", title: "吃刃", icon: "moguls", goal: "刹车横着滑时往脚尖猛压一下，感受吃刃；再用脚跟刃干净地停一次", coach: "下坡那条刃一插进雪里，就会绊一下", aim: 0, v: 2 },
   { key: "free", title: "自由练习", icon: "star", goal: "想练什么练什么，滑到底会送你回坡顶", coach: "自己玩吧，我在这儿看着", aim: 0, v: 1 },
 ];
-export const stepOf = (key) => STEPS.find((s) => s.key === key) || STEPS[0];
-export const goalText = (s, t = (x, v) => x.replace(/\{(\w+)\}/g, (_, k) => v[k])) => t(s.goal, { v: SPEED_GOAL, n: LINKS, from: STOP_FROM, m: STOP_IN });
+// On skis (双板): no heel and toe, no edge to catch. The turns are left and right (edgeOf with heel = +1: +1 a left
+// turn), the first brake is the plough (犁式: the tips together, the tails pushed out, a slow stop with the skis
+// still along the way you go), and the stop is the hockey stop (急停: both skis thrown across, as the board's brake
+// is measured: 60°+ within STOP_IN metres).
+export const PLOUGH_FROM = 8, PLOUGH_IN = 25; // km/h, metres
+export const SKI_STEPS = [
+  STEPS[0],
+  { key: "speed", title: "加速", icon: "ski", goal: "两支雪板平行朝坡下，手机往前倾（或手指往下拖），滑到 {v} km/h", coach: "雪板朝下，放平，冲～", aim: 0, v: 0.5 },
+  { key: "plough", title: "犁式刹车", icon: "challenge", goal: "手机往回倒一点（或手指往上拖一点）：板头并拢、板尾推开成 A 字，从 {pv} km/h 慢慢停住", coach: "板头靠拢，板尾推开，像一块比萨", aim: 0, v: 2 },
+  { key: "edge", title: "左右转弯", icon: "groomed", goal: "手机左右倾，两支板一起立刃。左转、右转各转过坡下那条线", coach: "膝盖往弯里压，两支板一起转", aim: 50, v: 3 },
+  { key: "link", title: "连续转弯", icon: "trailmap", goal: "连着转：左、右、左……连续转弯 {n} 次", coach: "左一下，右一下，像画 S", aim: 35, v: 4 },
+  { key: "brake", title: "急停", icon: "moguls", goal: "滑到 {from} km/h 以上，手机往回猛倒（或手指往上拖到底），两支板一起横过来，{m} 米内停住", coach: "两支板一起横过来，身体往山上那边靠", aim: 0, v: 2 },
+  { ...STEPS[STEPS.length - 1] },
+];
+export const stepsFor = (sport) => (sport === "ski" ? SKI_STEPS : STEPS);
+export const stepOf = (key, sport) => stepsFor(sport).find((s) => s.key === key) || stepsFor(sport)[0];
+export const goalText = (s, t = (x, v) => x.replace(/\{(\w+)\}/g, (_, k) => v[k])) => t(s.goal, { v: SPEED_GOAL, n: LINKS, from: STOP_FROM, m: STOP_IN, pv: PLOUGH_FROM });
 
 // Which edge the rider is on: +1 heel, -1 toe, 0 flat. steer as board.js takes it (right +), heel: the way the
 // heel side turns the board's nose (ride.js heelSide): a heel-side turn is one where −sign(steer) is heel.
@@ -182,9 +197,30 @@ export function stopStep(s, { speed, slip, caught, x, z, dt }) {
   return out;
 }
 
+// A plough stop: armed at PLOUGH_FROM km/h, timed from when the wedge is set (plough 0.4+) to standing still. Clean:
+// inside PLOUGH_IN metres with the skis never swung 45°+ across (that would be a hockey stop). Letting the wedge
+// go for a second starts it again.
+export function newPloughStop() { return { armed: false, at: null, dist: 0, across: 0, off: 0, still: 0, from: 0 }; }
+export function ploughStep(s, { speed, plough = 0, slip = 0, x, z, dt }) {
+  if (!s.armed) { if (speed * 3.6 >= PLOUGH_FROM) s.armed = true; else return null; }
+  if (!s.at) {
+    if (plough > 0.4) Object.assign(s, { at: { x, z }, dist: 0, across: 0, off: 0, still: 0, from: speed });
+    return null;
+  }
+  s.dist = Math.hypot(x - s.at.x, z - s.at.z);
+  s.across = Math.max(s.across, slipZone(slip).deg);
+  s.off = plough > 0.4 || speed < 0.6 ? 0 : s.off + dt;
+  if (s.off > 1) { Object.assign(s, newPloughStop(), { armed: speed * 3.6 >= PLOUGH_FROM }); return null; }
+  s.still = speed < 0.3 ? s.still + dt : 0;
+  if (s.still < 0.4) return null;
+  const out = { ok: s.dist <= PLOUGH_IN && s.across < 45, dist: +s.dist.toFixed(1), across: s.across, from: +(s.from * 3.6).toFixed(0) };
+  Object.assign(s, newPloughStop());
+  return out;
+}
+
 // One step's check, fed the physics each frame. sample: { speed, heading, fall, slip (board − travel, signed),
-// caught, steer, heel, x, z, dt }. Returns { done, parts: what's ticked so far, note: a line for the card }.
-export function newCheck(key) { return { key, turns: newTurns(), stop: newStop(), caughtSeen: false, best: 0, parts: {}, done: false, last: null }; }
+// caught, steer, heel, x, z, dt, plough (skis' wedge 0..1) }. Returns { done, parts: what's ticked so far, note: a line for the card }.
+export function newCheck(key) { return { key, turns: newTurns(), stop: newStop(), plough: newPloughStop(), caughtSeen: false, best: 0, parts: {}, done: false, last: null }; }
 export function checkStep(c, s) {
   if (c.done) return c;
   const edge = edgeOf(s.steer, s.heel), off = offFall(s.heading, s.fall);
@@ -204,17 +240,20 @@ export function checkStep(c, s) {
     case "link": c.parts.chain = Math.max(c.parts.chain || 0, c.turns.chain); c.done = c.turns.chain >= LINKS; break;
     case "brake": if (stopped) { c.last = stopped; c.done = stopped.ok; } break;
     case "catch": if (stopped) { c.last = stopped; if (c.caughtSeen && stopped.ok) { c.parts.clean = true; c.done = true; } } break;
+    case "plough": { const p = ploughStep(c.plough, s); if (p) { c.last = p; c.done = p.ok; } break; }
     case "free": if (turned) c.parts.turns = (c.parts.turns || 0) + 1; break;
   }
   return c;
 }
 
 // ---------- Progress, kept on this phone ----------
-// localStorage prerunPractice: { done: { <step key>: true }, at: the step last worked on }.
-export const STORE = "prerunPractice";
-export function loadProgress(storage) {
-  try { const p = JSON.parse(storage.getItem(STORE) || "{}"); return { done: p.done && typeof p.done === "object" ? p.done : {}, at: STEPS.some((s) => s.key === p.at) ? p.at : null }; } catch { return { done: {}, at: null }; }
+// localStorage prerunPractice: { done: { <step key>: true }, at: the step last worked on }; on skis its own,
+// prerunPracticeSki (the lessons differ).
+export const STORE = "prerunPractice", STORE_SKI = "prerunPracticeSki";
+const storeOf = (sport) => (sport === "ski" ? STORE_SKI : STORE);
+export function loadProgress(storage, sport) {
+  try { const p = JSON.parse(storage.getItem(storeOf(sport)) || "{}"); return { done: p.done && typeof p.done === "object" ? p.done : {}, at: stepsFor(sport).some((s) => s.key === p.at) ? p.at : null }; } catch { return { done: {}, at: null }; }
 }
-export function saveProgress(storage, p) { try { storage.setItem(STORE, JSON.stringify({ done: p.done, at: p.at })); } catch { /* storage off */ } }
+export function saveProgress(storage, p, sport) { try { storage.setItem(storeOf(sport), JSON.stringify({ done: p.done, at: p.at })); } catch { /* storage off */ } }
 // The first step not done yet (the free practice once all are).
-export const nextStep = (p) => (STEPS.find((s) => s.key !== "free" && !p.done[s.key]) || STEPS[STEPS.length - 1]).key;
+export const nextStep = (p, sport) => { const L = stepsFor(sport); return (L.find((s) => s.key !== "free" && !p.done[s.key]) || L[L.length - 1]).key; };

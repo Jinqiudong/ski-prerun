@@ -12,6 +12,9 @@
     #head button { pointer-events: auto; text-shadow: none; }
     #head b { font: 600 26px/1.1 "Cormorant Garamond", "Noto Serif SC", serif; color: var(--navy); } #head small { display: block; color: #5f5a52; font-size: 12px; margin-top: 3px; }
     #head .side { display: grid; justify-items: end; gap: 14px; }
+    /* 单板 / 双板: the 雪板 sheet's first row, each with its painted icon */
+    #wbody .seg.sport { margin-bottom: 12px; } #wbody .seg.sport button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 0; }
+    #wbody .seg.sport img { width: 30px; height: 30px; object-fit: contain; } #wbody .seg.sport button.on img { background: #fdfbf6; border-radius: 50%; }
     /* your avatar, top right: tap for settings (pick another avatar there) */
     #setBtn { position: relative; width: 52px; height: 52px; padding: 0; border-radius: 50%; border: 3px solid #fffdf8; background: #e6ebee; box-shadow: 0 4px 10px rgba(40,30,20,.2); cursor: pointer; }
     #setBtn img { width: 100%; height: 100%; border-radius: 50%; display: block; }
@@ -112,7 +115,8 @@
     /* the boards, tall, and which foot leads */
     #wbody .boardrow { display: flex; align-items: center; gap: 18px; }
     #wbody .boards { display: flex; gap: 8px; } #wbody .boards button { width: 34px; height: 116px; padding: 2px; border: 2px solid transparent; border-radius: 20px; background: none; cursor: pointer; }
-    #wbody .boards button.on { border-color: var(--navy); } #wbody .boards img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+    #wbody .boards button.on { border-color: var(--navy); } #wbody .boards .skis { display: flex; justify-content: center; gap: 5px; height: 100%; }
+    #wbody .boards .skis i { width: 9px; border-radius: 5px 5px 3px 3px; background: linear-gradient(90deg, var(--a) 0 34%, var(--b) 34% 66%, var(--a) 66%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); } #wbody .boards img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
     #wbody .stance { display: grid; gap: 8px; justify-items: start; } #wbody .stance small { font-size: 11px; color: var(--muted); }
     /* the look: who, hair, height, build, fit; three-way choices as segments */
     #wbody .sec { display: block; margin-top: 12px; } #wbody .sec .t { display: flex; justify-content: space-between; font-size: 14px; color: var(--navy); margin-bottom: 8px; }

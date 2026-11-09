@@ -82,6 +82,10 @@ const ROUTES = {
   G: { seq: [["Anim_Chill_Cruise", 1], ["Anim_Toe_Slide_Ref", 1]], v: 5.5, cam: "A" },  // a cruise into a toe-side slide
   // an animal (no clips of its own to trace): a gentle S down the slope on its board, standing
   P: { path: true, v: 5, cam: "rest" },
+  // on skis (双板; start.js leans and poses the skier from run.now.ski): linked parallel turns, or straight down
+  // in a tuck; both end in a hockey stop, skis thrown across, then a turn to face you
+  S: { path: "s", ski: true, v: 7, cam: "A" },
+  T: { path: "straight", ski: true, v: 9, cam: "A" },
 };
 const STOP = 30; // the skid stop, in line frames
 const LONG = 30; // the longest way in (m): longer lines are drawn in to this
@@ -104,10 +108,13 @@ function traceSeq(char, r) {
   }
   return { pts, hd, by, fps, segs };
 }
-// An animal's way down: a gentle S from far up the slope, easing out straight at you.
+// An animal's way down: a gentle S from far up the slope, easing out straight at you. A skier's: wider, rounder
+// turns ("s"), or nearly straight ("straight").
 function pathLine(r) {
-  const fps = 30, L = 26, N = Math.round((L / r.v) * fps), pts = [], hd = [];
-  for (let i = 0; i <= N; i++) { const u = i / N; pts.push([2.4 * Math.sin(u * Math.PI * 2.5) * (1 - u) ** 1.5 - 0.6 * (1 - u), -L * (1 - u)]); }
+  const fps = 30, L = r.ski ? 30 : 26, N = Math.round((L / r.v) * fps), pts = [], hd = [];
+  const x = r.path === "s" ? (u) => 3.4 * Math.sin(u * Math.PI * 3) * (1 - u) ** 1.2 - 0.8 * (1 - u)
+    : r.path === "straight" ? (u) => -1.6 * (1 - u) ** 2 : (u) => 2.4 * Math.sin(u * Math.PI * 2.5) * (1 - u) ** 1.5 - 0.6 * (1 - u);
+  for (let i = 0; i <= N; i++) { const u = i / N; pts.push([x(u), -L * (1 - u)]); }
   for (let i = 0; i <= N; i++) { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(N, i + 1)]; hd.push(Math.atan2(-(b[1] - a[1]), b[0] - a[0])); }
   return { pts, hd, by: pts.map(() => 0), n: pts.length, fps, segs: [] };
 }
@@ -172,6 +179,9 @@ export function makeEntrance(scene) {
   const tGeo = new THREE.BufferGeometry(); tGeo.setAttribute("position", new THREE.BufferAttribute(tPos, 3)); tGeo.setIndex(idx);
   const track = new THREE.Mesh(tGeo, new THREE.MeshBasicMaterial({ color: 0x8fa3ba, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
   track.frustumCulled = false; track.renderOrder = 0;
+  // skis leave two thin lines: the second one (the first is `track`, narrowed)
+  const tPos2 = new Float32Array(N * 2 * 3), tGeo2 = new THREE.BufferGeometry(); tGeo2.setAttribute("position", new THREE.BufferAttribute(tPos2, 3)); tGeo2.setIndex(idx);
+  const track2 = new THREE.Mesh(tGeo2, track.material); track2.frustumCulled = false; track2.visible = false;
   // the kicker: a snow wedge up to its lip, rounded off behind; placed where D takes off
   const KH = 0.7, KL = 2.6, sh = new THREE.Shape();
   sh.moveTo(-KL / 2, -0.05); sh.quadraticCurveTo(KL * 0.1, 0.05, KL / 2 - 0.15, KH); sh.lineTo(KL / 2 + 0.1, KH - 0.05); sh.quadraticCurveTo(KL / 2 + 0.9, KH * 0.6, KL / 2 + 1.6, -0.05); sh.lineTo(-KL / 2, -0.05);
@@ -224,14 +234,19 @@ export function makeEntrance(scene) {
   const flareTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, "rgba(255,250,235,1)"); r.addColorStop(0.3, "rgba(255,236,200,.5)"); r.addColorStop(1, "rgba(255,236,200,0)"); g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
   const flare = new Lensflare(); flare.addElement(new LensflareElement(flareTex, 380, 0, new THREE.Color(1, 0.96, 0.88))); flare.addElement(new LensflareElement(flareTex, 60, 0.5, new THREE.Color(0.8, 0.9, 1))); flare.addElement(new LensflareElement(flareTex, 90, 0.8, new THREE.Color(1, 0.9, 0.8)));
   flare.position.copy(SUN).multiplyScalar(60); flare.visible = false;
-  const group = new THREE.Group(); group.add(sky, ring, ground, track, kick, spray, flakes, flare); scene.add(group);
+  const group = new THREE.Group(); group.add(sky, ring, ground, track, track2, kick, spray, flakes, flare); scene.add(group);
   const setSky = (w) => { flare.visible = w > 0.6; };
   const follow = (camera) => { sky.position.copy(camera.position); ring.position.x = camera.position.x; ring.position.z = camera.position.z; };
 
   let run = null, n = 0;
-  const lay = (x, y, z, h) => { // across the board's line, a little above the snow
-    if (n >= N) return; const w = 0.09, o = n * 6, cx = Math.sin(h) * w, cz = Math.cos(h) * w;
-    tPos.set([x - cx, y + 0.02, z - cz, x + cx, y + 0.02, z + cz], o);
+  const lay = (x, y, z, h, ski = false) => { // across the board's line, a little above the snow (skis: two thin lines)
+    if (n >= N) return; const o = n * 6, sx = Math.sin(h), sz = Math.cos(h);
+    if (ski) {
+      const g = 0.12, w = 0.035;
+      tPos.set([x - sx * (g + w), y + 0.02, z - sz * (g + w), x - sx * (g - w), y + 0.02, z - sz * (g - w)], o);
+      tPos2.set([x + sx * (g - w), y + 0.02, z + sz * (g - w), x + sx * (g + w), y + 0.02, z + sz * (g + w)], o);
+      tGeo2.setDrawRange(0, Math.max(0, n * 6)); tGeo2.attributes.position.needsUpdate = true;
+    } else tPos.set([x - sx * 0.09, y + 0.02, z - sz * 0.09, x + sx * 0.09, y + 0.02, z + sz * 0.09], o);
     n++; tGeo.setDrawRange(0, Math.max(0, (n - 1) * 6)); tGeo.attributes.position.needsUpdate = true;
   };
   // the camera's lens: 30° at rest; a cut changes it at once
@@ -248,7 +263,7 @@ export function makeEntrance(scene) {
       char.root.updateWorldMatrix(true, false); const mirror = char.root.matrixWorld.determinant() < 0 ? -1 : 1;
       const key = char.root.uuid + k + char.root.scale.x + mirror; if (!cache.has(key)) cache.set(key, lineOf(char, r, mirror));
       const line = cache.get(key); if (!line) return false;
-      n = 0; tGeo.setDrawRange(0, 0); kick.visible = false; kick.material.opacity = 1;
+      n = 0; tGeo.setDrawRange(0, 0); tGeo2.setDrawRange(0, 0); track2.visible = !!r.ski; kick.visible = false; kick.material.opacity = 1;
       const ra = r.air || line.air;
       let air = ra ? { i0: ra[0], i1: ra[1], peak: 0, y0: 0, ramp: null } : null;
       if (r.kicker) { // the kicker's lip where the board leaves the snow; the board rides up its face to there
@@ -348,11 +363,20 @@ export function makeEntrance(scene) {
       // the rider's yaw on the line: the board's nose along it (turned half round for goofy, see lineOf); the stop ends facing you
       const yaw = h + run.flip, stopW = Math.min(1, Math.max(0, 1 - (F - f) / STOP)), sw = stopW * stopW * (3 - 2 * stopW), end = Math.round(yaw / (2 * Math.PI)) * 2 * Math.PI;
       if (!r.path && !run.stopping) E.clipAt(f);
-      if (stopW > 0 && !run.stopping) { run.stopping = true; char.play("Stand_Idle", { fade: 1.2 }); }
-      mover.position.set(x, y, z); mover.rotation.y = yaw + (end - yaw) * sw;
-      run.now = { x, y, z, h, u: f / F, i, f, flying };
+      if (stopW > 0 && !run.stopping) { run.stopping = true; if (!r.ski) char.play("Stand_Idle", { fade: 1.2 }); }
+      // a skier faces the way they go (the model's +z); start.js poses them from these numbers: on edge by the
+      // turn (inclined to balance it: tan = v·turn rate / g), tucked straight down, and the stop a hockey stop,
+      // the skis swung across the last stretch (slip) toward the side of the last turn, then turned to you
+      let ski = null;
+      if (r.ski) {
+        const rate = (h - (run.skiH ?? h)) / Math.max(dt, 1e-3) * (left > STOP ? 1 : 0), v = r.v * (left > STOP ? 1 : Math.max(0.08, left / STOP)); run.skiH = h;
+        run.side ??= 1; if (Math.abs(rate) > 0.15) run.side = Math.sign(rate);
+        ski = { edge: -Math.atan((v * rate) / 9.8) * 1.4, tuck: r.path === "straight" ? 1 - sw : 0, hockey: Math.min(1, stopW * 1.5) * (1 - Math.max(0, (stopW - 0.85) / 0.15)), slip: run.side * 1.25 * sw };
+      }
+      mover.position.set(x, y, z); mover.rotation.y = r.ski ? yaw + Math.PI / 2 : yaw + (end - yaw) * sw;
+      run.now = { x, y, z, h, u: f / F, i, f, flying, ski };
       if (!flying) {
-        lay(x, y, z, h);
+        lay(x, y, z, h, r.ski);
         // spray: off the outside of the turn, more the sharper it turns; a sheet of it while stopping
         const turn = (h - (run.lastH ?? h)) / Math.max(dt, 1e-3); run.lastH = h;
         const side = Math.sign(turn) || 1, ox = Math.sin(h) * side, oz = Math.cos(h) * side, fx = Math.cos(h), fz = -Math.sin(h);

@@ -63,3 +63,37 @@ export const scrubOf = (slip, grip) => 0.3 * Math.sin(Math.min(slip, 45 * DEG)) 
 export function governor(speed, cap, heelTurn = true) {
   return Math.max(heelTurn ? clamp((speed - 0.85 * cap) / (0.15 * cap), 0, 1) : 0, clamp((speed - cap) / (0.12 * cap), 0, 1));
 }
+
+// ---------- Skis (a look's ch.sport "ski": 双板) ----------
+// Two skis pointing the way you go, turned by rolling both onto their edges: the same edge, turn and travel as
+// the board (tilt, steer and the S line unchanged). What differs is the speed control, and it is the same to
+// either side (no heel and toe):
+//   glide   nothing asked;
+//   plough  a light brake, or any brake when slow (under PLOUGH_V): the tips together, the tails pushed out, a
+//           wedge that scrubs speed with no turn of the skis across the way you go;
+//   skid    a brake at speed in a turn: the skis swing on round into the turn, across the way you go (the
+//           turn's shape), braking as the board does past 45° (brakeOf); it holds through the edge change;
+//   hockey  a hard brake (HARD) at speed: both skis thrown 90° across, into the turn you were in (or toward
+//           the uphill side going straight), a full stop.
+export const SKI = { PLOUGH_V: 4.5, HARD: 0.75, PUSH_V: 4.5, PUSH_A: 1.5 };
+export function skiMode(bk, speed, steer, prev = "glide") {
+  if (bk < 0.05) return "glide";
+  if (bk >= SKI.HARD && (speed > 2.5 || prev === "hockey")) return "hockey"; // and held across to the stop
+  if (speed < SKI.PLOUGH_V) return "plough";
+  if (Math.abs(steer) >= 0.2 || prev === "skid" || prev === "hockey") return "skid";
+  return "plough";
+}
+// Which way the skis swing across (+1 / −1, as yaw turns): into the turn being made (steer > 0 turns right,
+// yaw going down), else the last turn's way, else toward the uphill side of the way you go (off: travel −
+// fall line, signed), so a straight run stops the short way round.
+export const skiSide = (steer, last = 0, off = 0) => (Math.abs(steer) > 0.15 ? -Math.sign(steer) : last || (off >= 0 ? 1 : -1));
+// The skis' angle across the way you go for a mode (signed by side): a skid from 45° up to 70°, a hockey stop 88°.
+export const skiPivot = (mode, bk, side) => side * (mode === "hockey" ? 88 * DEG : mode === "skid" ? Math.min(70 * DEG, pivotFor(bk)) : 0);
+// The wedge for a brake input (0..1, full from 0.4), and its deceleration (m/s², >= 0): it takes most of the pull
+// down the slope and 1.6 m/s² more, so it stops you on the gentle snow a plough is for, and only slows you on a
+// steep pitch.
+export const ploughOf = (bk) => clamp(bk / 0.4, 0, 1);
+export const ploughDecel = (wedge, along) => wedge * (0.55 * Math.max(0, along) + 1.6);
+// The guided ride's speed control on skis: the same governor, but every turn finishes the same, round and a
+// little skidded, to either side (the owner disliked one side braking).
+export const skiGovernor = (speed, cap) => governor(speed, cap, true);
