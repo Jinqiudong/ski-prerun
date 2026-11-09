@@ -13,8 +13,8 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 const loader = new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/"));
 let gearFile = null; const clipFiles = {};
-export const loadSki = (tpl) => Promise.all([gearFile ||= loader.loadAsync("assets/riders/ski_gear.glb?v=2"),
-  clipFiles[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_ski.glb?v=2`)]);
+export const loadSki = (tpl) => Promise.all([gearFile ||= loader.loadAsync("assets/riders/ski_gear.glb?v=3"),
+  clipFiles[tpl] ||= loader.loadAsync(`assets/riders/tpl_${tpl.toLowerCase()}_ski.glb?v=3`)]);
 // Hidden while on skis: the board, its bindings, and the snowboard boots (the gear brings ski boots).
 export const ON_BOARD = /^(Board_|Bindings_|Boots_)/;
 // The clips, by what they are (durations and loops: docs/SKI_RIDERS.md).
