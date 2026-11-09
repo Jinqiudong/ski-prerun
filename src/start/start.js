@@ -5,13 +5,13 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=22";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=23";
 import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
 import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";
 import { makeEntrance } from "./entrance.js?v=26";
 import { skiStage, colorSkis, tintSkiGear, SKI_COLORS } from "../rider/skier.js?v=1";
-import { addSki } from "../rider/ski.js?v=1";
+import { addSki } from "../rider/ski.js?v=2";
 import { sportOf } from "../rider/ski-core.js?v=1";
 import { openBookPage, locateIn } from "../ride/roadbook.js?v=29";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=49";

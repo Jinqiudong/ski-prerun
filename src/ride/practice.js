@@ -7,7 +7,7 @@
 // prerunPractice.
 import * as THREE from "three";
 import { Rider, Tracks, Spray } from "./board.js?v=14";
-import { poseBoarder, myRider } from "../rider/boarder.js?v=22";
+import { poseBoarder, myRider } from "../rider/boarder.js?v=23";
 import { Runner } from "./runner.js?v=1";
 import { guideAnimal } from "./guide-core.js?v=5";
 import { TREE, treeHit } from "./snow-core.js?v=3";
