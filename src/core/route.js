@@ -101,6 +101,57 @@ export function planRoute(graph, from, to, maxLevel = "expert") {
   }
 }
 
+// Every cheapest way from `from` at once (Dijkstra over the whole graph, with a heap): for a lift's top that
+// is asked the way to many places. lifts: false skis only (no lift legs). routeTo(to) is planRoute's answer
+// for that target set, from the same tree.
+export function planTree(graph, from, { maxLevel = "expert", lifts = true } = {}) {
+  const cap = LEVELS.indexOf(maxLevel);
+  const n = graph.nodes.length;
+  const best = new Float64Array(n).fill(Infinity);
+  const prev = new Int32Array(n).fill(-1);
+  const via = new Array(n);
+  const done = new Uint8Array(n);
+  const heap = []; // [cost, node], a binary min-heap
+  const push = (c, u) => {
+    heap.push([c, u]);
+    for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      for (let i = 0; ;) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]]; i = m;
+      }
+    }
+    return top;
+  };
+  for (const node of from) { best[node.id] = 0; push(0, node.id); }
+  while (heap.length) {
+    const [c0, u] = pop();
+    if (done[u] || c0 > best[u]) continue;
+    done[u] = 1;
+    for (const e of graph.edges[u]) {
+      if (e.leg.type === "run" && LEVELS.indexOf(e.leg.run.level) > cap) continue;
+      if (!lifts && e.leg.type === "lift") continue;
+      const c = best[u] + e.cost;
+      if (c < best[e.to]) { best[e.to] = c; prev[e.to] = u; via[e.to] = e.leg; push(c, e.to); }
+    }
+  }
+  return {
+    best,
+    routeTo(to) {
+      let u = -1;
+      for (const node of to) if (best[node.id] < Infinity && (u < 0 || best[node.id] < best[u])) u = node.id;
+      return u < 0 ? null : toLegs(graph, u, prev, via, best[u]);
+    },
+  };
+}
+
 function toLegs(graph, end, prev, via, seconds) {
   const raw = [];
   for (let v = end; prev[v] >= 0; v = prev[v]) raw.unshift(via[v]);

@@ -192,3 +192,59 @@
     #roadCue.pop { animation: rcPop .5s cubic-bezier(.3,1.6,.5,1); }
     @keyframes rcPop { from { transform: translateX(-50%) translateY(16px) scale(.7); opacity: 0; } }
     body.navmin #liftOffer.mini { bottom: calc(210px + env(safe-area-inset-bottom)); }
+    /* The lift top's page (ride.js, hub-core.js): the map above, this sheet below (the owner's mock, 2026-11-08). */
+    #pick { z-index: 6; box-sizing: border-box; max-height: 50vh; display: flex; flex-direction: column; padding: 12px 0 calc(8px + env(safe-area-inset-bottom)); background: #fbf8f1; border-radius: 22px 22px 0 0; box-shadow: 0 -6px 18px rgba(40,30,20,.14); font-family: "Cormorant Garamond", "Noto Serif SC", serif; color: #33302c; }
+    #pick[hidden] { display: none; }
+    body.picking #tabFab { display: none; }
+    #hubGroups { overflow-y: auto; min-height: 0; padding: 0 16px; scrollbar-width: none; }
+    #hubGroups::-webkit-scrollbar { display: none; }
+    #hubGroups .grp + .grp { margin-top: 8px; }
+    #hubGroups h4 { margin: 0 0 4px; display: flex; align-items: center; gap: 4px; font: 400 14px "Noto Serif SC", serif; color: #8a8278; }
+    #hubGroups h4 .cueIco { width: 20px; height: 20px; margin: 0; }
+    #hubGroups .row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    #hubGroups .row::-webkit-scrollbar { display: none; }
+    #hubGroups .opt { flex: none; box-sizing: border-box; border: 1px solid #d8cfbe; background: #fff; border-radius: 12px; padding: 4px 9px 3px; font: 15px/1.25 "Cormorant Garamond", "Noto Serif SC", serif; color: #33302c; white-space: nowrap; cursor: pointer; }
+    #hubGroups .opt b { font-weight: 600; color: #22344d; }
+    #hubGroups .opt small { color: #8a8172; font-size: 12.5px; }
+    #hubGroups .opt.on { background: #22344d; border-color: #22344d; color: #fdfbf6; }
+    #hubGroups .opt.on b { color: #fdfbf6; } #hubGroups .opt.on small { color: #cfd6e2; }
+    #hubGroups .opt.more { color: #22344d; background: #f3eee4; font-size: 14px; align-self: stretch; }
+    #hubGroups .vs { display: flex; gap: 2px; margin-top: 2px; }
+    #hubGroups .v { font: inherit; font-size: 14.5px; color: inherit; background: none; border: 0; border-radius: 999px; padding: 1px 7px 1px 3px; display: inline-flex; align-items: center; cursor: pointer; }
+    #hubGroups .v .lv { outline-color: transparent; }
+    #hubGroups .opt.on .v.on { background: #fdfbf6; color: #22344d; }
+    #hubGroups .opt.on .lv.advanced, #hubGroups .opt.on .lv.expert { background: #fdfbf6; box-shadow: none; }
+    #hubGroups .opt.on .v.on .lv.advanced, #hubGroups .opt.on .v.on .lv.expert { background: #111; }
+    #hubGroups .opt.on .lv.expert { box-shadow: 7px -7px 0 #fdfbf6; } #hubGroups .opt.on .v.on .lv.expert { box-shadow: 7px -7px 0 #111; }
+    #hubGroups .v.hard { text-decoration: underline dotted #b6463b; text-underline-offset: 3px; }
+    #hubGroups .none { margin: 6px 0; font-size: 15px; }
+    #hubLine { padding: 8px 16px 0; font: 16px/1.45 "Cormorant Garamond", "Noto Serif SC", serif; color: #33302c; }
+    #hubLine .runs { display: block; }
+    #hubLine small { display: block; font: 12.5px/1.6 "Noto Serif SC", serif; color: #8a8278; }
+    #hubLine .warn { color: #b6463b; }
+    #hubLine .doc { font: inherit; color: #22344d; background: none; border: 0; padding: 0; cursor: pointer; }
+    #hubLine .doc .cueIco { width: 18px; height: 18px; vertical-align: -4px; margin-right: 1px; }
+    #hubGo { margin: 8px 16px 0; padding: 10px; border: 0; border-radius: 999px; background: #22344d; color: #fdfbf6; font: 600 19px "Cormorant Garamond", "Noto Serif SC", serif; cursor: pointer; }
+    #hubGo[hidden] { display: none; }
+    #pick .pickLinks { margin-top: 4px; }
+    #pick .pickLinks a { text-shadow: none !important; font-size: 14px; color: #8a8278 !important; }
+    /* The breadcrumb, over the map just above the sheet. */
+    #hubCrumb { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font: 14px "Cormorant Garamond", "Noto Serif SC", serif; pointer-events: none; }
+    #hubCrumb[hidden] { display: none; }
+    #hubCrumb .c { pointer-events: auto; background: #fbf8f1; border: 1px solid #cbbfa9; border-radius: 12px; padding: 3px 10px; color: #22344d; box-shadow: 0 2px 6px rgba(40,30,20,.12); font: inherit; }
+    #hubCrumb .c.on, #hubCrumb .ask.on { background: #22344d; color: #fdfbf6; border-color: #22344d; }
+    #hubCrumb .ask { cursor: pointer; border-style: dashed; }
+    #hubCrumb i { font-style: normal; color: #6f675e; text-shadow: 0 0 4px #fdfbf6; }
+    #hubCrumb small { flex-basis: 100%; color: #6f675e; font: 12px "Noto Serif SC", serif; text-shadow: 0 0 4px #fdfbf6, 0 0 2px #fdfbf6; }
+    #hubCrumb .nexts { flex-basis: 100%; display: flex; gap: 6px; overflow-x: auto; pointer-events: auto; scrollbar-width: none; }
+    #hubCrumb .nexts[hidden] { display: none; }
+    #hubCrumb .nexts button { flex: none; display: inline-flex; align-items: center; font: inherit; font-size: 14px; color: #22344d; background: #fbf8f1; border: 1px dashed #8a8278; border-radius: 12px; padding: 2px 9px 2px 4px; }
+    #hubCrumb .nexts .cueIco { width: 18px; height: 18px; margin-right: 3px; }
+    /* The map's pins: a small icon each; the chosen one with its name; the chained ones dashed. */
+    .rtag.hp { padding: 3px !important; border-radius: 999px !important; line-height: 0; background: #fbf8f1 !important; border: 1px solid #cbbfa9 !important; box-shadow: 0 2px 5px rgba(40,30,20,.18); }
+    .rtag.hp .cueIco { width: 20px; height: 20px; margin: 0; vertical-align: middle; }
+    .rtag.hp.on { line-height: 1.2; padding: 3px 10px 3px 4px !important; background: #22344d !important; color: #fdfbf6 !important; border-color: #22344d !important; font-size: 15px; z-index: 3; }
+    .rtag.hp.on .cueIco { margin-right: 4px; }
+    .rtag.hp.next { border: 1px dashed #6f675e !important; background: rgba(251,248,241,.85) !important; transform-origin: center; }
+    .rtag.hp.next .cueIco { width: 16px; height: 16px; opacity: .8; }
+    .rtag.hp.next.on { background: #fbf8f1 !important; color: #22344d !important; border: 1.5px dashed #22344d !important; }

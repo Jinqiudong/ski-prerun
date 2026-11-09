@@ -74,6 +74,13 @@ const EN = {
   "看全图，选从哪里出发": "See it all, start anywhere", "这一趟怎么走的，明天照着走": "This run's way, to follow tomorrow", "这个雪场你滑过的地方": "Where you've skied here", "右上角的小地图样式": "The corner map's style", "回到开始页": "Back to the start",
   "菜单": "Menu", "路书 · 怎么滑、哪里容易错": "Roadbook · how to ski it, where it's easy to go wrong", "按这条路线滑 ›": "Ski this way ›", "从这条滑下去 ›": "Ski down this one ›", "回雪场": "Back to the resort", "徒步": "Hike", "再来一次": "Again",
   "取消": "Cancel", "从这里出发 ›": "Start here ›", "去坐 ›": "Go ride it ›", "那里没有雪道": "No run there", "点一条雪道或者一条缆车": "Tap a run or a lift",
+  // The lift top's page (src/ride/ride.js, hub-core.js)
+  "{name} 顶上": "Top of {name}", "从这里能去哪 · 时间是估算，按{lv}及以下规划": "Where you can go from here · times are estimates, planned on {lv} or easier",
+  "换缆车": "Change lifts", "滑到底，回村子": "Ski to the bottom, back to a village", "走上去": "Hike up", "更多 · {n}": "More · {n}", "有 {list}": "with {list}", " 等": " and more",
+  "{n} 分": "{n} min", "约 {a}–{b} 分钟": "about {a}–{b} min", "从这里没有能滑下去的路线": "No way down from here on the map", "爬升约 {m} 米 · 要带：{gear}": "About {m} m up · bring: {gear}",
+  "背上板走上去": "Board on your back, hike up", "约 {n} 分钟 · 估算": "about {n} min · estimate", "要过{lv}": "goes over {lv}", "就滑这条": "Ski this one", "滑去坐 {x}": "Ski over to {x}", "滑回 {x}": "Ski back to {x}",
+  "下一段已排好 · 再点取消": "Next leg planned · tap again to clear", "虚线：坐上去以后能去的": "Dotted: where that lift goes on to", "上一站排好的这一段": "The leg you planned at the last top",
+  "到 {x} 底站了": "At the bottom of {x}", "上去以后按计划去 {x}": "Up top, on to {x} as planned", "上去以后可以再选下一段": "Choose the next leg at the top", "坐 {x} 上山 ›": "Ride {x} up ›",
   // The painted map (src/ride/paintedmap.js)
   "已滑": "Skied", "已滑 {p}%": "Skied {p}%", "我的 {name}": "My {name}", "绿道": "Green", "蓝道": "Blue", "黑道": "Black", "双黑": "Double",
   "点山上任意地方 → 从那里出发 · 点雪道 → 看名字和难度 · 彩色 = 滑过 · 铅笔线 = 还没滑": "Tap anywhere on the mountain → start there · tap a run → its name and level · colour = skied · pencil = not yet",

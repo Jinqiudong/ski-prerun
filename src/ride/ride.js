@@ -5,31 +5,35 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor } from "./board.js?v=13";
-import { addStep, thinPath, openBookPage } from "./roadbook.js?v=27";
-import { segsOf, thinTrack } from "./roadbook-core.js?v=1";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=16";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=28";
+import { segsOf, thinTrack } from "./roadbook-core.js?v=2";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=17";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
-import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=6";
+import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=7";
+import { liftHub, findPlanned, crumbOf, viaNext, GO } from "./hub-core.js?v=1";
+import { Line2 } from "three/addons/lines/Line2.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=17";
+import { PaintedMap } from "./paintedmap.js?v=18";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=47";
-import { navRow } from "../core/nav.js?v=24";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=48";
+import { navRow } from "../core/nav.js?v=25";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=20";
-import { dropIn } from "../core/transition.js?v=17";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=21";
+import { dropIn } from "../core/transition.js?v=18";
 import { Facilities } from "./kitworld.js?v=5";
-import { rideTogether } from "./together.js?v=20";
-import { startParty } from "../core/party.js?v=16";
+import { rideTogether } from "./together.js?v=21";
+import { startParty } from "../core/party.js?v=17";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=13";
+import { Guide } from "./guide.js?v=14";
 import { bunnySpot, worldLift } from "./practice-core.js?v=1";
-import { startPractice, spotTitle } from "./practice.js?v=10";
+import { startPractice, spotTitle } from "./practice.js?v=11";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
@@ -729,7 +733,6 @@ function build(ctx) {
 
 // ---------- At the top: get off, rise above the summit, pick a run, dive back down to ski it ----------
 const ease = (u) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
-const LEVEL_COLOR = { easy: 0x22b35a, intermediate: 0x1f6fe5, advanced: 0x15171c, expert: 0x15171c };
 const LEVEL_MARK = { easy: '<i class="lv easy"></i>', intermediate: '<i class="lv intermediate"></i>', advanced: '<i class="lv advanced"></i>', expert: '<i class="lv expert"></i>' };
 // A painted icon inline with text (assets/icons; no emoji anywhere).
 const ICO = (n) => (n ? `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">` : "");
@@ -794,64 +797,32 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     }
     return out.sort((x, y) => x.a - y.a);
   }
-  const plan = (to) => {
-    for (const lv of LEVELS.slice(LEVELS.indexOf(myLevel))) {
-      const rt = planRoute(graph, fromTop, to, lv);
-      if (rt) return { rt, harder: lv !== myLevel ? lv : null };
-    }
-    return null;
-  };
-  // Where to go: each base, and each lift you can ski over to.
-  const dests = [];
-  for (const b of bases) {
-    const to = nodesNear(graph, b.x, b.z, 220), r = plan(to);
-    const p = r && makePlan(r.rt.legs, { to, kind: "base", key: `base:${b.name}`, title: `回 ${b.name}`, short: b.name, icon: "lodge", seconds: r.rt.seconds, harder: r.harder, end: [b.x, b.z], base: b });
-    if (p) dests.push(p);
-  }
-  const liftDests = [];
-  for (const l of R.lifts) {
-    if (!bigLift(l)) continue;
-    const r = plan([graph.liftNodes.get(l).bottom]);
-    if (!r || r.rt.legs.some((g) => g.type === "lift") || r.rt.seconds > 20 * 60) continue;
-    const p = makePlan(r.rt.legs, { to: [graph.liftNodes.get(l).bottom], kind: "lift", key: `lift:${l.name}`, title: l === lift ? `再坐一趟 ${l.name}` : `接 ${l.name} 缆车`, short: l.name, icon: "lift", seconds: r.rt.seconds, harder: r.harder, end: l.pts[0], lift: l });
-    if (p) liftDests.push(p);
-  }
-  // A lift that leaves from a base is the same place as that base: one option, "there you can ride X".
-  for (const p of liftDests) {
-    const b = dests.find((d) => d.base && Math.hypot(d.base.x - p.end[0], d.base.z - p.end[1]) < 350);
-    if (b) (b.lifts ||= []).push(p.short);
-    else dests.push(p);
-  }
   // What a spot at the bottom of a run leads to: lifts that leave from there, or a base.
   const leadsTo = ([x, z]) => {
     const ls = R.lifts.filter((l) => bigLift(l) && Math.hypot(l.pts[0][0] - x, l.pts[0][1] - z) < 260).map((l) => l.name);
     const b = bases.find((b) => Math.hypot(b.x - x, b.z - z) < 450);
     return { lifts: ls, base: b && b.name };
   };
-  // Runs that start at this lift's top, the longest of each name.
-  const byName = new Map();
-  R.runs.forEach((r) => {
-    if (!r.name || r.area || Math.hypot(r.pts[0][0] - g1.x, r.pts[0][1] - g1.z) > 200) return;
-    if (!byName.has(r.name) || byName.get(r.name).length < r.length) byName.set(r.name, r);
-  });
-  // A run on its own often ends in the middle of the mountain: carry on (any level) to the nearest lift or base.
-  const liftBottoms = R.lifts.filter(bigLift).map((l) => graph.liftNodes.get(l).bottom);
-  const runs = [...byName.values()].sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level) || b.length - a.length)
-    .map((r) => {
-      const legs = [{ type: "run", run: r, from: 0, to: r.pts.length - 1, length: r.length }];
-      let end = r.pts[r.pts.length - 1], leads = leadsTo(end), seconds = r.length / 7;
-      if (!leads.lifts.length && !leads.base) {
-        const rt = planRoute(graph, [graph.runNodes.get(r).at(-1)], [...liftBottoms, ...bases.flatMap((b) => nodesNear(graph, b.x, b.z, 220))], myLevel)
-          || planRoute(graph, [graph.runNodes.get(r).at(-1)], liftBottoms);
-        if (rt && !rt.legs.some((g) => g.type === "lift")) { legs.push(...rt.legs); end = [rt.end.x, rt.end.z]; leads = leadsTo(end); seconds += rt.seconds; }
-      }
-      const to = nodesNear(graph, end[0], end[1], 60);
-      return makePlan(legs, { to, kind: "run", key: `run:${r.name}`, title: r.name, icon: "", seconds, end, leads, first: r });
-    })
-    .filter(Boolean);
-  const wantKey = params.get("to");
-  let mode = runs.length && !dests.length ? "runs" : "dest";
-  if (wantKey?.startsWith("run:")) mode = "runs";
+  // The page at the top (hub-core.js): every place you can ski to from here, in three groups (再坐一次,
+  // 换缆车, 滑到底回村子), each with one way per level. A way picked becomes a plan (makePlan) when needed.
+  const hub = liftHub(R, graph, lift, { level: myLevel });
+  const hubs = new Map([[lift, hub]]); // the next lifts' hubs, for the chained "坐上去以后能去的"
+  const hubAt = (l) => { if (!hubs.has(l)) hubs.set(l, liftHub(R, graph, l, { level: myLevel })); return hubs.get(l); };
+  const planOf = new Map();
+  function planFor(d, v) {
+    const k = `${d.key}|${v.key}`;
+    if (planOf.has(k)) return planOf.get(k);
+    const extra = d.kind === "base"
+      ? { kind: "base", key: d.key, title: `回 ${d.name}`, short: d.name, icon: "lodge", base: d.place, lifts: d.lifts.length ? d.lifts : null }
+      : { kind: "lift", key: d.key, title: d.kind === "same" ? `再坐一趟 ${d.name}` : `接 ${d.name} 缆车`, short: d.name, icon: "lift", lift: d.lift };
+    const P = makePlan(v.legs, { ...extra, to: v.to, seconds: v.seconds, harder: v.harder ? v.level : null, end: v.end, leads: leadsTo(v.end), dest: d, variant: v });
+    planOf.set(k, P);
+    return P;
+  }
+  // The chained leg from the address: ?to= a place on this hub (base:X / lift:X, or an old run:Name), ?lv= its
+  // level, ?via= the lifts ridden before this one on the chain (the breadcrumb).
+  const wantKey = params.get("to"), VIA = params.get("via") || "";
+  const planned = findPlanned(hub, wantKey, params.get("lv"));
 
   // Where trees already stand: around the lift from the start, and the overview area once planted.
   const boxes = [];
@@ -923,7 +894,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // carried, up the ridge as a quick time-lapse to the summit's prayer flags, then down a line of the bowl.
   let hike = null, hk = null;
   const HIKE_GEAR = ["能挂板的背包或板带", "多带水", "能量棒", "保暖中间层", "备用手套", "雪镜和墨镜", "防晒", "救援三件套（建议）"];
-  fetch("data/hikes.json").then((x) => x.json()).then((h) => { hike = (h[RESORT] || []).find((x) => x.from === lift.name && x.summit && x.down) || null; }).catch(() => {});
+  fetch("data/hikes.json").then((x) => x.json()).then((h) => { hike = (h[RESORT] || []).find((x) => x.from === lift.name && x.summit && x.down) || null; if (hike && (st.phase === "rise" || st.phase === "pick")) paintSheet(); }).catch(() => {});
   function hikePath() {
     // Each line of the bowl once: of the pieces with a name, the one that starts highest.
     const byName = new Map();
@@ -1813,7 +1784,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   st.nearLift = () => { if (!phys) return null; let b = null; for (const l of R.lifts) if (rideable(l)) { const d = Math.hypot(l.pts[0][0] - phys.x, l.pts[0][1] - phys.z); if (!b || d < b.d) b = { name: l.name, d: Math.round(d) }; } return b; }; // testing
   st.placeNear = (name, back = 120) => { const l = R.lifts.find((x) => x.name === name), [x, z] = l.pts[0], [x2, z2] = l.pts[1]; const h = Math.atan2(x - x2, z - z2) + Math.PI; phys.place(x - Math.sin(h) * back, z - Math.cos(h) * back, h, 6); }; // testing
   st.tapMap = (x, z) => goToMapPoint(x, z); st.liftMid = (n) => { const l = R.lifts.find((q) => q.name === n); return l.pts[Math.floor(l.pts.length / 2)]; }; st.runPt = (n) => { const r = R.runs.find((q) => q.name === n); return r.pts[Math.floor(r.pts.length / 2)]; }; // testing
-  st.guide = (key) => routeGuide([...dests, ...runs].find((p) => p.key === key) || chosen);
+  st.guide = (key) => { const d = hub.all.find((x) => x.key === key); return routeGuide(d ? planFor(d, d.best) : chosen); };
 
   function arrive(P) {
     $("liftOffer").hidden = true; closeBigMap();
@@ -1839,9 +1810,12 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       note = P.leads.lifts.length ? `这里能坐 ${P.leads.lifts.join("、")}` : "";
       row = P.leads.lifts.slice(0, 3).map((n) => link(n, null, `坐 ${n} 上山 ›`)).join("");
     } else if (P.kind === "lift") {
-      title = `到 ${P.short} 底站了`;
-      note = "上去以后可以再选下一段";
-      row = link(P.short, null, `坐 ${P.short} 上山 ›`);
+      // The chain goes on (the top's page): the lifts so far, and the next leg if it was planned at the top.
+      const c = P.chain, next = c?.to ? c.to.replace(/^[a-z]+:/, "") : null;
+      title = t("到 {x} 底站了", { x: P.short });
+      note = next ? t("上去以后按计划去 {x}", { x: next }) : t("上去以后可以再选下一段");
+      const q = `look.html?lift=${encodeURIComponent(P.short)}${c?.via ? `&via=${encodeURIComponent(c.via)}` : ""}${c?.to ? `&to=${encodeURIComponent(c.to)}${c.lv ? `&lv=${c.lv}` : ""}` : ""}`;
+      row = `<a class="btn go" href="${withResort(q)}">${t("坐 {x} 上山 ›", { x: P.short })}</a>`;
     } else {
       title = `滑到底了 · ${P.title}`;
       note = P.leads.lifts.length ? `这里能坐 ${P.leads.lifts.join("、")}` : P.leads.base ? `这里是 ${P.leads.base}` : "这条雪道滑完了";
@@ -1865,7 +1839,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   };
   const marks = new THREE.Group(); // faint: every run from this top; bold: the chosen plan, drawn in order
   let chosen = null, routeMarks = [], reveal = null;
-  const tagBox = $("runTags"), cards = $("runCards");
+  const tagBox = $("runTags");
   let from, fromLook, riderFrom, riderTo, yaw0;
   st.start = (now) => {
     if (TRIP) addStep(RESORT, { k: "up", lift: lift.name, id: lift.id }); // at the top: this lift was ridden (the roadbook's leg)
@@ -1885,9 +1859,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     setupPick();
   };
   const camBehind = (r, ang, dist, hgt) => r.clone().add(new THREE.Vector3(Math.sin(yaw0 + ang) * -dist, hgt, Math.cos(yaw0 + ang) * -dist));
-  // The overview camera eases towards `want` (position, look-at and a screen shift that keeps the
-  // route between the top panel and the cards); `cur` is where it is now.
-  const cur = { pos: new THREE.Vector3(), look: new THREE.Vector3(), ox: 0, oy: 0 }, want = { pos: new THREE.Vector3(), look: new THREE.Vector3(), ox: 0, oy: 0 };
+  // The camera on the way up from the rider and back down to the snow (position, look-at, a screen shift).
+  const cur = { pos: new THREE.Vector3(), look: new THREE.Vector3(), ox: 0, oy: 0 };
   const applyCam = () => {
     camera.position.copy(cur.pos);
     camera.setViewOffset(innerWidth, innerHeight, cur.ox * innerWidth, cur.oy * innerHeight, innerWidth, innerHeight);
@@ -1918,8 +1891,8 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       applyCam();
       if (u >= 1) {
         if (st.phase === "rise") {
-          st.phase = "pick"; document.body.classList.remove("navmin"); flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); chosen?.card.scrollIntoView({ inline: "center", block: "nearest" });
-          if (chosen) requestAnimationFrame(() => aimAt(chosen)); // fit again now the cards are there to fit above
+          st.phase = "pick"; document.body.classList.remove("navmin"); flash(); tagBox.hidden = false; $("pick").hidden = false; document.body.classList.add("picking"); scrollChosen();
+          requestAnimationFrame(frameChosen); // fit again now the sheet is there to fit above
         }
         else startSki();
       }
@@ -1947,48 +1920,6 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     if (st.phase === "pick") return; // the miniature is drawn by st.render
   };
   const flash = () => { const f = $("flash"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); };
-  // Camera framing a set of points: from behind the summit, looking down at them, the whole lot
-  // between the top panel and the cards.
-  function frame(points, probes = []) {
-    const saved = { p: camera.position.clone(), q: camera.quaternion.clone(), view: camera.view && { ...camera.view } };
-    camera.clearViewOffset();
-    const c = points.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / points.length);
-    const dir = new THREE.Vector3(c.x - riderTo.x, 0, c.z - riderTo.z);
-    if (dir.lengthSq() < 100) dir.set(g1.x - line.ground[0].x, 0, g1.z - line.ground[0].z).negate();
-    dir.normalize();
-    const elev = 0.72, v = new THREE.Vector3(), out = { pos: new THREE.Vector3(), look: c.clone(), ox: 0, oy: 0 };
-    let box = null;
-    for (let D = 350; D < 20000; D *= 1.1) {
-      camera.position.copy(c).addScaledVector(dir, -Math.cos(elev) * D).add(new THREE.Vector3(0, Math.sin(elev) * D, 0));
-      camera.lookAt(c); camera.updateMatrixWorld();
-      box = { x0: 9, x1: -9, y0: 9, y1: -9 };
-      let behind = false;
-      for (const p of points) {
-        v.copy(p).project(camera);
-        if (v.z > 1) behind = true;
-        box.x0 = Math.min(box.x0, v.x); box.x1 = Math.max(box.x1, v.x); box.y0 = Math.min(box.y0, v.y); box.y1 = Math.max(box.y1, v.y);
-      }
-      out.pos.copy(camera.position);
-      if (!behind && box.x1 - box.x0 < 1.3 && box.y1 - box.y0 < 0.62) break;
-    }
-    // Shift the picture so the box sits centred left-right and just above the middle (cards below).
-    out.ox = ((box.x0 + box.x1) / 2) / 2;
-    out.oy = (0.1 - (box.y0 + box.y1) / 2) / 2;
-    camera.position.copy(saved.p); camera.quaternion.copy(saved.q);
-    if (saved.view?.enabled) camera.setViewOffset(saved.view.fullWidth, saved.view.fullHeight, saved.view.offsetX, saved.view.offsetY, saved.view.width, saved.view.height);
-    out.width = clamp(out.pos.distanceTo(c) * 0.009, 18, 60);
-    out.xs = probes.map((p) => v.copy(p).project(camera).x);
-    return out;
-  }
-  const pointsOf = (P) => {
-    const pts = [riderTo.clone()];
-    for (const l of P.legs) {
-      const list = l.type === "run" ? l.run.pts.slice(l.from, l.to + 1) : l.type === "lift" ? l.lift.pts : [];
-      list.forEach(([x, z], i) => { if (i % 3 === 0 || i === list.length - 1) pts.push(new THREE.Vector3(x, T.heightAt(x, z), z)); });
-    }
-    return pts;
-  };
-
   // ---- Tags floating over the world: run names, the lifts on the way, the destination.
   let liveTags = [];
   const clearTags = () => { tagBox.innerHTML = ""; liveTags = []; };
@@ -2003,7 +1934,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   };
   const v = new THREE.Vector3();
   // Tags sit above their spot, kept on screen, and nudged up out of each other's way (earlier tags win).
-  const RANK = { me: -1, dest: 0, on: 0, via: 1, pin: 2, leg: 3 };
+  const RANK = { me: -1, "hp on": 0, hp: 1, "hp next on": 1, "hp next": 2 };
   function placeTags() {
     const camera = aerial.camera;
     liveTags.sort((a, b) => (RANK[a.cls] ?? 2) - (RANK[b.cls] ?? 2));
@@ -2062,6 +1993,19 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     return true;
   }
   setTimeout(makeSprite, 1500); // early on the chair (a picture taken right at the top doesn't come out)
+  // ---- The page at the top (the hub): the map above, the sheet below. One page: 再坐一次, 换缆车 (the
+  // quickest 4, the rest under 更多), 滑到底回村子 (a lift leaving from a village folded into it), and a hike
+  // if this top has one. A place holds one way per level (hub-core.js); the chosen way is bold on the map in
+  // its colour, the others faint, the lift you'll ride dashed. Choosing a lift draws its own next options as
+  // dotted lines from its top (坐上去以后能去的): tap one to plan that leg too; the next top opens with it.
+  let chosenDest = null, chosenV = null, nextPick = null, moreOpen = false, hikeOn = false;
+  const overlay = new THREE.Group();
+  const runPath = (legs) => {
+    const out = [];
+    for (const l of legs) if (l.type === "run") for (const p of l.run.pts.slice(l.from, l.to + 1)) { const q = out[out.length - 1]; if (!q || Math.hypot(q[0] - p[0], q[1] - p[1]) > 0.5) out.push(p); }
+    return out;
+  };
+  const visibleDests = () => [hub.same, ...(moreOpen ? hub.change : hub.shown), ...hub.bases].filter(Boolean);
   function setupPick() {
     // From the rider at the sign, rise and pull back above the summit, looking down the way.
     from = camera.position.clone();
@@ -2069,24 +2013,16 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     cur.pos.copy(from); cur.look.copy(fromLook);
     tagBox.hidden = true;
     // Only a short lift-off above the rider before the cut to the miniature.
-    const riseTo = () => {
-      const r = ctx.rider.position, back = new THREE.Vector3(r.x - from.x, 0, r.z - from.z).normalize();
-      return { pos: r.clone().addScaledVector(back, -14).add(new THREE.Vector3(0, 22, 0)), look: r.clone().addScaledVector(back, 60).add(new THREE.Vector3(0, -15, 0)), ox: 0, oy: 0 };
-    };
-    st.rise = riseTo();
-    // One fixed overview per tab, framing every option at once, so they can be compared side by side.
-    const endV = (P) => new THREE.Vector3(P.end[0], T.heightAt(P.end[0], P.end[1]), P.end[1]);
-    for (const [m, L] of [["dest", dests], ["runs", runs]]) {
-      if (!L.length) continue;
-      views[m] = frame(L.flatMap(pointsOf), L.map(endV));
-      // Cards in the same left-to-right order as the places on screen.
-      const xs = new Map(L.map((P, i) => [P, views[m].xs[i]]));
-      L.sort((a, b) => xs.get(a) - xs.get(b));
+    const r = ctx.rider.position, back = new THREE.Vector3(r.x - from.x, 0, r.z - from.z).normalize();
+    st.rise = { pos: r.clone().addScaledVector(back, -14).add(new THREE.Vector3(0, 22, 0)), look: r.clone().addScaledVector(back, 60).add(new THREE.Vector3(0, -15, 0)), ox: 0, oy: 0 };
+    // The choosing happens from the air, as on the resort page: this top and everywhere you can go from it,
+    // and where the lifts you can change to lead on to (the chained dotted lines), fading into the paper.
+    const all = [[g1.x, g1.z]];
+    for (const d of hub.all) {
+      all.push(d.at);
+      for (const v of d.variants) all.push(...runPath(v.legs).filter((_, i) => i % 6 === 0), v.end);
+      if (d.kind === "lift") { all.push(...d.lift.pts); for (const n of hubAt(d.lift)?.all || []) all.push(n.at, n.best.end); }
     }
-    scene.add(marks);
-    // The choosing happens from the air, as on the resort page: the area around this top and everywhere you
-    // can go from it, looked down on steeply from the summit's side, fading into the paper past it.
-    const all = [[g1.x, g1.z], ...[...dests, ...runs].flatMap((P) => [...P.path.filter((_, i) => i % 6 === 0), P.end])];
     const [x0, x1, z0, z1] = boxOf(all.map((p) => p[0]), all.map((p) => p[1]), 300);
     const inside = ([x, z]) => x > x0 && x < x1 && z > z0 && z < z1;
     if (!aerial) { aerial = new Aerial(renderer); addEventListener("resize", () => aerial?.resize()); }
@@ -2094,59 +2030,47 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     window.__aerial = aerial; // test hook
     const c = aerial.box;
     aerial.size = aerial.sizeTo = aerial.whole * 1.12; // the whole area, corners included
-    spin = spin0 = ((((Math.atan2(g1.z - c.cz, g1.x - c.cx) + Math.PI / 4) / (Math.PI * 2)) % 1) + 1) % 1;
-    // The summit: a small flag where you stand.
-    const flag = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 70), new THREE.MeshLambertMaterial({ color: 0x4a4f57 }));
-    pole.position.y = 35;
-    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshLambertMaterial({ color: 0xc98f45, side: THREE.DoubleSide }));
-    cloth.position.set(20, 57, 0);
-    flag.add(pole, cloth);
-    flag.position.set(g1.x, aerial.Y(g1.x, g1.z), g1.z);
-    aerial.root.add(flag);
-    // You are here: a ring on the snow around the flag, pulsing softly (and a tag above it).
-    here = new THREE.Mesh(new THREE.RingGeometry(34, 42, 48), new THREE.MeshBasicMaterial({ color: 0xb4553f, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
-    here.rotation.x = -Math.PI / 2;
-    here.position.set(g1.x, aerial.Y(g1.x, g1.z) + 4, g1.z);
-    here.renderOrder = 3;
-    aerial.root.add(here);
-    $("pickTabs").innerHTML = `<button data-m="dest">去哪儿 · ${dests.length}</button><button data-m="runs">选一条雪道 · ${runs.length}</button>${hike ? `<button data-m="hike">${ICO("hike")}徒步</button>` : ""}`;
-    for (const b of $("pickTabs").children) b.onclick = () => setMode(b.dataset.m);
-    setMode(mode, [...dests, ...runs].find((P) => P.key === wantKey));
+    spin = ((((Math.atan2(g1.z - c.cz, g1.x - c.cx) + Math.PI / 4) / (Math.PI * 2)) % 1) + 1) % 1;
+    aerial.light3(() => 0, () => 0); // the ink ribbons step aside: the options are drawn over the picture
+    aerial.root.add(overlay);
+    $("liftName").textContent = t("{name} 顶上", { name: lift.name });
+    $("desc").textContent = t("从这里能去哪 · 时间是估算，按{lv}及以下规划", { lv: t(LEVEL_ZH[myLevel]) });
+    const first = planned || (hub.same && { dest: hub.same, variant: hub.same.best }) || (hub.all[0] && { dest: hub.all[0], variant: hub.all[0].best });
+    if (planned && hub.change.indexOf(planned.dest) >= hub.shown.length) moreOpen = true;
+    if (first) choose(first.dest, first.variant);
+    else if (hike) chooseHike();
+    else paintSheet();
   }
-  const list = () => (mode === "dest" ? dests : runs);
-  const views = {};
-  let aerial = null, here = null, spin = 0, spin0 = 0, pdrag = null;
+  let aerial = null, spin = 0, pdrag = null;
   renderer.domElement.addEventListener("pointerdown", (e) => { if (st.phase === "pick") pdrag = { x: e.clientX, s: spin }; });
   addEventListener("pointermove", (e) => { if (pdrag) spin = pdrag.s - (e.clientX - pdrag.x) / 600; });
   addEventListener("pointerup", () => (pdrag = null));
-  // The miniature fills the part of the screen between the top panel and the cards.
-  const aerialFrame = () => {
-    const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
-    aerial.orbit(spin, Math.max(0.35, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, 0); // steep: over the summit, down the slopes
+  // The miniature fills the part of the screen between the top panel and the sheet.
+  const room = () => {
+    const topPx = $("top").getBoundingClientRect().bottom + 24, crumb = $("hubCrumb"), sheetTop = $("pick").getBoundingClientRect().top - (crumb.hidden ? 0 : crumb.offsetHeight + 8);
+    return { topPx, botPx: innerHeight - sheetTop + 10 };
   };
-  // Zoom the miniature onto a plan: centred on it and close enough that it just fills the space between
-  // the top panel and the cards. The rest of the block runs on past the screen's softened edges.
-  function aimAt(P) {
-    const flat = [[g1.x, g1.z], P.end];
-    for (const l of P.legs) {
-      const list = l.type === "run" ? l.run.pts.slice(l.from, l.to + 1) : l.type === "lift" ? l.lift.pts : [];
-      list.forEach((p, i) => { if (i % 3 === 0 || i === list.length - 1) flat.push(p); });
-    }
+  const aerialFrame = () => {
+    const { topPx, botPx } = room();
+    aerial.orbit(spin, Math.max(0.3, 1 - (topPx + botPx) / innerHeight), topPx / innerHeight, 0); // steep: over the summit, down the slopes
+  };
+  // Zoom the miniature onto these [x, z] points: centred on them and close enough that they just fill the
+  // space between the top panel and the sheet. The rest of the block runs on past the softened edges.
+  function aimAt(flat) {
     const pts = flat.map(([x, z]) => new THREE.Vector3(x, aerial.Y(x, z), z));
     const lo = pts.reduce((a, p) => a.min(p), pts[0].clone()), hi = pts.reduce((a, p) => a.max(p), pts[0].clone());
     const saved = { size: aerial.size, focus: aerial.focus.clone() };
     aerial.focus.lerpVectors(lo, hi, 0.5);
     aerial.size = aerial.whole;
-    const topPx = $("top").getBoundingClientRect().bottom + 30, botPx = innerHeight - $("pick").getBoundingClientRect().top + 10;
-    const roomY = Math.max(0.35, 1 - (topPx + botPx) / innerHeight) * 2 * 0.8, roomX = 2 * 0.82; // a margin, so the ends stay clear of the panels
+    const { topPx, botPx } = room();
+    const roomY = Math.max(0.3, 1 - (topPx + botPx) / innerHeight) * 2 * 0.78, roomX = 2 * 0.8; // a margin, so the ends stay clear of the panels
     const at = (p) => v.copy(p).project(aerial.camera).clone();
     for (let k = 0; k < 4; k++) { // the projected size goes about as 1 / distance: a few rounds settle it
       aerialFrame();
       let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
       for (const p of pts) { v.copy(p).project(aerial.camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
-      // Perspective pushes the plan off centre: slide the focus over the snow until the plan's middle
-      // sits where the focus does (the middle of the space between the panel and the cards).
+      // Perspective pushes the points off centre: slide the focus over the snow until their middle sits
+      // where the focus does (the middle of the space between the panel and the sheet).
       const c = at(aerial.focus), right = new THREE.Vector3().setFromMatrixColumn(aerial.camera.matrixWorld, 0).setY(0).normalize();
       const up = new THREE.Vector3(-right.z, 0, right.x), dx = at(aerial.focus.clone().addScaledVector(right, 100)), dy = at(aerial.focus.clone().addScaledVector(up, 100));
       if (Math.abs(dy.y - c.y) < 1e-4) dy.y += 1e-4;
@@ -2162,132 +2086,183 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     const glide = 1 - Math.exp(-Math.min(0.1, t - lastT || 0) * 4); lastT = t;
     aerial.focus.lerp(aerial.focusTo, glide);
     aerial.size += (aerial.sizeTo - aerial.size) * glide;
-    here.scale.setScalar(1 + 0.15 * Math.sin(t * 3)); // you are here: a slow pulse
     aerialFrame();
     placeTags();
     aerial.render();
     return true;
   };
-  function setMode(m, first) {
-    mode = m;
-    for (const b of $("pickTabs").children) b.classList.toggle("on", b.dataset.m === m);
-    if (m === "hike") {
-      $("desc").textContent = `从 ${lift.name} 山顶走上去，再滑下来`;
-      cards.innerHTML = `<div class="rcard on"><div class="r1">${ICO("hike")}<b>${hike.zh}</b><span class="t">约 ${hike.mins[0]}–${hike.mins[1]} 分钟</span></div>
-        <div class="steps">${hike.zhWhy}</div>
-        <small>爬升约 ${hike.gain} 米 · 山顶 ${hike.summit[0].toLocaleString("en-US")} 米 · 下来可以滑 ${hike.down.slice(0, 4).join("、")} 等</small>
-        ${hike.snowcat ? `<small class="to">${ICO("groomed")}${hike.snowcat}</small>` : ""}
-        <small>要带：${HIKE_GEAR.join("、")}</small>
-        <small class="warn">${hike.tips[0]} · 以雪场当天公告为准</small>
-        <button class="go">背上板走上去 ›</button></div>`;
-      cards.querySelector(".go").onclick = startHike;
-      return;
-    }
-    Object.assign(want, views[m]);
-    $("desc").textContent = m === "dest" ? `从 ${lift.name} 山顶出发，想去哪儿？按${LEVEL_ZH[myLevel]}及以下规划` : `${runs.length} 条雪道从 ${lift.name} 山顶出发 · 左右滑卡片选一条`;
-    cards.innerHTML = "";
-    for (const P of list()) {
-      const card = document.createElement("div");
-      card.className = "rcard";
-      const steps = P.steps.map((s) => (s.type === "lift" ? `<span class="lift">${ICO("lift")}${s.name}</span>` : `${LEVEL_MARK[s.level]}${s.name}`)).join(" › ");
-      // The snow on the way: moguls on a run (the icon and 蘑菇道), and powder today off the groomed middles.
-      const bumps = P.segs.filter((g) => g.run.moguls).map((g) => g.run.name).filter((n, i, a) => n && a.indexOf(n) === i);
-      const snowChips = (bumps.length ? `<span class="chip"><img src="assets/icons/moguls.png?v=1" alt="">${P.kind === "run" && bumps.length === 1 && bumps[0] === P.title ? t("蘑菇道") : t("蘑菇道：{runs}", { runs: bumps.slice(0, 2).join("、") })}</span>` : "")
-        + (ctx.powder?.amt > 0 ? `<span class="chip"><img src="assets/icons/powder.png?v=1" alt="">${t("今天有粉雪")}</span>` : "");
-      card.innerHTML = P.kind === "run"
-        ? `<div class="r1">${LEVEL_MARK[P.first.level]}<b>${P.title}</b></div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
-          <small>${fmtLen(P.first.length)} · 落差 ${P.first.drop} 米 · 最陡约 ${P.steep}°</small>
-          <canvas width="300" height="40"></canvas>
-          <small class="to">${P.steps.length > 1 ? `接着 ${P.steps.slice(1).map((s) => `${LEVEL_MARK[s.level]}${s.name}`).join(" › ")} ` : "滑到底 "}→ ${P.leads.lifts.length ? `${ICO("lift")}${P.leads.lifts.slice(0, 3).join("、")}` : P.leads.base ? `${ICO("lodge")}${P.leads.base}` : "雪道尽头"}</small>
-          <button class="doc">${ICO("packing")}路书 · 怎么滑、哪里容易错</button>
-          <button class="go">从这条滑下去 ›</button>`
-        : `<div class="r1">${ICO(P.icon)}<b>${P.title}</b><span class="t">约 ${fmtMin(P.seconds)}</span></div>
-          <div class="steps">${steps}</div>${snowChips ? `<div class="chips">${snowChips}</div>` : ""}
-          <small>先滑 ${fmtLen(P.length)} · 最难 ${LEVEL_MARK[P.hardest]}${LEVEL_ZH[P.hardest]}${P.harder ? ` · <b class="warn">要过${LEVEL_ZH[P.harder]}</b>` : ""}${P.next ? ` · 中途坐 ${ICO("lift")}${P.next.name}` : ""}</small>
-          ${P.lifts ? `<small class="to">到了能坐 ${ICO("lift")}${P.lifts.join("、")}</small>` : ""}
-          <canvas width="300" height="34"></canvas>
-          <button class="doc">${ICO("packing")}路书 · 怎么滑、哪里容易错</button>
-          <button class="go">按这条路线滑 ›</button>`;
-      drawProfile(card.querySelector("canvas"), P);
-      card.onclick = (e) => { if (!e.target.closest("button")) select(P, true); };
-      card.querySelector(".doc").onclick = () => { select(P); openGuide(P); };
-      card.querySelector(".go").onclick = async (e) => {
-        if (chosen !== P) select(P); // this card's way, even if another card was the one in focus
-        bookRoute(P);
-        await dropIn(P, RESORT, R); // the run's card, then DROP IN (src/core/transition.js)
-        camera.clearViewOffset();
-        startSki();
-        $("pick").hidden = true; clearTags(); flash();
-      };
-      cards.append(card); P.card = card;
-    }
-    let settle = 0;
-    cards.onscroll = () => {
-      clearTimeout(settle);
-      settle = setTimeout(() => {
-        if (st.phase !== "pick") return; // a smooth scroll still settling after DROP IN
-        const mid = cards.getBoundingClientRect().left + cards.clientWidth / 2;
-        let best = null, bd = Infinity;
-        for (const P of list()) { const r = P.card.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < bd) { bd = d; best = P; } }
-        if (best && best !== chosen) select(best);
-      }, 90);
-    };
-    cards.scrollLeft = 0;
-    select(first && list().includes(first) ? first : list()[0], !!first);
+
+  // ---- The lines on the map (three's fat lines, so they keep their width on a phone's screen).
+  const HUB_INK = { easy: 0x2e8b4f, intermediate: 0x2a5db0, advanced: 0x1c1f25, expert: 0x1c1f25 }; // aerial.js INK
+  function clearOverlay() { for (const o of [...overlay.children]) { overlay.remove(o); o.geometry.dispose(); o.material.dispose(); } }
+  function addLine(pts, { color, width, opacity = 1, dash = null, lift = 3, order = 6 }) {
+    if (pts.length < 2) return;
+    const geo = new LineGeometry().setPositions(pts.flatMap(([x, z]) => [x, aerial.Y(x, z) + lift, z]));
+    const mat = new LineMaterial({ color, linewidth: width, transparent: true, opacity, depthTest: false, depthWrite: false, toneMapped: false, dashed: !!dash, dashSize: dash?.[0] ?? 1, gapSize: dash?.[1] ?? 1 });
+    mat.resolution.set(innerWidth, innerHeight);
+    aerial.lines.push(mat);
+    const o = new Line2(geo, mat);
+    if (dash) o.computeLineDistances();
+    o.renderOrder = order;
+    o.frustumCulled = false;
+    overlay.add(o);
   }
-  function select(P, scroll) {
-    if (!P) return;
-    chosen = P;
-    for (const o of list()) o.card.classList.toggle("on", o === P);
-    // On the miniature: the chosen way lit run by run from the top, the other options dimmed, the rest hidden.
-    const order = new Map(), others = new Set();
-    P.legs.forEach((l, i) => l.type === "run" && !order.has(l.run) && order.set(l.run, order.size));
-    for (const o of list()) for (const l of o.legs) if (l.type === "run") others.add(l.run);
-    if (aerial) {
-      aerial.light3((run) => (order.has(run) ? 1 : others.has(run) ? 0.22 : 0), (run) => (order.get(run) ?? 0) * 0.35);
-      const via = P.legs.find((l) => l.type === "lift")?.lift || (P.kind === "lift" ? P.lift : null);
-      aerial.focusLift(via);
-      aimAt(P);
+  // Each run of a way in its own colour (a way that turns harder shows where).
+  // drawn: the stretches already drawn in this style, so ways sharing a run don't stack up darker.
+  function drawWay(v, style, drawn = null) {
+    for (const l of v.legs) {
+      if (l.type !== "run") continue;
+      const k = `${l.run.id ?? l.run.name}:${l.from}:${l.to}`;
+      if (drawn) { if (drawn.has(k)) continue; drawn.add(k); }
+      addLine(l.run.pts.slice(l.from, l.to + 1), { ...style, color: style.color ?? HUB_INK[l.run.level] });
     }
-    ctx.addRunsNear((pts) => P.legs.some((l) => l.type === "run" && l.run.pts === pts));
-    // Tags: in run mode every run from here (tap to pick); the chosen plan's steps and where it ends.
+  }
+  function drawMap() {
+    clearOverlay();
+    if (!aerial || !chosenDest) return;
+    const shown = visibleDests(), nextHub = chosenDest.kind === "lift" ? hubAt(chosenDest.lift) : null;
+    // Every option, faint.
+    const faint = new Set(), dotted = new Set();
+    for (const d of shown) for (const w of d.variants) if (w !== chosenV) drawWay(w, { width: 2.5, opacity: 0.4, order: 6 }, faint);
+    // What the chosen lift leads on to: dotted, from its top.
+    if (nextHub) for (const n of nextHub.all) if (n !== nextPick?.dest) drawWay(n.best, { width: 3.2, opacity: 0.75, dash: [8, 24], order: 7 }, dotted);
+    if (nextPick) { drawWay(nextPick.variant, { color: 0xfdfbf6, width: 7, opacity: 0.9, order: 8 }); drawWay(nextPick.variant, { width: 3.5, opacity: 0.85, dash: [22, 14], order: 9 }); }
+    // The chosen way: bold, on a paper casing; the lift you'll ride dashed.
+    drawWay(chosenV, { color: 0xfdfbf6, width: 10, opacity: 0.95, order: 10 });
+    drawWay(chosenV, { width: 5.5, opacity: 1, order: 11 });
+    if (chosenDest.lift) addLine(chosenDest.lift.pts, { color: 0x22344d, width: 2.6, opacity: 0.95, dash: [40, 28], lift: 16, order: 12 });
+    aerial.focusLift(chosenDest.lift || null);
+  }
+  // ---- The pins: you (your figure, a soft shadow), a small icon per place, only the chosen one named.
+  function pinTags() {
     clearTags();
-    if (mode === "runs") for (const o of runs) {
-      const i = Math.min(o.first.pts.length - 1, Math.floor(o.first.pts.length * 0.3));
-      addTag(`${LEVEL_MARK[o.first.level]}${o.title}`, o === P ? "on" : "", o.first.pts[i][0], o.first.pts[i][1], 6, () => select(o, true));
-    }
-    P.segs.forEach((s, k) => {
-      if (!s.run.name || (mode === "runs" && k === 0)) return;
-      const b = k + 1 < P.segs.length ? P.segs[k + 1].at : P.path.length - 1, i = Math.round(s.at + (b - s.at) * 0.4);
-      addTag(`${LEVEL_MARK[s.run.level]}${s.run.name}`, "leg", P.path[i][0], P.path[i][1], 6);
-    });
-    // You are here: your own rider, a little full-body figure, hopping.
     const ava = sprite || (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     addTag(ava ? `<img src="${ava}" alt="你在这里">` : `<img src="assets/icons/rider.png?v=1" alt="你在这里">`, "me", g1.x, g1.z, 34);
-    for (const l of P.legs) if (l.type === "lift" && P.kind !== "run") addTag(`${ICO("lift")}坐 ${l.lift.name}`, "via", l.lift.pts[0][0], l.lift.pts[0][1], 10);
-    if (mode === "dest") for (const o of [P, ...dests.filter((d) => d !== P)]) addTag(o === P ? `${ICO("challenge")}${o.short} <small>${fmtMin(o.seconds)}</small>` : `${ICO(o.icon)}${o.short}`, o === P ? "dest" : "pin", o.end[0], o.end[1], 10, () => select(o, true));
-    else addTag(P.leads.lifts.length ? `→ ${ICO("lift")}${P.leads.lifts.slice(0, 2).join("、")}` : P.leads.base ? `→ ${ICO("lodge")}${P.leads.base}` : "雪道尽头", "dest", P.end[0], P.end[1], 10);
+    if (!chosenDest) return;
+    const icon = (d) => (d.kind === "base" ? "lodge" : "lift"), near = (a, b) => Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1]) < 80;
+    const shown = [chosenDest, ...visibleDests().filter((x) => x !== chosenDest)];
+    for (const d of shown) {
+      const on = d === chosenDest, name = d.kind === "same" ? t("再坐一次") : d.name;
+      const planned = nextPick && near(nextPick.dest, d); // the leg after the chosen lift ends here too: named, dashed
+      addTag(on || planned ? `${ICO(icon(d))}<span translate="no">${planned && !on ? nextPick.dest.name : name}</span>` : ICO(icon(d)), on ? "hp on" : planned ? "hp next on" : "hp", d.at[0], d.at[1], 10, on ? null : () => choose(d, d.best));
+    }
+    // The places the chosen lift leads on to (dotted pins; tap one to plan that leg), where not pinned already.
+    const nextHub = chosenDest.kind === "lift" ? hubAt(chosenDest.lift) : null;
+    if (nextHub) for (const n of nextHub.all) {
+      if (shown.some((d) => near(d, n))) continue;
+      const on = n === nextPick?.dest;
+      addTag(on ? `${ICO(icon(n))}<span translate="no">${n.name}</span>` : ICO(icon(n)), on ? "hp next on" : "hp next", n.at[0], n.at[1], 10, () => planNext(on ? null : n));
+    }
+  }
+  // ---- The sheet.
+  const mins = (s) => Math.max(1, Math.round(s / 60));
+  function paintSheet() {
+    const chip = (d) => {
+      const on = d === chosenDest && !hikeOn;
+      const name = d.kind === "same" ? lift.name : d.name;
+      const fold = d.lifts?.length ? ` <small>· ${t("有 {list}", { list: d.lifts.slice(0, 2).join("、") + (d.lifts.length > 2 ? t(" 等") : "") })}</small>` : "";
+      const vs = d.variants.map((w) => `<button class="v${on && w === chosenV ? " on" : ""}${w.harder ? " hard" : ""}" data-k="${d.key}|${w.key}">${LEVEL_MARK[w.level]}${t("{n} 分", { n: mins(w.seconds) })}</button>`).join("");
+      return `<div class="opt${on ? " on" : ""}" data-d="${d.key}"><b translate="no">${name}</b>${fold}<div class="vs">${vs}</div></div>`;
+    };
+    const grp = (icon, title, list, extra = "") => (list.length || extra ? `<div class="grp"><h4>${ICO(icon)}${title}</h4><div class="row">${list.map(chip).join("")}${extra}</div></div>` : "");
+    const moreBtn = hub.more ? `<button class="opt more" data-more="1">${moreOpen ? t("收起") : t("更多 · {n}", { n: hub.more })}</button>` : "";
+    const hikeChip = hike ? `<div class="grp"><h4>${ICO("hike")}${t("走上去")}</h4><div class="row"><div class="opt${hikeOn ? " on" : ""}" data-hike="1"><b>${hike.zh}</b><div class="vs"><span class="v">${t("约 {a}–{b} 分钟", { a: hike.mins[0], b: hike.mins[1] })}</span></div></div></div></div>` : "";
+    $("hubGroups").innerHTML = (hub.all.length ? "" : `<p class="none">${t("从这里没有能滑下去的路线")}</p>`)
+      + grp("lift", t("再坐一次"), hub.same ? [hub.same] : [])
+      + grp("lift", t("换缆车"), moreOpen ? hub.change : hub.shown, moreBtn)
+      + grp("lodge", t("滑到底，回村子"), hub.bases)
+      + hikeChip;
+    for (const el of $("hubGroups").querySelectorAll(".opt[data-d]")) el.onclick = (e) => {
+      const d = hub.all.find((x) => x.key === el.dataset.d), vk = e.target.closest(".v")?.dataset.k?.split("|")[1];
+      choose(d, d.variants.find((w) => w.key === vk) || (d === chosenDest && !hikeOn ? chosenV : d.best));
+    };
+    const mb = $("hubGroups").querySelector("[data-more]");
+    if (mb) mb.onclick = () => { moreOpen = !moreOpen; paintSheet(); drawMap(); pinTags(); };
+    const hb = $("hubGroups").querySelector("[data-hike]");
+    if (hb) hb.onclick = chooseHike;
+    paintLine();
+    paintCrumb();
+  }
+  function paintLine() {
+    const go = $("hubGo");
+    if (hikeOn) {
+      $("hubLine").innerHTML = `<span>${hike.zhWhy}</span><small>${t("爬升约 {m} 米 · 要带：{gear}", { m: hike.gain, gear: HIKE_GEAR.slice(0, 4).join("、") })} · <span class="warn">${hike.tips[0]}</span></small>`;
+      go.textContent = t("背上板走上去"); go.hidden = false; go.onclick = startHike;
+      return;
+    }
+    if (!chosenV) { $("hubLine").innerHTML = ""; go.hidden = true; return; }
+    const P = chosen, names = chosenV.names.slice(0, 5).map((n) => `${LEVEL_MARK[n.level]}<span translate="no">${n.name}</span>`).join(" → ") + (chosenV.names.length > 5 ? " …" : "");
+    const bumps = P.segs.filter((g) => g.run.moguls).map((g) => g.run.name).filter((n, i, a) => n && a.indexOf(n) === i);
+    const notes = [t("约 {n} 分钟 · 估算", { n: mins(chosenV.seconds) })];
+    if (chosenV.harder) notes.push(`<b class="warn">${t("要过{lv}", { lv: t(LEVEL_ZH[chosenV.level]) })}</b>`);
+    if (bumps.length) notes.push(`<img class="cueIco" src="assets/icons/moguls.png?v=1" alt="">${t("蘑菇道")}`);
+    if (ctx.powder?.amt > 0) notes.push(`<img class="cueIco" src="assets/icons/powder.png?v=1" alt="">${t("今天有粉雪")}`);
+    $("hubLine").innerHTML = `<span class="runs">${names || t("无名雪道")}</span><small>${notes.join(" · ")} · <button class="doc">${ICO("packing")}${t("路书")}</button></small>`;
+    $("hubLine").querySelector(".doc").onclick = () => openGuide(P);
+    go.hidden = false;
+    go.textContent = t(GO[chosenDest.kind], { x: chosenDest.name });
+    go.onclick = goNow;
+  }
+  // The breadcrumb over the map, while a chain is on: the lifts before (?via=), this one, the chosen lift and
+  // the leg after it (？ until planned; tap ？ for the places to choose from).
+  function paintCrumb() {
+    const box = $("hubCrumb");
+    const lead = !hikeOn && chosenDest?.kind === "lift" ? chosenDest : null;
+    if (!lead && !VIA) { box.hidden = true; box.innerHTML = ""; return; }
+    const steps = crumbOf(VIA, lift.name, lead ? lead.name : !hikeOn && chosenDest ? (chosenDest.kind === "same" ? lift.name : chosenDest.name) : null);
+    if (lead) steps.push(nextPick ? nextPick.dest.name : "？");
+    const last = steps.length - 1;
+    box.innerHTML = steps.map((s, i) => (i === last && lead ? `<button class="c ask${nextPick ? " on" : ""}" translate="no">${s}</button>` : `<span class="c${i === last ? " on" : ""}" translate="no">${s}</span>`)).join("<i>→</i>")
+      + (lead ? `<small>${nextPick ? t("下一段已排好 · 再点取消") : t("虚线：坐上去以后能去的")}</small>` : planned && chosenDest === planned.dest ? `<small>${t("上一站排好的这一段")}</small>` : "")
+      + (lead ? `<div class="nexts" hidden>${hubAt(lead.lift).all.map((n) => `<button data-n="${n.key}" class="${n === nextPick?.dest ? "on" : ""}" translate="no">${ICO(n.kind === "base" ? "lodge" : "lift")}${n.name}</button>`).join("")}</div>` : "");
+    box.hidden = false;
+    const ask = box.querySelector(".ask");
+    if (ask) ask.onclick = () => { if (nextPick) planNext(null); else box.querySelector(".nexts").hidden = !box.querySelector(".nexts").hidden; };
+    for (const b of box.querySelectorAll(".nexts button")) b.onclick = () => planNext(hubAt(lead.lift).all.find((n) => n.key === b.dataset.n));
+  }
+  function choose(d, w) {
+    if (!d || !w) return;
+    if (d !== chosenDest) nextPick = null;
+    hikeOn = false;
+    chosenDest = d; chosenV = w;
+    chosen = planFor(d, w);
+    paintSheet();
+    drawMap(); pinTags();
+    ctx.addRunsNear((pts) => w.legs.some((l) => l.type === "run" && l.run.pts === pts));
+    frameChosen();
     navigator.vibrate?.(8);
-    if (scroll) P.card.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    requestAnimationFrame(() => $("hubGroups").querySelector(".opt.on")?.scrollIntoView({ inline: "nearest", block: "nearest" }));
   }
-  function drawProfile(cv, P) {
-    const g = cv.getContext("2d"), W = cv.width, H = cv.height, hs = P.hs, ds = P.dist;
-    const hi = Math.max(...hs), lo = Math.min(...hs), L = ds[ds.length - 1] || 1;
-    const y = (h) => 4 + (1 - (h - lo) / (hi - lo || 1)) * (H - 8);
-    g.beginPath(); g.moveTo(0, H);
-    hs.forEach((h, i) => g.lineTo((ds[i] / L) * W, y(h)));
-    g.lineTo(W, H); g.closePath();
-    g.fillStyle = "rgba(255,255,255,0.18)"; g.fill();
-    // The line in each run's colour, so a route shows where it turns harder.
-    const col = (lv) => "#" + new THREE.Color(LEVEL_COLOR[lv] === 0x15171c ? 0xdfe6ef : LEVEL_COLOR[lv]).getHexString();
-    g.lineWidth = 2.5;
-    P.segs.forEach((s, k) => {
-      const a = s.at, b = k + 1 < P.segs.length ? P.segs[k + 1].at : hs.length - 1;
-      g.beginPath();
-      for (let i = a; i <= b; i++) (i === a ? g.moveTo : g.lineTo).call(g, (ds[i] / L) * W, y(hs[i]));
-      g.strokeStyle = col(s.run.level); g.stroke();
-    });
+  function frameChosen() {
+    if (!aerial || !chosenDest) return;
+    const flat = [[g1.x, g1.z], chosenDest.at, ...runPath(chosenV.legs).filter((_, i) => i % 3 === 0), chosenV.end];
+    if (chosenDest.kind === "lift") { const nh = hubAt(chosenDest.lift); flat.push(...chosenDest.lift.pts); for (const n of nh.all) flat.push(n.at); }
+    if (nextPick) flat.push(nextPick.dest.at, ...runPath(nextPick.variant.legs).filter((_, i) => i % 3 === 0));
+    aimAt(flat);
   }
+  // The next leg after the chosen lift, planned here (or cleared: null).
+  function planNext(n) {
+    nextPick = n ? { dest: n, variant: n.best } : null;
+    drawMap(); pinTags(); paintCrumb(); frameChosen();
+    navigator.vibrate?.(8);
+  }
+  function chooseHike() {
+    hikeOn = true; chosenDest = null; chosenV = null; nextPick = null;
+    clearOverlay(); pinTags(); paintSheet();
+    requestAnimationFrame(() => $("hubGroups").querySelector("[data-hike]")?.scrollIntoView({ block: "nearest" }));
+  }
+  async function goNow() {
+    const P = chosen, d = chosenDest;
+    if (!P) return;
+    bookRoute(P);
+    // The way on: the next lift's page gets the chain (?via=) and, if planned, its leg (?to=, ?lv=).
+    P.chain = d.lift ? { via: viaNext(VIA, lift.name), to: d.kind === "lift" ? nextPick?.dest.key : null, lv: d.kind === "lift" ? nextPick?.variant.level : null } : null;
+    await dropIn(P, RESORT, R); // the run's card, then DROP IN (src/core/transition.js)
+    camera.clearViewOffset();
+    startSki();
+    $("pick").hidden = true; $("hubCrumb").hidden = true; clearTags(); flash();
+  }
+  const scrollChosen = () => $("hubGroups").querySelector(".opt.on")?.scrollIntoView({ inline: "nearest", block: "nearest" });
   // ---- Riding together (together.js): where I am, landing beside a friend, a route to a friend.
   st.live = () => ({ phys: st.phase === "ski" && !spawn ? phys : null, ended, run: onRun?.run.name || null,
     dest: st.phase === "ski" && chosen?.end && !ended ? { x: chosen.end[0], z: chosen.end[1], name: chosen.short || chosen.title } : null,
@@ -2340,7 +2315,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     rideInstead(Q, note + (harder ? ` · <b class="warn">要过${LEVEL_ZH[harder]}</b>` : ""));
     return Q;
   };
-  st.plans = { dests, runs };
+  st.plans = hub; // testing
   // Testing: jump the rider `m` metres down the route, or onto the run named `run`.
   st.warp = (m, run) => {
     if (run) { const r = R.runs.find((x) => x.name === run), q = r.pts[Math.min(r.pts.length - 1, 4)]; phys.place(q[0], q[1], pathDir(r.pts, 4), 8); return; }
@@ -2396,8 +2371,10 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     simClock = null; out.push(ended ? "ARRIVED" : "not arrived"); return out;
   };
   st.state = () => ({ x: Math.round(phys?.x), z: Math.round(phys?.z), heading: +(phys?.heading ?? 0).toFixed(2), lean: +(phys?.lean ?? 0).toFixed(2), steer: +(phys?.steer ?? 0).toFixed(2), prog, plan: chosen?.steps.map((s) => s.name).join(">"), junctions: nav?.js.map((j) => `${Math.round(chosen.dist[j.i])}m: ${j.options.map((o) => (o.route ? "*" : "") + o.run.name).join(", ")}`) });
-  st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, mode, chosen: chosen?.key, dests: dests.map((d) => `${d.key} ${Math.round(d.seconds)}s ${d.steps.map((s) => s.name).join(">")}`), cam: camera.position.toArray().map(Math.round), want: { ox: +want.ox.toFixed(2), oy: +want.oy.toFixed(2) } });
-  st.select = (key) => { const P = [...dests, ...runs].find((p) => p.key === key); if (P) { if (!list().includes(P)) setMode(P.kind === "run" ? "runs" : "dest", P); else select(P, true); } };
+  st.debug = () => ({ frame: renderer.info.render.frame, phase: st.phase, chosen: chosen?.key, level: chosenV?.level, next: nextPick?.dest.key, hub: hub.all.map((d) => `${d.kind} ${d.name}: ${d.variants.map((w) => `${w.level}/${Math.round(w.seconds)}s`).join(" ")}`), cam: camera.position.toArray().map(Math.round) });
+  // Testing: choose a place (and a level) on the page, or plan the next leg after a chosen lift.
+  st.select = (key, lv) => { const d = hub.all.find((x) => x.key === key || (x.kind === "same" && key === "same")); if (d) { if (hub.change.indexOf(d) >= hub.shown.length && !moreOpen) moreOpen = true; choose(d, d.variants.find((w) => w.level === lv) || d.best); } return !!d; };
+  st.planNext = (key) => { const n = chosenDest?.kind === "lift" && hubAt(chosenDest.lift).all.find((x) => x.key === key); planNext(n || null); return !!n; };
   return st;
 }
 

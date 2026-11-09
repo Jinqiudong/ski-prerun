@@ -13,14 +13,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles/ride.css?v=4">
+  <link rel="stylesheet" href="src/styles/ride.css?v=5">
   <!-- A plain cover from the first paint until the transition (src/core/transition.js) takes over. -->
   <style>html.trans-cover body::after { content: ""; position: fixed; inset: 0; z-index: 89; background: #dde3e9; }</style>
   <script>try { if (!navigator.webdriver && sessionStorage.getItem("prerunTicket")) { document.documentElement.classList.add("trans-cover"); setTimeout(() => document.documentElement.classList.remove("trans-cover"), 8000); } } catch { /* storage off */ }</script>
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/styles/paper.css?v=2">
-  <link rel="stylesheet" href="src/styles/ride-paper.css?v=5">
+  <link rel="stylesheet" href="src/styles/ride-paper.css?v=6">
 </head>
 <body>
   <canvas id="c"></canvas>
@@ -42,7 +42,9 @@
   <button id="bubbleHint" hidden aria-label="防风罩"><img src="assets/icons/windy.png?v=1" alt=""><span hidden></span></button>
   <div id="pads"><button id="skip" class="glass" hidden>跳到山顶 ›</button><button id="fast" class="glass" hidden>按住<br>加速</button></div>
   <div id="runTags"></div>
-  <div id="pick" hidden><div id="pickTabs"></div><div id="runCards"></div><div class="pickLinks"><a href="mountain/">← 回雪场</a><a class="again" href="look.html">再坐一次</a></div></div>
+  <!-- The lift top's page (ride.js, hub-core.js): the map above; this sheet below: 再坐一次, 换缆车, 滑到底回村子,
+       the chosen way's runs in one line, the go button; the breadcrumb over the map while a chain is on. -->
+  <div id="pick" hidden><div id="hubCrumb" hidden></div><div id="hubGroups"></div><div id="hubLine"></div><button id="hubGo" class="go" hidden></button><div class="pickLinks"><a href="mountain/">← 回雪场</a><a class="again" href="look.html">再来一次</a></div></div>
   <div id="skiHud" class="glass" hidden>
     <!-- body.navmin (the guide leads): this strip only, icons and numbers: speed, the run, where it ends, how far -->
     <div class="strip"><span class="hs"><img src="assets/icons/hud_speed.png?v=1" alt="速度"><b id="hsSpeed">0</b><small>km/h</small></span><i class="sep"></i><span class="hs run" id="hsRun"></span><i class="sep" id="hsToSep"></i><span class="hs to" id="hsTo"><img id="hsToIco" alt=""><span id="hsToName"></span></span><i class="sep"></i><span class="hs"><img src="assets/icons/challenge.png?v=1" alt="还剩"><b id="hsLeft"></b><small id="hsLeftU"></small></span></div>
@@ -61,7 +63,7 @@
   <div id="flash"></div>
   <div id="status" class="glass">加载中…</div>
   <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质和云杉枝叶 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
-  <script type="module">import { liftRide } from "./src/core/transition.js?v=17"; liftRide();</script>
-  <script type="module" src="src/ride/ride.js?v=43"></script>
+  <script type="module">import { liftRide } from "./src/core/transition.js?v=18"; liftRide();</script>
+  <script type="module" src="src/ride/ride.js?v=44"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
 // up, talking and waving on the chair. The jacket's corrective morphs ride in the same clips.
 import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
-import { myRiderLook } from "../core/look.js?v=18";
+import { myRiderLook } from "../core/look.js?v=19";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 
