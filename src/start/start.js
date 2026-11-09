@@ -5,7 +5,7 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=23";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=24";
 import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
 import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";
@@ -13,11 +13,11 @@ import { makeEntrance } from "./entrance.js?v=26";
 import { skiStage, colorSkis, tintSkiGear, SKI_COLORS } from "../rider/skier.js?v=1";
 import { addSki } from "../rider/ski.js?v=2";
 import { sportOf } from "../rider/ski-core.js?v=1";
-import { openBookPage, locateIn } from "../ride/roadbook.js?v=30";
-import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=49";
-import { playIntro } from "./intro.js?v=36";
-import { flyTo } from "../core/transition.js?v=19";
-import { startParty } from "../core/party.js?v=20";
+import { openBookPage, locateIn } from "../ride/roadbook.js?v=31";
+import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=50";
+import { playIntro } from "./intro.js?v=37";
+import { flyTo } from "../core/transition.js?v=20";
+import { startParty } from "../core/party.js?v=21";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -607,7 +607,7 @@ const resortList = async () => (await (await fetch("data/resorts.json")).json())
 async function openWorld() {
   const cv = $("world").querySelector("canvas");
   if (!collection) {
-    const { Collection } = await import("./collection.js?v=63");
+    const { Collection } = await import("./collection.js?v=64");
     collection = new Collection(cv, $("ctags")); window.__world = collection; // testing
     const stats = Object.fromEntries(Object.entries(logOf()).map(([id, l]) => [id, l.stats || {}]));
     collection.resize();
@@ -643,7 +643,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=49");
+    const { Trips } = await import("./trips.js?v=50");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
@@ -653,7 +653,7 @@ async function openTrips() {
 }
 async function openRecords() {
   const list = await resortList();
-  const { renderMemory } = await import("./memory.js?v=33");
+  const { renderMemory } = await import("./memory.js?v=34");
   renderMemory($("memory"), { resorts: list, openBook: (id) => openBook(list.find((r) => r.id === id)) });
 }
 // The roadbook for one resort: the steps of each pre-run, its way on the map, and where you are now.

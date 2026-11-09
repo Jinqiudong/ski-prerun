@@ -157,6 +157,19 @@ const ICONS = {
       detail: [[100, 90, 2.6], [112, 88, 2.2], [107, 96, 1.8]].map(([x, y, r]) => ({ d: circ(x, y, r), fill: C.white, sw: 0 })) },
     ...flake(20, 24, 7), ...flake(52, 16, 5), { d: circ(38, 40, 2.4), fill: INK, sw: 0 },
   ],
+  // Ungroomed, natural snow (未压雪): the same slope as the moguls but its top left as the wind left it, lumpy
+  // and uneven, wind ripples across it, a rock poking through; no corduroy, no round bumps.
+  ungroomed: () => [
+    { d: "M4 112 Q4 102 14 99 Q22 90 32 95 Q40 84 52 88 Q58 80 66 83 Q76 70 88 74 Q94 64 104 64 Q110 54 118 55 Q125 54 125 62 V114 Q125 122 117 122 H12 Q4 122 4 112 Z",
+      fill: C.white, shade: C.blue, sw: 5, hl: ["M14 106 Q22 100 30 101"],
+      detail: [
+        ...[[18, 112, 3], [44, 104, 3], [72, 94, 2.6], [98, 84, 2.4], [30, 118, 2], [90, 106, 2.2], [108, 98, 2]].map(([x, y, n]) =>
+          ({ d: `M${x - 7 * n / 3} ${y} q${3.5 * n / 3} ${-3 * n / 3} ${7 * n / 3} 0 t${7 * n / 3} 0`, sw: 2.8, ink: C.dslate, op: 0.8 })),
+        { d: ell(63, 112, 13, 3.2), fill: C.blue, sw: 0 },
+      ] },
+    { d: "M50 112 L56 99 L66 95 L74 102 L76 112 Q63 115 50 112 Z", fill: C.grey, shade: C.dslate, sw: 4.2, hl: ["M57 102 L64 98"] },
+    ...flake(20, 24, 7), ...flake(52, 16, 5), { d: circ(38, 40, 2.4), fill: INK, sw: 0 }, { d: circ(84, 30, 2.2), fill: INK, sw: 0 },
+  ],
   // The bunny hill (宝宝坡, the practice): a gentle slope with an S of turns traced down it between two training
   // cones, a little flag at the top.
   practice: () => [

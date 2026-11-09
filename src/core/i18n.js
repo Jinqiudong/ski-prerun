@@ -178,6 +178,7 @@ const EN = {
   "{rn} · 在滑 {run}": "{rn} · skiing {run}", "{rn} · 滑行中": "{rn} · skiing",
   // The snow's fun (src/ride/snow-core.js, snowfx.js): a crash, powder, moguls (蘑菇, "mushrooms": bumps)
   "撞到树了": "Into a tree", "粉雪！": "Powder!", "重心靠后，板头浮起来": "sit back, let the nose float", "粉雪": "powder",
+  "压雪": "groomed", "树林": "trees", "未压雪": "ungroomed", "树林道，不压雪": "Through the trees, not groomed", "不压雪，自然雪面": "Not groomed: natural snow", "两边有粉雪，中间压实了": "Powder at the sides; the middle is packed", "整条都可能有粉雪": "Maybe powder all the way down", "不压雪": "Not groomed",
   "今天有粉雪": "Powder today", "那天有粉雪：雪道边上、树林里和背风坡最深，重心稍微靠后": "A powder day: deepest at the run edges, in the trees and on lee slopes; sit back a little",
   "蘑菇道": "Moguls", "蘑菇道：{runs}": "Moguls: {runs}", "前方蘑菇道": "Moguls ahead", "膝盖放软，看着下一个蘑菇": "soft knees, look to the next bump",
   "放慢一点，膝盖放软，一个一个绕过去": "Slow down a little, soft knees, round them one by one", "蘑菇道：有雪包（猫跳）的雪道": "Moguls: a run with bumps",

@@ -4,16 +4,16 @@
 // details: the times (estimated), and for each run its length, drop, steepest pitch, the snow (groomed or
 // moguls, maybe powder), each with where it comes from. The map draws only what was ridden.
 // The rules (steps → legs, areas, the map's lines) are in roadbook-core.js; the run facts in snow-core.js.
-import { t, EN_ON } from "../core/i18n.js?v=49";
+import { t, EN_ON } from "../core/i18n.js?v=50";
 import { legsOf, blocksOf, mapItems, runOfSeg, lapTimes } from "./roadbook-core.js?v=3";
-import { runFacts, powderAmount, powderField } from "./snow-core.js?v=3";
+import { runFacts, powderAmount, powderField, treeName } from "./snow-core.js?v=5";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const MARK = (l) => `<i class="lv ${esc(l)}"></i>`;
 // A painted icon inline (assets/icons, relative to the page: the book opens on the ride, the resort and the start page).
 const ROOT = () => (location.pathname.includes("/mountain/") ? "../" : "");
-const ICONS = ["lift", "snowboard", "difficulty", "groomed", "moguls", "powder", "trees", "alpine", "lodge", "trailmap", "hike"];
+const ICONS = ["lift", "snowboard", "difficulty", "groomed", "moguls", "powder", "trees", "ungroomed", "alpine", "lodge", "trailmap", "hike"];
 const ic = (n) => `<img class="ic" src="${ROOT()}assets/icons/${n}.png?v=1" alt="">`;
 // The icons loaded before the page shows (no broken pictures while the map paints); the lodge for the map.
 let iconsReady = null;
@@ -100,8 +100,8 @@ const SRC = { tag: () => `<span class="src">${t("地图标注")}</span>`, terrai
 const SURFACE = {
   moguls: { tag: ["moguls", "蘑菇道"], inferred: ["moguls", "多半有蘑菇（陡、不压雪）"] },
   groomed: { tag: ["groomed", "压雪道"], inferred: ["groomed", "多半压过雪"] },
-  offpiste: { tag: ["alpine", "野雪区，不压雪"] },
-  ungroomed: { inferred: ["trees", "多半不压雪"] },
+  offpiste: { tag: ["ungroomed", "野雪区，不压雪"] },
+  ungroomed: { tag: ["ungroomed", "不压雪"], inferred: ["ungroomed", "多半不压雪"] },
 };
 const km = (m) => (m >= 1000 ? t("{n} 公里", { n: (m / 1000).toFixed(1) }) : t("{n} 米", { n: Math.round(m / 10) * 10 }));
 
@@ -138,7 +138,7 @@ export function renderBook(box, resort, host) {
       const f = runFacts(run, pts, heightAt, sn && sn.f ? { f: sn.f, amt: sn.amt } : null);
       h += `<div class="f">${ic("difficulty")}${km(s.len || f.len)} · ${t("落差 {n} 米", { n: s.drop ?? f.drop })} · ${t("最陡 {n}°", { n: f.pitch })}${SRC.terrain()}</div>`;
       const [icon, words] = SURFACE[f.surface.k]?.[f.surface.src] || SURFACE.ungroomed.inferred;
-      h += `<div class="f">${ic(icon)}${f.surface.wild ? t("树林 / 碗区，") : ""}${t(words)}${SRC[f.surface.src]()}</div>`;
+      h += `<div class="f">${ic(treeName(run.name) && f.surface.k === "ungroomed" ? "trees" : icon)}${f.surface.wild ? t("树林 / 碗区，") : ""}${t(words)}${SRC[f.surface.src]()}</div>`;
       if (f.powder) h += `<div class="f">${ic("powder")}${t(f.powder.k === "edges" ? "两边可能有粉雪，中间压实了" : "可能整条都有粉雪")}${SRC.inferred()}</div>`;
     }
     if (links.length) {

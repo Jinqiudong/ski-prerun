@@ -18,7 +18,7 @@
 // it away while the 对讲机 was on (a call, the lock screen), the calls retried.
 // The rules with no DOM are in voice-core.js; the ICE servers (STUN, an optional TURN) in voice-config.js.
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
-import { t, myAvatar } from "./i18n.js?v=49";
+import { t, myAvatar } from "./i18n.js?v=50";
 import { VOICE, wantPeers, offerer, retryAfter, cleanSignal, cleanVoicePresence, speaking, talking, duckFor, micProblem } from "./voice-core.js?v=1";
 import { ICE_SERVERS } from "./voice-config.js?v=1";
 

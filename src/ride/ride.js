@@ -5,9 +5,9 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=14";
-import { addStep, thinPath, openBookPage } from "./roadbook.js?v=30";
+import { addStep, thinPath, openBookPage } from "./roadbook.js?v=31";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=3";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=23";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=24";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=8";
 import { liftHub, findPlanned, crumbOf, viaNext, GO } from "./hub-core.js?v=2";
@@ -17,24 +17,24 @@ import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { Aerial, aerialTexture } from "../mountain/aerial.js?v=1";
 import { solar, sunVector, weatherKind, palette } from "./sky.js?v=2";
 import { TrailMap } from "./mapview.js?v=10";
-import { PaintedMap } from "./paintedmap.js?v=19";
+import { PaintedMap } from "./paintedmap.js?v=20";
 import { SkiLog } from "../core/skilog.js?v=2";
 import { junctions, junctionSign, chevrons, arrowText, turnWord } from "./skinav.js?v=9";
-import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=49";
-import { navRow } from "../core/nav.js?v=26";
+import { translatePage, openSettings, myAvatar, t } from "../core/i18n.js?v=50";
+import { navRow } from "../core/nav.js?v=27";
 import { rideSound } from "../audio/index.js?v=6";
-import { openSoundPanel, creditLine } from "../audio/panel.js?v=22";
-import { dropIn } from "../core/transition.js?v=19";
+import { openSoundPanel, creditLine } from "../audio/panel.js?v=23";
+import { dropIn } from "../core/transition.js?v=20";
 import { Facilities } from "./kitworld.js?v=6";
-import { rideTogether } from "./together.js?v=28";
-import { startParty } from "../core/party.js?v=20";
+import { rideTogether } from "./together.js?v=29";
+import { startParty } from "../core/party.js?v=21";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=4";
 import { clearRope, ropeY } from "./lift-core.js?v=1";
-import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit } from "./snow-core.js?v=3";
-import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=3";
-import { Guide } from "./guide.js?v=19";
+import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit, runSurface, runPowder, runConds, wayConds, condWords, COND_ICON, COND_ZH } from "./snow-core.js?v=5";
+import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=4";
+import { Guide } from "./guide.js?v=20";
 import { bunnySpot, worldLift } from "./practice-core.js?v=2";
-import { startPractice, spotTitle } from "./practice.js?v=16";
+import { startPractice, spotTitle } from "./practice.js?v=17";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=1";
 import { condPill } from "./condpill.js?v=1";
@@ -446,20 +446,37 @@ function snowA(tex, vertexColors = false) {
   return mat;
 }
 
-function corduroy() {
-  const c = document.createElement("canvas");
-  c.width = 128; c.height = 8;
-  const g = c.getContext("2d");
-  for (let x = 0; x < 128; x++) {
-    const v = 238 + (x % 6 < 3 ? 12 : 0) + Math.round(Math.random() * 4);
-    g.fillStyle = `rgb(${v},${v + 2},${Math.min(255, v + 8)})`;
-    g.fillRect(x, 0, 1, 8);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
-  return t;
+// The runs' snow: a light pass over the ground's own snow (multiplied in, so its grain, shadows and powder stay),
+// one shared material per kind and no texture of its own (the snow's normal map is shared). Groomed
+// (snow-core.js runSurface): corduroy, fine ribs along the run every 0.22 m and the cat's 5 m passes faintly
+// told apart, following the run's line and fading out over the ribbon's outer metres; the ribs fade where they
+// would shimmer (fwidth), the passes by 260 m. Ungroomed, natural, off-piste and mogul runs: no ribs, the snow
+// a little lumpier, wind-worked shading at two scales. Where powder is deep the raised ground covers it.
+const RUN_W = 30, CORD = { rib: 0.22, lane: 5 };
+function runSnow(tex, groomed) {
+  return new THREE.ShaderMaterial({
+    defines: groomed ? { GROOMED: "" } : {},
+    uniforms: { snowN: { value: tex.snowN }, runW: { value: RUN_W }, rib: { value: CORD.rib }, laneW: { value: CORD.lane } },
+    vertexShader: `attribute vec2 runUV; varying vec2 vRun; varying vec3 vRP;
+      void main() { vRun = runUV; vec4 wp = modelMatrix * vec4(position, 1.0); vRP = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }`,
+    fragmentShader: `uniform sampler2D snowN; uniform float runW, rib, laneW; varying vec2 vRun; varying vec3 vRP;
+      void main() {
+        float rx = vRun.x, edge = 1.0 - smoothstep(runW * 0.5 - 9.0, runW * 0.5 - 1.0, abs(rx)), d = length(vRP - cameraPosition), f = 1.0;
+        #ifdef GROOMED
+          float rb = rx / rib, ribA = edge * (1.0 - smoothstep(0.1, 0.3, fwidth(rb)));
+          float lf = fract((rx + 100.0) / laneW), seam = 1.0 - smoothstep(0.012, 0.04, min(lf, 1.0 - lf));
+          float lane = fract(sin(floor((rx + 100.0) / laneW) * 91.7 + 3.1) * 4375.85), lanesA = edge * (1.0 - smoothstep(60.0, 260.0, d));
+          float rp = 0.5 + 0.5 * sin(rb * 6.2832); // a rib: a narrow shaded groove between rounded ridges
+          f = (1.0 - ribA * 0.085 * rp * rp) * (1.0 - lanesA * (0.03 * lane + 0.045 * seam));
+        #else
+          vec2 n = (texture2D(snowN, vRP.xz / 9.0).xy * 2.0 - 1.0) * 0.75 + (texture2D(snowN, vRP.xz / 2.6).xy * 2.0 - 1.0) * 0.4;
+          f = 1.0 - edge * (1.0 - smoothstep(80.0, 400.0, d)) * 0.09 * clamp(0.5 + 0.6 * (n.x - n.y), 0.0, 1.0);
+        #endif
+        gl_FragColor = vec4(vec3(f), 1.0);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.MultiplyBlending, premultipliedAlpha: true, toneMapped: false, fog: false,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+  });
 }
 
 function runRibbon(T, pts, width, lift) {
@@ -484,13 +501,14 @@ function runRibbon(T, pts, width, lift) {
     for (let c = 0; c < cols; c++) {
       const sd = (c / across) * 2 - 1, px = x - dz * sd * width / 2, pz = z + dx * sd * width / 2;
       pos.push(px, T.heightAt(px, pz) + lift, pz);
-      uv.push(((sd + 1) / 2) * (width / 4), s / 20);
+      uv.push((sd * width) / 2, s); // metres across from the line (+ right of the way down) and along it
     }
-    if (i) for (let c = 0; c < across; c++) { const b = (i - 1) * cols + c; idx.push(b, b + cols, b + 1, b + 1, b + cols, b + cols + 1); }
+    // wound counter-clockwise seen from above (the other way round they faced down and were culled: unseen)
+    if (i) for (let c = 0; c < across; c++) { const b = (i - 1) * cols + c; idx.push(b, b + 1, b + cols, b + 1, b + cols + 1, b + cols); }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute("runUV", new THREE.Float32BufferAttribute(uv, 2));
   geo.setIndex(idx);
   geo.computeVertexNormals();
   return geo;
@@ -684,15 +702,15 @@ function build(ctx) {
   world.add(ranges);
 
   // Runs near the lift.
-  const runMat = new THREE.MeshStandardMaterial({ map: tex.cord, color: 0xffffff, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4 });
+  const runMat = { groomed: runSnow(tex, true), rough: runSnow(tex, false) }; // corduroy on groomed runs, the rest natural
   const near = (pts) => pts.some(([x, z]) => line.up.some((g, i) => i % 25 === 0 && Math.hypot(g.x - x, g.z - z) < 1400));
   const drawn = new Set();
-  // Groomed runs; more can be added later along the way down (see addRunsNear).
+  // The runs, groomed or not (snow-core.js runSurface); more can be added later along the way down (see addRunsNear).
   ctx.addRunsNear = (test) => {
     for (const run of R.runs) {
       if (run.area || drawn.has(run) || !test(run.pts)) continue;
       drawn.add(run);
-      const m = new THREE.Mesh(runRibbon(T, run.pts, 30, 0.03), runMat);
+      const m = new THREE.Mesh(runRibbon(T, run.pts, RUN_W, 0.06), runSurface(run).k === "groomed" ? runMat.groomed : runMat.rough);
       m.receiveShadow = true;
       world.add(m);
     }
@@ -749,6 +767,31 @@ const LEVEL_MARK = { easy: '<i class="lv easy"></i>', intermediate: '<i class="l
 // A painted icon inline with text (assets/icons; no emoji anywhere).
 const ICO = (n) => (n ? `<img class="cueIco" src="assets/icons/${n}.png?v=1" alt="">` : "");
 const LEVEL_ZH = { easy: "绿道", intermediate: "蓝道", advanced: "黑道", expert: "双黑" };
+// A run's conditions (snow-core.js runConds: 压雪, 蘑菇, 树林, 未压雪, 粉雪), with the day's powder when there is
+// any (ctx.powder, from the conditions chosen: a 雪 sky or real recent snow). Kept per run until the powder changes.
+const condCache = new WeakMap();
+function condsOf(run, ctx) {
+  const amt = ctx.powder?.amt ?? 0, was = condCache.get(run);
+  if (was && was.amt === amt) return was.list;
+  const list = runConds(run, amt > 0 ? runPowder(run.pts, ctx.powder, runSurface(run).k === "groomed") : null);
+  condCache.set(run, { amt, list });
+  return list;
+}
+// The conditions as small painted icons (no words: the tap detail gives them).
+const condIcons = (list, cls = "cds") => (list.length ? `<span class="${cls}">${list.map((c) => `<img src="assets/icons/${COND_ICON[c.k]}.png?v=1" alt="${t(COND_ZH[c.k])}" title="${t(COND_ZH[c.k])}">`).join("")}</span>` : "");
+// ... and in words, each inferred one marked 推测 (as the roadbook does).
+const condText = (list) => list.map((c) => { const [w, inf] = condWords(c); return `<span class="cw">${ICO(COND_ICON[c.k])}${t(w)}${inf ? `<i class="inf">${t("推测")}</i>` : ""}</span>`; }).join("");
+// A way's named runs in order, each with its run objects (a name met again right after itself once).
+function namedRuns(legs) {
+  const out = [];
+  for (const l of legs) {
+    if (l.type !== "run" || !l.run.name) continue;
+    const last = out[out.length - 1];
+    if (last && last.name === l.run.name) { if (!last.runs.includes(l.run)) last.runs.push(l.run); continue; }
+    out.push({ name: l.run.name, level: l.run.level, runs: [l.run] });
+  }
+  return out;
+}
 const ROUTE_GOLD = 0xf2b632;
 const fmtLen = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} 公里` : `${Math.round(m)} 米`);
 const fmtMin = (s) => `${Math.max(1, Math.round(s / 60))} 分钟`;
@@ -878,17 +921,29 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // Moguls on the runs near the way down: their bumps in the physics (mogF) and drawn (one mesh each).
   const mogF = new MogulField(), mogMat = mogulMaterial(ctx.tex.snowN);
   let mogBuilt = 0;
-  function addMoguls(path) {
-    for (const run of R.runs) {
-      if (!run.moguls || mogF.has(run) || mogBuilt > 3000) continue; // at most ~3 km of bumps drawn at once
+  // The runs on the way down come first and are never cut by the budget, so a mogul run you ride always has
+  // its bumps; one built earlier for another way is widened to this way's stretch (its mesh rebuilt).
+  const mogMesh = new Map();
+  function addMoguls(path, mine = []) {
+    for (const run of new Set([...mine, ...R.runs])) {
+      const own = mine.includes(run);
+      if (!run.moguls || (!own && (mogF.has(run) || mogBuilt > 3000))) continue; // at most ~3 km of bumps drawn at once, past the way's own
       if (!run.pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.abs(rx - x) < 260 && Math.abs(rz - z) < 260))) continue;
-      const line = mogF.add(run); if (!line) continue;
+      const was = mogF.lines.find((l) => l.run === run), line = was || mogF.add(run); if (!line) continue;
       // only the stretch within ~250 m of the way down is bumped and drawn (a long run elsewhere costs nothing)
       let lo = Infinity, hi = -Infinity;
       for (let i = 0; i < line.xs.length; i += 5) if (path.some(([rx, rz], k) => k % 2 === 0 && (rx - line.xs[i]) ** 2 + (rz - line.zs[i]) ** 2 < 250 * 250)) { lo = Math.min(lo, line.ss[i]); hi = Math.max(hi, line.ss[i]); }
-      if (!(hi > lo)) { mogF.clip(line, 0, 0); continue; }
-      mogF.clip(line, lo - 30, hi + 30);
-      world.add(mogulMesh(T, line, mogMat));
+      if (!(hi > lo)) { if (!was) mogF.clip(line, 0, 0); continue; }
+      lo -= 30; hi += 30;
+      if (was && line.hi > line.lo) {
+        if (lo >= line.lo && hi <= line.hi) continue; // already bumped here
+        lo = Math.min(lo, line.lo); hi = Math.max(hi, line.hi);
+        const old = mogMesh.get(run); if (old) { world.remove(old); old.geometry.dispose(); }
+        mogBuilt -= line.hi - line.lo;
+      }
+      mogF.clip(line, lo, hi);
+      const mesh = mogulMesh(T, line, mogMat);
+      world.add(mesh); mogMesh.set(run, mesh);
       mogBuilt += line.hi - line.lo;
     }
   }
@@ -907,6 +962,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // carried, up the ridge as a quick time-lapse to the summit's prayer flags, then down a line of the bowl.
   let hike = null, hk = null;
   const HIKE_GEAR = ["能挂板的背包或板带", "多带水", "能量棒", "保暖中间层", "备用手套", "雪镜和墨镜", "防晒", "救援三件套（建议）"];
+  ctx.condsChanged = () => { if (st.phase === "rise" || st.phase === "pick") paintSheet(); };
   fetch("data/hikes.json").then((x) => x.json()).then((h) => { hike = (h[RESORT] || []).find((x) => x.from === lift.name && x.summit && x.down) || null; if (hike && (st.phase === "rise" || st.phase === "pick")) paintSheet(); }).catch(() => {});
   function hikePath() {
     // Each line of the bowl once: of the pieces with a name, the one that starts highest.
@@ -1053,7 +1109,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   // way goes (the route's in gold), chevrons on the snow before each turn, and the minimap.
   let nav = null, offFor = 0, lastLook = 0, onRun = null;
   // The HUD while the guide leads (body.navmin): one strip of icons, like a car's nav: speed, the run you're on
-  // (its mark and name), where the way ends (a lift or a base), how far. No sentences. The run's name changes
+  // (its mark, name and its conditions' icons: 压雪, 蘑菇, 树林, 未压雪, 粉雪), where the way ends (a lift or a base), how far. No sentences. The run's name changes
   // only once you're settled on the new one (0.8 s), with a flash of ink so a turn onto another run is seen.
   const strip = {
     run: null, cand: null, held: 0, near: false,
@@ -1062,7 +1118,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const to = P.next ? ["lift", P.next.name] : P.kind === "lift" ? ["lift", P.short] : P.kind === "base" ? ["lodge", P.short] : null;
       $("hsTo").hidden = !to; $("hsToSep").hidden = !to;
       if (to) { $("hsToIco").src = `assets/icons/${to[0]}.png?v=1`; $("hsToName").textContent = to[1] || ""; }
-      $("hsRun").innerHTML = P.first ? `${LEVEL_MARK[P.first.level] || ""}<span>${P.first.name || t("无名雪道")}</span>` : "";
+      $("hsRun").innerHTML = P.first ? `${LEVEL_MARK[P.first.level] || ""}<span>${P.first.name || t("无名雪道")}</span>${condIcons(condsOf(P.first, ctx))}` : "";
     },
     step(r, left, run, dt) {
       $("hsSpeed").textContent = Math.round(r.speed * 3.6);
@@ -1072,7 +1128,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       if ((this.held += dt) < 0.8) return;
       const was = this.run; this.run = run; this.cand = null;
       const el = $("hsRun");
-      el.innerHTML = `${LEVEL_MARK[run.level] || ""}<span>${run.name || t("无名雪道")}</span>`;
+      el.innerHTML = `${LEVEL_MARK[run.level] || ""}<span>${run.name || t("无名雪道")}</span>${condIcons(condsOf(run, ctx))}`; // and its conditions' icons
       if (was && was.name !== run.name) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); } // onto another run
     },
   };
@@ -1162,7 +1218,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
     ctx.forest(treeSpots(T, R, ctx.mask, { ground: path.filter((_, i) => i % 2 === 0).map(([x, z]) => ({ x, z })) }, 450, 0, planted), 300);
     boxes.push(boxOf(path.map((p) => p[0]), path.map((p) => p[1]), 400));
     ctx.addRunsNear((pts) => pts.some(([x, z]) => path.some(([rx, rz], i) => i % 3 === 0 && Math.hypot(rx - x, rz - z) < 700)));
-    addMoguls(path);
+    addMoguls(path, P.segs.map((g) => g.run));
     if (nav) { scene.remove(nav.group); nav.group.traverse((o) => o.geometry?.dispose()); }
     const group = new THREE.Group(), js = junctions(path, P.segs, R);
     for (const j of js) {
@@ -2178,7 +2234,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       const on = d === chosenDest && !hikeOn;
       const name = d.kind === "same" ? lift.name : d.name;
       const fold = d.lifts?.length ? ` <small>· ${t("有 {list}", { list: d.lifts.slice(0, 2).join("、") + (d.lifts.length > 2 ? t(" 等") : "") })}</small>` : "";
-      const vs = d.variants.map((w) => `<button class="v${on && w === chosenV ? " on" : ""}${w.harder ? " hard" : ""}" data-k="${d.key}|${w.key}">${LEVEL_MARK[w.level]}${t("{n} 分", { n: mins(w.seconds) })}</button>`).join("");
+      const vs = d.variants.map((w) => `<button class="v${on && w === chosenV ? " on" : ""}${w.harder ? " hard" : ""}" data-k="${d.key}|${w.key}">${LEVEL_MARK[w.level]}${t("{n} 分", { n: mins(w.seconds) })}${condIcons(wayConds(w.legs.filter((l) => l.type === "run").map((l) => condsOf(l.run, ctx))))}</button>`).join("");
       return `<div class="opt${on ? " on" : ""}" data-d="${d.key}"><b translate="no">${name}</b>${fold}<div class="vs">${vs}</div></div>`;
     };
     const grp = (icon, title, list, extra = "") => (list.length || extra ? `<div class="grp"><h4>${ICO(icon)}${title}</h4><div class="row">${list.map(chip).join("")}${extra}</div></div>` : "");
@@ -2208,14 +2264,15 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
       return;
     }
     if (!chosenV) { $("hubLine").innerHTML = ""; go.hidden = true; return; }
-    const P = chosen, names = chosenV.names.slice(0, 5).map((n) => `${LEVEL_MARK[n.level]}<span translate="no">${n.name}</span>`).join(" → ") + (chosenV.names.length > 5 ? " …" : "");
-    const bumps = P.segs.filter((g) => g.run.moguls).map((g) => g.run.name).filter((n, i, a) => n && a.indexOf(n) === i);
+    // Each run with its conditions' icons; tap the line for them in words (推测 where we inferred them).
+    const P = chosen, named = namedRuns(chosenV.legs), condsN = (n) => wayConds(n.runs.map((r) => condsOf(r, ctx)));
+    const names = named.slice(0, 5).map((n) => `<span class="rn">${LEVEL_MARK[n.level]}<span translate="no">${n.name}</span>${condIcons(condsN(n))}</span>`).join(" → ") + (named.length > 5 ? " …" : "");
     const notes = [t("约 {n} 分钟 · 估算", { n: mins(chosenV.seconds) })];
     if (chosenV.harder) notes.push(`<b class="warn">${t("要过{lv}", { lv: t(LEVEL_ZH[chosenV.level]) })}</b>`);
-    if (bumps.length) notes.push(`<img class="cueIco" src="assets/icons/moguls.png?v=1" alt="">${t("蘑菇道")}`);
-    if (ctx.powder?.amt > 0) notes.push(`<img class="cueIco" src="assets/icons/powder.png?v=1" alt="">${t("今天有粉雪")}`);
-    $("hubLine").innerHTML = `<span class="runs">${names || t("无名雪道")}</span><small>${notes.join(" · ")} · <button class="doc">${ICO("packing")}${t("路书")}</button></small>`;
+    const det = named.map((n) => `<div class="cr"><b translate="no">${LEVEL_MARK[n.level]}${n.name}</b>${condText(condsN(n))}</div>`).join("");
+    $("hubLine").innerHTML = `<span class="runs" role="button">${names || t("无名雪道")}</span><div class="cdet" hidden>${det}</div><small>${notes.join(" · ")} · <button class="doc">${ICO("packing")}${t("路书")}</button></small>`;
     $("hubLine").querySelector(".doc").onclick = () => openGuide(P);
+    $("hubLine").querySelector(".runs").onclick = () => { const d = $("hubLine").querySelector(".cdet"); d.hidden = !d.hidden || !det; };
     go.hidden = false;
     go.textContent = t(GO[chosenDest.kind], { x: chosenDest.name });
     go.onclick = goNow;
@@ -2522,8 +2579,7 @@ async function main() {
   // How far the carrier hangs under the rope: its lowest point (a cabin's floor, a chair's footrest).
   const drop = Math.max(2.5, ...Object.values(carrier.parts || {}).filter((q) => q?.geometry).map((q) => { q.geometry.boundingBox || q.geometry.computeBoundingBox(); return -q.geometry.boundingBox.min.y; }));
   const line = liftLine(T, lift, drop);
-  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow, cord: corduroy() }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]), when: effective(COND).date };
-  ctx.tex.cord.repeat.set(1, 1);
+  const ctx = { T, R, far, line, spots: treeSpots(T, R, mask, line), tex: { snowD, snowN, rockD, branch, branchSnow, crown, crownSnow }, groundGeo: terrainGeometry(T), rider: await boarderModel(), lift, mask, research, kitIndex, liftKits: { carrier, base, shaft, head, bottom, top: top0 }, liftsShown: new Set([lift]), when: effective(COND).date };
   build(ctx);
   $("status").remove();
   // Run names carved into the snow, met on the way up.
@@ -2549,6 +2605,7 @@ async function main() {
       ctx.powder = { f, amt: params.get("powder") === "map" ? 0 : amt };
       setPowderField(f, ctx.powder.amt);
       powderU.powderDebug.value = params.get("powder") === "map" ? 1 : 0;
+      ctx.condsChanged?.(); // the lift top's powder icons
     }, 50);
   });
 

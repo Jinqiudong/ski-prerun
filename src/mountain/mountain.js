@@ -4,15 +4,15 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Terrain } from "../ride/world.js?v=5";
-import { markMoguls } from "../ride/snow-core.js?v=3";
+import { markMoguls } from "../ride/snow-core.js?v=5";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=8";
 import { Aerial, PAPER } from "./aerial.js?v=1";
 import { solar, sunVector, weatherKind, WEATHER_ZH, palette } from "../ride/sky.js?v=2";
-import { addStep } from "../ride/roadbook.js?v=30";
-import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=49";
-import { openNav } from "../core/nav.js?v=26";
-import { liftTicket } from "../core/transition.js?v=19";
-import { startParty } from "../core/party.js?v=20";
+import { addStep } from "../ride/roadbook.js?v=31";
+import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=50";
+import { openNav } from "../core/nav.js?v=27";
+import { liftTicket } from "../core/transition.js?v=20";
+import { startParty } from "../core/party.js?v=21";
 import { bunnySpot } from "../ride/practice-core.js?v=2";
 import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
 
