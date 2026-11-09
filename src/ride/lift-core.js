@@ -77,3 +77,37 @@ export function clearRope(towers, total, groundAt, drop, { ropeH = 11.5, margin 
   }
   return { towers, short: Math.max(0, worstClearance(towers, total, groundAt, drop, { ropeH, margin, step }).short) };
 }
+
+// ---------- A tram (aerialway=cable_car): two cabins to and fro, no loop ----------
+// A jig-back tram has one cabin on each track rope, tied to the same haul rope: one goes up while the other
+// comes down, they pass mid-way, and each stops in its dock. Ridden, the pace eases out of the dock and
+// into the next (`tramPace`: a share of the line's speed, full after `TRAM_EASE` metres, never under
+// `TRAM_CRAWL`). Seen from elsewhere, `jigBack` says where the up-going cabin is at a time: a dwell in the
+// bottom dock, up, a dwell at the top, down; the other cabin is its mirror (total - s).
+export const TRAM_EASE = 80, TRAM_CRAWL = 0.12, TRAM_DWELL = 25;
+export function tramPace(d, total, ease = TRAM_EASE) {
+  const e = Math.max(0, Math.min(d, total - d));
+  return Math.max(TRAM_CRAWL, Math.min(1, Math.sqrt(e / ease)));
+}
+// The tram's towers: its real ones, the line's inner nodes in OpenStreetMap (a tram's line is straight, so its
+// nodes are its towers), none inside a dock (`NO_TOWER`). pts [[x, z]…]; returns s along the line of each.
+export function tramTowers(pts, noTower = NO_TOWER) {
+  const seg = (i) => Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += seg(i);
+  const out = [];
+  for (let i = 1, s = 0; i < pts.length - 1; i++) {
+    s += seg(i);
+    if (s > noTower && s < total - noTower) out.push(s);
+  }
+  return out;
+}
+// Where the up-going cabin is (metres from the bottom dock) at time t (s), on a line `total` long run at v m/s
+// with `dwell` s in each dock: { s, up } (up: on its way up; false: docked or on its way down).
+export function jigBack(t, total, v, dwell = TRAM_DWELL) {
+  const run = total / Math.max(0.1, v), cycle = 2 * (run + dwell), p = ((t % cycle) + cycle) % cycle;
+  if (p < dwell) return { s: 0, up: false };
+  if (p < dwell + run) return { s: (p - dwell) * v, up: true };
+  if (p < 2 * dwell + run) return { s: total, up: false };
+  return { s: total - (p - 2 * dwell - run) * v, up: false };
+}

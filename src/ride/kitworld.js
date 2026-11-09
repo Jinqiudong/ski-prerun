@@ -3,7 +3,8 @@
 // a few props. Everything instanced is pooled (facilities.js Pool): full models near the camera, a plain
 // stand-in further out, nothing beyond. GLBs load lazily, only those this resort and this ride need.
 import * as THREE from "three";
-import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=6";
+import { kit, kits, modelsFor, liftSpec, TERMINAL, terminalPlace, deckLevel, localToWorld, towerParts, latticeParts, farCarrier, splitRim, Pool, paintMat, tintMat, cabinLettering, nameBoard, liftSignMat, runFaceAtlas, junctionFaceMat, clearance, nearestRunPoint, seatOf, ROPE_H, SURFACE_H, CHARCOAL } from "./facilities.js?v=7";
+import { jigBack, tramTowers } from "./lift-core.js?v=2";
 
 const GRAPHITE = "#2c3138";
 // Packed snow banked under a deck or building where the ground falls away: a mound whose sides slope out.
@@ -98,10 +99,10 @@ export class Facilities {
     const C = K.carrier, split = spec.bubble ? splitRim(C) : { bake: C.parts.bake.geometry, rim: null };
     let glassMat = C.parts.glass?.material;
     if (glassMat && spec.bubbleColor) { glassMat = glassMat.clone(); glassMat.color.set(spec.bubbleColor); glassMat.opacity = 0.45; }
-    const near = [{ geometry: split.bake, material: C.parts.bake.material, tint: spec.cabin }, { geometry: C.parts.paint?.geometry, paint: true }, { geometry: C.parts.snow?.geometry, material: C.parts.snow?.material }, { geometry: C.parts.flat?.geometry, material: C.parts.flat?.material }];
+    const near = [{ geometry: split.bake, material: C.parts.bake.material, tint: spec.tint ?? spec.cabin }, { geometry: C.parts.paint?.geometry, paint: true }, { geometry: C.parts.snow?.geometry, material: C.parts.snow?.material }, { geometry: C.parts.flat?.geometry, material: C.parts.flat?.material }];
     if (C.parts.glass && !spec.bubble) near.push({ geometry: C.parts.glass.geometry, material: glassMat, order: 2 });
     if (spec.cabin && spec.cabinText) near.push(cabinLettering(C, spec.cabinText));
-    this.chairs = new Pool(this.group, near, [{ geometry: farCarrier(spec.carrier), paint: true }], 8, { nearR: 170, farR: 2400 });
+    this.chairs = new Pool(this.group, near, [{ geometry: farCarrier(spec.carrier), paint: true }], 8, { nearR: spec.tram ? 900 : 170, farR: 2400 });
     this.chairColor = spec.cabin ? cabinColorAt(spec, 0) : color;
     // A chondola (American Eagle): a cabin every fifth carrier on the line you ride too.
     if (spec.chondola && spec.cabinCarrier) kit(spec.cabinCarrier).then((k) => {
@@ -115,7 +116,10 @@ export class Facilities {
     }
     this.chairItems = [];
     const myChair = new THREE.Group();
-    for (const p of [...near.slice(0, 4), ...(spec.cabin && spec.cabinText ? near.slice(-1) : [])]) if (p.geometry) myChair.add(new THREE.Mesh(p.geometry, p.paint ? paintMat(this.chairColor) : p.tint ? tintMat(p.material, this.chairColor) : p.material));
+    // Riding inside the tram's cabin, its painted lower walls are seen from inside too (both sides drawn), so
+    // the lettering on the outside doesn't read backwards through them.
+    const paint = spec.tram ? Object.assign(paintMat(this.chairColor).clone(), { side: THREE.DoubleSide }) : paintMat(this.chairColor);
+    for (const p of [...near.slice(0, 4), ...(spec.cabin && spec.cabinText ? near.slice(-1) : [])]) if (p.geometry) myChair.add(new THREE.Mesh(p.geometry, p.paint ? paint : p.tint ? tintMat(p.material, this.chairColor) : p.material));
     const myBubble = new THREE.Group();
     if (spec.bubble) { const gl = new THREE.Mesh(C.parts.glass.geometry, glassMat); gl.renderOrder = 2; myBubble.add(gl); if (split.rim) myBubble.add(new THREE.Mesh(split.rim, C.parts.bake.material)); }
     else if (C.parts.glass) { // a cabin's glass, clearer for looking out through it
@@ -125,11 +129,11 @@ export class Facilities {
     myBubble.matrixAutoUpdate = false;
     myChair.add(myBubble);
     myChair.traverse((o) => { if (o.isMesh) { o.castShadow = o.renderOrder !== 2; o.receiveShadow = true; } });
-    rider.position.set(myPos.x, seat.top - 0.595, seat.z);
+    rider.position.set(myPos.x, seat.top - 0.595, myPos.z ?? seat.z);
     myChair.add(rider);
     this.world.add(myChair);
-    // A "prepare to unload" sign beside the up line before the top, facing the chairs.
-    kit("sign_lift").then((k) => {
+    // A "prepare to unload" sign beside the up line before the top, facing the chairs (not a tram's: it docks).
+    if (!spec.tram) kit("sign_lift").then((k) => {
       const s = line.total - (TERMINAL[spec.top].unload || 9) - 26, p = new THREE.Vector3();
       const i = Math.max(0, Math.min(line.ground.length - 1, Math.round((s / line.total) * (line.ground.length - 1))));
       p.copy(line.ground[i]).addScaledVector(line.side, g + 4.5);
@@ -149,9 +153,20 @@ export class Facilities {
     return { myChair, myBubble, topTerm, bottomTerm };
   }
 
-  // The line's carriers: n on each rope, spaced from ours; the up ones some with bubbles raised.
+  // The line's carriers: n on each rope, spaced from ours; the up ones some with bubbles raised. A tram has
+  // one other cabin: on the other track rope, as far from the top as ours is from the bottom (they pass
+  // mid-way), in the other colour (Snowbird's red and blue), turned as ours is.
   placeChairs(line, d, step, n, along, bOpen, bShut, cabin) {
     const p = _v, q = new THREE.Vector3(), items = this.chairItems, spec = this.spec;
+    if (spec.tram) {
+      const it = items[0] ||= { m: new THREE.Matrix4(), color: new THREE.Color(spec.cabinColor2 || this.chairColor) };
+      const r = new THREE.Vector3();
+      along(line.down, d, p); along(line.up, d, q); along(line.up, d + 4, r);
+      it.m.compose(p, _q.setFromAxisAngle(Y, Math.atan2(r.x - q.x, r.z - q.z)), _s.set(1, 1, 1));
+      items.length = 1;
+      this.chairs.refresh(this.cam, items);
+      return;
+    }
     while (items.length < 2 * n) items.push({ m: new THREE.Matrix4(), color: new THREE.Color(this.chairColor) });
     if (spec.cabinGroups) for (let i = 0; i < 2 * n; i++) items[i].color.set(cabinColorAt(spec, i < n ? i + 1 : n + i));
     const bub = this.bubbles ? (this.bubItems ||= []) : null;
@@ -201,15 +216,20 @@ export class Facilities {
     const o = { l, spec, pts, dir, side, surface, group: new THREE.Group(), carriers: [] };
     this.others.push(o);
     this.group.add(o.group);
-    // Towers every 85 m along the ground line, clear of the stations.
+    // Towers every 85 m along the ground line, clear of the stations (a tram's: its own, lift-core.js tramTowers).
     const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
     const total = cum[cum.length - 1], at = (s) => { let i = 1; while (i < pts.length - 1 && cum[i] < s) i++; const t = (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1); return pts[i - 1].clone().lerp(pts[i], Math.min(1, Math.max(0, t))); };
     const H = surface ? SURFACE_H : spec.towerRope || ROPE_H, nT = Math.max(1, Math.round(total / 85)), towers = [];
-    for (let k = 0; k <= nT; k++) { const s = (total * k) / nT; if (s < 28 || s > total - 28) continue; const p = at(s); p.y = T.heightAt(p.x, p.z); towers.push({ s, p }); }
+    const spots = spec.tram ? tramTowers(l.pts, 30) : Array.from({ length: nT + 1 }, (_, k) => (total * k) / nT);
+    for (const s of spots) { if (s < 28 || s > total - 28) continue; const p = at(s); p.y = T.heightAt(p.x, p.z); towers.push({ s, p }); }
     o.total = total;
     // The rope: from the bottom bullwheel over the towers to the top one.
     const g = surface ? 1.4 : spec.gauge, endH = (s) => (s < 1 ? TERMINAL[spec.bottom].ropeH : TERMINAL[spec.top].ropeH);
-    const knots = [{ s: 0, y: pts[0].y + (surface ? 1.2 : endH(0)) }, ...towers.map((t) => ({ s: t.s, y: t.p.y + H })), { s: total, y: pts[pts.length - 1].y + (surface ? 1.2 : endH(total)) }];
+    // A tram's dock (a big building on the slope) stands at the mean ground under it, and its cabins dock at its
+    // floor: the rope's ends at the dock's own level, not the ground's at the line's end.
+    const dockY = (name, top) => (TERMINAL[name]?.dock ? deckLevel(T, name, terminalPlace(name, top, top ? pts[pts.length - 1] : pts[0], dir)).mean : null);
+    o.dockY = [dockY(spec.bottom, false), dockY(spec.top, true)];
+    const knots = [{ s: 0, y: (o.dockY[0] ?? pts[0].y) + (surface ? 1.2 : endH(0)) }, ...towers.map((t) => ({ s: t.s, y: t.p.y + H })), { s: total, y: (o.dockY[1] ?? pts[pts.length - 1].y) + (surface ? 1.2 : endH(total)) }];
     const ropeAt = (s, off, out = new THREE.Vector3()) => {
       let k = 1; while (k < knots.length - 1 && knots[k].s < s) k++;
       const a = knots[k - 1], b = knots[k], t = Math.min(1, Math.max(0, (s - a.s) / (b.s - a.s || 1)));
@@ -242,9 +262,10 @@ export class Facilities {
         for (const [name, top] of [[spec.bottom, false], [spec.top, true]]) {
           kit(name).then((k) => {
             const pl = terminalPlace(name, top, top ? pts[pts.length - 1] : pts[0], dir), lv = deckLevel(T, name, pl);
-            pl.origin.y = lv.hi;
+            pl.origin.y = o.dockY[top ? 1 : 0] ?? lv.hi;
             const grp = instance(k, { paint: spec.terminalColor, band: spec.bandColor, board: (p) => nameBoard(p, l.name, null, this.renderer, pl.mirror < 0) });
-            if (lv.hi - lv.lo > 0.3) grp.add(plinth(TERMINAL[name].box, lv.hi - lv.lo + 1.5));
+            if (pl.origin.y - lv.lo > 0.3) grp.add(plinth(TERMINAL[name].box, pl.origin.y - lv.lo + 1.5));
+
             grp.position.copy(pl.origin); grp.rotation.y = pl.yaw; grp.scale.x = pl.mirror;
             o.group.add(grp);
             this.visibles.push({ obj: grp, p: pl.origin, far: 1100, detail: 420 });
@@ -255,6 +276,7 @@ export class Facilities {
         const C = this.carrierPool(spec.carrier, spec.cabinText);
         o.pool = C; o.gap = spec.cabin ? 55 : surface ? 25 : 33; o.speed = spec.detachable ? 5 : surface ? 3 : 2.3;
         o.color = new THREE.Color(spec.cabin ? cabinColorAt(spec, 0) : spec.color);
+        if (spec.tram) { o.tram = true; o.speed = 15; o.color2 = new THREE.Color(spec.cabinColor2 || o.color); } // to and fro at the ride's pace (ride.js SPEED × 3)
         if (spec.cabinGroups) o.colors = spec.cabinGroups.map((c) => new THREE.Color(c));
         if (spec.chondola) { o.pool2 = this.carrierPool(spec.cabinCarrier || "gondola"); o.color2 = new THREE.Color(spec.cabinColor || GRAPHITE); } // a cabin every fifth carrier
       }
@@ -289,6 +311,18 @@ export class Facilities {
     for (const cp of this.carrierPools.values()) cp.n = 0;
     for (const o of this.others) {
       if (!o.pool?.pool || c.x < o.box[0] - R || c.x > o.box[1] + R || c.z < o.box[2] - R || c.z > o.box[3] + R) continue;
+      if (o.tram) { // two cabins to and fro (lift-core.js jigBack), both turned the way up as in their docks
+        const s = jigBack(this.t, o.total, o.speed).s; // o.down runs from the top: s along it is the other cabin, total - s from the bottom
+        for (const [path, at, color] of [[o.up, s, o.color], [o.down, s, o.color2]]) {
+          if (path.length < 2) continue;
+          const f = Math.min(path.length - 1.001, at / 4), k = Math.floor(f), a = path[k], b = path[k + 1];
+          const cp = o.pool, it = cp.items[cp.n] ||= { m: new THREE.Matrix4(), color };
+          cp.n++; it.color = color;
+          const u = o.up[Math.min(o.up.length - 2, Math.floor(s / 4))], w = o.up[Math.min(o.up.length - 1, Math.floor(s / 4) + 1)];
+          it.m.compose(_v.copy(a).lerp(b, f - k), _q.setFromAxisAngle(Y, Math.atan2(w.x - u.x, w.z - u.z)), _s.set(1, 1, 1));
+        }
+        continue;
+      }
       const n = Math.floor(o.total / o.gap);
       for (const [path, back] of [[o.up, false], [o.down, true]]) {
         if (path.length < 2) continue;

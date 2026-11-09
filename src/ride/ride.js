@@ -7,7 +7,7 @@ import { Terrain, treeMaskFn, farTerrain } from "./world.js?v=5";
 import { Rider, Tracks, Spray, governor, skiGovernor } from "./board.js?v=16";
 import { addStep, thinPath, openBookPage } from "./roadbook.js?v=32";
 import { segsOf, thinTrack } from "./roadbook-core.js?v=3";
-import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=29";
+import { loadBoarder, boarderModel, poseBoarder, sitBoarder, standBoarder, idleBoarder, cabinStandBoarder, hikeBoarder, tricksOf, startTrick, fallBoarder, fallState, headOf, talkBoarder } from "../rider/boarder.js?v=30";
 import { snowNames, fadeNames, trailSigns } from "./snownames.js?v=3";
 import { buildGraph, planRoute, nodesNear, LEVELS } from "../core/route.js?v=8";
 import { liftHub, findPlanned, crumbOf, viaNext, GO } from "./hub-core.js?v=2";
@@ -25,16 +25,16 @@ import { navRow } from "../core/nav.js?v=28";
 import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=24";
 import { dropIn } from "../core/transition.js?v=21";
-import { Facilities } from "./kitworld.js?v=8";
-import { rideTogether } from "./together.js?v=34";
+import { Facilities } from "./kitworld.js?v=9";
+import { rideTogether } from "./together.js?v=35";
 import { startParty } from "../core/party.js?v=23";
-import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=6";
-import { clearRope, ropeY } from "./lift-core.js?v=1";
+import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=7";
+import { clearRope, ropeY, tramPace, tramTowers } from "./lift-core.js?v=2";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit, runSurface, runPowder, runConds, wayConds, condWords, COND_ICON, COND_ZH } from "./snow-core.js?v=5";
 import { sight, seeThrough, CrashFX, powderU, setPowderField, POWDER_RAISE, mogulMesh, mogulMaterial } from "./snowfx.js?v=4";
-import { Guide } from "./guide.js?v=25";
+import { Guide } from "./guide.js?v=26";
 import { bunnySpot, worldLift } from "./practice-core.js?v=2";
-import { startPractice, spotTitle } from "./practice.js?v=22";
+import { startPractice, spotTitle } from "./practice.js?v=23";
 import { tiltRead, upInPhone } from "./tilt-core.js?v=2";
 import { load as loadCond, save as saveCond, normalize as normCond, effective, LIVE } from "../core/conditions.js?v=2";
 import { condPill } from "./condpill.js?v=2";
@@ -73,12 +73,18 @@ const LIFT_KIND = { "American Flyer": { seats: 6, bubble: true, bubbleColor: "#2
 // data/facilities/<resort>.json when there is one, else the OpenStreetMap tags (facilities.js).
 const TOWER_EVERY = 85, SPEED = 5;
 let CHAIR_GAP = 33, CHAIR_STEP = 33, HALF_GAUGE = 3.0, SEAT_X = [], MY_SEAT = 0, HAS_BUBBLE = false, CABIN = false, SPEC = null, SEAT = null;
+// A tram (SPEC.tram: Snowbird's Aerial Tram, Snowbasin's Allen Peak Tram) runs to and fro: our cabin from the
+// bottom dock to the top one, the other cabin coming down the other track rope (they pass mid-way), no loop.
+// In the big tram cabin (SEAT.stand) everyone stands, each at their own spot (SEAT.xs, SEAT.zs).
+let TRAM = false;
+const seatZ = (x) => (SEAT.zs ? SEAT.zs[Math.max(0, SEAT.xs.indexOf(x))] : SEAT.z);
 function setLiftKind(lift, research, index) {
   const known = RESORT === "copper" ? LIFT_KIND[lift.name] : null;
   SPEC = liftSpec({ ...lift, seats: Math.min(8, Math.max(2, lift.seats || 4)) }, research, known, index);
   if (!SPEC.carrier) SPEC = { ...SPEC, carrier: "chair2" }; // a surface lift ridden as a chair (none are offered)
   SEAT = seatOf(SPEC.carrier);
   CABIN = SPEC.cabin;
+  TRAM = !!SPEC.tram;
   SEAT_X = SEAT.xs;
   MY_SEAT = SEAT_X[1];
   if (SEAT.pivot) BUBBLE_PIVOT.set(0, SEAT.pivot[0], SEAT.pivot[1]);
@@ -102,8 +108,9 @@ function liftLine(T, lift, drop = 3.5) {
   for (let i = 1; i < dense.length; i++) cum.push(cum[i - 1] + Math.hypot(dense[i].x - dense[i - 1].x, dense[i].z - dense[i - 1].z));
   const total = cum[cum.length - 1], nT = Math.max(2, Math.round(total / TOWER_EVERY));
   const towers = [];
-  for (let k = 0; k <= nT; k++) {
-    const s = (total * k) / nT;
+  // A tram's towers are its own (lift-core.js tramTowers: the line's nodes, Allen Peak's 37 m from its top).
+  const spots = TRAM ? [0, ...tramTowers(lift.pts, 30), total] : Array.from({ length: nT + 1 }, (_, k) => (total * k) / nT);
+  for (const s of spots) {
     let i = cum.findIndex((c) => c >= s);
     if (i < 0) i = dense.length - 1;
     const p = dense[i];
@@ -129,8 +136,9 @@ function liftLine(T, lift, drop = 3.5) {
   inA.y = towers[0].p.y; inB.y = towers[towers.length - 1].p.y;
   towers.splice(1, 0, { s: 20, p: inA, h: towers[0].h, station: true });
   towers.splice(towers.length - 1, 0, { s: total - 20, p: inB, h: towers[towers.length - 1].h, station: true });
-  while (towers.length > 4 && towers[2].s < 40) towers.splice(2, 1); // no tower inside a station
-  while (towers.length > 4 && towers[towers.length - 3].s > total - 40) towers.splice(towers.length - 3, 1);
+  const inside = TRAM ? 30 : 40; // no tower inside a station
+  while (towers.length > 4 && towers[2].s < inside) towers.splice(2, 1);
+  while (towers.length > 4 && towers[towers.length - 3].s > total - inside) towers.splice(towers.length - 3, 1);
   const dir = new THREE.Vector3().subVectors(ground[ground.length - 1], ground[0]).setY(0).normalize();
   const side = new THREE.Vector3(dir.z, 0, -dir.x);
   // A tower on every knoll the straight rope would drag the carriers through (lift-core.js clearRope): the
@@ -746,14 +754,17 @@ function build(ctx) {
 
   // Lift: the kit's towers, terminals and carriers (kitworld.js), the ropes.
   const ropeMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.7, roughness: 0.35 });
-  for (const path of [line.up, line.down]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), path.length, 0.03, 5), ropeMat));
+  // The big tram's cabin runs on two track ropes 1.1 m apart (utah.py TRAM_TRACK), its haul rope between them.
+  const ropes = SEAT.stand ? [[-0.55, 0.045], [0, 0.025], [0.55, 0.045]] : [[0, 0.03]];
+  for (const path of [line.up, line.down]) for (const [o, r] of ropes) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(o ? path.map((q) => q.clone().addScaledVector(line.side, o)) : path), path.length, r, 5), ropeMat));
+
   const fac = ctx.fac = new Facilities({ T, R, world, renderer, research: ctx.research, index: ctx.kitIndex, resort: RESORT, known: RESORT === "copper" ? LIFT_KIND : null });
   fac.liftKits = ctx.liftKits;
   const altOf = (q) => Math.round(T.data.hmin + T.heightAt(q.x, q.z));
   // Chairs evenly round the loop with ours as one of them: the gap is shrunk a touch so the last
   // chair ahead never lands on ours.
-  const n = Math.max(1, Math.floor(line.total / CHAIR_GAP)); CHAIR_STEP = line.total / (n + 1); ctx.chairN = n;
-  const mine = fac.rideLift({ line, spec: SPEC, lift: ctx.lift, rider, alt: altOf, seat: SEAT, myPos: { x: MY_SEAT } });
+  const n = TRAM ? 1 : Math.max(1, Math.floor(line.total / CHAIR_GAP)); CHAIR_STEP = TRAM ? line.total : line.total / (n + 1); ctx.chairN = n; // a tram: the one other cabin
+  const mine = fac.rideLift({ line, spec: SPEC, lift: ctx.lift, rider, alt: altOf, seat: SEAT, myPos: { x: MY_SEAT, z: seatZ(MY_SEAT) } });
   myChair = mine.myChair; myBubble = mine.myBubble; topTerm = mine.topTerm;
   myBubble.visible = HAS_BUBBLE;
   if (ctx.night > 0) for (const t of [line.towers[0].p, line.towers[line.towers.length - 1].p]) { // the stations are lit at night
@@ -2629,7 +2640,10 @@ async function main() {
   setInterval(() => COND.live && pill.show(), 60000);
 
   // Ride a stretch of the line over and over: from a quarter of the way up to about two thirds.
-  const d0 = TRIP ? 14 : line.total * 0.22, d1 = TRIP ? line.total - (TERMINAL[SPEC.top].unload || 9) : line.total * 0.66; // from the loading point to the unload ramp
+  const d0 = TRIP ? (TRAM ? 0 : 14) : line.total * 0.22, d1 = TRIP ? line.total - (TERMINAL[SPEC.top].unload ?? 9) : line.total * 0.66; // from the loading point to the unload ramp (a tram: dock to dock)
+  // The pace along the line: a tram eases out of its dock and into the next (lift-core.js tramPace), a chair keeps its speed.
+  const pace = (x) => (TRAM ? tramPace(x, line.total) : 1);
+  const secs = (a, b, v = SPEED * 3) => { let s = 0; for (let x = a; x < b; x += 2) s += Math.min(2, b - x) / (v * pace(x)); return s; }; // the time from a to b
   let fast = false, arrived = false, paused = false, rate = 1;
   const fastBtn = $("fast");
   fastBtn.hidden = !TRIP;
@@ -2647,7 +2661,7 @@ async function main() {
     $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.classList.toggle("one", rate === 1); };
     $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
   }
-  if (TRIP) $("weather").insertAdjacentHTML("beforeend", `<div class="cell"><img src="assets/icons/lift.png?v=1" alt=""><b>${(() => { const s = (d1 - d0) / (SPEED * 3); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; })()}</b>${t("坐到山顶")}</div>`);
+  if (TRIP) $("weather").insertAdjacentHTML("beforeend", `<div class="cell"><img src="assets/icons/lift.png?v=1" alt=""><b>${(() => { const s = secs(d0, d1); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; })()}</b>${t("坐到山顶")}</div>`);
   // Keep where we are, every couple of seconds and on the way out, for "continue" on the start page.
   let savedAt = 0;
   const keep = () => { if (!TRIP) return; const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0)));
@@ -2667,6 +2681,9 @@ async function main() {
   if (TRIP && params.get("sync")) d = Math.min(d1, d0 + (Math.max(0, Date.now() - Number(params.get("sync"))) / 1000) * SPEED * 3);
   const p = new THREE.Vector3(), q = new THREE.Vector3(), m = new THREE.Matrix4(), rot = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
   const bOpen = bubbleMatrix(1), bShut = bubbleMatrix(0), bm2 = new THREE.Matrix4();
+  // The way the line runs at d (4 m of it; at the very end the last 4 m: a tram docks at the line's end).
+  const _ha = new THREE.Vector3(), headAt = (x, out) => { const a = Math.max(0, Math.min(x, line.total - 4)); along(line.up, a, _ha); return along(line.up, a + 4, out).sub(_ha); };
+
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
   const bubbleBtn = $("bubble");
   const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; $("bubbleHint").classList.toggle("down", !open); };
@@ -2690,9 +2707,10 @@ async function main() {
   // Riding together (together.js): friends on the same shared trip, live. Nothing at all when riding alone.
   const together = rideTogether({ scene, camera, renderer, T, R, lift, line, ctx, top, along, resort: RESORT, trip: TRIP, d0, d1,
     get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,
-    speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate)),
-    seat: () => ({ xs: SEAT_X, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN, cabin: CABIN }),
-    setSeat: (x, snap = false) => { MY_SEAT = x; if (snap) ctx.rider.position.x = x; }, setBubble, offLift, withResort, party }); // not snapped: the rider slides over (below)
+    speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate) * pace(d)),
+    seat: () => ({ xs: SEAT_X, zs: SEAT.zs || null, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN, cabin: CABIN, stand: !!SEAT.stand, tram: TRAM }),
+    setSeat: (x, snap = false) => { MY_SEAT = x; if (snap) { ctx.rider.position.x = x; ctx.rider.position.z = seatZ(x); } }, setBubble,
+ offLift, withResort, party }); // not snapped: the rider slides over (below)
   myChair.rotation.order = "YXZ"; // the boarding swing turns about the chair's own cross bar
   // My bubble's glass, and a clearer copy for riding with a friend (the camera looks through it at us).
   const glassMats = HAS_BUBBLE && !CABIN && myBubble.children[0]?.material ? [myBubble.children[0].material, Object.assign(myBubble.children[0].material.clone(), { opacity: 0.12, transparent: true })] : null;
@@ -2710,15 +2728,15 @@ async function main() {
     sight.occOn.value = 0; // the trees go see-through only while skiing (stepSki turns it on)
     if (flakes.visible) flakes.userData.step(dt, camera.position);
     if (skipping && !arrived) { const u = Math.min(1, (now - skipping.t0) / 2200); d = skipping.from + (d1 - skipping.from) * ease(u) + (u >= 1 ? 1 : 0); }
-    else if (!params.has("still") && !arrived && !paused && !together.held()) d += SPEED * (fast ? 20 : 3 * rate) * dt; // held: waiting at the loading point for a friend
+    else if (!params.has("still") && !arrived && !paused && !together.held()) d += SPEED * (fast ? 20 : 3 * rate) * pace(d) * dt; // held: waiting at the loading point for a friend
     if (d > d1) {
       if (TRIP) {
         d = d1;
         if (!arrived) {
           offLift();
           // Put our chair at the unload point first: after "skip" it was still where it last was.
-          along(line.up, d, p); along(line.up, d + 4, q);
-          myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0); myChair.updateMatrixWorld(true);
+          along(line.up, d, p); headAt(d, q);
+          myChair.position.copy(p); myChair.rotation.set(0, Math.atan2(q.x, q.z), 0); myChair.updateMatrixWorld(true);
           top.start(now);
           atTop();
         }
@@ -2726,17 +2744,17 @@ async function main() {
     }
     if (TRIP && now - savedAt > 2000) { savedAt = now; keep(); }
     if (TRIP && !arrived) {
-      $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins((d1 - d) / (SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
-      const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = (d1 - d0) / (SPEED * 3);
+      $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins(secs(d, d1, SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
+      const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = secs(d0, d1);
       document.querySelector("#rideBar .fill").style.width = `${u * 100}%`; document.querySelector("#rideBar .knob").style.left = $("rbTime").style.left = `${u * 100}%`;
       if (document.activeElement !== $("rbSeek")) $("rbSeek").value = Math.round(u * 1000);
-      $("rbTime").textContent = `${clock(u * full)} / ${clock(full)}`;
+      $("rbTime").textContent = `${clock(full - secs(d, d1))} / ${clock(full)}`;
     }
-    along(line.up, d, p); along(line.up, d + 4, q);
-    const yaw = Math.atan2(q.x - p.x, q.z - p.z);
+    along(line.up, d, p); headAt(d, q);
+    const yaw = Math.atan2(q.x, q.z);
     const brd = together.boarding(now); // riding together: a friend just sat down (the chair swings), or I'm sitting down
     myChair.position.copy(p);
-    myChair.rotation.set(arrived ? 0 : brd?.swing || 0, yaw, 0);
+    myChair.rotation.set(arrived || SEAT.stand ? 0 : brd?.swing || 0, yaw, 0); // the big tram cabin does not swing as a chair does
     // The other chairs keep their spacing from ours; the down line runs the other way.
     ctx.fac.cam.copy(camera.position);
     ctx.fac.placeChairs(line, d, CHAIR_STEP, ctx.chairN, along, bOpen, bShut, CABIN);
@@ -2758,7 +2776,8 @@ async function main() {
     party.setSub(!top.phase && !arrived ? "lift" : top.phase === "ski" || top.phase === "hike" ? (top.live?.().ended ? "end" : "ski") : top.phase === "pick" ? "pick" : "top");
     if (top.phase) { top.step(now, dt); together.frame(now, dt); if (top.render(now / 1000)) return; sun.position.copy(top.focus).addScaledVector(sun.userData.dir, 600); sun.target.position.copy(top.focus); names.visible = top.phase !== "ski"; fadeNames(names, camera); ctx.fac.update(camera.position, dt); renderer.render(scene, camera); top.hud?.(); return; }
     ctx.rider.position.x += (MY_SEAT - ctx.rider.position.x) * Math.min(1, dt * 5); // sliding over to another seat
-    if (brd?.stand != null) standBoarder(ctx.rider, brd.stand); else sit(ctx.rider, look.yaw, together.mate());
+    if (SEAT.stand) { ctx.rider.position.z += (seatZ(MY_SEAT) - ctx.rider.position.z) * Math.min(1, dt * 5); cabinStandBoarder(ctx.rider); } // standing in the tram, the board held by the side
+    else if (brd?.stand != null) standBoarder(ctx.rider, brd.stand); else sit(ctx.rider, look.yaw, together.mate());
     const dir = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), view = dir.applyAxisAngle(Y, look.yaw);
     const head = myChair.position.clone().add(new THREE.Vector3(Math.cos(yaw) * MY_SEAT, SEAT.top + 0.86, -Math.sin(yaw) * MY_SEAT));
     // Behind a cabin at window height, looking in through its back glass. Behind and above a chair, far
@@ -2771,7 +2790,18 @@ async function main() {
     const e = Math.min(d + 30, line.total); // 30 m of line ahead, even at the very top
     const ahead = along(line.up, e, new THREE.Vector3()).sub(along(line.up, e - 30, new THREE.Vector3())).add(along(line.up, d, new THREE.Vector3())).sub(head).applyAxisAngle(Y, look.yaw);
     const aim = head.clone().add(ahead).add(new THREE.Vector3(0, -12 + 30 * Math.tan(look.pitch), 0));
-    if (CABIN) camera.position.copy(head).addScaledVector(view, -4.2).setY(myChair.position.y + SEAT.glassY);
+    if (SEAT.stand) {
+      // Standing in the tram: our eyes from the cabin's middle, 3.4 m behind the rider (who stands by the front
+      // glass) at a standing height, turning with the phone: ahead, the rider, the front glass and the line;
+      // to the sides, the side glass and the other cabin going by. Never outside the glass (SEAT.room: half-width,
+      // half-length, floor, roof).
+      const [hw, hl, fl] = SEAT.room, ox = MY_SEAT, oz = seatZ(MY_SEAT);
+      const eye = new THREE.Vector3(clamp(ox * 0.3, -hw + 0.3, hw - 0.3), fl + 1.65, clamp(oz - 3.4, -hl + 0.3, hl - 0.3));
+      myChair.updateMatrixWorld(true); camera.position.copy(myChair.localToWorld(eye));
+      aim.copy(camera.position).addScaledVector(view, 30).add(new THREE.Vector3(0, -2.5 + 30 * Math.tan(look.pitch), 0));
+
+    } else if (CABIN) camera.position.copy(head).addScaledVector(view, -4.2).setY(myChair.position.y + SEAT.glassY);
+
     else {
       const cx = MY_SEAT * 0.3, half = Math.max(...SEAT_X.map((x) => Math.abs(x - cx))) + 0.65;
       const tanH = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect, open = TRIP ? clamp(Math.min(d - d0, d1 - d) / 30, 0, 1) : 1; // 0 in a terminal: close in, under its roof

@@ -40,7 +40,8 @@
    ],
    "cabin_model_kit": "tram_cabin",
    "tower_model_kit": "tower_tram",
-   "note_kit": "A jig-back tram: two cabins, no loop. The kit has tram_cabin, tower_tram, tram_dock_bottom and tram_dock_top; the ride still draws a cable_car as a gondola until it learns to run two cabins to and fro."
+   "note_kit": "A jig-back tram: two cabins, no loop. The kit has tram_cabin, tower_tram, tram_dock_bottom and tram_dock_top; the ride runs it so (facilities.js spec.tram, kitworld.js, ride.js)."
+
   },
   "31845482": {
    "name": "Peruvian",

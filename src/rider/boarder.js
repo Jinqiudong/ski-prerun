@@ -699,6 +699,23 @@ export function idleBoarder(root) {
   mix(u); radioOver(u, dt); finish(root);
 }
 
+// Standing in a tram's cabin (ride.js, together.js), facing the way it goes: the board off the feet and held by
+// the side, as Board_Carry holds it, the walk stopped at the moment its feet pass (CARRY_STILL, a share of the
+// clip); skis stay on (Ski_Stand, the poles on the floor); an animal stands as it does at the top.
+export const CARRY_STILL = 0.5;
+export function cabinStandBoarder(root) {
+  if (root.userData.kind === "animal") return idleAnimal(root);
+  if (root.userData.kind === "ski") return stillSkier(root, { stand: 1 });
+  const u = root.userData, dt = tick(u);
+  start(root); u.flip = u.goofy;
+  u.lean.position.set(0, 0, 0); u.yaw.position.set(0, 0, 0); u.model.position.x = u.model.position.z = 0;
+  faceForward(u);
+  if (A_(u, "carry")) at(u.A.carry, CARRY_STILL);
+  weights(u, A_(u, "carry") ? { carry: 1 } : A_(u, "idle") ? { idle: 1 } : { stance: 1 });
+  holdProp(u.C, null);
+  mix(u); radioOver(u, dt); finish(root);
+}
+
 // On foot, the board carried (a hike-to): Board_Carry's walk at its own pace, bobbing a little with each
 // step (phase in steps).
 export function hikeBoarder(root, phase) {

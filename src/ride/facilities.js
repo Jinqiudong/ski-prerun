@@ -14,10 +14,10 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { texCap, keepBitmap, PHONE, lite } from "../core/detail.js?v=1";
 
-const VER = 9;
+const VER = 10;
 const BASE = "models/facilities/glb/"; // relative to look.html
 export const CHARCOAL = "#3b4048";
-const CARRIERS = ["chondola_chair", "chondola_cabin", "chair2", "chair3", "chair4_fixed", "chair4", "chair6", "chair6_bubble", "chair8_bubble", "gondola6", "gondola", "gondola10", "cabriolet", "tbar", "platter"];
+const CARRIERS = ["chondola_chair", "chondola_cabin", "chair2", "chair3", "chair4_fixed", "chair4", "chair6", "chair6_bubble", "chair8_bubble", "gondola6", "gondola", "gondola10", "cabriolet", "tbar", "platter", "tram_cabin"];
 const BUILDINGS = ["restaurant", "firstaid", "base_lodge", "warming_hut", "yurt", "restroom", "ticket_office"];
 
 // ---------- What each real lift is ----------
@@ -57,9 +57,12 @@ export function liftSpec(lift, research, known, index = null) {
   const bubble = !!(r.bubble ?? (known ? known.bubble : lift.bubble));
   const typed = [r.model, r.carrier, r.type].find((t) => CARRIERS.includes(t));
   const type = r.type; // the research's lift type
-  // A tram (aerialway=cable_car: Snowbird's Aerial Tram, Snowbasin's Allen Peak Tram) has no kit model of its
-  // own yet: it is drawn as gondola cabins on a loop, and ridden like one (it really runs to and fro).
-  const cabin = typed ? /^gondola|cabriolet/.test(typed) : type ? type === "gondola" || type === "cabriolet" || type === "tram" : lift.kind === "gondola" || lift.kind === "cable_car";
+  // A tram (aerialway=cable_car: Snowbird's Aerial Tram, Snowbasin's Allen Peak Tram) runs to and fro: two
+  // cabins, one on each track rope, no loop (`tram`; ride.js and kitworld.js run it so). Snowbird's has its
+  // own cabin, towers and docks in the kit; another tram is drawn with gondola cabins in gondola stations
+  // (the big tram cabin hangs 8.9 m under its rope: it fits no generic station).
+  const tram = type ? type === "tram" : lift.kind === "cable_car";
+  const cabin = typed ? /^gondola|cabriolet|tram_cabin/.test(typed) : type ? type === "gondola" || type === "cabriolet" || tram : lift.kind === "gondola" || tram;
   const surface = type ? ["platter", "tbar", "rope_tow", "j-bar"].includes(type) : ["t-bar", "j-bar", "platter", "drag_lift", "rope_tow"].includes(lift.kind);
   const detachable = !!(type ? type === "detach_chair" || cabin || type === "chondola" : r.detachable ?? lift.detachable ?? (cabin || seats >= 6 || bubble || /express/i.test(lift.name)));
   let carrier = typed;
@@ -76,20 +79,21 @@ export function liftSpec(lift, research, known, index = null) {
   const named = modelsFor(index, lift.name), own = named.filter((e) => TERMINAL[e.name] || CARRIERS.includes(e.name));
   const ownCarrier = own.find((e) => e.family === "lifts" && e.name !== "chondola_cabin")?.name;
   if (ownCarrier) carrier = ownCarrier;
-  const isCabin = /^gondola|cabriolet/.test(carrier || "");
-  const term = isCabin ? ["gondola_station", "gondola_station"] : detachable ? ["terminal_detach", "terminal_detach_top"] : ["terminal_fixed", "terminal_fixed"];
+  const big = carrier === "tram_cabin"; // the tram's own cabin rides only into the tram's own docks
+  const isCabin = big || /^gondola|cabriolet/.test(carrier || "");
+  const term = big ? ["tram_dock_bottom", "tram_dock_top"] : isCabin ? ["gondola_station", "gondola_station"] : detachable ? ["terminal_detach", "terminal_detach_top"] : ["terminal_fixed", "terminal_fixed"];
   const bottomOwn = own.find((e) => e.family === "stations" && TERMINAL[e.name] && !TERMINAL[e.name].topOnly);
   const topOwn = own.find((e) => TERMINAL[e.name]?.topOnly);
   // The research may name the hood itself (terminal_model), which wins over a name match: two resorts can
   // have a lift of the same name (Summit Express at Buttermilk and at Solitude) with different makers.
   const hood = TERMINAL[r.terminal_model] && !TERMINAL[r.terminal_model].topOnly ? r.terminal_model : bottomOwn?.name;
   if (hood && detachable && !isCabin) term[0] = term[1] = hood; // the maker's hood at both ends (turned round at the top)
-  if (topOwn) term[1] = topOwn.name;
+  if (topOwn && !big) term[1] = topOwn.name;
   // Its own towers (the 40 m lattice towers of the Silver Queen): the rope at the model's height.
   const tw = named.find((e) => e.family === "lifts" && /^tower_/.test(e.name) && e.rope);
   return {
     cabinCarrier: own.some((e) => e.name === "chondola_cabin") ? "chondola_cabin" : null,
-    carrier, cabin: isCabin, surface, seats, detachable,
+    carrier, cabin: isCabin, tram, surface, seats, detachable, tint: isCabin && !big, // a kit cabin's graphite body is tinted; the tram's has its own paint
     bubble: /bubble/.test(carrier || ""), bottom: term[0], top: term[1],
     gauge: TERMINAL[term[0]].gauge, tower: tw?.name || null, towerRope: tw ? tw.rope[1] : null,
     ...colours(r, known, isCabin), researched: !!r.type, chondola: type === "chondola" || lift.kind === "mixed_lift" && !!r.cabin_model, note: r.type === "chondola" ? "chondola: drawn as its chairs" : null,
@@ -104,7 +108,7 @@ function colours(r, known, isCabin) {
   return {
     color: chair, terminalColor: terminal, towerColor: c.tower || terminal, towerBaseColor: c.tower_base || null,
     bubbleColor: c.bubble || known?.bubbleColor || null, bandColor: c.terminal_band || c.terminal_stripe || null,
-    cabinColor: c.cabin || (isCabin && c.cabin_groups?.[0]) || null, cabinGroups: isCabin && Array.isArray(c.cabin_groups) ? c.cabin_groups : null,
+    cabinColor: c.cabin || (isCabin && c.cabin_groups?.[0]) || null, cabinColor2: c.cabin_2 || null, cabinGroups: isCabin && Array.isArray(c.cabin_groups) ? c.cabin_groups : null,
     cabinText: isCabin && r.cabin_text ? { text: r.cabin_text, color: c.cabin_logo || "#ffffff" } : null,
   };
 }
@@ -121,6 +125,11 @@ export const TERMINAL = {
   // Landmark top stations (models/facilities/glb/signature.json): the line ends at the bullwheel (bx, bull).
   thunderhead_lodge: { gauge: 3.0, ropeH: 9.5, bull: 0, bx: 22.5, box: [-28, 31, -19.6, 17.4], stand: [12, 0.5, -23], unload: 8, topOnly: true },
   silver_queen_top: { gauge: 3.0, ropeH: 4.25, bull: 9, box: [-15.5, 7, -15, 15], stand: [-4, 0.5, -10], unload: 10, topOnly: true },
+  // Snowbird's Aerial Tram docks (signature.json, models/facilities/blender/utah.py): the two cabins on track
+  // ropes 6 m either side of the middle; the line ends where a docked cabin's middle stops (`bull`), its floor
+  // on the dock's (the rope 8.9 m over it). At the top the rider takes the stairs down to the snow.
+  tram_dock_bottom: { gauge: 6.0, ropeH: 18.4, bull: 2.0, box: [-29, 29, -11, 15], unload: 0, dock: true },
+  tram_dock_top: { gauge: 6.0, ropeH: 13.0, bull: -5.5, box: [-11, 11, -7, 7.5], stand: [12.6, 0.2, -1.5], unload: 0, dock: true },
 };
 // The makers' detachable hoods (stations.json) stand where terminal_detach does. At the top the same hood is
 // turned round and mirrored (as terminal_fixed is): the bullwheel uphill, the up rope still on its +x
@@ -167,6 +176,15 @@ export function gradePad(T, name, pl, level, margin = 16, blend = 32) {
 // Where a rider sits in each carrier (the game's frame: grip at the origin, +z the way up).
 const DETACH_L = { chair4: 2.5, chair6: 2.7, chondola_chair: 2.7, chair6_bubble: 2.95, chair8_bubble: 3.1 };
 const CABIN = { gondola: [1.7, 2.1], gondola6: [1.5, 2.0], gondola10: [1.95, 2.2] };
+// The tram's cabin (tram_cabin: 3.6 × 8.6 m, its floor 8.76 m under the track ropes): everyone stands, at spots
+// over the front half (+z, uphill), the rider's own (index 1) by the front glass; friends fill 2, 0, then on
+// back (together-core seatOrder). Each spot's x is its own, so a spot is known by its x as a chair's seat is.
+// `top` is where a seat's top would be: the ride stands the rider 0.595 m under it, on the floor.
+const TRAM_FLOOR = -8.74;
+const TRAM_SEAT = {
+  xs: [-0.55, 0.45, 1.15, -1.15, 0.05, -0.35, 0.8, -1.0], zs: [2.75, 2.95, 1.95, 1.75, 1.45, 0.3, 0.45, -0.6],
+  top: TRAM_FLOOR + 0.595, z: 2.95, cabin: true, stand: true, glassY: TRAM_FLOOR + 1.7, room: [1.55, 4.0, TRAM_FLOOR, -6.25],
+};
 export function seatOf(name) {
   if (DETACH_L[name]) {
     const n = +(name.match(/\d/) || [6])[0], L = DETACH_L[name], sw = 0.62;
@@ -174,6 +192,7 @@ export function seatOf(name) {
   }
   if (/^chair/.test(name)) { const n = +name.match(/\d/)[0], sw = 0.56; return { xs: Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * sw), top: -2.2 + 0.045, z: 0.08 }; }
   if (CABIN[name]) { const [d, h] = CABIN[name]; return { xs: [-0.45, 0.45], top: -1.15 - h + 0.65, z: -(d / 2 - 0.36), cabin: true, glassY: -1.15 - h + 0.95 + 0.5 }; }
+  if (name === "tram_cabin") return TRAM_SEAT;
   return { xs: [-0.35, 0.35], top: -3.55 + 0.65, z: 0.25, cabin: true, open: true, glassY: -2.4 }; // the cabriolet: riders stand
 }
 
@@ -357,7 +376,8 @@ export function latticeParts(k, top = 40) {
 // A plain stand-in for a carrier far away.
 export function farCarrier(name) {
   const s = seatOf(name), list = [];
-  if (s.cabin) {
+  if (name === "tram_cabin") list.push(new THREE.BoxGeometry(3.6, 2.7, 8.6).translate(0, -7.55, 0), new THREE.BoxGeometry(0.5, 6.2, 0.8).translate(0, -3.1, 1.0), new THREE.BoxGeometry(1.4, 0.5, 7.2).translate(0, -0.9, 0));
+  else if (s.cabin) {
     const [d, h] = CABIN[name] || [2, 2.2], w = name === "gondola10" ? 2.3 : name === "gondola6" ? 1.7 : 1.95;
     list.push(new THREE.BoxGeometry(w, h, d).translate(0, -1.15 - h / 2, 0), new THREE.BoxGeometry(0.12, 1.1, 0.12).translate(0, -0.6, 0));
   } else {
