@@ -2,7 +2,7 @@
 // brow before a top station, the stations' level stretch untouched.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ropeY, marginAt, worstClearance, clearRope, ROPE_SAG, NEAR_MARGIN, LINE_MARGIN, NO_TOWER } from "../src/ride/lift-core.js";
+import { ropeY, marginAt, worstClearance, clearRope, ROPE_SAG, NEAR_MARGIN, LINE_MARGIN, NO_TOWER, tramPace, tramTowers, jigBack, TRAM_CRAWL, TRAM_EASE } from "../src/ride/lift-core.js";
 
 const DROP = 3.33; // a gondola cabin's floor under the rope
 // A line as ride.js liftLine makes one: stations at both ends (rope 4.25 m over the deck, level for 20 m),
@@ -88,4 +88,32 @@ test("with a tower already at the station's edge, that tower is raised instead",
   assert.equal(r.short, 0);
   assert.ok(r.towers.some((x) => x.raised && x.s === total - 50));
   assert.ok(!r.towers.some((x) => x.added));
+});
+
+// A tram (Snowbird's Aerial Tram, Snowbasin's Allen Peak Tram): two cabins to and fro.
+test("a tram eases out of its dock and into the next, full speed between", () => {
+  assert.equal(tramPace(0, 2400), TRAM_CRAWL);
+  assert.equal(tramPace(2400, 2400), TRAM_CRAWL);
+  assert.equal(tramPace(1200, 2400), 1);
+  assert.equal(tramPace(TRAM_EASE, 2400), 1);
+  assert.ok(tramPace(20, 2400) > TRAM_CRAWL && tramPace(20, 2400) < tramPace(40, 2400));
+});
+
+test("a tram's towers are its line's inner nodes, none in a dock", () => {
+  // Snowbird's Aerial Tram in OpenStreetMap (data/snowbird.json): its towers, and a node 9 m short of the top dock.
+  const pts = [[-549.1, -1443.6], [-316.5, -889.5], [-175.9, -581.5], [-97.6, -394.9], [326.2, 603.7], [388.1, 754.0], [391.6, 762.5]];
+  const s = tramTowers(pts);
+  assert.equal(s.length, 4);
+  for (let i = 1; i < s.length; i++) assert.ok(s[i] > s[i - 1]);
+  assert.ok(Math.abs(s[0] - 601) < 2);
+  assert.deepEqual(tramTowers([[0, 0], [100, 0]]), []);
+});
+
+test("jig-back: a dwell in each dock, up, down; the cabins pass mid-way", () => {
+  const total = 1000, v = 10, dwell = 20;
+  assert.deepEqual(jigBack(5, total, v, dwell), { s: 0, up: false });
+  assert.deepEqual(jigBack(70, total, v, dwell), { s: 500, up: true }); // the other cabin: total - s, the same spot
+  assert.deepEqual(jigBack(130, total, v, dwell), { s: total, up: false });
+  assert.equal(jigBack(170, total, v, dwell).s, 700); // 30 s on its way down
+  assert.deepEqual(jigBack(5 + 2 * (100 + 20), total, v, dwell), { s: 0, up: false }); // round again
 });

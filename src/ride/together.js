@@ -21,7 +21,7 @@
 import * as THREE from "three";
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "../core/i18n.js?v=51";
-import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=29";
+import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, cabinStandBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=30";
 import { ymd } from "../start/trip-intro.js?v=1";
 import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=8";
 import { voiceHere } from "../core/voice.js?v=19";
@@ -123,8 +123,12 @@ export function rideTogether(api) {
   // 一起坐 (party.js): boarded at the call's moment, in the caller's chair.
   const sync = Number(params.get("sync")) || 0, host = sync ? params.get("host") : null, crew = (params.get("crew") || "").split(",").filter((x) => /^[\w-]{4,40}$/.test(x));
   const boardAt = sync || Date.now() - (api.trip && at0 === 0 ? 0 : 60000);
-  const ownChair = `${me}@${boardAt}`;
-  let chairId = host ? `${host}@${sync}` : ownChair, joinedChair = !!host, satWith = new Set(), found = false, pendingFollow = null;
+  // A tram (api.seat().tram) has one cabin going up: everyone riding it up is in it, whenever they boarded, so
+  // its chair id is the lift's own (no owner: nobody's chair to keep pace with), and the cabin's spots are
+  // settled among all of them as a chair's seats are.
+  const tramChair = api.seat().tram ? `tram@${lift.name}` : null;
+  const ownChair = tramChair || `${me}@${boardAt}`;
+  let chairId = tramChair || (host ? `${host}@${sync}` : ownChair), joinedChair = !!host, satWith = new Set(), found = false, pendingFollow = null;
   // My seat: its index in the chair (api.seat().xs) and when I took it. 一起坐: by id among the call's crew,
   // all at the call's moment, so nobody's claims collide.
   const xsOf = () => api.seat().xs, seatIx = () => Math.max(0, xsOf().indexOf(api.seat().x));
@@ -227,7 +231,9 @@ export function rideTogether(api) {
   // Into chair c (a friend's): the first free seat, else the chair behind. Returns true if I sat down in it.
   function takeSeat(f, c, d) {
     const k = freeSeat(chairSeats(chairMembers(c).filter((m) => m.id !== me), xsOf().length), xsOf().length);
-    if (k < 0) { chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k], true); api.d = Math.max(api.d0, d - api.step()); toast(f.avatar, t("坐 {name} 后面那把", { name: esc(f.name) })); last = null; return false; }
+    if (k < 0 && tramChair) { chairId = tramChair; api.d = d; stopHold(); sitTogether(f, true); last = null; return true; } // a full tram: in it all the same
+    if (k < 0) { chairId = ownChair;
+ seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k], true); api.d = Math.max(api.d0, d - api.step()); toast(f.avatar, t("坐 {name} 后面那把", { name: esc(f.name) })); last = null; return false; }
     chairId = c; seat = { k, kt: Date.now() }; api.d = d; api.setSeat(xsOf()[k], true);
     stopHold(); sitTogether(f, true); last = null;
     return true;
@@ -247,6 +253,7 @@ export function rideTogether(api) {
     const r = seatsIn(chairId).get(me);
     if (r === seat.k) return;
     if (r >= 0) { seat = { k: r, kt: Date.now() }; api.setSeat(xsOf()[r]); last = null; return; }
+    if (tramChair) return; // a full tram cabin: there is no cabin behind; stand where you are
     chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k], true); api.d = Math.max(api.d0, api.d - api.step()); last = null;
     toast("lift", t("这把坐满了，坐后面那把"));
   }
@@ -351,7 +358,7 @@ export function rideTogether(api) {
     viewBtn.classList.toggle("on", shared && !camBack);
     if (shared) for (const [img, av] of [[viewBtn.querySelectorAll("img")[0], myAvatar()], [viewBtn.querySelectorAll("img")[1], mates[0].avatar]]) if (img.dataset.av !== av) { img.dataset.av = av; img.src = `assets/icons/${av}.png?v=1`; }
     for (const b of seatGo) {
-      const k = shared ? seatToward(seats, xsOf().length, seat.k, +b.dataset.dir) : -1;
+      const k = shared && !seatInfo().stand ? seatToward(seats, xsOf().length, seat.k, +b.dataset.dir) : -1; // standing in a tram: no seats to change
       b.hidden = k < 0; if (k < 0) continue;
       b.dataset.k = k;
       sv.set(xsOf()[k], seatInfo().top + 0.12, seatInfo().z); api.chair().localToWorld(sv); sv.project(camera);
@@ -471,7 +478,8 @@ export function rideTogether(api) {
       // on their left, +x).
       const x = xs[Math.min(k, xs.length - 1)];
       f.seatX = f.seatX == null || f.seatFrame !== frame ? x : f.seatX + (x - f.seatX) * Math.min(1, dt * 5); f.seatFrame = frame;
-      f.pose = { kind: "lift", frame, seat: new THREE.Vector3(f.seatX, api.seat().top - 0.595, api.seat().z), talk: inMine ? Math.sign(api.seat().x - x) : 0 };
+      const zs = api.seat().zs, stand = inMine && api.seat().stand; // standing in the tram, each at their own spot
+      f.pose = { kind: "lift", frame, seat: new THREE.Vector3(f.seatX, api.seat().top - 0.595, zs ? zs[Math.min(k, zs.length - 1)] : api.seat().z), talk: inMine && !stand ? Math.sign(api.seat().x - x) : 0, stand };
       f.inMine = inMine;
       frame.updateMatrixWorld(true);
       f.pos = frame.localToWorld(f.pose.seat.clone());
@@ -495,7 +503,9 @@ export function rideTogether(api) {
     if (p.kind === "lift") {
       if (m.parent !== p.frame) p.frame.add(m);
       m.position.copy(p.seat); m.quaternion.identity();
-      if (f.sitAt && now - f.sitAt < SIT) standBoarder(m, 1 - ease((now - f.sitAt) / SIT)); // sitting down: standing, then the exit clip's first moment, then seated
+      if (p.stand) cabinStandBoarder(m);
+      else if (f.sitAt && now - f.sitAt < SIT) standBoarder(m, 1 - ease((now - f.sitAt) / SIT)); // sitting down: standing, then the exit clip's first moment, then seated
+
       else sitBoarder(m, Math.sin(now / 2600 + f.id.length) * 0.5, undefined, p.talk);
       return true;
     }

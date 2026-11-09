@@ -5,7 +5,7 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=29";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=30";
 import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
 import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";

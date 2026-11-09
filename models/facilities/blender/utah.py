@@ -177,7 +177,10 @@ def tram_dock_top():
         for z in (bh + h * 0.5, bh + h * 0.85): box((0.8, 0.05, 0.05), (x, -2.0, z), K["GALV"])
     cyl(0.6, 0.15, (2.0, by1 + 0.1, bh - 2.0), M["lightgrey"] if "lightgrey" in M else CG, rot=(PI / 2, 0, 0), verts=20)
     # Each side: the raking frame and the long curved saddle over the cabin's two track ropes.
-    R, yc, ztop = 34.0, -1.0, 16.4
+    # The saddle carries the track ropes at 13.0 where the cabin stops (y = 5.5), so the docked cabin's carriage
+    # runs on it; a long gentle curve, dipping under a metre to its outer end.
+    R, yc = 120.0, -1.0
+    ztop = 13.0 - 0.05 + R - math.sqrt(R * R - (5.5 - yc) ** 2)
     arc = lambda y: ztop - R + math.sqrt(R * R - (y - yc) ** 2)
     for s in (-1, 1):
         xc = s * 6.0; n = 12; y0, y1 = -9.0, 14.0
@@ -188,12 +191,17 @@ def tram_dock_top():
             box((2.5, L, 0.12), c + Vector((0, 0, 0.52)), STL, rot=(a, 0, 0))
             box((2.3, L - 0.1, 0.2), c + Vector((0, 0, 0.7)), SN, rot=(a, 0, 0), bevel=0.06, seg=1, kind="snow")
             for t in (-1, 1): box((0.16, L, 0.18), c + Vector((t * TRAM_TRACK, 0, -0.5)), K["DARK"], rot=(a, 0, 0))
-        legs = [((xc - s * 1.0, -5.5), (xc, -4.0)), ((xc + s * 2.6, -5.5), (xc + s * 0.8, -3.0)), ((xc - s * 1.0, 3.5), (xc, 4.5)), ((xc + s * 2.6, 3.0), (xc + s * 0.8, 6.0)), ((xc + s * 2.6, 9.8), (xc + s * 0.8, 9.5))]
+        # The frame stands clear of the docked cabin (x = xc +-1.85, y 1.2 to 9.8, its carriage up to the ropes):
+        # the legs beside it lean in to the saddle's edges, the inner one stands by the anchor block and reaches
+        # the saddle with an arm over the ropes.
+        legs = [((xc - s * 1.0, -5.5), (xc, -4.0)), ((xc + s * 2.6, -5.5), (xc + s * 0.8, -3.0)), ((xc - s * 2.1, 3.5), (xc - s * 2.1, 4.5)), ((xc + s * 2.6, 3.0), (xc + s * 1.2, 6.0)), ((xc + s * 2.6, 9.8), (xc + s * 1.2, 9.5))]
         for (fx, fy), (tx, ty) in legs:
             LF.rod((fx, fy, zp), (tx, ty, arc(ty) + 0.1), 0.2, STL, verts=8)
+        LF.rod((xc - s * 2.1, 4.5, arc(4.5) + 0.6), (xc, 4.5, arc(4.5) + 0.6), 0.15, STL, verts=8)
         for ya, yb in ((-4.0, 4.5), (4.5, 9.5)):
-            LF.rod((xc + s * 1.6, ya, zp + 2.0), (xc + s * 0.9, yb, arc(yb) - 0.5), 0.1, STL, verts=6)
-            LF.rod((xc + s * 1.6, yb, zp + 2.0), (xc + s * 0.9, ya, arc(ya) - 0.5), 0.1, STL, verts=6)
+            LF.rod((xc + s * 2.4, ya, zp + 2.0), (xc + s * 1.5, yb, arc(yb) - 0.6), 0.1, STL, verts=6)
+            LF.rod((xc + s * 2.4, yb, zp + 2.0), (xc + s * 1.5, ya, arc(ya) - 0.6), 0.1, STL, verts=6)
+
         for z in (zp + 3.0, zp + 7.0): LF.rod((xc + s * 2.0, -5.0, z), (xc + s * 2.0, 9.0, z), 0.09, STL, verts=6)
         for k in range(int((arc(-4.0) - zp) / 0.35)):  # a ladder up the frame
             z = zp + 0.3 + k * 0.35; box((0.5, 0.03, 0.03), (xc + s * 2.2, -5.6, z), K["GALV"])
