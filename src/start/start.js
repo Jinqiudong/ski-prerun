@@ -13,9 +13,9 @@ import { makeEntrance } from "./entrance.js?v=26";
 import { skiStage, colorSkis, tintSkiGear, SKI_COLORS } from "../rider/skier.js?v=1";
 import { addSki } from "../rider/ski.js?v=2";
 import { sportOf } from "../rider/ski-core.js?v=1";
-import { openBookPage, locateIn } from "../ride/roadbook.js?v=29";
+import { openBookPage, locateIn } from "../ride/roadbook.js?v=30";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=49";
-import { playIntro } from "./intro.js?v=35";
+import { playIntro } from "./intro.js?v=36";
 import { flyTo } from "../core/transition.js?v=19";
 import { startParty } from "../core/party.js?v=20";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
@@ -643,7 +643,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=48");
+    const { Trips } = await import("./trips.js?v=49");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");

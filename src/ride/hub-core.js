@@ -7,7 +7,7 @@
 // Each place holds at most one way per difficulty (the hardest run on it): the quickest, timed with the
 // planner's pace (route.js PACE, an estimate). Ski only: a way that needs another lift is not a way down.
 // Used by ride.js (the page itself, and the chained "坐上去以后能去的" from the next lift's top); tested.
-import { LEVELS, planTree, nodesNear } from "../core/route.js?v=7";
+import { LEVELS, planTree, nodesNear } from "../core/route.js?v=8";
 
 export const VILLAGE_R = 350; // m: a lift whose bottom is this close to a village leaves from that village
 export const MAX_MIN = 20; // minutes: a lift further than this (by the quickest way) is not offered

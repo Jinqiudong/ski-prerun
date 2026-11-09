@@ -5,7 +5,7 @@
 // moguls, maybe powder), each with where it comes from. The map draws only what was ridden.
 // The rules (steps → legs, areas, the map's lines) are in roadbook-core.js; the run facts in snow-core.js.
 import { t, EN_ON } from "../core/i18n.js?v=49";
-import { legsOf, blocksOf, mapItems, runOfSeg, lapTimes } from "./roadbook-core.js?v=2";
+import { legsOf, blocksOf, mapItems, runOfSeg, lapTimes } from "./roadbook-core.js?v=3";
 import { runFacts, powderAmount, powderField } from "./snow-core.js?v=3";
 const KEY = "prerunBook", GAP = 3 * 3600e3, KEEP = 30;
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };

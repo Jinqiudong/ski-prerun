@@ -1,0 +1,956 @@
+{
+ "copper": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/copper-mountain/ski-lifts/",
+   "https://liftblog.com/copper-mountain-co/",
+   "https://www.fs.usda.gov/r02/whiteriver/projects/62865",
+   "https://gearjunkie.com/news/copper-mountain-tucker-lift/"
+  ],
+  "lifts": [
+   {
+    "name": "American Eagle",
+    "type": "chair",
+    "note": "2018 chondola (6-seat chairs + 8-seat cabins)"
+   },
+   {
+    "name": "American Flyer",
+    "type": "chair",
+    "note": "2018 high-speed 6, bubble"
+   },
+   {
+    "name": "Timberline Express",
+    "type": "chair",
+    "note": "replaced 2024 with high-speed 6 (same name; old detachable quad removed)"
+   },
+   {
+    "name": "Super Bee",
+    "type": "chair",
+    "note": "high-speed 6"
+   },
+   {
+    "name": "Kokomo Express",
+    "type": "chair"
+   },
+   {
+    "name": "Woodward Express",
+    "type": "chair"
+   },
+   {
+    "name": "Excelerator",
+    "type": "chair",
+    "note": "high-speed quad, not replaced (upgrade only in master plan)"
+   },
+   {
+    "name": "Three Bears",
+    "type": "chair"
+   },
+   {
+    "name": "Resolution",
+    "type": "chair"
+   },
+   {
+    "name": "Sierra",
+    "type": "chair"
+   },
+   {
+    "name": "Rendezvous",
+    "type": "chair"
+   },
+   {
+    "name": "Lumberjack",
+    "type": "chair",
+    "note": "replacement (Lumberjack Express) only planned ~2027"
+   },
+   {
+    "name": "Blackjack",
+    "type": "chair"
+   },
+   {
+    "name": "Mountain Chief",
+    "type": "chair"
+   },
+   {
+    "name": "Pitchfork",
+    "type": "chair"
+   },
+   {
+    "name": "Alpine",
+    "type": "chair"
+   },
+   {
+    "name": "Storm King",
+    "type": "surface",
+    "note": "T-bar"
+   },
+   {
+    "name": "Celebrity Ridge",
+    "type": "surface",
+    "note": "J-bar/platter"
+   },
+   {
+    "name": "Gem",
+    "type": "surface"
+   },
+   {
+    "name": "Stinger",
+    "type": "carpet"
+   },
+   {
+    "name": "Easy Rider",
+    "type": "carpet"
+   },
+   {
+    "name": "Rugrat",
+    "type": "carpet"
+   },
+   {
+    "name": "Slingshot",
+    "type": "carpet"
+   },
+   {
+    "name": "Glide",
+    "type": "carpet"
+   }
+  ],
+  "renamed": [],
+  "removed": [
+   {
+    "name": "Timberline Express (old detachable quad)",
+    "note": "Replaced in place by a high-speed six-pack keeping the name Timberline Express (skiresort YOC 2024; liftblog comment says done by Jan 2025). Not a name change.",
+    "source": "https://www.skiresort.com/en/ski-resort/copper-mountain/ski-lifts/"
+   }
+  ],
+  "not_public_or_other_resort": [],
+  "areas": [
+   "West Village",
+   "Center Village",
+   "East Village",
+   "Union Peak / Union Bowl",
+   "Spaulding Bowl",
+   "Copper Bowl",
+   "Resolution Bowl",
+   "Enchanted Forest",
+   "Tucker Mountain (hike/cat-access expert terrain)",
+   "Celebrity Ridge",
+   "Woodward terrain parks"
+  ],
+  "confidence": "medium",
+  "notes": "All 23 of our names are current. Only official lift missing from ours: Glide (carpet). Rugrat is spelled 'Rugrat' on skiresort (ours 'Rug Rat'). No new lifts or renames for 2025/26 found. Tucker Mountain chairlift (proposed 2019) was not built. Excelerator not replaced. Official copper status page was not reachable (404)."
+ },
+ "winterpark": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/winter-park-resort/ski-lifts/",
+   "https://blog.winterparkresort.com/whats-new-at-winter-park-resort-for-winter-2025-26/",
+   "https://peakrankings.com/content/winter-park-replacing-pioneer-express-for-2023-24-will-add-critical-mid-station",
+   "https://liftblog.com/winter-park-co/"
+  ],
+  "lifts": [
+   {
+    "name": "The Gondola",
+    "type": "gondola",
+    "note": "2018"
+   },
+   {
+    "name": "Village Cabriolet",
+    "type": "gondola",
+    "note": "cabriolet, village transport"
+   },
+   {
+    "name": "Wild Spur Express",
+    "type": "chair",
+    "note": "2023 high-speed 6, replaced Pioneer Express"
+   },
+   {
+    "name": "Sunnyside Express",
+    "type": "chair",
+    "note": "2019 high-speed 6"
+   },
+   {
+    "name": "Panoramic Express",
+    "type": "chair"
+   },
+   {
+    "name": "Super Gauge Express",
+    "type": "chair"
+   },
+   {
+    "name": "Explorer Express",
+    "type": "chair",
+    "note": "formerly Eskimo"
+   },
+   {
+    "name": "Olympia Express",
+    "type": "chair"
+   },
+   {
+    "name": "Prospector Express",
+    "type": "chair"
+   },
+   {
+    "name": "Gemini Express",
+    "type": "chair"
+   },
+   {
+    "name": "High Lonesome Express",
+    "type": "chair",
+    "note": "still the 1991 quad; no replacement found"
+   },
+   {
+    "name": "Eagle Wind",
+    "type": "chair"
+   },
+   {
+    "name": "Arrow",
+    "type": "chair"
+   },
+   {
+    "name": "Endeavor",
+    "type": "chair",
+    "note": "replacement only proposed"
+   },
+   {
+    "name": "Iron Horse",
+    "type": "chair"
+   },
+   {
+    "name": "Pony Express",
+    "type": "chair"
+   },
+   {
+    "name": "Galloping Goose",
+    "type": "chair"
+   },
+   {
+    "name": "Challenger",
+    "type": "chair"
+   },
+   {
+    "name": "Discovery",
+    "type": "chair"
+   },
+   {
+    "name": "Looking Glass",
+    "type": "chair"
+   },
+   {
+    "name": "Spirit",
+    "type": "surface",
+    "note": "J-bar per skiresort"
+   },
+   {
+    "name": "Lariat",
+    "type": "surface",
+    "note": "rope tow"
+   },
+   {
+    "name": "Comet",
+    "type": "carpet"
+   },
+   {
+    "name": "Meteor",
+    "type": "carpet"
+   },
+   {
+    "name": "Cirque Sled",
+    "type": "carpet",
+    "note": "listed by skiresort as people mover; unclear if a lift in the usual sense (low confidence)"
+   }
+  ],
+  "renamed": [
+   {
+    "from": "Pioneer Express",
+    "to": "Wild Spur Express",
+    "source": "https://www.skiresort.com/en/ski-resort/winter-park-resort/ski-lifts/"
+   },
+   {
+    "from": "Eskimo Express",
+    "to": "Explorer Express",
+    "source": "https://www.skiresort.com/en/ski-resort/winter-park-resort/ski-lifts/"
+   }
+  ],
+  "removed": [
+   {
+    "name": "Pioneer Express",
+    "note": "replaced by Wild Spur Express (with mid-station) for 2023/24",
+    "source": "https://peakrankings.com/content/winter-park-replacing-pioneer-express-for-2023-24-will-add-critical-mid-station"
+   },
+   {
+    "name": "Sunnyside (triple)",
+    "note": "replaced by Sunnyside Express six-pack in 2019 (before 2022)",
+    "source": "https://businessden.com/alterra-announces-off-season-plans-winter-park-to-spend-6m-on-faster-mary-jane-lift/"
+   }
+  ],
+  "not_public_or_other_resort": [
+   {
+    "name": "Tubing (carpet)",
+    "note": "tubing hill carpet, not a ski lift"
+   }
+  ],
+  "areas": [
+   "Winter Park (front side)",
+   "Mary Jane",
+   "Parsenn Bowl",
+   "Vasquez Ridge",
+   "Vasquez Cirque (hike/sled access)",
+   "Cooper Creek Glades",
+   "Eagle Wind",
+   "Panoramic / Panorama area",
+   "Discovery Park (adaptive/beginner)",
+   "Village / base"
+  ],
+  "confidence": "high",
+  "notes": "All 24 of our ski-lift names match the current list. Our Tubing carpet is not a ski lift. Only possible miss: 'Cirque Sled' (people mover per skiresort; low importance). No lift changes for 2025/26 (resort 'what's new' lists only snowmaking/dining). Sunnyside and High Lonesome unchanged."
+ },
+ "steamboat": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/steamboat/ski-lifts/",
+   "https://www.fs.usda.gov/r02/mbrtb/projects/66977",
+   "https://liftblog.com/tag/steamboat/",
+   "https://liftblog.com/2026-new-lifts/",
+   "https://www.kunc.org/news/2025-04-02/steamboat-resort-prepares-for-spring-operations",
+   "https://unofficialnetworks.com/2026/10/25/colorado-ski-resort-free-magic-carpet-beginners/",
+   "https://steamboatpilot.com/news/steamboat-resort-plans-to-open-completed-wild-blue-gondola-600-additional-acres-by-friday"
+  ],
+  "lifts": [
+   {
+    "name": "Steamboat Gondola",
+    "type": "gondola"
+   },
+   {
+    "name": "Wild Blue Gondola I",
+    "type": "gondola",
+    "note": "2022, base to Greenhorn Ranch"
+   },
+   {
+    "name": "Wild Blue Gondola II",
+    "type": "gondola",
+    "note": "2023, Greenhorn Ranch to Sunshine Peak"
+   },
+   {
+    "name": "Wildhorse Gondola",
+    "type": "gondola",
+    "note": "pulse gondola from Wildhorse Meadows to base area"
+   },
+   {
+    "name": "Christie Peak Express",
+    "type": "chair"
+   },
+   {
+    "name": "Mahogany Ridge Express",
+    "type": "chair",
+    "note": "2023, serves Fish Creek Canyon expansion"
+   },
+   {
+    "name": "Greenhorn Ranch Express",
+    "type": "chair",
+    "note": "2022"
+   },
+   {
+    "name": "Elkhead Express",
+    "type": "chair"
+   },
+   {
+    "name": "Sunshine Express",
+    "type": "chair",
+    "note": "still 2006 quad in 2025/26; six-pack replacement approved Mar/Apr 2025 but not confirmed built"
+   },
+   {
+    "name": "Pony Express",
+    "type": "chair"
+   },
+   {
+    "name": "Thunderhead Express",
+    "type": "chair"
+   },
+   {
+    "name": "Storm Peak Express",
+    "type": "chair"
+   },
+   {
+    "name": "Sundown Express",
+    "type": "chair"
+   },
+   {
+    "name": "Burgess Creek",
+    "type": "chair"
+   },
+   {
+    "name": "Morningside",
+    "type": "chair"
+   },
+   {
+    "name": "Four Points",
+    "type": "chair"
+   },
+   {
+    "name": "South Peak",
+    "type": "chair"
+   },
+   {
+    "name": "Bar UE",
+    "type": "chair"
+   },
+   {
+    "name": "Bashor",
+    "type": "chair"
+   },
+   {
+    "name": "Wrangler",
+    "type": "carpet"
+   },
+   {
+    "name": "Buckaroo",
+    "type": "carpet"
+   },
+   {
+    "name": "Two Whoops",
+    "type": "carpet",
+    "note": "pair of covered carpets at Greenhorn Ranch"
+   }
+  ],
+  "renamed": [],
+  "removed": [
+   {
+    "name": "Preview",
+    "note": "removed spring 2022 during base-area redevelopment (liftblog comments; low confidence)",
+    "source": "https://liftblog.com/steamboat-co/"
+   },
+   {
+    "name": "Priest Creek (double)",
+    "note": "long closed; chairs gone, towers removed 2024",
+    "source": "https://liftblog.com/tag/steamboat/"
+   }
+  ],
+  "not_public_or_other_resort": [],
+  "areas": [
+   "Base / Gondola Square",
+   "Christie Peak",
+   "Greenhorn Ranch (beginner)",
+   "Thunderhead",
+   "Storm Peak",
+   "Mt. Werner",
+   "Sunshine Peak / Sunshine Bowl",
+   "Morningside Park",
+   "Priest Creek",
+   "Pioneer Ridge",
+   "Four Points",
+   "Burgess Creek",
+   "Fish Creek Canyon (2023 expansion, Mahogany Ridge Express)",
+   "Closets / Christmas Tree Bowl / Shadows (Storm Peak/Morningside zones)",
+   "Mavericks Superpipe/terrain park"
+  ],
+  "confidence": "medium",
+  "notes": "All 21 of our names are current. Missing from ours: Wildhorse Gondola (resort pulse gondola from Wildhorse Meadows). Sunshine Express six-pack replacement was approved (USFS decision 2025-03-18) but no source shows it built for 2025/26; liftblog commenters say it slipped. Our 'Morningside Lift' = official 'Morningside'. No renames found."
+ },
+ "abasin": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/arapahoe-basin/ski-lifts/",
+   "https://arapahoebasin.com/blog/new-len-ex",
+   "https://www.cbsnews.com/amp/colorado/news/arapahoe-basin-skiing-pali-lift",
+   "https://liftblog.com/arapahoe-basin-co/"
+  ],
+  "lifts": [
+   {
+    "name": "Lenawee Express",
+    "type": "chair",
+    "note": "2022 high-speed 6, replaced Lenawee Mountain triple"
+   },
+   {
+    "name": "Black Mountain Express",
+    "type": "chair"
+   },
+   {
+    "name": "Molly Hogan",
+    "type": "chair",
+    "note": "2020 fixed quad replaced Molly Hogan double"
+   },
+   {
+    "name": "Beavers",
+    "type": "chair",
+    "note": "2018"
+   },
+   {
+    "name": "Zuma",
+    "type": "chair"
+   },
+   {
+    "name": "Pallavicini",
+    "type": "chair",
+    "note": "new fixed double 2020, same name"
+   },
+   {
+    "name": "Lazy J Tow",
+    "type": "surface"
+   },
+   {
+    "name": "Molly's Magic Carpet",
+    "type": "carpet"
+   },
+   {
+    "name": "Pika Place",
+    "type": "carpet"
+   }
+  ],
+  "renamed": [
+   {
+    "from": "Lenawee Mountain (triple)",
+    "to": "Lenawee Express",
+    "source": "https://arapahoebasin.com/blog/new-len-ex"
+   }
+  ],
+  "removed": [
+   {
+    "name": "Lenawee Mountain triple",
+    "note": "replaced by Lenawee Express six-pack, opened Dec 2022",
+    "source": "https://arapahoebasin.com/blog/new-len-ex"
+   },
+   {
+    "name": "Norway",
+    "note": "removed c. 2018 without replacement (pre-2022)",
+    "source": "https://liftblog.com/arapahoe-basin-co/"
+   }
+  ],
+  "not_public_or_other_resort": [],
+  "areas": [
+   "Front Side",
+   "East Wall",
+   "Pallavicini",
+   "Steep Gullies",
+   "Montezuma Bowl",
+   "The Beavers",
+   "Zuma Bowl/Cornice",
+   "Lenawee Face / Norway area",
+   "Black Mountain Lodge mid area"
+  ],
+  "confidence": "high",
+  "notes": "All 9 of our names match the 9 current lifts. No 2025/26 lift changes. Pallavicini was rebuilt in 2020 under the same name (skiresort also calls it 'Timber Lift'); Lenawee Express is the 2022 replacement. Master plan (Dec 2025) proposes a future 'Wrangler Express' quad, not built."
+ },
+ "eldora": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/eldora-mountain/ski-lifts/",
+   "https://liftblog.com/eldora-co/",
+   "https://snowstash.com/usa/colorado/eldora/lift-system",
+   "https://www.freeskier.com/eldora-gets-the-official-go-ahead-on-terrain-expansion"
+  ],
+  "lifts": [
+   {
+    "name": "Alpenglow",
+    "type": "chair",
+    "note": "2017 high-speed 6"
+   },
+   {
+    "name": "Corona",
+    "type": "chair"
+   },
+   {
+    "name": "Indian Peaks",
+    "type": "chair"
+   },
+   {
+    "name": "EZ",
+    "type": "chair"
+   },
+   {
+    "name": "Caribou",
+    "type": "chair"
+   },
+   {
+    "name": "Sundance",
+    "type": "chair"
+   },
+   {
+    "name": "Little Hawk",
+    "type": "chair"
+   },
+   {
+    "name": "Race",
+    "type": "surface",
+    "note": "platter"
+   },
+   {
+    "name": "Tenderfoot",
+    "type": "carpet"
+   }
+  ],
+  "renamed": [],
+  "removed": [
+   {
+    "name": "Cannonball / Challenge",
+    "note": "replaced by Alpenglow in 2017 (pre-2022)",
+    "source": "https://liftblog.com/eldora-co/"
+   }
+  ],
+  "not_public_or_other_resort": [
+   {
+    "name": "Sun Kid (carpet)",
+    "note": "Not an official lift name; 'Sunkid' is a carpet manufacturer. Probably a second (unnamed or ski-school) carpet; unverified."
+   }
+  ],
+  "areas": [
+   "Front side (Alpenglow/Sundance)",
+   "Corona (back side)",
+   "Indian Peaks",
+   "Ptarmigan / Lower mountain (Little Hawk, Caribou)",
+   "Caribou beginner area / Caribou Lodge",
+   "Jolly Jug (approved expansion, no lift built)",
+   "Nordic center"
+  ],
+  "confidence": "medium",
+  "notes": "All our chair/platter/Tenderfoot names are current. 'Sun Kid' is not an official name. No new lifts for 2025/26 (resort became town of Nederland-owned in 2026 per SnowStash). Jolly Jug expansion lift not built. Official Eldora status page URL returned 404."
+ },
+ "snowmass": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/snowmass/ski-lifts/",
+   "https://aspen.com/articles/aspen-snowmass-2025-26-winter-news/",
+   "https://www.aspenpublicradio.org/outdoors/2024-08-30/farewell-to-the-couch-aspen-skiing-company-plans-to-remove-gents-ridge-chairlift-this-fall",
+   "https://liftblog.com/snowmass-co/"
+  ],
+  "lifts": [
+   {
+    "name": "Sky Cab",
+    "type": "gondola",
+    "note": "pulse gondola Base Village - Snowmass Mall"
+   },
+   {
+    "name": "Elk Camp Gondola",
+    "type": "gondola"
+   },
+   {
+    "name": "Elk Camp",
+    "type": "chair",
+    "note": "NEW 2025/26 high-speed 6, replaced Elk Camp quad"
+   },
+   {
+    "name": "Big Burn",
+    "type": "chair",
+    "note": "2020 high-speed 6"
+   },
+   {
+    "name": "Village Express",
+    "type": "chair"
+   },
+   {
+    "name": "Coney Express",
+    "type": "chair",
+    "note": "2024, replaced Coney Glade"
+   },
+   {
+    "name": "High Alpine",
+    "type": "chair"
+   },
+   {
+    "name": "Sheer Bliss",
+    "type": "chair"
+   },
+   {
+    "name": "Two Creeks",
+    "type": "chair"
+   },
+   {
+    "name": "Sam's Knob",
+    "type": "chair"
+   },
+   {
+    "name": "Alpine Springs",
+    "type": "chair",
+    "note": "six-pack replacement planned ~2027"
+   },
+   {
+    "name": "Meadows",
+    "type": "chair"
+   },
+   {
+    "name": "Assay Hill",
+    "type": "chair"
+   },
+   {
+    "name": "Campground",
+    "type": "chair"
+   },
+   {
+    "name": "Cirque T-Bar",
+    "type": "surface",
+    "note": "NEW 2025/26, replaced Cirque platter"
+   },
+   {
+    "name": "Scooper",
+    "type": "surface"
+   },
+   {
+    "name": "Meadows Carpet",
+    "type": "carpet"
+   },
+   {
+    "name": "Bear Bottom Carpet",
+    "type": "carpet"
+   },
+   {
+    "name": "Treehouse Carpet",
+    "type": "carpet"
+   },
+   {
+    "name": "Assay Hill Carpet (formerly Burlingame Carpet)",
+    "type": "carpet"
+   }
+  ],
+  "renamed": [
+   {
+    "from": "Coney Glade",
+    "to": "Coney Express",
+    "source": "https://www.skiresort.com/en/ski-resort/snowmass/ski-lifts/"
+   },
+   {
+    "from": "Cirque platter (Cirque Poma)",
+    "to": "Cirque T-Bar",
+    "source": "https://aspen.com/articles/aspen-snowmass-2025-26-winter-news/"
+   },
+   {
+    "from": "Burlingame Carpet",
+    "to": "Assay Hill Carpet",
+    "source": "https://liftblog.com/snowmass-co/"
+   }
+  ],
+  "removed": [
+   {
+    "name": "Elk Camp quad",
+    "note": "replaced by Elk Camp six-pack for 2025/26 (name unchanged; old lift sold to Powderhorn)",
+    "source": "https://aspen.com/articles/aspen-snowmass-2025-26-winter-news/"
+   },
+   {
+    "name": "Cirque platter",
+    "note": "replaced by Cirque T-Bar for 2025/26",
+    "source": "https://aspen.com/articles/aspen-snowmass-2025-26-winter-news/"
+   },
+   {
+    "name": "Coney Glade",
+    "note": "removed 2024, replaced by Coney Express",
+    "source": "https://www.aspenpublicradio.org/outdoors/2024-08-30/farewell-to-the-couch-aspen-skiing-company-plans-to-remove-gents-ridge-chairlift-this-fall"
+   }
+  ],
+  "not_public_or_other_resort": [
+   {
+    "name": "Pines Lower / Pines Upper (platters)",
+    "note": "private real-estate lifts for The Pines homes (liftblog SL-001/SL-002), not resort-operated public lifts"
+   }
+  ],
+  "areas": [
+   "Base Village / Snowmass Mall / Fanny Hill",
+   "Elk Camp",
+   "Two Creeks",
+   "Sam's Knob",
+   "Big Burn",
+   "High Alpine",
+   "Hanging Valley",
+   "The Cirque",
+   "Burnt Mountain / Long Shot",
+   "Campground",
+   "Coney Glade",
+   "Alpine Springs",
+   "Sheer Bliss"
+  ],
+  "confidence": "high",
+  "notes": "All our public lift names are current (Elk Camp and Cirque T-Bar now refer to the new 2025/26 lifts; check that our geometry is not the old lift line - Elk Camp 6 bottom terminal sits slightly east of the old one per liftblog). Missing from ours: 4 carpets (Meadows, Bear Bottom, Treehouse, Assay Hill/Burlingame). Pines platters are private."
+ },
+ "aspenmountain": {
+  "season": "2026/27 (the coming season; 2025/26 still had Little Nell and Bell Mountain)",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/aspen-mountain/ski-lifts/",
+   "https://www.aspenpublicradio.org/outdoors/2024-08-30/farewell-to-the-couch-aspen-skiing-company-plans-to-remove-gents-ridge-chairlift-this-fall",
+   "https://www.aspentimes.com/news/aspen-nell-bell-lift-aspen-skiing-company/",
+   "https://www.fs.usda.gov/r02/whiteriver/projects/68277",
+   "https://www.freeskier.com/iconic-little-nell-and-bell-mountain-chairs-retired-from-aspen",
+   "https://liftblog.com/aspen-mountain-co/"
+  ],
+  "lifts": [
+   {
+    "name": "Silver Queen Gondola",
+    "type": "gondola"
+   },
+   {
+    "name": "Ajax Express",
+    "type": "chair"
+   },
+   {
+    "name": "Ruthie's",
+    "type": "chair"
+   },
+   {
+    "name": "F.I.S.",
+    "type": "chair"
+   },
+   {
+    "name": "Hero's",
+    "type": "chair",
+    "note": "high-speed quad, opened 2023/24 for Hero's (Pandora) expansion"
+   },
+   {
+    "name": "Shadow Mountain (Lift 1A)",
+    "type": "chair",
+    "note": "1971 double, peak-time only; replacement planned with west base redevelopment"
+   },
+   {
+    "name": "Nell Bell",
+    "type": "chair",
+    "note": "new high-speed quad for 2026/27, replaces Little Nell and Bell Mountain"
+   }
+  ],
+  "renamed": [],
+  "removed": [
+   {
+    "name": "Gent's Ridge",
+    "note": "removed fall 2024 (sold to Maverick Mountain, MT); terrain now served by Hero's",
+    "source": "https://www.aspenpublicradio.org/outdoors/2024-08-30/farewell-to-the-couch-aspen-skiing-company-plans-to-remove-gents-ridge-chairlift-this-fall"
+   },
+   {
+    "name": "Little Nell",
+    "note": "removed 2026, replaced by Nell Bell for 2026/27",
+    "source": "https://www.freeskier.com/iconic-little-nell-and-bell-mountain-chairs-retired-from-aspen"
+   },
+   {
+    "name": "Bell Mountain",
+    "note": "removed 2026, replaced by Nell Bell for 2026/27",
+    "source": "https://www.freeskier.com/iconic-little-nell-and-bell-mountain-chairs-retired-from-aspen"
+   }
+  ],
+  "not_public_or_other_resort": [],
+  "areas": [
+   "Little Nell / Gondola Plaza (base)",
+   "Bell Mountain",
+   "Spar Gulch / Copper Bowl",
+   "Ruthie's / Ruthie's Run",
+   "Sundeck / summit",
+   "Hero's (Pandora's) expansion",
+   "Walsh's / Gent's Ridge zone",
+   "Shadow Mountain / Lift 1A side",
+   "Dumps"
+  ],
+  "confidence": "medium",
+  "notes": "Our data reflects the 2026/27 layout, not 2025/26: 'Nell Bell' (high-speed quad Gondola Plaza to top of Bell Mountain) debuts winter 2026/27 and replaces BOTH Little Nell and Bell Mountain (towers still being flown in Sept 2026). For 2026/27 our list is correct except it lacks Shadow Mountain (Lift 1A). For 2025/26 we lack Little Nell, Bell Mountain and Shadow Mountain and Nell Bell did not yet exist. Gent's Ridge is correctly absent. Shadow Mountain 2025/26 operation not confirmed by an official page (medium)."
+ },
+ "highlands": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/aspen-highlands/ski-lifts/",
+   "https://liftblog.com/tag/aspen-highlands/",
+   "https://liftblog.com/five-trees-aspen-highlands-co",
+   "https://aspen.com/articles/aspen-snowmass-2025-26-winter-news/"
+  ],
+  "lifts": [
+   {
+    "name": "Exhibition",
+    "type": "chair",
+    "note": "high-speed quad; master plan proposes replacing with Maroon Bells Gondola (not built)"
+   },
+   {
+    "name": "Loge Peak",
+    "type": "chair"
+   },
+   {
+    "name": "Cloud Nine",
+    "type": "chair"
+   },
+   {
+    "name": "Thunderbowl",
+    "type": "chair",
+    "note": "fixed triple; detachable upgrade proposed"
+   },
+   {
+    "name": "Deep Temerity",
+    "type": "chair"
+   }
+  ],
+  "renamed": [],
+  "removed": [],
+  "not_public_or_other_resort": [
+   {
+    "name": "Five Trees",
+    "note": "real lift at Highlands but private/residential (and used by race clubs); not on public trail map"
+   },
+   {
+    "name": "unnamed rope tow",
+    "note": "no official source lists a public rope tow at Highlands; Golden Horn race surface lift was approved 2018 but repeatedly delayed and skiresort lists it as planned 2027. Possibly a ski-school/race-club tow; unverified."
+   }
+  ],
+  "areas": [
+   "Highland Bowl (hike-to)",
+   "Deep Temerity",
+   "Temerity",
+   "Olympic Bowl",
+   "Steeplechase",
+   "Loge Peak / Loge Bowl",
+   "Thunderbowl",
+   "Golden Horn (race area)",
+   "Cloud Nine",
+   "Exhibition / base"
+  ],
+  "confidence": "high",
+  "notes": "All 5 public lifts in ours are current; no lift changes 2022-2026. No 'Olympic' lift exists (Olympic is a terrain area/bowl). Proposed in the 2025 master plan, none built: Maroon Bells Gondola (Exhibition replacement), Thunderbowl detachable quad, Apple Strudel quad, Golden Horn surface lift."
+ },
+ "buttermilk": {
+  "season": "2025/26",
+  "sources": [
+   "https://www.skiresort.com/en/ski-resort/buttermilk-mountain/ski-lifts/",
+   "https://en.wikipedia.org/wiki/Buttermilk_(ski_area)",
+   "https://liftblog.com/buttermilk-co/",
+   "https://www.aspenpublicradio.org/outdoors/2024-08-30/farewell-to-the-couch-aspen-skiing-company-plans-to-remove-gents-ridge-chairlift-this-fall"
+  ],
+  "lifts": [
+   {
+    "name": "Summit Express",
+    "type": "chair"
+   },
+   {
+    "name": "West Buttermilk Express",
+    "type": "chair"
+   },
+   {
+    "name": "Tiehack Express",
+    "type": "chair"
+   },
+   {
+    "name": "Panda Peak",
+    "type": "chair",
+    "note": "fixed double; quad replacement proposed only"
+   },
+   {
+    "name": "Ski School Tow",
+    "type": "surface",
+    "note": "rope tow"
+   },
+   {
+    "name": "Magic carpet (Panda/ski school area)",
+    "type": "carpet",
+    "note": "name not given by skiresort"
+   }
+  ],
+  "renamed": [],
+  "removed": [],
+  "not_public_or_other_resort": [
+   {
+    "name": "Five Trees",
+    "note": "belongs to Aspen Highlands (private double from Five Trees residences), not Buttermilk - likely a bbox/assignment error in our data"
+   },
+   {
+    "name": "unnamed carpet / unnamed rope tow",
+    "note": "probably duplicates of the Ski School Magic Carpet / Ski School Lift; verify they are not the same features"
+   }
+  ],
+  "areas": [
+   "Main Buttermilk",
+   "West Buttermilk",
+   "Tiehack",
+   "Panda Peak (beginner)",
+   "Fort Frog / kids area",
+   "X Games terrain park and superpipe"
+  ],
+  "confidence": "medium",
+  "notes": "Our Summit/Tiehack/West Buttermilk Express and Panda Peak are current. 'Ski School Lift (drag)' = skiresort 'Ski School Tow' (rope tow); 'Ski School Magic Carpet' = the people mover. Five Trees is a Highlands lift. No changes 2022-2026."
+ },
+ "_note": "Official lift lists gathered 2026-11-09 for tools/audit_resorts.mjs (sources per resort). Names compared loosely (case, 'Lift'/'Express'/'Chair', text in brackets ignored)."
+}

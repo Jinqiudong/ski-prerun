@@ -92,8 +92,13 @@ elements = json.load(open(osm_path))["elements"]
 LEVELS = {"novice": "easy", "easy": "easy", "intermediate": "intermediate", "advanced": "advanced",
           "expert": "expert", "extreme": "expert", "freeride": "expert"}
 runs, lifts = [], []
+# Left out: a resort's `exclude` (OSM ids of a neighbour's lifts or runs inside our box, from
+# tools/audit_resorts.mjs) and private lifts (access=private/no: a lift for homes, not the resort's).
+EXCLUDE = set(CFG.get("exclude") or [])
 for e in elements:
     tags = e.get("tags", {})
+    if e["id"] in EXCLUDE or ("aerialway" in tags and tags.get("access") in {"private", "no"}):
+        continue
     pts = [to_local(g["lat"], g["lon"]) for g in e.get("geometry", [])]
     if len(pts) < 2 or not all(x0 <= x <= x1 and z0 <= z <= z1 for x, z in pts):
         continue  # outside the resort area (the Overpass box also catches the neighbouring resort)
