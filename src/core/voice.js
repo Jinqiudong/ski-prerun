@@ -41,7 +41,7 @@ const CSS = `
 #vcMic.on small { color: #bfe3cb; }
 #vcMic .n { position: absolute; top: -6px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #3f7d5c; border: 2px solid #fdfbf6; color: #fdfbf6; font: 600 10px/14px "Noto Serif SC", serif; text-align: center; }
 #vcMic.left .n { right: -6px; } #vcMic.right .n { left: -6px; }
-#vcMic .n[hidden], #vcNote[hidden], #vcWho[hidden] { display: none; }
+#vcMic[hidden], #vcMic .n[hidden], #vcNote[hidden], #vcWho[hidden] { display: none; }
 #vcWho { position: fixed; z-index: 2147483000; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
 #vcWho img { width: 30px; height: 30px; border-radius: 50%; background: #e6ebee; box-shadow: 0 0 0 2px #fdfbf6, 0 0 0 4px #3f7d5c; animation: vc-ring .9s ease-in-out infinite alternate; }
 #vcNote { position: fixed; z-index: 2147483001; max-width: min(62vw, 270px); padding: 6px 12px; border-radius: 12px; background: rgba(253,251,246,.97); color: #22344d; box-shadow: 0 6px 14px rgba(40,30,20,.22); font: 13px/1.45 "Noto Serif SC", serif; }
@@ -68,7 +68,7 @@ export function startVoice({ root = "" } = {}) {
   // ---- On screen: the toggle (对讲机, 开 / 关, and how many friends are connected), who's talking beside it,
   // and a line for what's going on.
   const style = document.createElement("style"); style.textContent = CSS; document.head.append(style);
-  const btn = document.createElement("button"); btn.id = "vcMic"; btn.type = "button";
+  const btn = document.createElement("button"); btn.id = "vcMic"; btn.type = "button"; btn.hidden = true;
   btn.innerHTML = `<img src="${root}assets/icons/voice_radio.png?v=1" alt="" draggable="false"><b></b><small></small><i class="n" hidden></i>`;
   const who = document.createElement("div"); who.id = "vcWho"; who.hidden = true;
   const note = document.createElement("div"); note.id = "vcNote"; note.hidden = true; note.setAttribute("role", "status");
@@ -347,6 +347,10 @@ export function startVoice({ root = "" } = {}) {
     if (mine && levels) { myLevel = rms(mine.an, mine.buf); mySpk = speaking(mySpk, micLive() ? myLevel : 0, now); }
     myTalk = talking(myTalk, micLive() && !!mySpk?.on, now);
     btn.style.boxShadow = micLive() ? `0 6px 14px rgba(40,50,70,.22), 0 0 0 ${Math.round(2 + Math.min(1, myLevel * 12) * 4)}px rgba(63,125,92,${mySpk?.on ? 0.55 : 0.18})` : "";
+    // Only there in a trip with a friend online (or while your mic is still on, so you can turn it off):
+    // on the welcome page, or alone, there's nobody to talk to.
+    const friends = !!trip && list.some((m) => m.id !== me && !m.gone && now - m.at < VOICE.STALE * 2);
+    btn.hidden = !(friends || want); if (btn.hidden) note.hidden = true;
     const n = btn.querySelector(".n"); n.hidden = !live; if (live && n.textContent !== String(live)) n.textContent = live;
     paintWho(speakers.filter((s) => s.on && !s.muted).map((s) => s.id));
     ducked = duckFor(speakers);
