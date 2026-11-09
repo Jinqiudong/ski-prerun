@@ -1,4 +1,4 @@
-// Where voice chat finds its way between two phones (src/ride/voice.js): the ICE servers every peer
+// Where voice chat finds its way between two phones (src/core/voice.js): the ICE servers every peer
 // connection uses. The one place to change them.
 //
 // STUN (free, public, Google's): tells each phone the address the internet sees it at, so two phones can

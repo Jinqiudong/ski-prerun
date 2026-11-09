@@ -1,10 +1,10 @@
 // The party (一起滑): friends on a shared trip, together on any page. Anyone on the trip can invite anyone on
 // it, join or leave at any time; nobody leads, and nobody leaving (or closing the app) breaks it for the rest:
-// their row greys out, then goes. Being in the party: you see where the others are on every page, voice works
-// (mic off until you turn it on), and you can act on each other: 去找他 (go to them), 跟着他 (follow: carried
-// onto the lift they board and down the route they choose, until 自由滑), 一起坐 (everyone who accepts boards
-// the same chair at the same moment), 叫他来 (ping someone who isn't at a resort). Nothing happens to you
-// without a tap, except while you follow someone.
+// their row greys out, then goes. Being in the party: you see where the others are on every page, the 对讲机
+// (src/core/voice.js: one group call, its toggle always on screen) connects you, and you can act on each
+// other: 去找他 (go to them), 跟着他 (follow: carried onto the lift they board and down the route they
+// choose, until 自由滑), 一起坐 (everyone who accepts boards the same chair at the same moment), 叫他来 (ping
+// someone who isn't at a resort). Nothing happens to you without a tap, except while you follow someone.
 //
 // The entry and the notifications are a pet, not a pill: the owner's capybara in goggles, peeking over a
 // little snowy ledge stuck to the edge of the screen (assets/party/, cut by tools/cut_party_art.py). It
@@ -14,16 +14,21 @@
 // out holding the sign, the party panel hanging under it; push it up or tap outside and it goes back, happy.
 //
 // One Realtime broadcast channel per shared trip, party:<trip> (shared-trip.js's Channel): presence every
-// few seconds (where I am: page, resort, lift, chair, route, whom I follow, mic), invites, calls, pings. The
-// ride keeps its own channel for fine positions (together.js). What I chose (in the party, whom I follow, my
-// mic) is kept in localStorage, so every page rejoins silently. The rules with no DOM are in party-core.js.
+// few seconds (where I am: page, resort, lift, chair, route, whom I follow, 对讲机 on), invites, calls, pings.
+// The ride keeps its own channel for fine positions (together.js). What I chose (in the party, whom I follow)
+// is kept in localStorage, so every page rejoins silently. The rules with no DOM are in party-core.js.
+// The voice isn't the page's: it lives in the shell (index.html) and outlasts every page; the party only
+// tells it which trip's call to be in (none when I'm not in the party) and where its toggle sits on this page.
 //
 // startParty({ page: "home" | "resort" | "ride", root, resort, rn, sub, lift }) on every page; the ride
-// hands it its hooks with setRide({ state, find, follow, unfollow, voice }).
+// hands it its hooks with setRide({ state, find, follow, unfollow, callable }).
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "./i18n.js?v=47";
 import { rideTrip } from "../ride/together-core.js?v=7";
-import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=1";
+import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=2";
+import { voiceHere, startVoice } from "./voice.js?v=1";
+import { micSpot } from "./voice-core.js?v=1";
+import { duck } from "../audio/engine.js?v=5";
 
 const KEY = "prerunParty", SEEN = "prerunPartySeen", RIDE_TRIP = "prerunRideTrip", LAND = "prerunTogetherLand";
 const FACES = ["peek", "blink", "happy", "surprised", "doze", "love"];
@@ -102,11 +107,12 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   const A = (n) => `${root}assets/party/${petOf(myAvatar())}${n}.png?v=1`;
   const icon = (av) => `${root}assets/icons/${av}.png?v=1`;
   const saved = (() => { try { return JSON.parse(store(localStorage, KEY) || "{}") || {}; } catch { return {}; } })();
-  const keep = () => store(localStorage, KEY, JSON.stringify({ trip: S.trip, in: S.in, since: S.since, fol: S.fol, mic: S.mic }));
-  const S = { trip: null, in: !!saved.in, since: saved.since || 0, fol: saved.fol || null, mic: !!saved.mic, sub, ride: null, open: false };
+  const keep = () => store(localStorage, KEY, JSON.stringify({ trip: S.trip, in: S.in, since: S.since, fol: S.fol }));
+  const S = { trip: null, in: !!saved.in, since: saved.since || 0, fol: saved.fol || null, sub, ride: null, open: false };
   const heard = new Map(); // id → presence + { at, gone }
   const notes = []; // { kind, from, call?, heardAt, done }
-  let ch = null, voice = null, voiceLoading = null;
+  let ch = null;
+  const V = voiceHere() || startVoice({ root }); // the shell's (or, on a page opened on its own, this page's)
 
   // ---- Which trip: the one picked in the panel if I'm still on it, else today's / the next / the latest.
   const myTrips = () => { let list = []; try { list = JSON.parse(localStorage.getItem("prerunTrips") || "[]"); } catch { /* none */ } return (Array.isArray(list) ? list : []).filter((tr) => tr?.shared && typeof tr.id === "string" && (!tr.srv?.members || tr.srv.members.some((m) => m.id === me))); };
@@ -144,6 +150,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
     if (s.edge === "top") { pet.style.top = `calc(env(safe-area-inset-top) + ${Math.round((s.y || 0) * innerHeight) + 4}px)`; pet.style.left = `${Math.round(s.x * innerWidth - 46)}px`; }
     else pet.style.top = `${Math.round(s.y * innerHeight - 50)}px`;
     if (!sign.hidden) placeSign();
+    V.place(micSpot(page, S.sub));
   }
   addEventListener("resize", place);
 
@@ -330,7 +337,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   function mine() {
     const o = { id: me, name: myName() || tripOf(S.trip)?.people?.find((p) => p.me)?.name || t("朋友"), av: myAvatar(), in: S.in };
     if (!S.in) return o;
-    Object.assign(o, { page, fol: S.fol, mic: S.mic && micOn(), since: S.since });
+    Object.assign(o, { page, fol: S.fol, mic: V.micOn, since: S.since });
     if (page === "home") o.tab = S.sub || "rider";
     if (page !== "home") { o.resort = resort; o.rn = rn || resort; }
     if (page === "resort") o.ph = S.sub === "base" ? "base" : null;
@@ -350,27 +357,23 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   // ---- The channel
   function connect() {
     ch?.close(); ch = null; heard.clear();
-    if (voice) { voice.setMic(false); voice = null; voiceLoading = null; } // it spoke on the old channel
     if (!S.trip) return;
     store(sessionStorage, RIDE_TRIP, S.trip);
     ch = new Channel(`party:${S.trip}`, onMessage, { onJoin: () => { lastSent = ""; sentAt = 0; ch.broadcast("p", { ...mine(), ask: true }); } });
-    if (S.in && page !== "ride" && voice === null && voiceLoading === null && document.readyState !== "loading") wantVoice();
   }
   function onMessage(ev, p) {
     if (!p || p.id === me) return;
     const now = Date.now();
-    if (ev === "v" || ev === "vs") { voice?.onMessage(ev, p); return; }
     if (ev === "p") {
       const o = cleanPresence(p); if (!o) return;
       const was = heard.get(o.id);
       heard.set(o.id, { ...o, at: now, gone: 0 });
-      if (p.ask) { lastSent = ""; sentAt = 0; voice?.hello(o.id); } // someone just came: tell them where I am at once
+      if (p.ask) { lastSent = ""; sentAt = 0; } // someone just came: tell them where I am at once
       if (o.in && was && !was.in && S.in) note({ kind: "info", from: o.id, text: t("{name} 加入了", { name: o.name || t("朋友") }) });
       if (o.id === S.fol || S.fol) stepFollow(true);
       paintSoon();
     } else if (ev === "bye") {
       const f = heard.get(p.id); if (f) { f.gone = now; f.in = false; }
-      voice?.drop?.(p.id, false);
       paintSoon();
     } else if (ev === "inv") {
       const iv = cleanInvite(p, me); if (!iv || S.in) return;
@@ -393,13 +396,13 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   function join() {
     if (!S.trip) return;
     S.in = true; S.since = S.since || Date.now(); keep(); sendNow(); paintPanel();
-    wantVoice();
+    stepVoice();
   }
   function leave() {
     ch?.broadcast("bye", { id: me });
     S.in = false; S.since = 0; S.fol = null; keep(); sendNow();
     if (page === "ride") S.ride?.unfollow?.();
-    setMic(false, true);
+    V.setMic(false); stepVoice();
     paintPanel();
   }
   function invite(ids) {
@@ -410,30 +413,14 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   }
   function ping(id) { if (ch?.broadcast("ping", { id: me, to: id })) note({ kind: "info", from: me, text: t("叫过了，等他来") }); }
 
-  // ---- Voice: in the ride, the ride's own (near friends by distance, the walkie-talkie); elsewhere a group
-  // call with whoever in the party is off the slopes too, on this channel. Off until you turn it on.
-  const micOn = () => (page === "ride" ? !!S.ride?.voice?.micOn : !!voice?.micOn);
-  async function wantVoice() {
-    if (page === "ride" || voice || voiceLoading || !ch) return voice;
-    voiceLoading = import("../ride/voice.js?v=14").then(({ rideVoice }) => {
-      voice = rideVoice({ ch, me, camera: null, myPos: (o) => o.set(0, 0, 0), talk: () => {}, nameOf: (id) => heard.get(id)?.name || t("朋友"), hud: false, onSay: (s) => s && note({ kind: "info", from: me, text: s }) });
-      return voice;
-    }).catch((e) => { console.warn("voice", e); return null; });
-    return voiceLoading;
-  }
-  async function setMic(on, quiet = false) {
-    if (!quiet) { S.mic = on; keep(); }
-    if (page === "ride") { await S.ride?.voice?.setMic?.(on); sendNow(); paintPanel(); return; }
-    if (!on && !voice) return;
-    const v = await wantVoice(); if (!v) return;
-    await v.setMic(on); sendNow(); paintPanel();
-  }
-  // A mic left on is asked for again on the first tap of this page (phones only open it from a tap).
-  addEventListener("pointerdown", () => { if (S.in && S.mic && !micOn()) setMic(true); }, { once: true, capture: true });
-  function stepVoice(now) {
-    if (page === "ride" || !voice) return;
-    const live = S.in ? liveMembers(heard, now).filter((m) => m.state === "live" && m.page !== "ride").map((m) => ({ id: m.id, pos: null, inMine: true, at: performance.now() - (now - m.at), gone: 0 })) : [];
-    voice.frame(performance.now(), live);
+  // ---- The 对讲机: the shell's call for this trip while I'm in the party; this page's music ducked under
+  // friends talking; and while it's on, this page keeps the phone's audio session the mic's (on iOS a page's
+  // own sound would otherwise set it to "ambient" under the shell).
+  let ducked = 0;
+  function stepVoice() {
+    V.room(S.in ? S.trip : null);
+    if (V.duck !== ducked) { ducked = V.duck; duck(ducked, ducked ? 0.2 : 0.6); }
+    if (V.micOn) { try { if (navigator.audioSession && navigator.audioSession.type !== "play-and-record") navigator.audioSession.type = "play-and-record"; } catch { /* older Safari */ } }
   }
 
   // ---- The panel: the pet comes out holding the sign, the party hanging under it.
@@ -492,7 +479,7 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
     const can = !!S.trip, callable = S.in && members.length ? (page === "ride" ? S.ride?.callable?.() : null) : null;
     if (callable) h += `<div class="foot"><button class="go" data-k="call" data-lift="${esc(callable)}">${esc(t("约大家一起坐 {lift}", { lift: callable }))}</button></div>`;
     h += `<div class="foot">${S.in
-      ? `<button data-k="mic" class="${micOn() ? "on" : ""}" aria-pressed="${micOn()}">${t("麦克风")} ${micOn() ? t("开") : t("关")}</button><button data-k="invite"${can ? "" : " disabled"}>${t("＋邀请")}</button><button data-k="leave">${t("离开")}</button>`
+      ? `<button data-k="invite"${can ? "" : " disabled"}>${t("＋邀请")}</button><button data-k="leave">${t("离开")}</button>`
       : `<button class="go" data-k="join"${can ? "" : " disabled"}>${t("加入一起滑")}</button><button data-k="invite"${can ? "" : " disabled"}>${t("＋邀请")}</button>`}</div>`;
     if (full || !box.querySelector("#ptPanel")) box.innerHTML = `${head}<div id="ptPanel">${h}</div>`;
     else box.querySelector("#ptPanel").innerHTML = h;
@@ -510,7 +497,6 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
     if (k === "follow") setFollow(S.fol === id ? null : id);
     if (k === "free") setFollow(null);
     if (k === "team") setFollow(teamLead(heard, me, Date.now()));
-    if (k === "mic") setMic(!micOn());
     if (k === "call") { closePanel(); setTimeout(() => callLift(b.dataset.lift), 500); }
   });
   box.addEventListener("change", (e) => {
@@ -520,10 +506,9 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
   });
 
   // ---- Every 250 ms: presence, calls, follow, voice.
-  setInterval(() => { const now = Date.now(); send(now); stepCalls(now); stepFollow(); stepVoice(now); if (S.open && Math.floor(now / 1000) !== Math.floor((now - 250) / 1000)) paintSoon(); }, 250);
+  setInterval(() => { const now = Date.now(); send(now); stepCalls(now); stepFollow(); stepVoice(); if (S.open && Math.floor(now / 1000) !== Math.floor((now - 250) / 1000)) paintSoon(); }, 250);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) sendNow(); });
-  place(); connect();
-  if (S.in && page !== "ride") wantVoice(); // connected to the others from the start (listening costs little; the mic waits)
+  place(); connect(); stepVoice();
 
   const api = {
     get trip() { return S.trip; }, get in() { return S.in; }, get fol() { return S.fol; }, me,
@@ -533,6 +518,6 @@ export function startParty({ page, root = "", resort = null, rn = null, sub = ""
     callLift, goFind, setFollow, join, leave, open: openPanel, close: closePanel,
     members: () => liveMembers(heard, Date.now()),
   };
-  window.__party = Object.defineProperties({ heard, notes, S, invite, ping, mine, okOf, get ch() { return ch; }, get voice() { return voice; } }, Object.getOwnPropertyDescriptors(api)); // testing
+  window.__party = Object.defineProperties({ heard, notes, S, invite, ping, mine, okOf, get ch() { return ch; }, voice: V }, Object.getOwnPropertyDescriptors(api)); // testing
   return api;
 }

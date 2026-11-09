@@ -12,7 +12,6 @@
 //   ok   { id, k }                                 I'm in for call k
 //   ping { id, to }                                叫他来: come over
 //   bye  { id }                                    I left the party
-//   v / vs                                         voice (src/ride/voice.js), off the slopes
 
 export const ID = /^[\w-]{4,40}$/;
 const AV = /^av_[a-z]+$/, RESORT = /^[a-z0-9-]{2,40}$/, K = /^[\w-]{4,24}$/;
@@ -181,7 +180,7 @@ export const SPOTS = {
   "ride:top": { edge: "right", y: 0.62 },
   "ride:pick": { edge: "right", y: 0.36 }, // choosing a run: above the cards and the map pin of me
   "ride:ski": { edge: "right", y: 0.62 }, // skiing: right edge, below the turn cue and the round buttons
-  "ride:end": { edge: "left", y: 0.42 }, // at the bottom, the arrival card up: left, above it and the walkie-talkie
+  "ride:end": { edge: "left", y: 0.42 }, // at the bottom, the arrival card up: left, above it
 };
 export function spotFor(page, sub) {
   return SPOTS[`${page}:${sub}`] || SPOTS[page] || (page === "ride" ? SPOTS["ride:ski"] : SPOTS["home:rider"]);

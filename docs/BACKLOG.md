@@ -11,7 +11,7 @@ Work that waits on something else. Newest first.
 
 ## Waiting on the character models (owner + character AI)
 - Done in batch 4: the ride draws the templates (`src/rider/boarder.js`: `tpl_*_lod.glb` with the `tpl_*_ride.glb` clips) for me and for friends riding together; the chair clips (sit, look, talk, point, wave), the radio pose, falls and getting up are in.
-- **Walkie-talkie:** the radio is ready in the ride (`talkBoarder`: `Radio_Talk_Ride` over the riding pose, the radio in the hand) but nothing calls it until push-to-talk exists (voice, below). Still wanted: the radio on the jacket chest strap otherwise.
+- **Walkie-talkie:** the rider raises the radio (`talkBoarder`: `Radio_Talk_Ride` over the riding pose, the radio in the hand) while they talk on the 对讲机 (`src/core/voice.js`). Still wanted: the radio on the jacket chest strap otherwise.
 - **Riding together on a chair:** more than two friends in a chair all talk toward me; the bar coming down; `Chairlift_Point` plays only on a friend's "这条好滑" / "缆车站见".
 - More edge angle in `Heelside_Carve` / `Toeside_Carve` (the ride adds its own lean today; see the batch-4 note).
 - Hair and jacket-hem bones for wind; bigger body and fit morphs.
@@ -19,7 +19,7 @@ Work that waits on something else. Newest first.
 ## Riding together (after shared trips) — part 1 built in `src/ride/together.js`; voice is part 2
 - Done: friends live on the mountain and the maps (Supabase Realtime broadcast per trip and resort); follow; "去找他" (fly over, land beside them); same chair within 6 s; quick messages ("等我", "缆车站见", "这条好滑", "我先下去了", "去找你").
 - Icons wanted for it (stand-ins now): `msg_chat` (the quick-message button; `rider` stands in), `msg_wait` (`rest`), `msg_meet` (`lift`), `msg_good` (`star`), `msg_down` (`snowboard`), `msg_coming` (`compass_rose`).
-- Voice: near friends open automatically (proximity, louder when closer); far friends by walkie-talkie push-to-talk with a radio squelch. WebRTC mesh, Supabase for signalling, a TURN relay for some networks. Safari only (in-app browsers often block the mic).
+- Voice: built as the 对讲机 (`src/core/voice.js`): one toggle, always on screen; on, the whole party hears you on every page until you turn it off (the owner's call, 2026-11: no push-to-talk, no proximity). It lives in the shell (`index.html`), so page changes never drop it. WebRTC mesh, Supabase for signalling; still wanted: a TURN relay for some networks. Safari only (in-app browsers often block the mic).
 - Listen together: one friend picks a track from the game's own licensed library and everyone hears it in sync (`src/audio` `play(trackId, atSeconds)`). Streaming services can't be rebroadcast inside the game.
 
 ## Radio prop (assets/props/radio.glb)

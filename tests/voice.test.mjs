@@ -1,53 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { VOICE, gainAt, sendTo, wantPeers, offerer, retryAfter, cleanSignal, cleanVoiceState, speaking, duckFor, micProblem } from "../src/ride/voice-core.js";
+import { VOICE, wantPeers, offerer, retryAfter, cleanSignal, cleanVoicePresence, speaking, talking, duckFor, micProblem, MIC_SPOTS, micSpot } from "../src/core/voice-core.js";
+import { SPOTS, spotFor } from "../src/core/party-core.js";
+import "../src/core/frame.js";
 
-test("gainAt: clear up close and in the same chair, fading with distance, silent from 150 m", () => {
-  assert.equal(gainAt(0), 1);
-  assert.equal(gainAt(VOICE.FULL), 1);
-  assert.equal(gainAt(VOICE.SILENT), 0);
-  assert.equal(gainAt(400), 0);
-  assert.equal(gainAt(140, { sameChair: true }), 1, "the same chair is always clear");
-  let prev = 1;
-  for (let d = 10; d < VOICE.SILENT; d += 10) { const g = gainAt(d); assert.ok(g < prev && g > 0, `falls off at ${d} m`); prev = g; }
-  assert.ok(gainAt(33) > 0.25 && gainAt(33) < 0.5, "the next chair is still clear");
-  assert.ok(gainAt(100) < 0.08, "100 m is a murmur");
-  assert.equal(gainAt(null), 0, "not known where they are");
-  assert.equal(gainAt(NaN), 0);
-});
+const { appSrc, appHash, toShell } = globalThis.prerunShell;
 
-test("gainAt: the walkie-talkie reaches any distance; muting wins", () => {
-  assert.equal(gainAt(5000, { radio: true }), VOICE.RADIO);
-  assert.equal(gainAt(null, { radio: true }), VOICE.RADIO);
-  assert.equal(gainAt(2, { muted: true }), 0);
-  assert.equal(gainAt(2, { radio: true, muted: true }), 0);
-});
-
-test("sendTo: nothing with the mic off; near with it on; everyone on the walkie-talkie", () => {
-  assert.equal(sendTo(5), false);
-  assert.equal(sendTo(5, { mic: true }), true);
-  assert.equal(sendTo(VOICE.SILENT + 5, { mic: true }), true, "a margin past silent");
-  assert.equal(sendTo(VOICE.SILENT + VOICE.SEND_MARGIN, { mic: true }), false);
-  assert.equal(sendTo(-1, { mic: true }), false, "unknown distance");
-  assert.equal(sendTo(-1, { mic: true, sameChair: true }), true);
-  assert.equal(sendTo(9000, { radio: true }), true);
-});
-
-test("wantPeers: friends live on the channel now, nearest first, at most 7", () => {
+test("wantPeers: members heard from lately, not gone, by id, at most PEERS", () => {
   const now = 100000;
   const list = [
-    { id: "mB00000000", d: 50, at: now - 1000 },
-    { id: "mC00000000", d: 10, at: now - 1000 },
-    { id: "mD00000000", d: 5, at: now - 20000 }, // stale
-    { id: "mE00000000", d: 1, at: now - 100, gone: now - 50 }, // said bye
-    { id: "bad id", d: 1, at: now },
-    { id: "mF00000000", d: null, at: now - 10 }, // where unknown: last
+    { id: "mC00000000", at: now - 1000 },
+    { id: "mB00000000", at: now - 1000 },
+    { id: "mD00000000", at: now - 20000 }, // stale
+    { id: "mE00000000", at: now - 100, gone: now - 50 }, // said bye
+    { id: "bad id", at: now },
   ];
-  assert.deepEqual(wantPeers(list, now), ["mC00000000", "mB00000000", "mF00000000"]);
-  const many = Array.from({ length: 12 }, (_, i) => ({ id: `m${String(i).padStart(9, "0")}`, d: 100 - i, at: now }));
+  assert.deepEqual(wantPeers(list, now), ["mB00000000", "mC00000000"]);
+  const many = Array.from({ length: 12 }, (_, i) => ({ id: `m${String(11 - i).padStart(9, "0")}`, at: now }));
   const w = wantPeers(many, now);
   assert.equal(w.length, VOICE.PEERS);
-  assert.equal(w[0], "m000000011");
+  assert.equal(w[0], "m000000000", "the same order on every phone");
   assert.deepEqual(wantPeers(null, now), []);
 });
 
@@ -75,11 +47,11 @@ test("cleanSignal: only messages for me, with a real-looking description", () =>
   assert.equal(cleanSignal("offer", me), null);
 });
 
-test("cleanVoiceState: booleans only", () => {
-  assert.deepEqual(cleanVoiceState({ id: "mFr0000000", mic: true, r: "yes", x: 1 }), { id: "mFr0000000", mic: true, r: false });
-  assert.deepEqual(cleanVoiceState({ id: "mFr0000000", r: true }), { id: "mFr0000000", mic: false, r: true });
-  assert.equal(cleanVoiceState({ id: "!" }), null);
-  assert.equal(cleanVoiceState(undefined), null);
+test("cleanVoicePresence: an id, a short name, a known avatar, booleans", () => {
+  assert.deepEqual(cleanVoicePresence({ id: "mFr0000000", name: "小雪", av: "av_fox", mic: true, ask: "yes", x: 1 }), { id: "mFr0000000", name: "小雪", av: "av_fox", mic: true, ask: false });
+  assert.deepEqual(cleanVoicePresence({ id: "mFr0000000", name: "x".repeat(40), av: "../evil" }), { id: "mFr0000000", name: "x".repeat(20), av: "av_rider", mic: false, ask: false });
+  assert.equal(cleanVoicePresence({ id: "!" }), null);
+  assert.equal(cleanVoicePresence(undefined), null);
 });
 
 test("speaking: on at once, off only after a quiet moment", () => {
@@ -92,13 +64,20 @@ test("speaking: on at once, off only after a quiet moment", () => {
   s = speaking(s, 0.0, 1000); assert.equal(s.on, false);
 });
 
-test("duckFor: friends heard speaking duck the music; a far murmur doesn't", () => {
+test("talking: the radio goes up at once and stays up through a pause", () => {
+  let s = talking(null, false, 0);
+  assert.equal(s.on, false);
+  s = talking(s, true, 100); assert.equal(s.on, true);
+  s = talking(s, false, 100 + VOICE.TALK_HOLD - 10); assert.equal(s.on, true, "a breath between sentences");
+  s = talking(s, true, 2000); s = talking(s, false, 2000 + VOICE.TALK_HOLD + 10); assert.equal(s.on, false, "down after the hold");
+});
+
+test("duckFor: a friend speaking ducks the music; a muted one, or nobody, doesn't", () => {
   assert.equal(duckFor([]), 0);
-  assert.equal(duckFor([{ on: false, gain: 1 }]), 0);
-  assert.equal(duckFor([{ on: true, gain: 0.05 }]), 0);
-  const near = duckFor([{ on: true, gain: 1 }]), mid = duckFor([{ on: true, gain: 0.3 }]);
-  assert.ok(near > mid && mid > 0 && near <= 0.75);
-  assert.equal(duckFor([], true), near, "me on the walkie-talkie");
+  assert.equal(duckFor(null), 0);
+  assert.equal(duckFor([{ on: false }]), 0);
+  assert.equal(duckFor([{ on: true, muted: true }]), 0);
+  assert.ok(duckFor([{ on: false }, { on: true }]) > 0.3);
 });
 
 test("micProblem: getUserMedia's errors as hints", () => {
@@ -107,4 +86,54 @@ test("micProblem: getUserMedia's errors as hints", () => {
   assert.equal(micProblem({ name: "NotReadableError" }), "busy");
   assert.equal(micProblem({ name: "insecure" }), "insecure");
   assert.equal(micProblem(null), "other");
+});
+
+test("micSpot: every page the pet knows has a spot for the 对讲机, clear of the pet", () => {
+  for (const key of Object.keys(SPOTS)) {
+    const [page, sub = ""] = key.split(":"), m = micSpot(page, sub), p = spotFor(page, sub);
+    assert.ok(m.edge === "left" || m.edge === "right", key);
+    assert.ok(m.y > 0.05 && m.y < 0.95, key);
+    if (p.edge === m.edge) assert.ok(Math.abs(p.y - m.y) > 0.15, `${key}: clear of the pet`);
+  }
+  assert.deepEqual(micSpot("ride", "nowhere"), MIC_SPOTS["ride:ski"]);
+  assert.deepEqual(micSpot("resort", "base"), MIC_SPOTS.resort);
+});
+
+test("shell addresses: a page's address after #, only the app's own pages", () => {
+  const root = "https://x.github.io/ski-prerun/";
+  assert.equal(appHash(`${root}look.html?resort=copper&lift=American%20Flyer`, root), "#look.html?resort=copper&lift=American%20Flyer");
+  assert.equal(appHash(`${root}mountain/?resort=copper`, root), "#mountain/?resort=copper");
+  assert.equal(appHash(`${root}start.html`, root), "#start.html");
+  assert.equal(appHash(`${root}index.html`, root), null, "not the shell itself");
+  assert.equal(appHash("https://evil.example/start.html", root), null);
+  assert.equal(appSrc("#look.html?resort=copper&lift=X", ""), "look.html?resort=copper&lift=X");
+  assert.equal(appSrc("#mountain/?resort=copper", ""), "mountain/?resort=copper");
+  assert.equal(appSrc("#sound.html", ""), "sound.html");
+  assert.equal(appSrc("", "?trip=abc"), "start.html?trip=abc", "the old index.html?trip=… link");
+  assert.equal(appSrc("", ""), "start.html");
+  for (const bad of ["#javascript:alert(1)", "#//evil.example/x", "#https://evil.example/", "#../start.html", "#start.html.evil", "#tools/check.mjs"]) assert.equal(appSrc(bad, ""), "start.html", bad);
+  for (const p of ["start.html?tab=trip", "look.html?resort=copper&lift=A&at=1", "mountain/?resort=copper", "sound.html"]) assert.equal(appSrc(appHash(root + p, root), ""), p, "a round trip");
+});
+
+test("toShell: a page on its own moves into the shell; not inside it, not in tests, not with ?shell=0", () => {
+  // toShell reads the window it was loaded in (g); here a copy of it runs against a fake one.
+  const page = (href, { top = true, webdriver = false } = {}) => {
+    const g = { location: { href, search: new URL(href).search, replace(u) { g.went = u; } }, navigator: { webdriver }, went: null };
+    g.top = top ? g : {};
+    return g;
+  };
+  const make = (g) => new Function("g", "appHash", `return (${toShell.toString()});`)(g, appHash);
+  const script = { src: "https://x.github.io/ski-prerun/src/core/frame.js?v=1" };
+  let g = page("https://x.github.io/ski-prerun/look.html?resort=copper&lift=A");
+  assert.equal(make(g)(script), true); assert.equal(g.went, "https://x.github.io/ski-prerun/#look.html?resort=copper&lift=A");
+  g = page("https://x.github.io/ski-prerun/mountain/?resort=copper");
+  make(g)(script); assert.equal(g.went, "https://x.github.io/ski-prerun/#mountain/?resort=copper");
+  g = page("https://x.github.io/ski-prerun/start.html", { top: false });
+  assert.equal(make(g)(script), false, "in the shell already"); assert.equal(g.went, null);
+  g = page("https://x.github.io/ski-prerun/start.html?shell=0");
+  assert.equal(make(g)(script), false);
+  g = page("https://x.github.io/ski-prerun/start.html", { webdriver: true });
+  assert.equal(make(g)(script), false, "not in the headless tests");
+  g = page("https://x.github.io/ski-prerun/start.html?shell=force", { webdriver: true });
+  assert.equal(make(g)(script), true);
 });
