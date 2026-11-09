@@ -23,9 +23,12 @@ export function carveDepth(edge, speed = 10) {
 //   trunk: the trunk's tilt toward the toes (rad), measured on the board (hips to neck), that the trunk is
 //   brought to; twist: the chest turned to face the toes more (− : opened toward the nose), rad.
 //   armIn / armDown: added to each upper arm's direction, toward the toes and down (unit-ish), then aimed.
+//   lean: how much of the physics' inclination the rider's body shows. On the toe side at full lean (about
+//   46°) the shins would lie near the snow and it reads as kneeling; leaned 20% less (about 37°), with the
+//   legs extended (hipDown < 0) and the hips driven in, it reads as a laid-out carve, knees off the snow.
 export const SHAPES = {
-  toe: { hipIn: 0.27, hipDown: -0.03, trunk: -0.3, twist: 0.14, armIn: 0.55, armDown: 0.7 },
-  heel: { hipIn: -0.16, hipDown: 0.26, trunk: 0.45, twist: -0.16, armIn: 0.9, armDown: 0.1 },
+  toe: { hipIn: 0.27, hipDown: -0.09, trunk: -0.12, lean: 0.8, twist: 0.14, armIn: 0.55, armDown: 0.7 },
+  heel: { hipIn: -0.16, hipDown: 0.07, trunk: 0.45, lean: 1, twist: -0.16, armIn: 0.9, armDown: 0.1 },
 };
 
 // The layer for a moment of the ride: toe and heel depths (0..1, at most one of them non-zero, but a blend
@@ -37,6 +40,11 @@ export function carveLayer(toe, heel) {
   for (const key of ["hipIn", "hipDown", "twist", "armIn", "armDown"]) out[key] = T[key] * toe + H[key] * heel;
   out.trunk = k > 1e-6 ? (T.trunk * toe + H.trunk * heel) / k : 0;
   return out;
+}
+
+// How much of the inclination the body shows (1 = all of it), by the toe and heel depths.
+export function leanScale(toe, heel) {
+  return 1 - (1 - SHAPES.toe.lean) * clamp(toe, 0, 1) - (1 - SHAPES.heel.lean) * clamp(heel, 0, 1);
 }
 
 // A two-bone leg reaching from the hip to the foot: thigh l1, shin l2, the foot at d. The thigh's angle off

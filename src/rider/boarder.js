@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, setPartColor, holdProp } from "./character.js?v=13";
 import { myRiderLook } from "../core/look.js?v=18";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
-import { carveDepth, carveLayer, twoBone } from "./carve-core.js?v=1";
+import { carveDepth, carveLayer, leanScale, twoBone } from "./carve-core.js?v=2";
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
@@ -348,7 +348,9 @@ export function poseBoarder(root, r) {
   mix(u);
   // Skid: the board swings so the toes face the way you are going and the heel edge trails uphill.
   u.yaw.rotation.y = -tx * 1.2 * s.skid * (1 - down);
-  const tilt = (s.edge * (1 - s.skid) - tx * 0.3 * s.skid * (1 - sk)) * (1 - k); // about the board's long axis; + leans toward -x
+  // About the board's long axis; + leans toward -x. Deep on the toe side the body shows a little less of it
+  // (carve-core.js leanScale), so the pose reads as a laid-out carve, not kneeling.
+  const tilt = (s.edge * (1 - s.skid) * leanScale(s.toeD * (1 - k), s.heelD * (1 - k)) - tx * 0.3 * s.skid * (1 - sk)) * (1 - k);
   u.lean.rotation.z = tilt;
   u.lean.position.y = -Math.min(u.edgeX[0] * Math.sin(tilt), u.edgeX[1] * Math.sin(tilt)); // pivot on the edge in the snow, not under it
   u.lean.updateMatrixWorld(true);

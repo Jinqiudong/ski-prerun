@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { carveDepth, carveLayer, twoBone, SHAPES, EDGE_FLAT } from "../src/rider/carve-core.js";
+import { carveDepth, carveLayer, leanScale, twoBone, SHAPES, EDGE_FLAT } from "../src/rider/carve-core.js";
 
 const near = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
 
@@ -18,9 +18,9 @@ test("depth: none on a flat board, more with edge and speed, all of it on a hard
 
 test("layer: toe side drives the hips in over the toes and stands tall; heel side sits low and back", () => {
   const toe = carveLayer(1, 0), heel = carveLayer(0, 1), flat = carveLayer(0, 0);
-  assert.ok(toe.hipIn > 0.15 && toe.hipDown < 0.05, "toe: hips forward, not down");
+  assert.ok(toe.hipIn > 0.15 && toe.hipDown <= 0, "toe: hips forward, legs extended, not dropped");
   assert.ok(toe.trunk < 0, "toe: chest stacked back over the hips, not folded forward");
-  assert.ok(heel.hipIn < 0 && heel.hipDown > 0.2, "heel: hips back and low");
+  assert.ok(heel.hipIn < 0 && heel.hipDown > 0.03, "heel: hips back and low");
   assert.ok(heel.trunk > 0.2, "heel: chest up, forward over the knees");
   assert.ok(heel.armIn > 0.5, "heel: arms forward");
   assert.ok(toe.armDown > 0.4, "toe: hands low");
@@ -40,4 +40,11 @@ test("two-bone leg: law of cosines, held within reach", () => {
   near(twoBone(0.4, 0.4, 2).knee, 0, 0.05); // out of reach: straight
   const f = twoBone(0.4, 0.4, 0.01);
   near(f.d, 0.3 * 0.8); // folded no further than 30% of the leg
+});
+
+test("lean: the body shows less of the inclination deep on the toe side only", () => {
+  near(leanScale(0, 0), 1); near(leanScale(0, 1), 1);
+  const deep = leanScale(1, 0);
+  assert.ok(deep > 0.7 && deep < 0.95, `${deep}`);
+  assert.ok(leanScale(0.3, 0) > deep && leanScale(0.3, 0) < 1);
 });
