@@ -12,7 +12,7 @@ import { carveDepth, carveLayer, leanScale, twoBone } from "./carve-core.js?v=2"
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 import { SKI_CLIPS, skiTricks, skiWeights, newPlant, plantStep, standinParams, sportOf, extraLean, fallSide } from "./ski-core.js?v=1";
 import { dressSkier, poseSkiBody, placePoles, tintSkiGear, SKI_STACK } from "./skier.js?v=1";
-import { addSki, loadSki } from "./ski.js?v=1";
+import { addSki, loadSki } from "./ski.js?v=2";
 
 // Riders saved before the templates (on the first model, "rider_a") keep their six part colours; parts they
 // never picked default to these.

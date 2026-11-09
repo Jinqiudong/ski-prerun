@@ -71,7 +71,11 @@ little thicker) and `Hand_L_Socket` / `Hand_R_Socket` at the inverse (0.8, 2.0, 
 The snowboard clips key those scales at 1, so crossfading back to them opens the hand again; a non-`Ski_` clip
 played with the skis on shows the open mitten with the pole through it.
 The arms are solved for that grip: the forearm runs square to the pole (as a fist holds it), the elbow out, back
-and down, the wrist bent no more than the grip's own tilt.
+and down, the wrist bent no more than the grip's own tilt. The relaxed holds (`Ski_Stand`, `Ski_Glide`,
+`Ski_Snowplough`, `Ski_Push`, the outside arm of `Ski_Turn_L` / `_R`; the owner: "not clamped") let the upper arm
+hang a little away from the body with the elbow bent 40–55°, the hands wider than the hips, and the wrist tip the
+fist up to about 30° round the same grip; their planted poles are solved with the arm, so the tip lands on the
+snow. The tuck stays tight.
 
 "hold" clips keep one pose, with a slow breath, and start and end on the same frame: they loop seamlessly, and
 the ride can hold them at mid-duration as it does the board's. "once" clips play through and the game holds the
@@ -79,7 +83,7 @@ last frame (or crossfades out). Times are seconds from the clip's start.
 
 | clip | s | loop | what |
 |---|---|---|---|
-| `Ski_Stand` | 2.00 | hold | standing on skis, light knee bend, forearms forward, both poles planted upright just ahead of and outside the boots |
+| `Ski_Stand` | 2.00 | hold | a relaxed stand: soft knees, upper arms a little away from the body, elbows slightly out, fists a bit wider than the hips and forward, both poles planted just outside and ahead of the boots, leaning a touch out |
 | `Ski_Glide` | 2.00 | hold | parallel, neutral: knees and ankles flexed, hips over the feet, hands forward and wide, poles trailing back |
 | `Ski_Turn_L`, `Ski_Turn_R` | 2.00 | hold | carved parallel turn at its apex: skis on edge (32°), hips in toward the turn, chest more upright (angulation) and turned a little to the outside, inside ski a little ahead, inside pole forward and ready. Blend from `Ski_Glide` by the turn's strength |
 | `Ski_Pole_Plant_L`, `Ski_Pole_Plant_R` | 0.87 | once | from the glide pose: the pole swings forward, its tip touches the snow at 0.33 s ahead of the boot, slides back to the boot by 0.53 s (the skier passing it), back to the glide pose at the end (layer it at a turn's end, or crossfade) |
