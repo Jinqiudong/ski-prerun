@@ -77,6 +77,23 @@ const CLIPS = {
   pop: "Ollie", ollie: "Ollie_Air", indy: "Indy_Grab", melon: "Melon_Grab", tailGrab: "Tail_Grab", nose: "Nose_Press", tailPress: "Tail_Press", // pop: played
   fallHeel: "Fall_Heel", fallToe: "Fall_Toe", upHeel: "Get_Up", upToe: "Get_Up_Toe", // played
 };
+// Chairlift_Sit_Talk swings its left arm out and up toward whoever it talks to (mirrored for a friend on the
+// right: the right arm), reaching across the neighbour at chest height, and turns the chest so the other hand
+// lifts off its knee. On the chair both hands rest on the knees, the same on both sides (the owner's call): the
+// talk clip is played as Chairlift_Sit with only its neck and head, which turn to the friend and nod along.
+// Made once per set of clips (a template's, or a rigged animal's).
+const TALK_BONES = /^(Neck|Head)\./;
+const quiet = new WeakMap();
+function quietTalk(C) {
+  const talk = C.clips.Chairlift_Sit_Talk, sit = C.clips.Chairlift_Sit;
+  if (!talk || !sit) return talk || null;
+  if (!quiet.has(talk)) {
+    const c = talk.clone();
+    c.tracks = sit.tracks.filter((t) => !TALK_BONES.test(t.name)).map((t) => t.clone()).concat(talk.tracks.filter((t) => TALK_BONES.test(t.name)).map((t) => t.clone()));
+    quiet.set(talk, c);
+  }
+  return quiet.get(talk);
+}
 // Talking on the radio while riding: Radio_Talk_Ride's right arm and head, laid over whatever the legs are doing.
 const RADIO_BONES = ["ShoulderR", "UpperArmR", "ForearmR", "HandR", "Neck", "Head"];
 
@@ -117,7 +134,7 @@ export async function boarderModel(friend = null) {
   const toeX = Math.sign(root.worldToLocal(toes.add(root.getWorldPosition(new THREE.Vector3()))).x) || 1;
   const mixer = C.mixer, A = {};
   for (const [k, n] of Object.entries(CLIPS)) {
-    const c = C.clips[n]; if (!c) continue;
+    const c = k === "talk" ? quietTalk(C) : C.clips[n]; if (!c) continue;
     const a = mixer.clipAction(c);
     a.play(); a.paused = true; a.time = c.duration / 2; a.setEffectiveWeight(0); // held at its peak
     A[k] = a;
