@@ -193,6 +193,20 @@ ICONS.trick_spin = () => [
   { d: "M120 74 A56 38 0 0 1 36 104", sw: 5.5 },
   { d: poly([20, 102], [40, 92], [38, 114]), fill: INK, sw: 3 },
 ];
+// The skier's tricks (双板): a straight jump, two skis in the air over the snow; a spread eagle, the skis out in a V
+// and a pole to each side.
+ICONS.trick_ski_hop = () => [
+  snowLine(),
+  { d: "M6 96 Q16 66 34 58", sw: 4, dash: "7 8" },
+  ...ski(66, 52, -8, C.sage), ...ski(70, 68, -8, C.blue),
+  { d: line([50, 84], [50, 94]), sw: 4.5 }, { d: line([70, 84], [70, 98]), sw: 4.5 }, { d: line([90, 80], [90, 90]), sw: 4.5 },
+];
+ICONS.trick_ski_spread = () => [
+  { d: line([64, 64], [6, 40]), sw: 4 }, { d: circ(14, 43, 5), fill: C.dslate, sw: 3 },
+  { d: line([64, 64], [122, 40]), sw: 4 }, { d: circ(114, 43, 5), fill: C.dslate, sw: 3 },
+  ...ski(30, 78, 49, C.sage, true), ...ski(98, 78, -49, C.blue),
+  { d: "M64 8 Q66 18 76 20 Q66 22 64 32 Q62 22 52 20 Q62 18 64 8 Z", fill: C.gold, sw: 3.4 },
+];
 ICONS.trick_indy = () => grab(64, 74, 0);
 ICONS.trick_melon = () => grab(64, 54, 180);
 ICONS.trick_tailgrab = () => grab(26, 74, 35);
@@ -266,6 +280,15 @@ function board(cx, cy, a) {
       detail: [{ d: line([cx - 50, cy + 4], [cx + 50, cy + 4]), sw: 3, ink: C.white, op: 0.7 }] },
     { d: rr(cx - 34, cy - 24, 20, 15, 4), fill: C.dslate, sw: 4, transform: tr },
     { d: rr(cx + 14, cy - 24, 20, 15, 4), fill: C.dslate, sw: 4, transform: tr },
+  ];
+}
+// a ski from the side, centred on (cx, cy), turned by a degrees, its tip turned up at the right (flip: at the left)
+function ski(cx, cy, a, fill, flip = false) {
+  const tr = `rotate(${a} ${cx} ${cy})${flip ? ` translate(${2 * cx} 0) scale(-1 1)` : ""}`;
+  return [
+    { d: `M${cx - 50} ${cy - 4} H${cx + 38} Q${cx + 50} ${cy - 4} ${cx + 56} ${cy - 14} Q${cx + 60} ${cy - 8} ${cx + 52} ${cy + 1} Q${cx + 46} ${cy + 5} ${cx + 36} ${cy + 5} H${cx - 50} Q${cx - 56} ${cy + 5} ${cx - 56} ${cy} Q${cx - 56} ${cy - 4} ${cx - 50} ${cy - 4} Z`,
+      fill, sw: 4, hl: [`M${cx - 40} ${cy - 1} H${cx - 6}`], transform: tr },
+    { d: rr(cx - 12, cy - 13, 22, 10, 3), fill: C.dslate, sw: 3.5, transform: tr },
   ];
 }
 function snowLine() {

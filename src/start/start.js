@@ -5,16 +5,19 @@
 // All on this phone only.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { RIDERS, OUTFITS } from "../rider/boarder.js?v=16";
+import { RIDERS, OUTFITS } from "../rider/boarder.js?v=17";
 import { ANIMAL_RIDERS, ANIMAL_ZH, RIGGED, animalOf, riggedOf, deskPetOf } from "../rider/animal-core.js?v=2";
 import { animalRider, animalStage, PET_MOVES } from "../rider/animal.js?v=3";
 import { CFG, PETS, petParts, COLOR_MATS, HAIR, hairOf, setHair, POSES, BOARDS, makeCharacter, presetChar, partColors, setPartColor } from "../rider/character.js?v=13";
-import { makeEntrance } from "./entrance.js?v=25";
+import { makeEntrance } from "./entrance.js?v=26";
+import { skiStage, colorSkis, tintSkiGear, SKI_COLORS } from "../rider/skier.js?v=1";
+import { addSki } from "../rider/ski.js?v=1";
+import { sportOf } from "../rider/ski-core.js?v=1";
 import { openBookPage, locateIn } from "../ride/roadbook.js?v=27";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=47";
 import { playIntro } from "./intro.js?v=33";
 import { flyTo } from "../core/transition.js?v=17";
-import { startParty } from "../core/party.js?v=16";
+import { startParty } from "../core/party.js?v=17";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
 playIntro({ open: (id) => openTrip(id), go: (id) => goResort(id), memory: () => setTab("log") });
@@ -172,9 +175,16 @@ const GLYPH = {
   G: `<path d="M6 46 C 22 42, 32 34, 46 30"/><path d="M50 22 L 52 38 M58 20 L 60 36 M66 18 L 68 34" stroke-width="2.5"/>`,
   P: `<path d="M20 4 C 60 10, 60 22, 36 28 S 20 44, 42 52"/><circle cx="62" cy="46" r="5"/>`,
 };
-// An old favourite that was a trick: the nearest entrance (a jump for the jumps, else the carve).
-const entrancesOf = () => (rider?.pet ? ENTRANCES.filter(([k]) => rider.clips[k]) : ENTRANCES); // a rigged animal: the ones it has clips for
-const favOf = (ch) => (entrancesOf().some(([k]) => k === ch.fav) ? ch.fav : /Ollie|Air/.test(ch.fav || "") ? "Anim_Pop_Ref" : "Anim_Carve_Ref");
+// On skis (双板): the board's moves don't apply; the skier's own, posed by skier.js from entrance.js's numbers.
+const SKI_ENTRANCES = [["Ski_S", "平行 S 弯", "S"], ["Ski_Schuss", "直滑降", "T"]];
+GLYPH.S = `<path d="M38 4 C 66 12, 66 22, 40 28 S 14 44, 42 52"/><path d="M46 4 C 74 12, 74 22, 48 28 S 22 44, 50 52" opacity=".55"/>`;
+GLYPH.T = `<path d="M30 4 L 40 52" /><path d="M38 4 L 48 52" opacity=".55"/><path d="M34 52 L 56 46" stroke-width="5"/>`;
+// An old favourite that was a trick: the nearest entrance (a jump for the jumps, else the carve). A skier's
+// favourite is kept apart (ch.skiFav), so going back to the board keeps the board's.
+const onSkis = () => sportOf(wear.ch) === "ski";
+const entrancesOf = () => (onSkis() ? SKI_ENTRANCES : rider?.pet ? ENTRANCES.filter(([k]) => rider.clips[k]) : ENTRANCES); // a rigged animal: the ones it has clips for
+const favOf = (ch) => (onSkis() ? (SKI_ENTRANCES.some(([k]) => k === ch.skiFav) ? ch.skiFav : SKI_ENTRANCES[0][0])
+  : entrancesOf().some(([k]) => k === ch.fav) ? ch.fav : /Ollie|Air/.test(ch.fav || "") ? "Anim_Pop_Ref" : "Anim_Carve_Ref");
 // An animal rides the same slope down (a gentle S) and does one of its moves in front of you (animal.js).
 const petFav = (ch) => (PET_MOVES.some(([k]) => k === ch.petFav) ? ch.petFav : PET_MOVES.some(([k]) => k === ch.fav) ? ch.fav : PET_MOVES[0][0]);
 let lastEntry = null, afterEntry = null;
@@ -183,7 +193,7 @@ function enter(k) {
   if (!rider) return;
   focus = "full"; pose = "Stand_Idle"; renderPoses();
   if (rider.isAnimal) { k ||= petFav(wear.ch); afterEntry = k; entrance.start("P", rider, turntable); }
-  else { k ||= favOf(wear.ch); afterEntry = null; entrance.start(ENTRANCES.find(([c]) => c === k)[2], rider, turntable); }
+  else { k ||= favOf(wear.ch); afterEntry = null; entrance.start(entrancesOf().find(([c]) => c === k)[2], rider, turntable); }
   lastEntry = k; renderEntries();
 }
 // Back on the spot, facing you (for a close look at a part, or a pose).
@@ -248,7 +258,9 @@ let last = performance.now();
 renderer.setAnimationLoop((now) => {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (tab !== "rider") return;
+  const sk = skiNow(); sk?.before();
   if (rider) { loopPose(dt); rider.step(dt); const was = entrance.running; entrance.step(dt);
+    sk?.after(dt, entrance.running ? entrance.now?.ski || null : null, pose === "Stand_Idle");
     if (was && !entrance.running && afterEntry) { rider.play(afterEntry, { once: true }); afterEntry = null; } } // an animal's move, arrived
   if (spinTo !== null) { turntable.rotation.y += (spinTo - turntable.rotation.y) * (1 - Math.exp(-dt * 6)); if (Math.abs(turntable.rotation.y - spinTo) < 1e-3) spinTo = null; }
   // the sun and its shadow camera ride along with the rider
@@ -261,6 +273,35 @@ renderer.setAnimationLoop((now) => {
 
 // Dress the rider in what I wear. { enter }: and run their entrance (a new outfit).
 const chars = {};
+// The skier stages by template: the one worn now, if on skis. The character AI's gear and Ski_ clips (ski.js), or
+// the stand-in (skier.js skiStage) if they don't load.
+const skis = {};
+// With the real files: Ski_Stand for 站立; an entrance plays the clip its numbers call for (entrance.js run.now.ski:
+// a hockey stop, a tuck, a turn, a glide), back to the pose when it ends.
+// The board's poses (a wave, a photo) keep their upper body; their legs are put on the skis by hand (skier.js, legs only).
+function realSki(c, ch) {
+  c.ski(true);
+  const legs = skiStage(c, ch, c.rest, { rigOnly: true });
+  let riding = false;
+  return {
+    real: true, gear: null,
+    before() { if (!/^Ski_/.test(c.current || "")) legs.before(); },
+    after(dt, ride) {
+      const own = /^Ski_/.test(c.current || "");
+      holder.rotation.y = own ? -Math.PI / 2 : 0; // the Ski_ clips face +x (docs/SKI_RIDERS.md); the board's poses face you
+      if (!own && !ride) legs.after(dt, null, true);
+      if (ride) {
+        const k = ride.hockey > 0.3 ? "Ski_Hockey_Stop" : ride.tuck > 0.5 ? "Ski_Tuck" : ride.edge > 0.18 ? "Ski_Turn_R" : ride.edge < -0.18 ? "Ski_Turn_L" : "Ski_Glide";
+        if (c.current !== k) c.play(k, { once: k === "Ski_Hockey_Stop", fade: 0.35 });
+        riding = true;
+      } else if (riding) { riding = false; c.play(clipOf(pose), { fade: 0.6 }); }
+    },
+    off() { legs.off(); c.ski(false); },
+  };
+}
+// The pose's clip: on the real skis, standing is Ski_Stand.
+const clipOf = (k) => (k === "Stand_Idle" && skiNow()?.real ? "Ski_Stand" : k);
+const skiNow = () => (rider && !rider.isAnimal && onSkis() ? skis[tplOf(wear.ch)] : null);
 const holder = new THREE.Group(); turntable.add(holder);
 // An animal (animal.js) is made when picked and let go when another is (its file goes with it).
 let pet = null; // { animal, made: a promise of its stage figure }
@@ -269,32 +310,46 @@ async function show({ enter: go = false } = {}) {
   const ch = wear.ch, a = petOf(ch), key = a || tplOf(ch);
   if (pet && pet.animal !== a) dropPet();
   if (a && !pet) pet = { animal: a, made: animalRider({ animal: a }).then(animalStage) };
-  const c = await (a ? pet.made : (chars[tplOf(ch)] ||= makeCharacter(tplOf(ch))));
+  const c = await (a ? pet.made : (chars[tplOf(ch)] ||= makeCharacter(tplOf(ch)).then((m) => { m.rest = []; m.root.traverse((o) => { if (o.isBone) m.rest.push([o, o.position.clone(), o.quaternion.clone()]); }); return m; })));
   if (ch !== wear.ch || key !== (petOf(wear.ch) || tplOf(wear.ch))) return; // something else was put on meanwhile
   const swapped = rider !== c;
   if (swapped) { if (rider) holder.remove(rider.root); rider = c; holder.add(c.root); if (a) center(); renderPoses(); }
   if (a) c.setBoard(ch.board); else c.set(ch);
-  // regular or goofy: the character is mirrored (the entrance rides goofy's line mirrored, entrance.js)
-  holder.scale.x = wear.stance === "goofy" ? -1 : 1;
+  // regular or goofy: the character is mirrored (the entrance rides goofy's line mirrored, entrance.js); a skier never
+  holder.scale.x = wear.stance === "goofy" && !onSkis() ? -1 : 1;
+  // on skis or off them (skier.js: the board hidden, skis and poles on; the old stage let go)
+  const want = !a && onSkis() ? tplOf(ch) : null;
+  for (const k of Object.keys(skis)) if (skis[k] && k !== want) { skis[k].off(); skis[k] = null; }
+  if (want && !skis[want]) {
+    const real = await addSki(c).then(() => !!(c.skiGear?.length && c.clips.Ski_Stand)).catch(() => false);
+    if (ch !== wear.ch || !onSkis()) return show(); // changed meanwhile
+    holder.updateMatrixWorld(true);
+    skis[want] ||= real ? realSki(c, ch) : skiStage(c, ch, c.rest);
+  }
+  if (want) { colorSkis(skis[want].gear, ch); if (skis[want].real) tintSkiGear(c, ch); }
+  if (!want) holder.rotation.y = 0;
+  renderSport();
   holder.position.y = a ? 0.004 : c.pet ? 0.062 : 0.062 * ch.height / CFG.templates[ch.tpl].height; // the template's snow is a little below its origin
   if (go && focus === "full") enter();
-  else if (swapped || !c.current) { if (entrance.running) center(); c.play(pose, { fade: 0 }); }
+  else if (swapped || !c.current || (want && skis[want]?.real && c.current === "Stand_Idle") || (!want && /^Ski_/.test(c.current || ""))) { if (entrance.running) center(); c.play(clipOf(pose), { fade: 0 }); }
   $("status").hidden = true;
 }
 const escape = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 // ---- Poses (摆姿势): one row of chips, all loops. An animal only stands (its walk, slowly); its moves are its entrances.
 const POSE_ROW = ["Stand_Idle", "Board_Hold", "Pose_Wave", "Pose_Cheer", "Sit_Snow", "Pose_Hold_Photo", "Radio_Talk_Stand"];
-const LABEL = Object.fromEntries([...POSES, ...ENTRANCES, ...PET_MOVES.map(([k, l]) => [k, l])]);
+const LABEL = Object.fromEntries([...POSES, ...ENTRANCES, ...SKI_ENTRANCES, ...PET_MOVES.map(([k, l]) => [k, l])]);
+// On skis: the poses that don't need the board (no 抱板, no sitting in the snow on it).
+const SKI_POSES = ["Stand_Idle", "Pose_Wave", "Pose_Cheer", "Pose_Hold_Photo", "Radio_Talk_Stand"];
 let pose = "Stand_Idle", entries = false;
 function playPose(k) {
   if (!rider) return;
   if (entrance.running) center();
-  pose = k; rider.play(k); renderPoses();
+  pose = k; rider.play(clipOf(k)); renderPoses();
 }
 function renderPoses() {
   // a rigged animal: the poses it has clips for (character.js leaves out the ones its short arms can't do)
-  const list = petOf(wear.ch) ? ["Stand_Idle"] : rigOf(wear.ch) ? POSE_ROW.filter((k) => !rider?.pet || rider.clips[k]) : POSE_ROW;
+  const list = petOf(wear.ch) ? ["Stand_Idle"] : rigOf(wear.ch) ? POSE_ROW.filter((k) => !rider?.pet || rider.clips[k]) : onSkis() ? SKI_POSES : POSE_ROW;
   $("poses").innerHTML = list.map((k) => `<button class="${k === pose ? "on" : ""}" data-pose="${k}">${t(LABEL[k])}</button>`).join("");
 }
 $("poses").addEventListener("click", (e) => { const b = e.target.closest("[data-pose]"); if (b) playPose(b.dataset.pose); });
@@ -308,7 +363,7 @@ function renderEntries() {
 $("entries").addEventListener("click", (e) => {
   const b = e.target.closest("[data-entry]"); if (!b) return;
   const k = b.dataset.entry, a = petOf(wear.ch);
-  if (k === lastEntry && k !== (a ? petFav(wear.ch) : favOf(wear.ch))) { if (a) wear.ch.petFav = k; else wear.ch.fav = k; save(); renderEntries(); return; }
+  if (k === lastEntry && k !== (a ? petFav(wear.ch) : favOf(wear.ch))) { if (a) wear.ch.petFav = k; else if (onSkis()) wear.ch.skiFav = k; else wear.ch.fav = k; save(); renderEntries(); return; }
   enter(k);
 });
 function showEntries(on) {
@@ -316,6 +371,18 @@ function showEntries(on) {
   if (on) { renderEntries(); enter(); }
 }
 $("goBtn").onclick = () => showEntries(true);
+// ---- 单板 / 双板: board or skis, kept on the rider (ch.sport "ski", else a board), so friends see it too
+// (core/look.js, together-core.js cleanRider). The animals ride boards: no choice for them.
+function renderSport() {
+  const el = $("sport"); el.hidden = !!wear.ch.animal;
+  for (const b of el.querySelectorAll("[data-sport]")) b.classList.toggle("on", b.dataset.sport === sportOf(wear.ch));
+}
+$("sport").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-sport]"); if (!b || b.dataset.sport === sportOf(wear.ch)) return;
+  if (b.dataset.sport === "ski") wear.ch.sport = "ski"; else delete wear.ch.sport;
+  pose = "Stand_Idle"; lastEntry = null; renderPoses(); if (entries) renderEntries();
+  save(); render(); show({ enter: true });
+});
 $("entryClose").onclick = () => showEntries(false);
 
 // ---- The wardrobe (换装): a rail of icons down the left, what the chosen one changes on a sheet at the bottom;
@@ -333,7 +400,7 @@ function open(k, sub) {
   wtab = k; if (sub) gear = sub; naming = false; palette = null;
   if (rigOf(wear.ch) && gear === "gloves") gear = "helmet";
   focus = petOf(wear.ch) ? "full" : (k === "gear" ? FOCUS[gear] : FOCUS[k]) || "full";
-  if (focus !== "full") { const was = entrance.running; center(); if (was && rider) { pose = "Stand_Idle"; rider.play(pose); renderPoses(); } }
+  if (focus !== "full") { const was = entrance.running; center(); if (was && rider) { pose = "Stand_Idle"; rider.play(clipOf(pose)); renderPoses(); } }
   render();
 }
 function closeDress() {
@@ -404,6 +471,7 @@ function render() {
       h = `<small class="lbl">${t("款式")}</small><div class="tiles">${acc("beanie", "橘子帽")}<button class="chip${!on ? " on" : ""}" data-ppart="beanie">${t("头盔")}</button></div>`
         + `<small class="lbl">${t(on ? "帽子颜色" : "头盔颜色")}</small>${swatches(on ? "beanie" : "helmet")}`; }
     else if (gk === "helmet") h = colours("helmet") + `<small class="lbl">${t("款式")}</small><div class="tiles">${tile("visor", "帽檐")}${tile("stickers", "贴纸")}<button class="chip${ch.glossyHelmet ? " on" : ""}" data-gloss>${t("亮面")}</button></div>`;
+    else if (gk === "board" && onSkis()) h = `<div class="boardrow"><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><span class="skis">${[0, 1].map(() => `<i style="--a:${SKI_COLORS[k][0]};--b:${SKI_COLORS[k][1]}"></i>`).join("")}</span></button>`).join("")}</div></div>`;
     else if (gk === "board") h = (a ? `<p class="pethint">${t("小动物不穿衣服，换块雪板吧")}</p>` : "") + `<div class="boardrow"><div class="boards">${BOARDS.map((k) => `<button class="${ch.board === k ? "on" : ""}" data-board="${k}"><img src="assets/riders/boards/${k}_base.jpg?v=1" alt=""></button>`).join("")}</div>`
       + `<div class="stance">${["regular", "goofy"].map((s) => `<button class="chip${wear.stance === s ? " on" : ""}" data-stance="${s}">${s === "regular" ? "Regular" : "Goofy"}</button>`).join("")}<small>${t(wear.stance === "goofy" ? "右脚在前" : "左脚在前")}</small></div></div>`;
     else h = colours(gear);
@@ -432,8 +500,9 @@ $("rail").addEventListener("click", (e) => { const b = e.target.closest("[data-k
 $("wsub").addEventListener("click", (e) => { const b = e.target.closest("[data-k]"); if (b) open("gear", b.dataset.k); });
 // Wear an outfit: a new copy of it (your stance stays yours), and its entrance.
 function wearOutfit(r) {
-  const was = petOf(wear.ch);
+  const was = petOf(wear.ch), sport = wear.ch.sport;
   Object.assign(wear, { ch: deep(charOf(r)), from: r.id, name: r.name, dirty: false });
+  if (sport === "ski") wear.ch.sport = "ski"; else delete wear.ch.sport; // board or skis is yours, whatever you wear
   if (was !== petOf(wear.ch)) { if (wtab !== "outfits") open(wtab); pose = "Stand_Idle"; renderPoses(); }
   save(); render(); show({ enter: true });
 }

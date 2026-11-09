@@ -22,7 +22,7 @@
 // hands it its hooks with setRide({ state, find, follow, unfollow, voice }).
 import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "./i18n.js?v=47";
-import { rideTrip } from "../ride/together-core.js?v=7";
+import { rideTrip } from "../ride/together-core.js?v=8";
 import { cleanPresence, cleanInvite, cleanPing, cleanCall, cleanOk, liveMembers, resolveFollow, teamLead, followMove, findWay, callAt, callLeft, callChair, spotFor, statusOf, petOf, EVERY, COUNTDOWN } from "./party-core.js?v=1";
 
 const KEY = "prerunParty", SEEN = "prerunPartySeen", RIDE_TRIP = "prerunRideTrip", LAND = "prerunTogetherLand";

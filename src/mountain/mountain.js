@@ -12,8 +12,8 @@ import { addStep } from "../ride/roadbook.js?v=27";
 import { translatePage, myAvatar, t as tr, EN_ON as EN } from "../core/i18n.js?v=47";
 import { openNav } from "../core/nav.js?v=24";
 import { liftTicket } from "../core/transition.js?v=17";
-import { startParty } from "../core/party.js?v=16";
-import { bunnySpot } from "../ride/practice-core.js?v=1";
+import { startParty } from "../core/party.js?v=17";
+import { bunnySpot } from "../ride/practice-core.js?v=2";
 import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=1";
 
 const EXAG = 1.3; // relief exaggerated, as painted resort maps do, so the ridges read

@@ -73,7 +73,7 @@ export function cleanHi(p) {
   return { id: p.id, name: str(p.name, 20) || "", avatar: AV.test(p.avatar) ? p.avatar : "av_rider", colors, rider: cleanRider(p.rider), stance: p.stance === "goofy" ? "goofy" : "regular", ask: !!p.ask };
 }
 // The rider in someone's look (core/look.js): { ch } (a character: template, sizes, parts, colours by
-// material, board, and animal if they ride as one of the resort animals), { preset, colors } or { preset }; only
+// material, board, skis (sport) or not, and animal if they ride as one of the resort animals), { preset, colors } or { preset }; only
 // the right kinds of value (the ride keeps the sizes inside the template's ranges). null if it isn't one.
 export function cleanRider(r) {
   if (!r || typeof r !== "object") return null;
@@ -85,6 +85,7 @@ export function cleanRider(r) {
     if (c.colors && typeof c.colors === "object") for (const [k, v] of Object.entries(c.colors).slice(0, 40)) if (/^MAT_\w{1,30}$/.test(k) && HEX.test(v)) ch.colors[k] = v;
     if (/^[A-D]$/.test(c.board)) ch.board = c.board;
     if (c.glossyHelmet === true) ch.glossyHelmet = true;
+    if (c.sport === "ski") ch.sport = "ski"; // on skis (双板); a board otherwise
     if (animalOf(c.animal)) ch.animal = c.animal;
     if (riggedOf(c.animal) && c.pet && typeof c.pet === "object") ch.pet = { colors: petColors(c.pet.colors) }; // its own colours
     return { ch };
