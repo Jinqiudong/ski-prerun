@@ -9,8 +9,8 @@ import { CFG, COLOR_MATS, makeCharacter, loadTemplate, presetChar, partColors, s
 import { myRiderLook } from "../core/look.js?v=22";
 import { animalOf, riggedOf, deskPetOf, petColors } from "./animal-core.js?v=2";
 import { jointFrame, limitJoint, limitHinge, decompose, limitsOf, sideOf, rangesFor, HINGES } from "./joint-core.js?v=1";
-import { armTargets, ARM_SPEED } from "./carve-core.js?v=5";
-import { carveDepth, depthStep, carveLayer, alignOf, leanScale, twoBone, slew, hipSlew, TRUNK_SPEED, PELVIS_SPEED, NEUTRAL_TRUNK } from "./carve-core.js?v=5";
+import { armTargets, ARM_SPEED } from "./carve-core.js?v=6";
+import { carveDepth, depthStep, carveLayer, alignOf, leanScale, twoBone, slew, hipSlew, TRUNK_SPEED, PELVIS_SPEED, NEUTRAL_TRUNK } from "./carve-core.js?v=6";
 import { loadAnimal, animalRider, disposeAnimal, poseAnimal, sitAnimal, idleAnimal, hikeAnimal, ANIMAL_TRICKS, startAnimalTrick, fallAnimal } from "./animal.js?v=3";
 import { SKI_CLIPS, skiTricks, skiWeights, newPlant, plantStep, standinParams, sportOf, extraLean, fallSide } from "./ski-core.js?v=1";
 import { dressSkier, poseSkiBody, placePoles, tintSkiGear, SKI_STACK } from "./skier.js?v=1";
@@ -168,9 +168,8 @@ export async function boarderModel(friend = null) {
   const joints = jointsOf(bones, B);
   for (const l of legs) l.hinge = joints.find((j) => j.bone === l.shin)?.f.hinge?.h || null; // the knee's hinge, in the thigh's space
   const elbowH = Object.fromEntries(joints.filter((j) => j.f.hinge && /^Forearm/.test(j.name)).map((j) => [j.name, j.f.hinge.h])); // the elbows' hinges, in the upper arms' space
-  const chestFront = new THREE.Vector3(0, 1, 0).applyQuaternion(B.footL.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(B.chest.getWorldQuaternion(new THREE.Quaternion()).invert()); // the body's front, in the chest's space
   const handRest = Object.fromEntries(["HandL", "HandR"].filter((n) => C.bones[n]).map((n) => [n, C.bones[n].quaternion.clone()]));
-  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ, legs, legLen, joints, handRest, elbowH, chestFront,
+  root.userData = { kind: "board", C, tpl: C.tpl, goofy: me.stance === "goofy", flip: me.stance === "goofy", pushT: 0, walkT: 0, at: 0, yaw, lean, model, mixer, A, B, bones, radio, lead, toeX, armZ, legs, legLen, joints, handRest, elbowH,
     edgeX: [edges.min.x, edges.max.x], s: { edge: 0, skid: 0, knee: 0, fore: 0, tuck: 0, radio: 0, toeD: 0, heelD: 0 } };
   return root;
 }
@@ -218,10 +217,11 @@ function armsBody(u, dt, toe, heel, w) {
   const B = u.B, F = u.lean, s = u.s, prev = (s.arms ||= {});
   if (w < 0.01) { s.arms = {}; return; } // a trick or a fall: its clip's arms; afterwards they ease back from there
   const leadL = u.lead === "L", T = armTargets(toe, heel, !!u.C?.pet);
-  // The arms follow the body: their frame is the chest's (its front, the toes' side; up along the trunk; the nose
-  // squared to both), not the board's, which on a deep heel edge tips the toes' side up into the sky.
-  const cf = u.chestFront.clone().applyQuaternion(B.chest.getWorldQuaternion(_wq)).normalize();
-  const cu = wpos(B.neck, new THREE.Vector3()).sub(wpos(B.spine, new THREE.Vector3())); cu.addScaledVector(cf, -cu.dot(cf)).normalize();
+  // The arms follow the body: their frame is the trunk's, not the board's, which on a deep heel edge tips the toes'
+  // side up into the sky. Up along the trunk; the front, the toes' side across the board squared to it (not the chest bone's own front:
+  // that is turned open toward the nose, and an arm "forward over the nose" in it swung behind the body).
+  const cu = wpos(B.neck, new THREE.Vector3()).sub(wpos(B.spine, new THREE.Vector3())).normalize();
+  const cf = new THREE.Vector3(u.toeX, 0, 0).transformDirection(F.matrixWorld); cf.addScaledVector(cu, -cf.dot(cu)).normalize();
   const cn = new THREE.Vector3(0, 0, 1).transformDirection(F.matrixWorld); cn.addScaledVector(cf, -cn.dot(cf)).addScaledVector(cu, -cn.dot(cu)).normalize();
   const toWorld = (v) => new THREE.Vector3().addScaledVector(cf, v[0]).addScaledVector(cu, v[1]).addScaledVector(cn, v[2]).normalize(); // [toes, up, nose] → world
   const inv = F.matrixWorld.clone().invert(), max = ARM_SPEED * dt;
@@ -365,25 +365,26 @@ function carveBody(u, toe, heel, align = null, neutral = 0) {
   // A direction's tilt toward the toes, on the board (0: square off its base).
   const tiltOf = (v) => Math.atan2(v.dot(across), v.dot(up));
   const thighTilt = () => u.legs.reduce((a, l) => a + tiltOf(wpos(l.thigh, _a).sub(wpos(l.shin, _b))), 0) / u.legs.length;
-  // Toe side: the pelvis tipped forward into line with the thighs (knee to hip), the legs bent again to the
-  // feet; twice round, as tipping the pelvis moves the hip joints.
-  if (L.align > 0.001 && B.spine) for (let i = 0; i < 2; i++) {
-    const fix = (thighTilt() + L.bend - tiltOf(wpos(B.spine, _d).sub(wpos(B.hips, _c)))) * L.align;
+  // (Between the edges: tall in the world, whatever the board's roll; upTilt is the board's own tilt.)
+  const level = new THREE.Vector3(tx, 0, 0).transformDirection(u.yaw.matrixWorld); level.y = 0; level.normalize();
+  const upTilt = Math.atan2(up.dot(level), up.y);
+  // Toe side: the pelvis tipped forward into line with the thighs (knee to hip); between the edges stacked tall
+  // in the world; the legs bent again to the feet; twice round, as tipping the pelvis moves the hip joints.
+  if ((L.align > 0.001 || L.pelvisUp > 0.001) && B.spine) for (let i = 0; i < 2; i++) {
+    const p = tiltOf(wpos(B.spine, _d).sub(wpos(B.hips, _c)));
+    const fix = (thighTilt() + L.bend - p) * L.align + (NEUTRAL_TRUNK - upTilt - p) * L.pelvisUp;
     turn(B.hips, F, Z, -tx * fix);
     reach();
   }
   // The trunk: on the toe side in line with the thighs too (the chest over the hips); on the heel side
-  // brought to its tilt. Split between spine and chest; the chest turned first; twice round, as the spine's
-  // pivot sits above the hips.
+  // brought to its tilt. The chest turned first; then the whole trunk tipped as one at the spine (a firm core:
+  // split between spine and chest, the trunk bent into an S and the chest, the neck and the head over-rotated,
+  // the head flicking some 20° at every edge change); twice round, as the spine's pivot sits above the hips.
   turn(B.chest, F, Y, tx * L.twist);
-  // (Between the edges: tall in the world, whatever the board's roll; upTilt is the board's own tilt.)
-  const level = new THREE.Vector3(tx, 0, 0).transformDirection(u.yaw.matrixWorld); level.y = 0; level.normalize();
-  const upTilt = Math.atan2(up.dot(level), up.y);
   if (B.spine && B.neck) for (let i = 0; i < 2; i++) {
     const now = tiltOf(wpos(B.neck, new THREE.Vector3()).sub(wpos(B.hips, _c)));
     const fix = (L.trunk - now) * L.trunkK + (thighTilt() + L.bend - now) * L.alignToe + (NEUTRAL_TRUNK - upTilt - now) * L.upright;
-    turn(B.spine, F, Z, -tx * fix * 0.55);
-    turn(B.chest, F, Z, -tx * fix * 0.45);
+    turn(B.spine, F, Z, -tx * fix);
   }
   return L.alignToe;
 }
@@ -418,14 +419,17 @@ function slewBody(root, u, dt, off) {
       B.hips.position.copy(B.hips.parent.worldToLocal(hp)); B.hips.updateMatrixWorld(true);
       legsTo(u, feet, across);
     }
-    // Pelvis, then trunk: tipped about the board's long axis back toward where they were.
+    // Pelvis, then trunk: tipped about the board's long axis back toward where they were. Holding the pelvis back
+    // leaves the trunk where the layers put it (the spine turned back by as much): each is limited on its own.
+    // (Carried along with the pelvis, a trunk asked to sit back into the heel side was dragged the other way,
+    // some 10° up and over toward the toes, and swung back a moment later.)
     for (let i = 0; i < 3; i++) {
       const p = pelvis(), pw = slew(s.slewP, p, PELVIS_SPEED * dt * fast);
-      if (Math.abs(pw - p) > 5e-4) { turn(B.hips, u.lean, Z, -tx * (pw - p)); legsTo(u, feet, across); } else break;
+      if (Math.abs(pw - p) > 5e-4) { turn(B.hips, u.lean, Z, -tx * (pw - p)); turn(B.spine, u.lean, Z, tx * (pw - p)); legsTo(u, feet, across); } else break;
     }
     for (let i = 0; i < 8; i++) { // a few times round: the board's long axis is not quite square to the level toe side
       const t = trunk(), tw = slew(s.slewT, t, TRUNK_SPEED * dt * fast);
-      if (Math.abs(tw - t) > 5e-4) { turn(B.spine, u.lean, Z, -tx * (tw - t) * 0.55); turn(B.chest, u.lean, Z, -tx * (tw - t) * 0.45); } else break;
+      if (Math.abs(tw - t) > 5e-4) { turn(B.spine, u.lean, Z, -tx * (tw - t)); } else break;
     }
   }
   s.slewH = hipH(); s.slewP = pelvis(); s.slewT = trunk();

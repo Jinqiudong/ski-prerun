@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { armTargets, ARM_SPEED, hipSlew, HIP_SPEED as HS, HIP_RISE, carveDepth, depthStep, slew, carveLayer, alignOf, leanScale, twoBone, SHAPES, EDGE_FLAT, ALIGN_AT, HIP_BEND, NEUTRAL_BEND, NEUTRAL_RISE, RISE_S, LEAVE_S, HIP_SPEED, TRUNK_SPEED } from "../src/rider/carve-core.js";
+import { armTargets, ARM_SPEED, hipSlew, HIP_SPEED as HS, HIP_RISE, carveDepth, depthStep, slew, carveLayer, alignOf, leanScale, twoBone, SHAPES, EDGE_FLAT, ALIGN_AT, HIP_BEND, HEEL_TRUNK_AT, HEEL_LET_GO, NEUTRAL_RISE, RISE_S, LEAVE_S, HIP_SPEED, TRUNK_SPEED } from "../src/rider/carve-core.js";
 
 const near = (a, b, e = 1e-6) => assert.ok(Math.abs(a - b) < e, `${a} vs ${b}`);
 const KMH = (v) => v / 3.6;
@@ -49,20 +49,44 @@ test("toe side: in line with the thighs from the first bit of edge", () => {
   near(alignOf(0), 0); near(alignOf(ALIGN_AT), 1); near(alignOf(ALIGN_AT / 2), 0.5);
   near(carveLayer(0.2, 0, 0.3).align, 0.3); // eased by the caller
   assert.ok(HIP_BEND > 0 && HIP_BEND <= 10 * Math.PI / 180);
-  near(carveLayer(0.3, 0.2, 1).alignToe, 0); // gone once on the heel edge
+  near(carveLayer(0.3, HEEL_LET_GO, 1).alignToe, 0); // gone once on the heel edge
 });
 
 test("between the edges: a tall, centred stance", () => {
   const mid = carveLayer(0, 0, 0, 1);
   near(mid.hipDown, NEUTRAL_RISE); assert.ok(mid.hipDown < 0, "legs a little extended");
-  near(mid.align, 1); near(mid.bend, NEUTRAL_BEND); near(mid.upright, 1); // pelvis in line with a little bend, trunk tall in the world
-  assert.ok(NEUTRAL_BEND < 0.4, "not the clips' crouch with the butt out");
+  near(mid.align, 0); near(mid.upright, 1); // pelvis and trunk stacked tall in the world, not held to the thighs
   const heel = carveLayer(0, 0.5, 0, 1);
   near(heel.upright, 0); near(heel.trunkK, 1); // on the heel edge its own trunk
   // through the switch nothing jumps: each value moves little from a small toe to a small heel depth (the
   // toe line's align, eased over time by boarder.js, is still about 0 there)
   const a = carveLayer(0.01, 0, 0.02, 1), b = carveLayer(0, 0.01, 0, 1);
   for (const k of ["hipIn", "hipDown", "twist"]) assert.ok(Math.abs(a[k] - b[k]) < 0.02, k);
+});
+
+test("into and out of the heel edge the trunk and the pelvis hand over smoothly, not in a frame or two", () => {
+  // the weights of the tall moment and of the heel side's trunk change no faster than ~1.6/HEEL_TRUNK_AT per unit of
+  // depth (smoothstep), over at least a quarter of the depth (the depth builds at most 1/RISE_S per second)
+  assert.ok(HEEL_TRUNK_AT >= 0.3 && HEEL_LET_GO >= 0.2);
+  let worst = 0;
+  for (let h = 0; h < 0.6; h += 0.005) {
+    const a = carveLayer(0, h, 0, 1), b = carveLayer(0, h + 0.005, 0, 1);
+    for (const k of ["trunkK", "upright", "align"]) worst = Math.max(worst, Math.abs(b[k] - a[k]) / 0.005);
+  }
+  assert.ok(worst < 1.6 / HEEL_TRUNK_AT, `steepest ${worst}`);
+  const t = carveLayer(0.3, 0, 1, 1), t2 = carveLayer(0.3, 0.02, 1, 1); // the toe line lets go gently too
+  assert.ok(Math.abs(t.align - t2.align) < 0.05);
+});
+
+test("arms carried, not hanging dead along the trunk", () => {
+  for (const [toe, heel] of [[0, 0], [1, 0], [0, 1], [0.15, 0], [0, 0.15]]) {
+    const a = armTargets(toe, heel);
+    for (const k of ["lead", "rear"]) {
+      assert.ok(a[k].upper[0] > 0.45, `${k} held in front of the body (${toe},${heel}): ${a[k].upper}`);
+      assert.ok(a[k].upper[1] > -0.85, `${k} not straight down`);
+      assert.ok(a[k].elbow >= 0.6, "elbows bent, an athletic carriage");
+    }
+  }
 });
 
 test("heel sit: moderate on a medium turn, deep only at the top end", () => {
