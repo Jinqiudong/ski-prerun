@@ -1,5 +1,5 @@
 // Human joint limits, as numbers (no three.js; tested: tests/joint.test.mjs). boarder.js clamps every bone of a
-// rider's skeleton to these after all its layers (the clips, the carving body, the speed limits, the lean, a trick
+// rider's skeleton to these last (a safety net: the riding key poses, the clips, a trick
 // blending in), so a big movement never bends a joint past what a person's can.
 //
 // Quaternions are [x, y, z, w]; vectors [x, y, z]. A joint is measured in its parent's space, from the rig's own
