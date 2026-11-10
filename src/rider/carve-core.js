@@ -1,113 +1,88 @@
-// The carving body on each edge, as numbers (no three.js; tested). boarder.js lays it over the ride clips,
-// whose toe-side and heel-side carves are posed on a flat board and hardly differ from the stance.
-//   Toe side (前刃): the hips driven forward and in over the toe edge (顶胯), knees into the hill, the
-//   pelvis and the trunk in one straight line with the thighs (no bend at the hip, no butt out), the chest
-//   over the hips, the hands low and forward.
-//   Heel side (后刃): sitting down as into a chair, the hips low and back over the heel edge, the knees bent,
-//   the chest up and leaning a little forward over the knees, the arms reaching forward for balance.
-// Lengths are in leg lengths (thigh + shin), so a short-legged rider (the capybara) bends as much, by its
-// own size. "Toward the toes" is the side the toes point to, across the board; "down" is into the board.
+// The riding body as numbers (no three.js; tested): a few whole-body key poses, each a correct snowboarder's
+// stance on its own, and how they are blended from the ride. boarder.js builds each key pose once per rider on
+// its own skeleton (buildKeys) and plays the blend; nothing else moves the body while riding, so the whole body
+// moves as one and every frame is a mix of poses that each look right.
+//
+// A key pose is written in the board's frame as directions [toward the toes, up off the base, toward the nose]
+// and angles in degrees:
+//   hip    [in, h]: the hips' centre over the bindings' midpoint, toward the toes (− : the heels) and up, in leg
+//          lengths (thigh + shin), so a short-legged rider (the capybara) bends as much by its own size. The legs
+//          are bent by a two-bone IK to keep the boots in the bindings.
+//   pelvis { tilt, open }: the pelvis's tilt toward the toes off the base's normal (hips to lower back), and how
+//          far its front is turned from the toes toward the nose.
+//   trunk  { tilt, open }: the same for the trunk (the spine and the chest as one: a firm core, no S-bend).
+//   head   { tilt, look, pitch }: the head's up tilted toward the toes (a deep carve's head stays near level in the
+//          world: tilted against the board's lean), its face turned `look` from the toes toward the nose (down the
+//          hill) and pitched down by `pitch`.
+//   arms   { lead, rear }: the upper arm's and the forearm's directions (the lead arm is the nose's side); the elbow
+//          bends on its hinge. Hands below the chest, never out at shoulder height, never behind.
+// Reference: coaching photos of toe- and heel-side carves (knees forward and hips over the toe edge, the body one
+// line from the knees up; on the heels sitting down as into a chair, chest up and forward, arms forward).
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (x) => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); }; // eased at both ends: no kink in the motion
 
-// How deep into the edge, 0..1, from the board's edge angle (radians, either sign) and the speed (m/s): the
-// load of the turn. Nothing near a flat base; a medium turn at a medium speed (about 36° at 30 km/h) is a
-// moderate version (about 0.4); all of it only on a hard carve (about 49°) fast (54 km/h and up). Eased in,
-// so the posture builds as the turn loads up rather than jumping with the first bit of edge.
-export const EDGE_FLAT = 0.08, EDGE_FULL = 0.85, SPEED_FULL = 15;
-export function carveDepth(edge, speed = 10) {
-  const t = clamp((Math.abs(edge) - EDGE_FLAT) / (EDGE_FULL - EDGE_FLAT), 0, 1);
-  const load = t * (0.35 + 0.65 * clamp((speed || 0) / SPEED_FULL, 0, 1));
-  return load ** 1.4;
-}
-
-// The depth over time: no faster than building a new edge in about RISE_S seconds or leaving one in LEAVE_S
-// (a little quicker), so the posture never jumps however quick the roll.
-export const RISE_S = 0.6, LEAVE_S = 0.35;
-// Leaving follows the edge straight down (capped), so by the time the board is flat the old edge's posture
-// has gone; building eases in.
-export function depthStep(cur, target, dt) {
-  if (target <= cur) return Math.max(target, cur - dt / LEAVE_S);
-  return Math.min(cur + (target - cur) * Math.min(1, dt * 8), cur + dt / RISE_S);
-}
-
-// A slew limit: from prev toward want by at most maxStep.
-export const slew = (prev, want, maxStep) => prev + clamp(want - prev, -maxStep, maxStep);
-// The body's speed limits, whatever the clips and the layer ask: the hips up or down (m/s), the pelvis and
-// the trunk tipping toward the toes or the heels (rad/s), in the world (so the board can roll under a body
-// that stays centred, crossing under, rather than the body flipping with it).
-export const HIP_SPEED = 0.6, TRUNK_SPEED = 2, PELVIS_SPEED = 2.5;
-// Rising out of a deep sit may be quicker than sinking into one: held low while the board rolls to the toe
-// edge at speed, the shins would fold over the boots past what an ankle in a boot can (joint-core.js Foot).
-export const HIP_RISE = 1.1;
-// The hips' allowed move this frame: down by HIP_SPEED, up by HIP_RISE (m/s).
-export const hipSlew = (prev, want, dt) => prev + clamp(want - prev, -HIP_SPEED * dt, HIP_RISE * dt);
-
-// The shape at full depth on each side.
-//   hipIn: hips toward the toes (− : toward the heels), leg lengths; hipDown: hips toward the board.
-//   trunk: (heel side) the trunk's tilt toward the toes (rad), measured on the board (hips to neck), that
-//   the trunk is brought to; on the toe side the trunk follows the thighs instead (align); twist: the chest turned to face the toes more (− : opened toward the nose), rad.
-//   sit: (heel side) how far the hips sink as into a chair, full by SIT_AT of depth: a moderate turn is
-//   already a clear sit; the deepest sit comes from the heel carve clip and the inclination on a hard one.
-//   lean: how much of the physics' inclination the rider's body shows. On the toe side at full lean (about
-//   46°) the shins would lie near the snow and it reads as kneeling; leaned 20% less (about 37°), with the
-//   legs extended (hipDown < 0) and the hips driven in, it reads as a laid-out carve, knees off the snow.
-export const SHAPES = {
-  toe: { hipIn: 0.27, hipDown: -0.09, lean: 0.8, twist: 0.14 },
-  heel: { hipIn: -0.16, hipDown: 0, sit: 0.09, trunk: 0.45, lean: 1, twist: -0.16 },
+const RIDE_ARMS = { lead: { upper: [0.45, -0.75, 0.5], fore: [0.6, -0.25, 0.75] }, rear: { upper: [0.42, -0.82, -0.3], fore: [0.75, -0.4, 0.15] } };
+export const KEYS = {
+  // Straight running: an athletic stance, knees softly bent, hips over the board's centre, trunk a little forward.
+  neutral: { hip: [0, 0.95], pelvis: { tilt: 12, open: 15 }, trunk: { tilt: 10, open: 25 }, head: { tilt: 0, look: 70, pitch: 12 }, arms: RIDE_ARMS },
+  // Toe side (前刃): knees forward, the hips pushed forward over the toes in one line with the thighs (顶胯), the
+  // trunk upright in the world once the board leans (a little back of the base's normal on the board).
+  toe: { hip: [0.12, 0.92], pelvis: { tilt: -6, open: 10 }, trunk: { tilt: -8, open: 15 }, head: { tilt: -12, look: 65, pitch: 10 },
+    arms: { lead: { upper: [0.45, -0.82, 0.35], fore: [0.65, -0.35, 0.65] }, rear: { upper: [0.4, -0.9, -0.1], fore: [0.75, -0.45, 0.2] } } },
+  toeDeep: { hip: [0.2, 0.88], pelvis: { tilt: -12, open: 10 }, trunk: { tilt: -12, open: 15 }, head: { tilt: -24, look: 60, pitch: 8 },
+    arms: { lead: { upper: [0.5, -0.8, 0.3], fore: [0.7, -0.3, 0.6] }, rear: { upper: [0.45, -0.88, -0.05], fore: [0.8, -0.4, 0.2] } } },
+  // Heel side (后刃): sitting into the heels, hips low and back, the chest up and forward over the knees.
+  heel: { hip: [-0.12, 0.72], pelvis: { tilt: 26, open: 20 }, trunk: { tilt: 34, open: 30 }, head: { tilt: 12, look: 70, pitch: 10 },
+    arms: { lead: { upper: [0.6, -0.65, 0.45], fore: [0.75, -0.1, 0.6] }, rear: { upper: [0.65, -0.72, 0], fore: [0.85, -0.2, 0.35] } } },
+  heelDeep: { hip: [-0.17, 0.62], pelvis: { tilt: 34, open: 22 }, trunk: { tilt: 48, open: 30 }, head: { tilt: 26, look: 65, pitch: 8 },
+    arms: { lead: { upper: [0.7, -0.55, 0.45], fore: [0.8, 0, 0.6] }, rear: { upper: [0.75, -0.62, 0.05], fore: [0.9, -0.1, 0.35] } } },
+  // Braking: the board across, sitting back onto the heel edge, arms forward and low (never the skid clip's T-pose).
+  skid: { hip: [-0.12, 0.76], pelvis: { tilt: 22, open: 20 }, trunk: { tilt: 26, open: 30 }, head: { tilt: 8, look: 35, pitch: 12 },
+    arms: { lead: { upper: [0.6, -0.68, 0.4], fore: [0.8, -0.15, 0.55] }, rear: { upper: [0.65, -0.74, -0.05], fore: [0.85, -0.25, 0.35] } } },
+  // A tuck (or the knees soaking up a bump): low, the chest down over the knees, hands in front of them.
+  tuck: { hip: [-0.04, 0.7], pelvis: { tilt: 32, open: 15 }, trunk: { tilt: 40, open: 25 }, head: { tilt: -5, look: 70, pitch: -5 },
+    arms: { lead: { upper: [0.55, -0.78, 0.25], fore: [0.45, -0.55, 0.65] }, rear: { upper: [0.55, -0.8, -0.1], fore: [0.6, -0.6, 0.4] } } },
 };
+export const KEY_NAMES = Object.keys(KEYS);
+// The knees point over the toes and a little out toward each end of the board (toward the nose for the lead leg).
+export const KNEES_OUT = 0.35;
 
-// The layer for a moment of the ride: toe and heel depths (0..1, at most one of them non-zero, but a blend
-// is fine) to { hipIn, hipDown, twist } scaled by depth; the trunk's tilt `trunk` and how
-// far it is brought to it (`trunkK`, the heel side's); and `align` with `bend`: how far the pelvis and the
-// trunk are brought into line with the thighs and the bend left at the hip.
-// On the toe side the hips are driven forward from the first bit of edge, not only on a deep carve (the
-// owner: 顶出去, hips and butt pushed out in one straight line with the thighs): full by ALIGN_AT of depth,
-// bent at the hip by no more than HIP_BEND; the hips' drive forward ramps in with it. The lean into the
-// turn then comes from the ankles, the knees and the whole body's inclination, never from folding at the
-// waist.
-// Between the edges (`neutral`, 0..1: riding, not skidding, pushing or in a trick) the body passes through
-// a tall, centred stance: the legs a little extended (NEUTRAL_RISE) and the pelvis and the trunk stacked
-// tall over the board in the world (`upright`), not the clips' crouch with the butt out. (The pelvis is not
-// held to the thighs there: they fold fast into the heel side's sit, and a pelvis following them tipped back
-// past the board and swung forward again, a hip that dropped and popped at every edge change.) On the heel
-// side the trunk is brought to its own tilt instead, eased in (smoothstep) by HEEL_TRUNK_AT of depth, and the
-// toe side's line lets go by HEEL_LET_GO. (Both were a few hundredths of depth, about a tenth of a second: the
-// pelvis and the trunk swung some 20° in a frame or two as the heel edge came in or went, then crawled at the
-// speed limits; with the head flicking on top it read as a limp, rubbery body.)
-export const NEUTRAL_TRUNK = 0.1;
-export const ALIGN_AT = 0.15, HIP_BEND = 0.06, NEUTRAL_RISE = -0.05, HEEL_TRUNK_AT = 0.35, HEEL_LET_GO = 0.25, TOE_TRUNK_AT = 0.25, SIT_AT = 0.35;
-const smooth = (x) => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
-// How far into line, from the toe depth alone (boarder.js eases it over time).
-export const alignOf = (toe) => smooth(toe / ALIGN_AT);
-export function carveLayer(toe, heel, alignTo = null, neutral = 0) {
-  const T = SHAPES.toe, H = SHAPES.heel;
-  const align = (alignTo ?? alignOf(toe)) * (1 - smooth(heel / HEEL_LET_GO)), drive = 0.55 * align + 0.45 * clamp(toe, 0, 1);
-  const hw = smooth(heel / HEEL_TRUNK_AT), flat = clamp(1 - (toe + heel) / 0.3, 0, 1);
-  const out = { hipIn: 0, hipDown: 0, twist: 0, trunk: H.trunk, trunkK: hw, align: 0, bend: 0, alignToe: 0, upright: 0, pelvisUp: 0 };
-  for (const key of ["hipDown", "twist"]) out[key] = T[key] * toe + H[key] * heel;
-  out.hipDown += NEUTRAL_RISE * clamp(neutral, 0, 1) * flat + H.sit * clamp(heel / SIT_AT, 0, 1);
-  out.hipIn = T.hipIn * drive + H.hipIn * heel;
-  out.align = align * (1 - hw);
-  out.bend = HIP_BEND;
-  // The trunk follows the thighs' line only as the toe edge loads up (by TOE_TRUNK_AT of depth); on a shallow toe
-  // edge it stays stacked tall. (Held to the thighs down to the last bit of toe edge, it rolled back with the board
-  // some 25° toward the heels as the edge let go, then sprang up into the tall moment: a body falling backward and
-  // catching itself at every toe-to-heel change.) boarder.js drops the angulation by it.
-  out.alignToe = out.align * smooth(toe / TOE_TRUNK_AT);
-  // Between the edges the pelvis (`pelvisUp`) and the trunk (`upright`) are stacked tall over the board in the
-  // world (NEUTRAL_TRUNK from vertical, toward the toes), not tipped with it as the board rolls: the board rolls
-  // under a centred body.
-  const nk = clamp(neutral, 0, 1) * (1 - hw);
-  out.upright = (1 - align * smooth(toe / TOE_TRUNK_AT)) * nk;
-  out.pelvisUp = (1 - align) * nk;
-  return out;
+// The edge angles (rad): below EDGE_FLAT the base is flat (neutral); the carve pose is full by EDGE_CARVE and the
+// deep one by EDGE_FULL. The physics' lean already carries the speed (tan lean = speed × turn rate / g): a deep
+// edge only comes with a fast, hard turn.
+export const EDGE_FLAT = 0.08, EDGE_CARVE = 0.5, EDGE_FULL = 0.85;
+
+// The edge, smoothed: a critically damped spring (no overshoot), about EDGE_T seconds to most of a step. The
+// one scalar the whole body follows; the board's lean uses it too, so the body and the board move together.
+export const EDGE_T = 0.25, EDGE_W = 2.15 / EDGE_T;
+export function spring(x, v, target, dt, w = EDGE_W) {
+  // exact step of x'' = w²(target − x) − 2w x'
+  const e = Math.exp(-w * dt), d = x - target, c = v + w * d;
+  return { x: target + (d + c * dt) * e, v: (v - w * c * dt) * e };
 }
 
-// How much of the inclination the body shows (1 = all of it), by the toe and heel depths.
-export function leanScale(toe, heel) {
-  return 1 - (1 - SHAPES.toe.lean) * clamp(toe, 0, 1) - (1 - SHAPES.heel.lean) * clamp(heel, 0, 1);
+// The key poses' weights for a moment of the ride: { neutral, toe, toeDeep, heel, heelDeep, skid, tuck } summing
+// to 1. edge: the smoothed edge angle (rad, either sign); toe: on the toe edge (else the heel); skid, tuck: 0..1.
+// The carve pose grows out of neutral with the edge (full by EDGE_CARVE), the deep one after it (by EDGE_FULL),
+// each a smoothstep, so the body's angulation keeps pace with the board's lean (the trunk upright in the world,
+// never laid back into the turn) and nothing moves with a kink. Between the edges the blend passes through the
+// neutral stance (the tall moment), so changing edge never sits down suddenly.
+export function keyWeights(edge, toe, skid = 0, tuck = 0) {
+  const w = Object.fromEntries(KEY_NAMES.map((k) => [k, 0])), e = Math.abs(edge);
+  const c = smooth((e - EDGE_FLAT) / (EDGE_CARVE - EDGE_FLAT)), deep = smooth((e - EDGE_CARVE) / (EDGE_FULL - EDGE_CARVE));
+  const s = clamp(skid, 0, 1), t = clamp(tuck, 0, 1) * (1 - s), r = 1 - s - t;
+  w.neutral = (1 - c) * r; w[toe ? "toe" : "heel"] = (c - deep) * r; w[toe ? "toeDeep" : "heelDeep"] = deep * r;
+  w.skid = s; w.tuck = t;
+  return w;
 }
+
+// How much of the physics' inclination the board and the body show: a deep toe-side carve a little less (at
+// full lean the shins would lie near the snow and it reads as kneeling).
+export const TOE_LEAN = 0.85;
+export const leanScale = (w) => 1 - (1 - TOE_LEAN) * ((w.toeDeep || 0) + 0.5 * (w.toe || 0));
+
+export const DEG = Math.PI / 180;
 
 // A two-bone leg reaching from the hip to the foot: thigh l1, shin l2, the foot at d. The thigh's angle off
 // the hip-to-foot line (rad) and the knee's bend (0 = straight). d is held within reach: no shorter than
@@ -117,28 +92,4 @@ export function twoBone(l1, l2, d, fold = 0.3) {
   const hip = Math.acos(clamp((l1 * l1 + dd * dd - l2 * l2) / (2 * l1 * dd), -1, 1));
   const knee = Math.PI - Math.acos(clamp((l1 * l1 + l2 * l2 - dd * dd) / (2 * l1 * l2), -1, 1));
   return { d: dd, hip, knee };
-}
-
-// The arms while riding, quiet but carried (boarder.js armsBody). Directions in the trunk's frame as [toward the
-// toes (the body's front, squared to the trunk), up the trunk, toward the nose]: each upper arm's (from the
-// shoulder), the side its forearm bends toward and the elbow's bend (rad). An athletic carriage: both arms held
-// off the body in front of it, elbows bent, hands about waist height; the lead arm toward the nose, the rear
-// one over the back knee. On the heel side both reach further forward for balance; on the toe side the hands
-// are low and forward. Never hanging dead along the trunk (the owner: "软绵绵的", limp), never out sideways at
-// shoulder height, never pointing back. A rigged animal's short arms stay nearer its sides.
-const ARMS = {
-  ride: { lead: [0.55, -0.65, 0.5], rear: [0.55, -0.75, -0.2] },
-  toe: { lead: [0.6, -0.7, 0.4], rear: [0.55, -0.78, -0.15] },
-  heel: { lead: [0.75, -0.4, 0.5], rear: [0.8, -0.5, 0.05] },
-};
-export const ARM_SPEED = 3; // rad/s, each upper arm and forearm
-const unit = (v) => { const n = Math.hypot(...v) || 1; return v.map((x) => x / n); };
-export function armTargets(toe = 0, heel = 0, pet = false) {
-  const t = clamp(toe / 0.3, 0, 1), h = clamp(heel / 0.3, 0, 1), r = Math.max(0, 1 - t - h);
-  const mix = (k) => unit([0, 1, 2].map((i) => ARMS.ride[k][i] * r + ARMS.toe[k][i] * t + ARMS.heel[k][i] * h));
-  const side = (v) => (pet ? unit([v[0] * 0.6, v[1] - 0.3, v[2] * 0.6]) : v);
-  return {
-    lead: { upper: side(mix("lead")), bendTo: [0.6, 0.3, 0.75], elbow: 0.8 },
-    rear: { upper: side(mix("rear")), bendTo: [0.8, 0.35, 0.2], elbow: 0.75 },
-  };
 }
