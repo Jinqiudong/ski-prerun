@@ -67,27 +67,40 @@ export const SHAPES = {
 // turn then comes from the ankles, the knees and the whole body's inclination, never from folding at the
 // waist.
 // Between the edges (`neutral`, 0..1: riding, not skidding, pushing or in a trick) the body passes through
-// a tall, centred stance: the legs a little extended (NEUTRAL_RISE) and the trunk stacked over the hips,
-// bent at the hip by NEUTRAL_BEND, not the clips' crouch with the butt out. On the heel side the trunk
-// is brought to its own tilt instead, by HEEL_TRUNK_AT of depth.
+// a tall, centred stance: the legs a little extended (NEUTRAL_RISE) and the pelvis and the trunk stacked
+// tall over the board in the world (`upright`), not the clips' crouch with the butt out. (The pelvis is not
+// held to the thighs there: they fold fast into the heel side's sit, and a pelvis following them tipped back
+// past the board and swung forward again, a hip that dropped and popped at every edge change.) On the heel
+// side the trunk is brought to its own tilt instead, eased in (smoothstep) by HEEL_TRUNK_AT of depth, and the
+// toe side's line lets go by HEEL_LET_GO. (Both were a few hundredths of depth, about a tenth of a second: the
+// pelvis and the trunk swung some 20° in a frame or two as the heel edge came in or went, then crawled at the
+// speed limits; with the head flicking on top it read as a limp, rubbery body.)
 export const NEUTRAL_TRUNK = 0.1;
-export const ALIGN_AT = 0.05, HIP_BEND = 0.06, NEUTRAL_BEND = 0.3, NEUTRAL_RISE = -0.05, HEEL_TRUNK_AT = 0.15, SIT_AT = 0.35;
+export const ALIGN_AT = 0.15, HIP_BEND = 0.06, NEUTRAL_RISE = -0.05, HEEL_TRUNK_AT = 0.35, HEEL_LET_GO = 0.25, TOE_TRUNK_AT = 0.25, SIT_AT = 0.35;
+const smooth = (x) => { const t = clamp(x, 0, 1); return t * t * (3 - 2 * t); };
 // How far into line, from the toe depth alone (boarder.js eases it over time).
-export const alignOf = (toe) => clamp(toe / ALIGN_AT, 0, 1);
+export const alignOf = (toe) => smooth(toe / ALIGN_AT);
 export function carveLayer(toe, heel, alignTo = null, neutral = 0) {
   const T = SHAPES.toe, H = SHAPES.heel;
-  const align = (alignTo ?? alignOf(toe)) * (1 - clamp(heel / 0.08, 0, 1)), drive = 0.55 * align + 0.45 * clamp(toe, 0, 1);
-  const hw = clamp(heel / HEEL_TRUNK_AT, 0, 1), flat = clamp(1 - (toe + heel) / 0.3, 0, 1);
-  const out = { hipIn: 0, hipDown: 0, twist: 0, trunk: H.trunk, trunkK: hw, align: 0, bend: 0, alignToe: 0, upright: 0 };
+  const align = (alignTo ?? alignOf(toe)) * (1 - smooth(heel / HEEL_LET_GO)), drive = 0.55 * align + 0.45 * clamp(toe, 0, 1);
+  const hw = smooth(heel / HEEL_TRUNK_AT), flat = clamp(1 - (toe + heel) / 0.3, 0, 1);
+  const out = { hipIn: 0, hipDown: 0, twist: 0, trunk: H.trunk, trunkK: hw, align: 0, bend: 0, alignToe: 0, upright: 0, pelvisUp: 0 };
   for (const key of ["hipDown", "twist"]) out[key] = T[key] * toe + H[key] * heel;
   out.hipDown += NEUTRAL_RISE * clamp(neutral, 0, 1) * flat + H.sit * clamp(heel / SIT_AT, 0, 1);
   out.hipIn = T.hipIn * drive + H.hipIn * heel;
-  out.align = (align + (1 - align) * clamp(neutral, 0, 1)) * (1 - hw);
-  out.bend = NEUTRAL_BEND + (HIP_BEND - NEUTRAL_BEND) * align;
-  out.alignToe = align * (1 - hw); // the toe side's part of it (boarder.js drops the angulation by it)
-  // Between the edges the trunk is stacked tall over the board in the world (NEUTRAL_TRUNK from vertical,
-  // toward the toes), not tipped with it as the board rolls: the board rolls under a centred body.
-  out.upright = (1 - align) * clamp(neutral, 0, 1) * (1 - hw);
+  out.align = align * (1 - hw);
+  out.bend = HIP_BEND;
+  // The trunk follows the thighs' line only as the toe edge loads up (by TOE_TRUNK_AT of depth); on a shallow toe
+  // edge it stays stacked tall. (Held to the thighs down to the last bit of toe edge, it rolled back with the board
+  // some 25° toward the heels as the edge let go, then sprang up into the tall moment: a body falling backward and
+  // catching itself at every toe-to-heel change.) boarder.js drops the angulation by it.
+  out.alignToe = out.align * smooth(toe / TOE_TRUNK_AT);
+  // Between the edges the pelvis (`pelvisUp`) and the trunk (`upright`) are stacked tall over the board in the
+  // world (NEUTRAL_TRUNK from vertical, toward the toes), not tipped with it as the board rolls: the board rolls
+  // under a centred body.
+  const nk = clamp(neutral, 0, 1) * (1 - hw);
+  out.upright = (1 - align * smooth(toe / TOE_TRUNK_AT)) * nk;
+  out.pelvisUp = (1 - align) * nk;
   return out;
 }
 
@@ -106,16 +119,17 @@ export function twoBone(l1, l2, d, fold = 0.3) {
   return { d: dd, hip, knee };
 }
 
-// The arms while riding, relaxed and quiet (boarder.js armsBody). Directions in the board's frame as [toward the
-// toes, up, toward the nose]: each upper arm's (from the shoulder), the side its forearm bends toward and the
-// elbow's soft bend (rad). Riding along: the lead arm forward over the nose, the rear arm low by the back hip;
-// on the heel side both forward (out in front of the chest, the toes' side) for balance; on the toe side the
-// hands low and forward. Never out sideways at shoulder height, never pointing back. A rigged animal's short
-// arms stay nearer its sides.
+// The arms while riding, quiet but carried (boarder.js armsBody). Directions in the trunk's frame as [toward the
+// toes (the body's front, squared to the trunk), up the trunk, toward the nose]: each upper arm's (from the
+// shoulder), the side its forearm bends toward and the elbow's bend (rad). An athletic carriage: both arms held
+// off the body in front of it, elbows bent, hands about waist height; the lead arm toward the nose, the rear
+// one over the back knee. On the heel side both reach further forward for balance; on the toe side the hands
+// are low and forward. Never hanging dead along the trunk (the owner: "软绵绵的", limp), never out sideways at
+// shoulder height, never pointing back. A rigged animal's short arms stay nearer its sides.
 const ARMS = {
-  ride: { lead: [0.3, -0.75, 0.6], rear: [0.15, -0.95, -0.2] },
-  toe: { lead: [0.5, -0.75, 0.45], rear: [0.35, -0.9, -0.05] },
-  heel: { lead: [0.7, -0.4, 0.5], rear: [0.75, -0.5, 0.1] },
+  ride: { lead: [0.55, -0.65, 0.5], rear: [0.55, -0.75, -0.2] },
+  toe: { lead: [0.6, -0.7, 0.4], rear: [0.55, -0.78, -0.15] },
+  heel: { lead: [0.75, -0.4, 0.5], rear: [0.8, -0.5, 0.05] },
 };
 export const ARM_SPEED = 3; // rad/s, each upper arm and forearm
 const unit = (v) => { const n = Math.hypot(...v) || 1; return v.map((x) => x / n); };
@@ -124,7 +138,7 @@ export function armTargets(toe = 0, heel = 0, pet = false) {
   const mix = (k) => unit([0, 1, 2].map((i) => ARMS.ride[k][i] * r + ARMS.toe[k][i] * t + ARMS.heel[k][i] * h));
   const side = (v) => (pet ? unit([v[0] * 0.6, v[1] - 0.3, v[2] * 0.6]) : v);
   return {
-    lead: { upper: side(mix("lead")), bendTo: [0.6, 0.2, 0.8], elbow: 0.5 },
-    rear: { upper: side(mix("rear")), bendTo: [0.8, 0.3, 0.2], elbow: 0.45 },
+    lead: { upper: side(mix("lead")), bendTo: [0.6, 0.3, 0.75], elbow: 0.8 },
+    rear: { upper: side(mix("rear")), bendTo: [0.8, 0.35, 0.2], elbow: 0.75 },
   };
 }
