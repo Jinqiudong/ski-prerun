@@ -23,9 +23,12 @@ import { Channel, memberId, myName } from "../start/shared-trip.js?v=2";
 import { t, myAvatar } from "../core/i18n.js?v=51";
 import { myRider, boarderModel, disposeBoarder, poseBoarder, sitBoarder, standBoarder, cabinStandBoarder, idleBoarder, hikeBoarder, gestureBoarder, talkBoarder } from "../rider/boarder.js?v=32";
 import { ymd } from "../start/trip-intro.js?v=1";
-import { rideTrip, cleanState, cleanHi, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=8";
+import { rideTrip, cleanState, cleanHi, cleanChairAct, changed, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD_MAX, whereOf, alongPts, QUICK } from "./together-core.js?v=9";
 import { voiceHere } from "../core/voice.js?v=19";
 
+const QUIET = 3000; // after a seek or skip in a shared chair: the others' old places don't pull me back
+// What a friend's chair action says (the bubble, pause and skip; a seek or ×speed shows by itself).
+const CHAIR_SAYS = { bub: (v) => (v ? "收起了防风罩" : "放下了防风罩"), skip: () => "直接到山顶了", pause: (v) => (v ? "停一下" : "继续走") };
 const MAX = 8, STALE = 15000, NEAR = 150, TAG_FAR = 1000, SEND_EVERY = 250, JOIN_FOR = HOLD_MAX;
 const SIT = 900, SETTLE = 2400; // sitting down (ms); the boarding moment before a held chair goes
 const LAND = "prerunTogetherLand", TRIP = "prerunRideTrip";
@@ -101,7 +104,7 @@ function landingCover() {
 }
 
 export function rideTogether(api) {
-  const none = { frame() {}, mate: () => 0, held: () => false, boarding: () => null, active: false };
+  const none = { frame() {}, mate: () => 0, held: () => false, boarding: () => null, chairAct() {}, fast: () => false, active: false };
   const params = new URLSearchParams(location.search);
   if (params.get("trip")) store(sessionStorage, TRIP, params.get("trip"));
   const party = api.party || null;
@@ -185,6 +188,14 @@ export function rideTogether(api) {
       say(f, q); toast(q.icon, `<b>${esc(f.name)}</b>：${esc(t(q.zh))}`);
       if (f.model && f.s?.ph === "lift") gestureBoarder(f.model, q.k === "good" || q.k === "meet" ? "point" : "wave"); // on a chair, with a hand too
       if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(30);
+    } else if (ev === "c") {
+      const f = friends.get(p.id), c = cleanChairAct(p);
+      if (!c || c.c !== chairId || top.phase || api.arrived) return;
+      if (c.a === "fast") { fastFrom.set(p.id, c.v ? now : 0); return; }
+      if (c.a === "seek" || c.a === "skip") quietUntil = now + QUIET;
+      api.chairDo(c.a, c.v);
+      const said = CHAIR_SAYS[c.a]?.(c.v);
+      if (said && f?.name) toast(f.avatar, `<b>${esc(f.name)}</b> ${esc(t(said))}`);
     } else if (ev === "bye") {
       const f = friends.get(p.id); if (f) f.gone = now;
     }
@@ -263,13 +274,13 @@ export function rideTogether(api) {
     seat = { k, kt: Date.now() }; api.setSeat(xsOf()[k]); last = null; tickAt = 0;
     return true;
   }
-  // Riding in a friend's chair: their chair's speed is ours; jump away (skip, seek) and you leave it.
+  // Riding in a friend's chair: their chair's place and speed are ours (a skip or seek moves all of us: chairAct).
   function keepChair(dt) {
-    if (chairId === ownChair || top.phase || api.arrived) return;
+    if (chairId === ownChair || top.phase || api.arrived || performance.now() < quietUntil) return;
     const owner = friends.get(chairId.split("@")[0]);
     if (!owner?.s || owner.s.ph !== "lift" || owner.s.c !== chairId || owner.gone) return;
     const want = extrapD(owner), diff = want - api.d;
-    if (Math.abs(diff) > 25) { chairId = ownChair; seat = { k: 1 % xsOf().length, kt: Date.now() }; api.setSeat(xsOf()[seat.k]); last = null; return; }
+    if (Math.abs(diff) > 25) { api.d = want; return; } // far off (a slow page, a lost message): there at once
     api.d += diff * Math.min(1, dt * 3);
   }
   // The boarding moment: whoever just got on sits down (me: I got into their chair), the chair swings with
@@ -736,6 +747,29 @@ export function rideTogether(api) {
     follow: (id) => startFollow(id, true), unfollow: () => stopFollow(true),
   });
   window.__tg = { get fly() { return fly && { t: Math.round(performance.now() - fly.t0), landed: fly.landed }; }, get lastLand() { return lastLand; }, rx, tx, friends, get chairId() { return chairId; }, get seat() { return seat; }, get held() { return held; }, seatsIn, moveTo, onMessage, ownChair, goFind, startFollow, stopFollow, send: (k) => ch.broadcast("m", { id: me, k }), ch, tripId, me, get voice() { return voice(); } }; // testing
+  // ---- One chair, one ride: the bubble, 快进, skip, the ride bar's seek, pause and ×speed done by anyone in
+  // the chair happen for all of us. A held 快进 is said again while held, and lapses if its "let go" is lost.
+  const fastFrom = new Map(); let fastMine = false, fastSaid = 0, seekAt = 0, seekTimer = 0, quietUntil = 0;
+  const company = () => !top.phase && !api.arrived && chairMembers(chairId).some((m) => m.id !== me);
+  function chairAct(a, v = 0) {
+    if (a === "fast") fastMine = !!v;
+    if (a === "seek" || a === "skip") { quietUntil = performance.now() + QUIET; last = null; tickAt = 0; } // my new place goes out at once
+    if (!company()) return;
+    if (a === "fast") fastSaid = performance.now();
+    if (a === "seek") { // a drag: at most every 150 ms, and where it stopped
+      clearTimeout(seekTimer);
+      const go = () => { seekAt = performance.now(); ch.broadcast("c", { id: me, c: chairId, a, v: +api.d.toFixed(1) }); };
+      if (performance.now() - seekAt > 150) go(); else seekTimer = setTimeout(go, 150);
+      return;
+    }
+    ch.broadcast("c", { id: me, c: chairId, a, v });
+  }
+  function fastHeld() {
+    const now = performance.now();
+    if (fastMine && company() && now - fastSaid > 800) { fastSaid = now; ch.broadcast("c", { id: me, c: chairId, a: "fast", v: 1 }); }
+    for (const [id, at] of fastFrom) if (at && now - at < 1800 && chairMembers(chairId).some((m) => m.id === id)) return true;
+    return false;
+  }
   // A friend beside me in my chair, for the ride to pose me talking to them: +1 on my left (+x), -1 on my right, 0 none.
   function mate() {
     if (top.phase || api.arrived) return 0;
@@ -747,5 +781,5 @@ export function rideTogether(api) {
     }
     return best;
   }
-  return { active: true, frame, goFind, startFollow, stopFollow, mate, held: () => held, boarding };
+  return { active: true, frame, goFind, startFollow, stopFollow, mate, held: () => held, boarding, chairAct, fast: fastHeld };
 }

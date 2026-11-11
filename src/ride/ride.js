@@ -26,8 +26,8 @@ import { rideSound } from "../audio/index.js?v=6";
 import { openSoundPanel, creditLine } from "../audio/panel.js?v=24";
 import { dropIn } from "../core/transition.js?v=21";
 import { Facilities } from "./kitworld.js?v=9";
-import { rideTogether } from "./together.js?v=37";
-import { startParty } from "../core/party.js?v=23";
+import { rideTogether } from "./together.js?v=38";
+import { startParty } from "../core/party.js?v=24";
 import { loadResearch, loadKitIndex, liftSpec, kits, TERMINAL, terminalPlace, deckLevel, gradePad, seatOf, ROPE_H } from "./facilities.js?v=7";
 import { clearRope, ropeY, tramPace, tramTowers } from "./lift-core.js?v=2";
 import { powderAmount, powderField, powderAt, markMoguls, MogulField, bumpStep, TREE, treeHit, runSurface, runPowder, runConds, wayConds, condWords, COND_ICON, COND_ZH } from "./snow-core.js?v=5";
@@ -2645,21 +2645,25 @@ async function main() {
   const pace = (x) => (TRAM ? tramPace(x, line.total) : 1);
   const secs = (a, b, v = SPEED * 3) => { let s = 0; for (let x = a; x < b; x += 2) s += Math.min(2, b - x) / (v * pace(x)); return s; }; // the time from a to b
   let fast = false, arrived = false, paused = false, rate = 1;
+  const fastNow = () => fast || together.fast(); // 快进 held by me or by a friend in my chair
   const fastBtn = $("fast");
   fastBtn.hidden = !TRIP;
-  for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); fast = v; });
+  for (const [ev, v] of [["pointerdown", true], ["pointerup", false], ["pointerleave", false], ["pointercancel", false]]) fastBtn.addEventListener(ev, (e) => { e.stopPropagation(); if (fast !== v) { fast = v; together.chairAct("fast", v ? 1 : 0); } });
   $("skip").hidden = !TRIP;
   // Skip: the chair speeds up the line and glides into the top station (about two seconds).
   let skipping = null, faceK = 0, withK = 0; // the chair camera: in front of the chair (faceK 1) or behind it (0); placed for a friend beside me (withK)
-  $("skip").addEventListener("click", () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; });
+  const skipUp = () => { if (!skipping && !arrived) skipping = { from: d, t0: performance.now() }; };
+  $("skip").addEventListener("click", () => { if (!arrived) { skipUp(); together.chairAct("skip"); } });
   $("again").addEventListener("click", rideAgain);
   // The ride bar: tap the chair for ×1 ×2 ×4, tap the flag to pause, drag the dot to go back or ahead (to the end: the top).
   const RATES = [1, 2, 4];
+  const setPaused = (v) => { paused = v; $("rbPause").classList.toggle("paused", paused); };
+  const setRate = (v) => { rate = v; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.classList.toggle("one", rate === 1); };
   if (TRIP) {
     $("rideBar").hidden = false; document.body.classList.add("riding");
-    $("rbPause").onclick = () => { paused = !paused; $("rbPause").classList.toggle("paused", paused); };
-    $("rbSpeed").onclick = () => { rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length]; const b = $("rbSpeed").querySelector("b"); b.textContent = `×${rate}`; b.classList.toggle("one", rate === 1); };
-    $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { if (!skipping) skipping = { from: d, t0: performance.now() }; } else d = d0 + (d1 - d0) * u; });
+    $("rbPause").onclick = () => { setPaused(!paused); together.chairAct("pause", paused ? 1 : 0); };
+    $("rbSpeed").onclick = () => { setRate(RATES[(RATES.indexOf(rate) + 1) % RATES.length]); together.chairAct("rate", rate); };
+    $("rbSeek").addEventListener("input", () => { if (arrived) return; const u = +$("rbSeek").value / 1000; if (u >= 0.995) { skipUp(); together.chairAct("skip"); } else { d = d0 + (d1 - d0) * u; together.chairAct("seek"); } });
   }
   if (TRIP) $("weather").insertAdjacentHTML("beforeend", `<div class="cell"><img src="assets/icons/lift.png?v=1" alt=""><b>${(() => { const s = secs(d0, d1); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`; })()}</b>${t("坐到山顶")}</div>`);
   // Keep where we are, every couple of seconds and on the way out, for "continue" on the start page.
@@ -2687,7 +2691,8 @@ async function main() {
   // The rider's own bubble: pull it down against the wind, or push it up for the view.
   const bubbleBtn = $("bubble");
   const setBubble = (open) => { bubbleWant = open ? 1 : 0; bubbleBtn.querySelector("span").textContent = open ? "放下防风罩" : "收起防风罩"; $("bubbleHint").classList.toggle("down", !open); };
-  bubbleBtn.addEventListener("click", () => setBubble(bubbleWant < 0.5));
+  const flipBubble = () => { setBubble(bubbleWant < 0.5); together.chairAct("bub", bubbleWant); }; // and for everyone in my chair
+  bubbleBtn.addEventListener("click", flipBubble);
   // Tap the canopy itself to pull it down or push it up (a short tap, not a drag to look around). The first
   // time, a small note by the canopy says so.
   const rc = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -2696,9 +2701,9 @@ async function main() {
   renderer.domElement.addEventListener("pointerup", (e) => {
     if (!tap0 || !HAS_BUBBLE || CABIN || arrived || Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y) > 10 || performance.now() - tap0.t > 400) return;
     ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); rc.setFromCamera(ndc, camera);
-    if (rc.intersectObject(myBubble, true).length) setBubble(bubbleWant < 0.5);
+    if (rc.intersectObject(myBubble, true).length) flipBubble();
   });
-  $("bubbleHint").addEventListener("click", () => setBubble(bubbleWant < 0.5));
+  $("bubbleHint").addEventListener("click", flipBubble);
   let hintOn = TRIP && HAS_BUBBLE && !CABIN;
   const hv = new THREE.Vector3(), hb = new THREE.Box3();
   if (params.get("bubble") === "down") { setBubble(false); bubbleOpen = 0; }
@@ -2707,8 +2712,13 @@ async function main() {
   // Riding together (together.js): friends on the same shared trip, live. Nothing at all when riding alone.
   const together = rideTogether({ scene, camera, renderer, T, R, lift, line, ctx, top, along, resort: RESORT, trip: TRIP, d0, d1,
     get d() { return d; }, set d(v) { d = v; }, get arrived() { return arrived; }, chair: () => myChair, step: () => CHAIR_STEP,
-    speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fast ? 20 : 3 * rate) * pace(d)),
+    speed: () => (arrived || paused || params.has("still") ? 0 : SPEED * (fastNow() ? 20 : 3 * rate) * pace(d)),
     seat: () => ({ xs: SEAT_X, zs: SEAT.zs || null, x: MY_SEAT, top: SEAT.top, z: SEAT.z, bubble: HAS_BUBBLE && !CABIN, cabin: CABIN, stand: !!SEAT.stand, tram: TRAM }),
+    chairDo: (a, v) => { // a friend in my chair did it: the same here
+      if (arrived) return;
+      if (a === "bub") setBubble(!!v); else if (a === "skip") skipUp(); else if (a === "seek") { skipping = null; d = Math.max(d0, Math.min(d1, v)); }
+      else if (a === "pause" && TRIP) setPaused(!!v); else if (a === "rate" && TRIP) setRate(v);
+    },
     setSeat: (x, snap = false) => { MY_SEAT = x; if (snap) { ctx.rider.position.x = x; ctx.rider.position.z = seatZ(x); } }, setBubble,
  offLift, withResort, party }); // not snapped: the rider slides over (below)
   myChair.rotation.order = "YXZ"; // the boarding swing turns about the chair's own cross bar
@@ -2728,7 +2738,7 @@ async function main() {
     sight.occOn.value = 0; // the trees go see-through only while skiing (stepSki turns it on)
     if (flakes.visible) flakes.userData.step(dt, camera.position);
     if (skipping && !arrived) { const u = Math.min(1, (now - skipping.t0) / 2200); d = skipping.from + (d1 - skipping.from) * ease(u) + (u >= 1 ? 1 : 0); }
-    else if (!params.has("still") && !arrived && !paused && !together.held()) d += SPEED * (fast ? 20 : 3 * rate) * pace(d) * dt; // held: waiting at the loading point for a friend
+    else if (!params.has("still") && !arrived && !paused && !together.held()) d += SPEED * (fastNow() ? 20 : 3 * rate) * pace(d) * dt; // held: waiting at the loading point for a friend
     if (d > d1) {
       if (TRIP) {
         d = d1;
@@ -2744,7 +2754,7 @@ async function main() {
     }
     if (TRIP && now - savedAt > 2000) { savedAt = now; keep(); }
     if (TRIP && !arrived) {
-      $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins(secs(d, d1, SPEED * (fast ? 20 : 3 * rate)))} · 转动手机看四周`;
+      $("desc").textContent = `还有 ${(Math.max(0, d1 - d) / 1000).toFixed(1)} 公里 · 约 ${mins(secs(d, d1, SPEED * (fastNow() ? 20 : 3 * rate)))} · 转动手机看四周`;
       const u = Math.min(1, Math.max(0, (d - d0) / (d1 - d0))), full = secs(d0, d1);
       document.querySelector("#rideBar .fill").style.width = `${u * 100}%`; document.querySelector("#rideBar .knob").style.left = $("rbTime").style.left = `${u * 100}%`;
       if (document.activeElement !== $("rbSeek")) $("rbSeek").value = Math.round(u * 1000);
@@ -2759,7 +2769,7 @@ async function main() {
     ctx.fac.cam.copy(camera.position);
     ctx.fac.placeChairs(line, d, CHAIR_STEP, ctx.chairN, along, bOpen, bShut, CABIN);
     bubbleOpen += ((CABIN ? 0 : bubbleWant) - bubbleOpen) * Math.min(1, dt * 2.5);
-    if (!top.phase) snd?.lift({ d, total: line.total, towers: line.towers, rate: fast ? 20 / 3 : rate, shelter: 1 - bubbleOpen, dt }); // the bubble down keeps the wind off
+    if (!top.phase) snd?.lift({ d, total: line.total, towers: line.towers, rate: fastNow() ? 20 / 3 : rate, shelter: 1 - bubbleOpen, dt }); // the bubble down keeps the wind off
     bubbleMatrix(bubbleOpen, myBubble.matrix);
     if (hintOn) { // the note sits under the canopy's middle, on screen
       if (arrived) { hintOn = false; $("bubbleHint").hidden = true; }

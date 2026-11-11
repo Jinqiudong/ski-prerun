@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rideTrip, cleanState, cleanHi, cleanRider, changed, seatOrder, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD, HOLD_MAX, whereOf, alongPts } from "../src/ride/together-core.js";
+import { rideTrip, cleanState, cleanHi, cleanChairAct, cleanRider, changed, seatOrder, seatsOf, chairToJoin, chairSeats, freeSeat, seatToward, holdLeft, comingTo, HOLD, HOLD_MAX, whereOf, alongPts } from "../src/ride/together-core.js";
 
 const trip = (o) => ({ id: "t-" + Math.random().toString(36).slice(2, 8), shared: true, from: "2026-11-05", to: "2026-11-08", srv: { members: [{ id: "mA" + "0".repeat(8) }] }, ...o });
 
@@ -142,4 +142,14 @@ test("whereOf and alongPts", () => {
   assert.deepEqual(whereOf({ ph: "ski", run: "Soliloquy" }), ["在 {run}", { run: "Soliloquy" }]);
   const p = alongPts([[0, 0], [0, 10], [10, 10]], 15);
   assert.deepEqual([p.x, p.z], [5, 10]);
+});
+
+test("cleanChairAct: the bubble, 快进, skip, seek, pause and ×speed, nothing else", () => {
+  assert.deepEqual(cleanChairAct({ id: "abcd", c: "abcd@1", a: "bub", v: 0 }), { id: "abcd", c: "abcd@1", a: "bub", v: 0 });
+  assert.deepEqual(cleanChairAct({ id: "abcd", c: "abcd@1", a: "seek", v: 99999 }), { id: "abcd", c: "abcd@1", a: "seek", v: 20000 });
+  assert.deepEqual(cleanChairAct({ id: "abcd", c: "abcd@1", a: "skip", v: "x" }), { id: "abcd", c: "abcd@1", a: "skip", v: 0 });
+  assert.equal(cleanChairAct({ id: "abcd", c: "abcd@1", a: "rate", v: 8 }), null);
+  assert.equal(cleanChairAct({ id: "abcd", c: "abcd@1", a: "eval", v: 1 }), null);
+  assert.equal(cleanChairAct({ id: "abcd", a: "bub", v: 1 }), null);
+  assert.equal(cleanChairAct({ id: "abcd", c: "abcd@1", a: "seek" }), null);
 });
