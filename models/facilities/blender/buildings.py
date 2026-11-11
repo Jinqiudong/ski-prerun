@@ -104,7 +104,7 @@ def gable_roof(f, span, y0, y1, z0, rise, over, M, thick=0.32, st=0.6, ice=0, en
         f.cyl(st * 0.47, ln - 0.08, e, SN, rot=(PI / 2, 0, 0), verts=10)
         for i in range(ice):
             y = y0 + 0.2 + rnd.random() * (ln - 0.4); h = 0.12 + rnd.random() * 0.42
-            f.cyl(0.045, h, e + Vector((s * 0.03, y - yc, -st * 0.45 - h / 2)), ICE, verts=5, r2=0.0)
+            f.cyl(0.0, h, e + Vector((s * 0.03, y - yc, -st * 0.45 - h / 2)), ICE, verts=5, r2=0.045, kind="ice")
     if ridge: f.cyl(st * 0.6, ln - 0.08, Vector((0, yc, zr + st * 0.72)), SN, rot=(PI / 2, 0, 0), verts=12)
     top = lambda u: zr + thick / (2 * math.cos(a)) - abs(u) * math.tan(a)
     return a, top
@@ -573,7 +573,7 @@ def ticket_office():
     cyl(0.16, aw - 0.05, e0 + dv * La + nrm * 0.18, SN, rot=(0, PI / 2, 0), verts=10, kind="snow")
     for i in range(14):
         x = -aw / 2 + 0.2 + rnd.random() * (aw - 0.4); h = 0.1 + rnd.random() * 0.3
-        cyl(0.035, h, e0 + dv * La + Vector((x, 0, -0.05 - h / 2)), M["ice"], verts=5, r2=0.0)
+        cyl(0.0, h, e0 + dv * La + Vector((x, 0, -0.05 - h / 2)), M["ice"], verts=5, r2=0.035, kind="ice")
     box((aw + 0.05, 0.08, 0.26), e0 + dv * La + Vector((0, -0.02, -0.12)), TIM)
     for x in (-W / 2 + 0.25, -1.2, 1.2, W / 2 - 0.25):
         box((0.14, ad, 0.2), Vector((x, 0, 0)) + c + nrm * -0.17, TIM, rot=(b, 0, 0))

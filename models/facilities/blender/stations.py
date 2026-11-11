@@ -524,7 +524,7 @@ def gondola_station():
         cyl(0.3, D + 3.1, eave, M["snow"], rot=(math.pi / 2, 0, 0), verts=12)
         for i in range(30):
             yy = y0 - 1.4 + rnd.random() * (D + 2.8); h = 0.15 + rnd.random() * 0.45
-            cyl(0.05, h, eave + Vector((s * 0.05, yy - cy, -0.3 - h / 2)), flat("ice", "#cfe3f2", 0.2, grain=0), verts=6, r2=0.0)
+            cyl(0.0, h, eave + Vector((s * 0.05, yy - cy, -0.3 - h / 2)), flat("ice", "#cfe3f2", 0.2, grain=0), verts=6, r2=0.05, kind="ice")
         for k in range(n + 1):  # rafter tails under the eave
             box((1.5, 0.2, 0.26), ridge + dv * (L - 0.75) + Vector((0, y0 + k * bay - cy, -0.45)), TIM, rot=rot)
     cyl(0.42, D + 3.1, ridge + Vector((0, 0, 0.45)), M["snow"], rot=(math.pi / 2, 0, 0), verts=14)

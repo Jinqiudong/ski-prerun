@@ -417,7 +417,7 @@ def cliffhouse():
     seamed_roof(ey0 - 0.6, ey1 + 0.4, ex1 + 0.6, ex0 - 0.2, ET - 0.05, ET + 0.6, M, mat="galv", snow=0.4, axis="y")
     for i in range(18):
         y = ey0 + 0.2 + rnd.random() * (ey1 - ey0 - 0.4); h = 0.2 + rnd.random() * 0.7
-        cyl(0.05, h, (ex1 + 0.62, y, ET - 0.2 - h / 2), M["ice"], verts=5, r2=0.0)
+        cyl(0.0, h, (ex1 + 0.62, y, ET - 0.2 - h / 2), M["ice"], verts=5, r2=0.05, kind="ice")
     # On the roof: the kitchen fan and a condenser box; the stove flue.
     zf = top(1.4)
     cyl(0.45, 0.5, (1.4, 2.0, zf + 0.2), M["galv"], verts=16); cyl(0.55, 0.12, (1.4, 2.0, zf + 0.5), M["galv"], verts=16)
