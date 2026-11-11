@@ -65,6 +65,17 @@ export function cleanState(p) {
   }
   return s;
 }
+// A chair action from a friend in my chair: the bubble (v 1 up, 0 down), 快进 held (1) or let go (0), skip,
+// a seek (v: the chair's new place along the line), pause (1) or go on (0), ×speed (1, 2 or 4).
+const CHAIR_ACTS = { bub: [0, 1], fast: [0, 1], skip: null, seek: null, pause: [0, 1], rate: [1, 2, 4] };
+export function cleanChairAct(p) {
+  if (!p || typeof p !== "object" || !ID.test(p.id) || !Object.hasOwn(CHAIR_ACTS, p.a)) return null;
+  const c = str(p.c, 80); if (!c) return null;
+  const ok = CHAIR_ACTS[p.a];
+  if (p.a === "seek") { const v = num(p.v, 0, 20000); return v == null ? null : { id: p.id, c, a: p.a, v }; }
+  if (ok && !ok.includes(p.v)) return null;
+  return { id: p.id, c, a: p.a, v: ok ? p.v : 0 };
+}
 // Who someone is, from a "hi".
 export function cleanHi(p) {
   if (!p || typeof p !== "object" || !ID.test(p.id)) return null;

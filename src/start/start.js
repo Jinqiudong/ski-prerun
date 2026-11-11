@@ -17,7 +17,7 @@ import { openBookPage, locateIn } from "../ride/roadbook.js?v=32";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=51";
 import { playIntro } from "./intro.js?v=38";
 import { flyTo } from "../core/transition.js?v=21";
-import { startParty } from "../core/party.js?v=23";
+import { startParty } from "../core/party.js?v=24";
 import { REGIONS, regionOf } from "../core/regions.js?v=1";
 // The opening (about your nearest trip, if there is one); its buttons open that trip, go straight to today's
 // mountain, or the Memory wtab.
