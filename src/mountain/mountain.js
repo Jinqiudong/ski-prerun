@@ -14,6 +14,8 @@ import { guard, pixelRatio, freeOnLeave, shadowSize, PHONE } from "../core/detai
 import { bunnySpot } from "../ride/practice-core.js?v=2";
 import { load as loadCond, save as saveCond, choose, dateAt, LIVE } from "../core/conditions.js?v=2";
 import { regionOf } from "../core/regions.js?v=1";
+import { buildGraph, LEVELS } from "../core/route.js?v=8";
+import { liftInfo, recommend, tipParts } from "./liftinfo-core.js?v=1";
 
 // Which resort: ?resort=, else the one picked on the start screen. Its place comes with its data.
 const RESORT_ID = (() => { try { return new URLSearchParams(location.search).get("resort") || JSON.parse(localStorage.getItem("prerun") || "{}").resort || "copper"; } catch { return "copper"; } })().replace(/[^a-z0-9-]/g, "");
@@ -170,6 +172,16 @@ async function main() {
   const liftLen = (l) => l.length || l.pts.reduce((a, p, i) => (i ? a + Math.hypot(p[0] - l.pts[i - 1][0], p[1] - l.pts[i - 1][1]) : 0), 0);
   const minsOf = (l) => Math.max(1, Math.round(liftLen(l) / 4.5 / 60)); // the ride up, as the lift cards always said
   const together = () => party.in && party.members().length > 0;
+  // What each lift's top leads to (liftinfo-core.js): the runs leaving it, the lifts in reach; worked out once
+  // per lift, from the same route graph as the ride's lift top. The rider's level as the ride reads it.
+  const graph = buildGraph(R, (x, z) => T.heightAt(x, z));
+  const infos = new Map(), infoOf = (l) => { if (!infos.has(l)) infos.set(l, liftInfo(R, graph, l)); return infos.get(l); };
+  const myLevel = (() => { try { const l = JSON.parse(localStorage.getItem("prerun") || "{}").level; return LEVELS.includes(l) ? l : "intermediate"; } catch { return "intermediate"; } })();
+  const SYM = (lv) => `<i class="sym ${lv}"></i>`;
+  const infoHtml = (i) => {
+    const runs = Object.entries(i.counts).map(([lv, n]) => `<span class="lv">${SYM(lv)}${n}</span>`).join("");
+    return `<span class="l1"><b>${i.seats}</b>${runs ? `<i class="dot">·</i>${runs}` : ""}</span>${i.change.length ? `<span class="l2">可换 ${i.change.length} 条</span>` : ""}`;
+  };
 
   // The flags: one per base, a pill on a thin post standing at the base.
   const flagBox = $("flags"), tagBox = $("tops");
@@ -199,9 +211,9 @@ async function main() {
       el.className = "top";
       el.setAttribute("translate", "no");
       const p = relief.topOf(l);
-      el.innerHTML = `<span class="lab"><small>${liftName(l)}</small><b>${Math.round(T.data.hmin + T.heightAt(p.x, p.z))} M</b></span><i class="tri"></i><i class="post"></i>`;
+      el.innerHTML = `<span class="lab"><small>${liftName(l)}</small><b>${Math.round(T.data.hmin + T.heightAt(p.x, p.z))} M</b></span><i class="tri"></i><i class="post"></i><span class="info">${infoHtml(infoOf(l))}</span>`;
       tagBox.append(el);
-      return { l, el, lab: el.children[0], tri: el.children[1], post: el.children[2], pos: p, at: null };
+      return { l, el, lab: el.children[0], tri: el.children[1], post: el.children[2], info: el.children[3], pos: p, at: null, infoAt: null };
     });
     fillSheet(base, ls);
     if (base) navigator.vibrate?.(8);
@@ -213,16 +225,28 @@ async function main() {
     rows.innerHTML = "";
     if (!base) return;
     $("eyebrow").textContent = base.name;
-    const row = (icon, name, right, go) => {
+    // One tip: the lift to ride first at your level (the most runs you can ski leaving its top, the shorter
+    // ride on a tie), or, honestly, that none has one. Its row gets a small 推荐.
+    const cands = ls.filter((l) => l !== bunnyLift && relief.lifts.has(l)).map((l) => ({ lift: l, minutes: minsOf(l) }));
+    const rec = cands.length ? recommend(R, graph, cands, myLevel) : undefined;
+    $("tip").hidden = rec === undefined;
+    if (rec !== undefined) {
+      $("tip").innerHTML = "";
+      for (const p of tipParts(rec, myLevel, { bunny: base === bunnyBase })) {
+        if (typeof p === "string") $("tip").append(p);
+        else { const b = document.createElement("b"); b.setAttribute("translate", "no"); b.textContent = p.lift; $("tip").append(b); }
+      }
+    }
+    const row = (icon, name, right, go, tag) => {
       const b = document.createElement("button");
       b.className = "row";
-      b.innerHTML = `<img src="${IC(icon)}" alt=""><b translate="no">${name}</b><span>${right}</span>`;
+      b.innerHTML = `<img src="${IC(icon)}" alt=""><b translate="no">${name}</b>${tag ? `<em>${tag}</em>` : ""}<span>${right}</span>`;
       b.addEventListener("click", go);
       rows.append(b);
       return b;
     };
     for (const l of ls) {
-      const r = row(l === bunnyLift ? "practice" : "lift", liftName(l), "", () => { if (together() && l !== bunnyLift) party.callLift(l.name, RESORT_ID, R.name); else go(l); });
+      const r = row(l === bunnyLift ? "practice" : "lift", liftName(l), "", () => { if (together() && l !== bunnyLift) party.callLift(l.name, RESORT_ID, R.name); else go(l); }, rec?.lift === l ? "推荐" : "");
       r.l = l;
     }
     if (!bunnyLift && base === bunnyBase) { // a gentle slope with no lift of its own
@@ -328,6 +352,7 @@ async function main() {
     for (const q of tops) {
       const p = scr(q.pos);
       q.el.style.display = p ? "" : "none";
+      q.r = null;
       if (!p) continue;
       q.w ||= q.lab.offsetWidth; q.h ||= q.lab.offsetHeight;
       // over the pin, or slid along to a side (the triangle stays on the pin), kept on the screen
@@ -341,12 +366,13 @@ async function main() {
       q.post.style.height = `${c.post}px`;
       q.tri.style.transform = `translate(-50%, ${-c.post - 8}px)`;
       q.lab.style.transform = `translate(${-q.w / 2 + c.sx * q.w}px, ${-c.post - 8 - q.h}px)`;
+      q.r = c.r; q.p = p;
     }
-    // the chosen flag next, then the others
-    for (const f of [...flags].sort((a, b) => (b.base === pick) - (a.base === pick))) {
+    // the chosen flag next, then the tops' small cards, then the other flags
+    const placeFlag = (f) => {
       const p = scr(f.pos);
       f.el.style.display = p ? "" : "none";
-      if (!p) continue;
+      if (!p) return;
       f.w ||= f.pill.offsetWidth; f.h ||= f.pill.offsetHeight;
       const { w, h } = f, cands = [];
       // the pill stands over the base, or a little to a side on a slanted post, clear of the gold lines
@@ -360,7 +386,24 @@ async function main() {
       f.post.style.transform = `rotate(${Math.atan2(c.dx, c.post)}rad)`;
       f.pill.style.transform = `translate(${c.dx - w / 2}px, ${-c.post - h}px)`;
       f.el.dataset.at = c.key;
+    };
+    for (const f of flags) if (f.base === pick) placeFlag(f);
+    // each top's small card (seats, the runs leaving it, 可换) beside its name and height, never on them
+    const labs = tops.filter((q) => q.r).map((q) => q.r);
+    for (const q of tops) {
+      if (!q.r || q.el.style.display === "none") continue;
+      q.iw ||= q.info.offsetWidth; q.ih ||= q.info.offsetHeight;
+      const { r, p } = q, w = q.iw, h = q.ih, gap = 6, cy = (r.y0 + r.y1) / 2, cx = (r.x0 + r.x1) / 2, cands = [];
+      const at = (key, x0, y0, pref) => cands.push({ key, pref, r: { x0, x1: x0 + w, y0, y1: y0 + h } });
+      at("r", r.x1 + gap, cy - h / 2, 0); at("l", r.x0 - gap - w, cy - h / 2, 10);
+      at("rt", r.x1 + gap, r.y0 - h * 0.6, 30); at("lt", r.x0 - gap - w, r.y0 - h * 0.6, 40);
+      at("t", cx - w / 2, r.y0 - gap - h, 50);
+      at("rb", r.x1 + gap, r.y1 - h * 0.4, 60); at("lb", r.x0 - gap - w, r.y1 - h * 0.4, 70);
+      for (const c of cands) for (const o of labs) c.pref += overlap(c.r, o) * 50; // a name or a height covered: never
+      const c = solve({ get at() { return q.infoAt; }, set at(k) { q.infoAt = k; } }, p, cands);
+      q.info.style.transform = `translate(${c.r.x0 - p.x}px, ${c.r.y0 - p.y}px)`;
     }
+    for (const f of flags) if (f.base !== pick) placeFlag(f);
   }
 
   // ---------- Touch: drag to turn a little; tap a base or a flag to choose it, tap elsewhere to let go ----------
@@ -387,13 +430,16 @@ async function main() {
     camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
     relief.resize(innerWidth, innerHeight);
-    for (const q of [...flags, ...tops]) { q.w = q.h = 0; }
+    for (const q of [...flags, ...tops]) { q.w = q.h = q.iw = q.ih = 0; }
     aim();
   };
   addEventListener("resize", resize);
 
   $("status").remove();
   aim();
+  // ?base=: back from the ride (its back sheet's 回雪场页), the base that lift leaves from is still chosen.
+  const base0 = villages.find((b) => b.name === new URLSearchParams(location.search).get("base"));
+  if (base0) select(base0);
   renderer.shadowMap.needsUpdate = true;
   window.__resort = { relief, renderer, camera, scene, flags, get pick() { return pick; }, select: (name) => select(villages.find((b) => b.name === name) || null), applyLook, look }; // test hook
 

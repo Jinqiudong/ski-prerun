@@ -1487,7 +1487,7 @@ function topOfLift({ T, R, lift, line, ctx, getChair, snd }) {
   });
   st.trick = doTrick; // testing
   function stepSki(dt) {
-    if (pmap.isOpen) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map
+    if (pmap.isOpen || st.hold) { snd?.ski(phys, { paused: true, dt }); return; } // skiing waits while you look at the map (or the back sheet is up)
     if (spawn) { snd?.ski(phys, { paused: true, dt }); spawnStep(dt); return; }
     const P = chosen, path = P.path, r = phys, last = path.length - 1, ski = onSkis();
     const near = nearestOn(path, r.x, r.z, Math.max(0, prog - 6), Math.min(last, prog + 40));
@@ -2568,6 +2568,55 @@ const pillLabel = () => {
 };
 $("top").onclick = () => { const i = $("topInfo"); i.hidden = !i.hidden; pillLabel(); };
 pillLabel();
+// Back (the app has no browser back; the owner's mock B2, 2026-11-17): the round ‹ at the pill's start, or a
+// swipe in from the screen's left edge, pauses and asks where to: this lift again from the bottom, straight to
+// the top to choose the way down, or the resort page (with this lift's base still chosen). On the run, the
+// top again replaces skipping to it. Cancel carries on. main() fills `backCtl` once the ride is up; until then
+// only the resort page is offered.
+let backCtl = null;
+const BACK_ICON = { restart: "assets/icons/lift.png?v=1", top: "assets/icons/trailmap.png?v=1", retop: "assets/icons/trailmap.png?v=1", resort: "assets/icons/back.png?v=1" };
+const BACK_OPT = {
+  restart: ["从底站重坐", "这趟缆车从头再来"],
+  top: ["跳到山顶选雪道", "不看坐缆车，直接选怎么滑下去"],
+  retop: ["回到山顶重选雪道", "回到这趟缆车的山顶，换一条滑下去"],
+  resort: ["回雪场页", "换一个村子或缆车"],
+};
+const backSheet = () => !$("backSheet").hidden;
+function openBack() {
+  if (backSheet()) return;
+  fold(); $("topInfo").hidden = true; pillLabel();
+  const acts = backCtl ? backCtl.acts() : ["resort"];
+  backCtl?.hold(true);
+  $("backSheet").innerHTML = acts.map((a) => `<button data-act="${a}"><img src="${BACK_ICON[a]}" alt=""><span><b>${t(BACK_OPT[a][0])}</b><small>${t(BACK_OPT[a][1])}</small></span></button>`).join("")
+    + `<button data-act="cancel" class="cancel">${t("取消")}</button>`;
+  $("backSheet").querySelectorAll("button").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); closeBack(b.dataset.act); }));
+  $("backSheet").hidden = $("backDim").hidden = false;
+}
+function closeBack(act = "cancel") {
+  $("backSheet").hidden = $("backDim").hidden = true;
+  if (act === "resort") { location.href = backCtl ? backCtl.resortUrl() : withResort("mountain/"); return; }
+  if (act !== "cancel" && backCtl) { backCtl.go(act); return; }
+  backCtl?.hold(false);
+}
+$("backBtn").addEventListener("click", (e) => { e.stopPropagation(); openBack(); }); // not the pill's own tap (the snow)
+$("backDim").onclick = () => closeBack();
+// The swipe in from the left edge: a finger that starts within 24 px of it and moves right more than 80 px
+// (more across than down). Such a touch on the picture is kept from the ride's own drags (looking round,
+// steering), so the two never fight; a touch anywhere else is theirs as before.
+let edge = null;
+addEventListener("pointerdown", (e) => {
+  edge = null;
+  if (e.clientX >= 24 || e.target !== renderer.domElement || backSheet()) return;
+  edge = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  e.stopPropagation();
+}, { capture: true });
+addEventListener("pointermove", (e) => {
+  if (!edge || e.pointerId !== edge.id) return;
+  e.stopPropagation();
+  const dx = e.clientX - edge.x, dy = Math.abs(e.clientY - edge.y);
+  if (dx > 80 && dx > dy) { edge = null; openBack(); }
+}, { capture: true });
+for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, (e) => { if (edge && e.pointerId === edge.id) { edge = null; e.stopPropagation(); } }, { capture: true });
 const riderLoad = loadBoarder(); // start early: the light template and its clips, about 1.8 MB
 async function main() {
   const [R, far, research, kitIndex] = await Promise.all([fetch(`data/${RESORT}.json`).then((r) => r.json()), fetch(`data/${RESORT}-far.json`).then((r) => r.json()), loadResearch(RESORT), loadKitIndex()]);
@@ -2725,6 +2774,33 @@ async function main() {
   // My bubble's glass, and a clearer copy for riding with a friend (the camera looks through it at us).
   const glassMats = HAS_BUBBLE && !CABIN && myBubble.children[0]?.material ? [myBubble.children[0].material, Object.assign(myBubble.children[0].material.clone(), { opacity: 0.12, transparent: true })] : null;
   window.__together = together;
+  // The back sheet (above): what it offers where we are, what pausing means here, where each choice goes.
+  const liftBase = (() => { // the village this lift leaves from, for the resort page to keep it chosen (mountain.js BASE_RADIUS)
+    let best = null;
+    for (const v of R.places.filter((p) => p.kind === "village")) { const k = Math.hypot(v.x - lift.pts[0][0], v.z - lift.pts[0][1]); if (k < 350 && (!best || k < best.k)) best = { v, k }; }
+    return best?.v.name || null;
+  })();
+  let heldPause = false;
+  const where = () => (top.phase === "practice" ? "practice" : !top.phase ? (arrived ? "top" : TRIP ? "lift" : "preview") : top.phase === "ski" || top.phase === "hike" ? "run" : "top");
+  backCtl = {
+    acts: () => ({ lift: ["restart", "top", "resort"], top: ["restart", "resort"], run: ["retop", "restart", "resort"] })[where()] || ["resort"],
+    hold(on) {
+      if (where() === "lift") {
+        if (on && !paused) { heldPause = true; setPaused(true); together.chairAct("pause", 1); }
+        else if (!on && heldPause) { heldPause = false; setPaused(false); together.chairAct("pause", 0); }
+      } else top.hold = on;
+    },
+    go(act) {
+      const w = where();
+      if (act === "restart" && w === "lift") { // the same chair, back to the loading point (with friends in it, for them too, as the ride bar's seek)
+        skipping = null; heldPause = false; setPaused(false); d = d0; together.chairAct("seek"); return;
+      }
+      if (act === "restart") return rideAgain(); // off the lift: this lift again from the bottom (再坐一次)
+      if (act === "top" && w === "lift") { heldPause = false; setPaused(false); skipUp(); together.chairAct("skip"); return; }
+      if (act === "retop") { const u = new URL(location.href); u.searchParams.set("at", "1"); location.replace(u); } // the top again: the page as a reload at the top
+    },
+    resortUrl: () => withResort(`mountain/${liftBase ? `?base=${encodeURIComponent(liftBase)}` : ""}`),
+  };
   window.__look = { get d() { return d; }, set d(v) { d = v; }, line, look, camera, setBubble, names, renderer, fac: ctx.fac, spec: SPEC, get chair() { return myChair; },
     rider: ctx.rider, talk: (on) => talkBoarder(ctx.rider, on), fall: (heel) => fallBoarder(ctx.rider, heel),
     powder: (on) => { powderU.powderDebug.value = on ? 1 : 0; }, ctx, sight, scene }; // testing (the walkie-talkie in voice.js raises the radio for real)

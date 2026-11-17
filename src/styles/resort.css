@@ -54,6 +54,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .top .tri { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #ff9a12; }
 body.dusk .top small { color: #22314d; text-shadow: 0 0 3px #eef0fb, 0 0 6px #eef0fb; }
 body.dusk .top b { color: #ffad2e; text-shadow: 0 0 4px rgba(34,49,77,.55), 0 0 8px rgba(34,49,77,.35); }
+/* beside the name and height: a small card, the seats and the runs leaving the top by level, then 可换 N 条
+   (the lifts in reach); placed by layout() in mountain.js, never over a name or a height */
+.top .info { position: absolute; left: 0; top: 0; display: grid; gap: 1px; padding: 4px 8px 4px; border-radius: 9px; background: rgba(253,251,246,.94); box-shadow: 0 2px 7px rgba(40,50,70,.16); white-space: nowrap; font: 500 11px/1.3 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; color: #33302c; }
+.top .info .l1 { display: flex; align-items: center; gap: 5px; }
+.top .info b, body.dusk .top .info b { font: 600 11px/1.3 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; letter-spacing: 0; color: #33302c; text-shadow: none; }
+.top .info .dot { font-style: normal; color: #8a8278; margin: 0 -1px; }
+.top .info .lv { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; }
+.top .info .l2 { color: #7b746b; font-size: 10.5px; }
+/* the trail map's symbols, US colours: green circle, blue square, black diamond, double black diamond */
+.sym { display: inline-block; flex: none; width: 8px; height: 8px; vertical-align: -1px; }
+.sym.easy { background: #2f9a48; border-radius: 50%; }
+.sym.intermediate { background: #2a66c9; }
+.sym.advanced { width: 7px; height: 7px; margin: 0 1px; background: #1d1d1d; transform: rotate(45deg); }
+.sym.expert { width: 7px; height: 7px; margin: 0 6px 0 1px; background: #1d1d1d; transform: rotate(45deg); box-shadow: 6px -6px 0 #1d1d1d; }
 
 /* the hint, before a base is chosen */
 #hint { position: fixed; z-index: 4; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); margin: 0; text-align: center; font: 15px "Noto Serif SC", serif; color: #6f675e; letter-spacing: .08em; pointer-events: none; }
@@ -69,8 +83,14 @@ body.picked #sheet { display: block; animation: up .28s ease-out; }
 #rows .row + .row { border-top: 1px solid #ece4d6; }
 #rows .row:active { background: #f3ede2; }
 #rows .row img { width: 30px; height: 30px; flex: none; }
-#rows .row b { flex: 1; min-width: 0; font: 600 20px/1.15 "Cormorant Garamond", "Noto Serif SC", serif; color: #22314d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#rows .row span { flex: none; font: 13px "Noto Serif SC", serif; color: #6f675e; white-space: nowrap; }
+#rows .row b { flex: 0 1 auto; min-width: 0; font: 600 20px/1.15 "Cormorant Garamond", "Noto Serif SC", serif; color: #22314d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rows .row em { flex: none; margin-left: -4px; padding: 1px 7px; border-radius: 999px; background: #e39a2b; color: #fff; font: 600 11px/1.5 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; font-style: normal; }
+#rows .row span { flex: none; margin-left: auto; font: 13px "Noto Serif SC", serif; color: #6f675e; white-space: nowrap; }
+/* the tip under the base's name: which lift to ride first at your level */
+#tip { margin: 10px 14px 8px; padding: 9px 12px; border-radius: 13px; background: #fdf1dc; font: 13px/1.55 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; color: #5a4630; }
+#tip[hidden] { display: none; }
+#tip b { color: #b5661b; font-weight: 600; }
+#tip:not([hidden]) + #rows .row:first-child { border-top: 1px solid #ece4d6; }
 #rows .none { margin: 0; padding: 14px 18px; font-size: 14px; color: #8a8278; }
 
 #credit { position: fixed; z-index: 4; left: 8px; right: 8px; bottom: calc(3px + env(safe-area-inset-bottom)); text-align: center; font-size: 8px; line-height: 1.3; color: #8a8278; pointer-events: none; }
