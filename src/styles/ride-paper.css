@@ -1,5 +1,23 @@
     /* The chair ride in the app's paper look: a player bar along the bottom (the owner's mock, 2026-11-05). */
     #pads { display: none !important; }
+    /* Back (the owner's mock B2, 2026-11-17): a round ‹ at the pill's start, in place of the lift icon (as the
+       resort page's back button); its sheet from the bottom over a dim: where to go from here, then 取消. */
+    #topBar #liftIco { display: none; }
+    #topBar #backBtn { width: 44px; height: 44px; flex: none; padding: 0; border: 0; border-radius: 50%; background: #f3ede2; display: grid; place-items: center; cursor: pointer; }
+    #topBar #backBtn img { width: 22px; height: 22px; }
+    #topBar #backBtn:active { background: #e6dccb; }
+    body.navmin #top:not(.open) #backBtn { display: none; }
+    #backDim { position: fixed; inset: 0; z-index: 40; background: rgba(20,25,40,.45); } #backDim[hidden] { display: none; }
+    #backSheet { position: fixed; z-index: 41; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 4px 0; border-radius: 22px; background: #fbf9f4; box-shadow: 0 -6px 30px rgba(0,0,0,.25); animation: backUp .22s ease-out; }
+    #backSheet[hidden] { display: none; }
+    @keyframes backUp { from { transform: translateY(24px); opacity: 0; } }
+    #backSheet button { width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 20px; border: 0; background: none; text-align: left; color: #1f2a44; cursor: pointer; }
+    #backSheet button + button { border-top: 1px solid #eee8de; }
+    #backSheet button:active { background: #f3ede2; }
+    #backSheet img { width: 30px; height: 30px; flex: none; }
+    #backSheet b { display: block; font: 600 18px/1.25 "Noto Serif SC", serif; }
+    #backSheet small { display: block; margin-top: 2px; font: 12px/1.4 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; color: #8a8277; }
+    #backSheet .cancel { justify-content: center; font: 16px "Noto Serif SC", serif; color: #8a8277; }
     #top { border-radius: 22px !important; padding: 10px 14px !important; }
     #top b { display: inline-flex; align-items: center; gap: 6px; font: 600 20px "Cormorant Garamond", "Noto Serif SC", serif !important; }
     #menuBtn { float: right; width: 44px !important; height: 44px !important; padding: 0 !important; border-radius: 50% !important; border: 3px solid #fdfbf6 !important; background: #e6ebee !important; overflow: hidden; box-shadow: 0 4px 10px rgba(40,50,70,.18); }
