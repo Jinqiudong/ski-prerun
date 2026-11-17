@@ -10,11 +10,10 @@
   <link rel="icon" type="image/png" href="../assets/icons/icon-192.png">
   <meta name="apple-mobile-web-app-title" content="雪场预滑">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#2f7fe8">
+  <meta name="theme-color" content="#f6f2ea">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>雪场预滑</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../src/styles/mountain.css?v=2">
   <script>
     // The app starts by picking a rider; anyone arriving here without one goes there first.
     try { if (!JSON.parse(localStorage.getItem("prerun") || "{}").rider) location.replace("../start.html"); } catch { /* storage off: carry on */ }
@@ -25,59 +24,31 @@
   <script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Noto+Serif+SC:wght@400;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../src/styles/paper.css?v=2">
-  <link rel="stylesheet" href="../src/styles/mountain-paper.css?v=5">
+  <link rel="stylesheet" href="../src/styles/resort.css?v=1">
 </head>
 <body>
   <canvas id="c"></canvas>
-  <!-- The top: back, the resort and its heights, your avatar (the menu); under it the weather, tap for the hour and sky. -->
+  <!-- The top: back, the resort's region and name, your avatar (the menu); the weather chip under it. -->
   <div id="title"><button id="backBtn" class="rb" aria-label="返回"><img src="../assets/icons/back.png?v=1" alt=""></button>
     <div class="tt"><i>COLORADO</i><b>Copper Mountain</b><small id="heights"></small></div>
     <button id="navBtn" class="rb av" aria-label="菜单"><img alt=""></button></div>
-  <div id="topFade"></div>
-  <div id="vignette"></div>
-  <!-- A base's miniature: back to the mountain, the base's name under its resort's, its height and lifts; spin it again. -->
-  <div id="miniTop"><button id="miniBack" class="rb" aria-label="回全景"><img src="../assets/icons/back.png?v=1" alt=""></button>
-    <div class="tt"><i id="miniKick"></i><b id="miniTitle"></b><small id="miniSub"></small></div>
-    <button id="replay" class="rb" aria-label="转一圈"><img src="../assets/icons/refresh.png?v=1" alt=""></button></div>
-  <button id="introSkip" hidden>跳过 ›</button>
-  <div id="liftTags"></div>
-  <div id="plansBar"><div class="plans"><span class="lbl">今天</span><button data-plan="easy"><i class="dt e"></i>热身</button><button data-plan="intermediate"><i class="dt m"></i>巡航</button><button data-plan="advanced"><i class="dt a"></i>挑战</button></div><div id="planOut" class="glass" hidden></div><div id="legend" class="glass"><span class="sw full"></span>山顶直接出发 <span class="sw half"></span>滑下去能接上</div></div>
-  <div id="liftCards"></div>
-  <div id="dim"></div>
-  <div id="detail" class="glass"><button id="detailClose" aria-label="收起"><i></i></button><div id="detailBody"></div><button id="detailGo">坐缆车上山 ›</button></div>
-  <div id="pins"></div>
-  <button id="now"><img id="nowIcon" src="../assets/icons/cloudy.png?v=1" alt=""><span id="nowText">…</span><i class="sep"></i><img class="rf" src="../assets/icons/refresh.png?v=1" alt=""><span id="nowTime"></span><span class="more">详情</span></button>
-  <div id="side"><button id="compassBtn" aria-label="朝北"><img src="../assets/icons/compass_rose.png?v=1" alt=""></button></div>
-  <!-- The sky to preview: the hour slides (any time of day), the weather is a tap; 实时 brings back now and the
-       real weather together. Time and weather change on their own. -->
+  <!-- The flags at the bases and, for the chosen base, a pin at each lift's top (src/mountain/mountain.js). -->
+  <div id="tops"></div>
+  <div id="flags"></div>
+  <button id="now"><img id="nowIcon" src="../assets/icons/cloudy.png?v=1" alt=""><span id="nowTime"></span></button>
+  <!-- The sky to preview: the hour slides, the weather is a tap; 实时 brings back now and the real weather. -->
   <div id="timePanel">
     <div class="th"><b id="tpTime">--:--</b><button id="tpLive"><img src="../assets/icons/refresh.png?v=1" alt="">实时</button></div>
     <input id="hour" type="range" min="0" max="23.75" step="0.25" value="12">
     <div class="tl"><small>00:00</small><small id="tpRise" class="mk">日出</small><small id="tpNoon" class="mk">12:00</small><small id="tpSet" class="mk">日落</small><small>23:00</small></div>
     <div class="wxrow"><button data-wx="clear"><img src="../assets/icons/sunny.png?v=1" alt=""><span>晴</span></button><button data-wx="cloudy"><img src="../assets/icons/partly.png?v=1" alt=""><span>多云</span></button><button data-wx="overcast"><img src="../assets/icons/cloudy.png?v=1" alt=""><span>阴</span></button><button data-wx="snow"><img src="../assets/icons/snow_now.png?v=1" alt=""><span>雪</span></button></div>
   </div>
-  <div id="status" class="glass">生成山体…</div>
-  <div id="base" class="glass"><h2><span id="baseName"></span><button id="baseClose" aria-label="关闭">×</button></h2><p id="baseMeta"></p><ul id="baseLifts"></ul></div>
-  <!-- Two round buttons: bottom left, how you look (views, spin); bottom right, what's on the mountain (runs,
-       lifts). Tap one and its choices pop up; pick one (or tap the map) and they fold back. -->
-  <div id="bar" class="fab">
-    <div class="pop">
-      <button data-view="hero" class="on"><img src="../assets/icons/resorts.png?v=1" alt=""><span>全景</span></button>
-      <button data-view="close"><img src="../assets/icons/view_close.png?v=1" alt=""><span>近看</span></button>
-      <button data-view="top"><img src="../assets/icons/view_top.png?v=1" alt=""><span>俯视</span></button>
-      <button id="spin" class="tg"><img src="../assets/icons/autorotate.png?v=1" alt=""><span>自动旋转</span></button>
-    </div>
-    <button id="viewFab" class="fabBtn" aria-label="视角"><img src="../assets/icons/resorts.png?v=1" alt=""></button>
-  </div>
-  <div id="layerBar" class="fab">
-    <div class="pop">
-      <button id="runs" class="on tg"><img src="../assets/icons/layer_runs.png?v=1" alt=""><span>雪道</span></button>
-      <button id="lifts" class="on tg"><img src="../assets/icons/layer_lifts.png?v=1" alt=""><span>缆车</span></button>
-    </div>
-    <button id="layerFab" class="fabBtn" aria-label="图层"><img src="../assets/icons/layer_runs.png?v=1" alt=""></button>
-  </div>
-  <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 雪地材质 Poly Haven (CC0) · 原型，仅供熟悉路线，以雪场官方地图为准</div>
+  <div id="status">生成山体…</div>
+  <p id="hint">点一个村子出发</p>
+  <!-- The chosen base: a row per lift, tap one to ride it. -->
+  <div id="sheet"><div id="eyebrow" translate="no"></div><div id="rows"></div></div>
+  <div id="credit">雪道和缆车 © OpenStreetMap 贡献者 · 地形 AWS Terrain Tiles · 原型，仅供熟悉路线，以雪场官方地图为准</div>
   <script type="module">import { flyIn } from "../src/core/transition.js?v=21"; flyIn();</script>
-  <script type="module" src="../src/mountain/mountain.js?v=35"></script>
+  <script type="module" src="../src/mountain/mountain.js?v=36"></script>
 </body>
 </html>
