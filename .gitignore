@@ -6,3 +6,5 @@ __pycache__/
 .claude/
 # scratch output of tools
 vista_*.png
+# the iOS app's web copy (npm run app:sync)
+www/

@@ -9,6 +9,7 @@
 // "＋ 邀请" (in the crew) uploads them; old links that carry the whole trip still open.
 import { t, EN_ON, myAvatar, AVATARS } from "../core/i18n.js?v=51";
 import { api, Live, memberId, myName, setMyName, toLocal, toData, isMember, ownerOf, canEdit, pendingDays, pendingSections, ago, UUID } from "./shared-trip.js?v=2";
+import { siteBase } from "../core/site.js?v=1";
 import { daysOf } from "../ride/roadbook.js?v=32";
 import { myLook, sameLook } from "../core/look.js?v=22";
 import { REGIONS, regionOf, regionFor } from "../core/regions.js?v=1";
@@ -340,7 +341,7 @@ export class Trips {
       return true;
     } catch { return false; }
   }
-  link(tr) { const base = `${location.origin}${location.pathname.replace(/[^/]*$/, "")}start.html?trip=`; return tr.shared ? base + tr.id : base + b64(JSON.stringify({ ...tr, id: undefined })); }
+  link(tr) { const base = `${siteBase(location)}start.html?trip=`; return tr.shared ? base + tr.id : base + b64(JSON.stringify({ ...tr, id: undefined })); }
 
   // ---- The boarding passes: one per city people fly from.
   groups(tr) {

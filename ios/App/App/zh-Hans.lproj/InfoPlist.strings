@@ -1,0 +1,6 @@
+/* Ski Pre-Run: the permission prompts (Simplified Chinese). Keep in step with Info.plist and en.lproj. */
+"CFBundleDisplayName" = "雪场预滑";
+"NSMicrophoneUsageDescription" = "对讲机需要用麦克风：和同一行程的朋友语音聊天，只在你打开对讲机时使用。";
+"NSMotionUsageDescription" = "滑行时通过倾斜手机来转向。";
+"NSLocationWhenInUseUsageDescription" = "用你的位置在雪道图上显示你在哪里，并为行程找到离你最近的机场。";
+"NSPhotoLibraryAddUsageDescription" = "在你选择保存时，把滑雪日的合影存到相册。";
