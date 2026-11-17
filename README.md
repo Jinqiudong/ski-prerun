@@ -20,6 +20,9 @@ npm test             # route planner tests
 npm run models       # rebuild the facility models in Blender
 ```
 
+The iOS app (Capacitor, the site bundled): `npm run app:sync`, then build in Xcode. See
+[docs/IOS_APP.md](docs/IOS_APP.md).
+
 No build step: the pages load ES modules from `src/` directly. The layout and conventions are in
 [AGENTS.md](AGENTS.md).
 

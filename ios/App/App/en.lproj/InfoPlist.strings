@@ -1,0 +1,6 @@
+/* Ski Pre-Run: the permission prompts (English). Keep in step with Info.plist and zh-Hans.lproj. */
+"CFBundleDisplayName" = "Ski Pre-Run";
+"NSMicrophoneUsageDescription" = "Ski Pre-Run uses the microphone for the walkie-talkie: voice chat with friends on your shared trip, only while you turn it on.";
+"NSMotionUsageDescription" = "Ski Pre-Run reads how you tilt your phone to steer while you ride.";
+"NSLocationWhenInUseUsageDescription" = "Ski Pre-Run uses your location to show where you are on the trail map and to find your nearest airport for a trip.";
+"NSPhotoLibraryAddUsageDescription" = "Ski Pre-Run saves the group photo of your ski day to your photos when you ask it to.";

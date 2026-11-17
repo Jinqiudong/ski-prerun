@@ -1,0 +1,11 @@
+{
+  "appId": "com.skiprerun.app",
+  "appName": "Ski Pre-Run",
+  "webDir": "www",
+  "backgroundColor": "#e9edf2",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#e9edf2",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

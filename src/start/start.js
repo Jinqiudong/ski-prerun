@@ -15,7 +15,7 @@ import { addSki } from "../rider/ski.js?v=2";
 import { sportOf } from "../rider/ski-core.js?v=1";
 import { openBookPage, locateIn } from "../ride/roadbook.js?v=32";
 import { t, EN_ON, translatePage, openSettings, myAvatar } from "../core/i18n.js?v=51";
-import { playIntro } from "./intro.js?v=38";
+import { playIntro } from "./intro.js?v=39";
 import { flyTo } from "../core/transition.js?v=21";
 import { startParty } from "../core/party.js?v=24";
 import { REGIONS, regionOf } from "../core/regions.js?v=1";
@@ -652,7 +652,7 @@ async function openTrip(id) {
 }
 async function openTrips() {
   if (!trips) {
-    const { Trips } = await import("./trips.js?v=51");
+    const { Trips } = await import("./trips.js?v=52");
     const sprite = (() => { try { return localStorage.getItem("prerunSprite"); } catch { return null; } })();
     trips = new Trips($("trips"), await resortList(), { me: "我", sprite, go: goResort });
     const code = new URLSearchParams(location.search).get("trip");
