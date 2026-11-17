@@ -1,0 +1,77 @@
+/* The resort page: the relief block on flat paper (cream by day, lavender at dusk), flags at the bases, one
+   card of lifts (the owner's mock, 2026-11-17). Loaded after paper.css. */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #f6f2ea; font-family: "Noto Serif SC", -apple-system, serif; color: #33302c; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* the top */
+#title { position: fixed; z-index: 6; top: 0; left: 0; right: 0; padding: calc(14px + env(safe-area-inset-top)) 14px 8px; display: flex; align-items: flex-start; gap: 12px; pointer-events: none; }
+#title > * { pointer-events: auto; }
+.rb { width: 40px; height: 40px; flex: none; padding: 0; border-radius: 50%; border: 0; background: #fdfbf6; box-shadow: 0 3px 10px rgba(40,50,70,.13); display: grid; place-items: center; }
+.rb img { width: 20px; height: 20px; } .rb.av img { width: 100%; height: 100%; border-radius: 50%; }
+#navBtn { overflow: hidden; border: 3px solid #fdfbf6; background: #e6ebee; }
+#title .tt { flex: 1; min-width: 0; padding-top: 1px; pointer-events: none; }
+#title .tt i { display: block; font: 600 10px Oswald, sans-serif; font-style: normal; letter-spacing: .3em; color: #8a5a44; }
+#title .tt b { display: block; font: 600 30px/1.08 "Cormorant Garamond", "Noto Serif SC", serif; color: #22314d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#title .tt small { display: block; font: 12px "Noto Serif SC", serif; color: #6f675e; margin-top: 2px; }
+#title .tt small:empty { display: none; }
+
+/* the weather: a small chip under the avatar; the panel under it */
+#now { position: fixed; z-index: 6; top: calc(62px + env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 3px; padding: 2px 9px 2px 3px; border: 0; border-radius: 999px; background: rgba(253,251,246,.92); box-shadow: 0 3px 8px rgba(40,50,70,.1); }
+#now img { width: 24px; height: 24px; } #nowTime { font: 600 13px "Cormorant Garamond", serif; color: #22314d; }
+#now.chosen::after { content: "自选"; font: 600 10px "Noto Serif SC", serif; color: #fdfbf6; background: #b0703e; border-radius: 999px; padding: 0 6px; margin-left: 3px; }
+#timePanel { position: fixed; z-index: 7; top: calc(96px + env(safe-area-inset-top)); left: 14px; right: 14px; display: none; padding: 12px 16px 10px; border-radius: 18px; background: rgba(253,251,246,.97); box-shadow: 0 8px 20px rgba(40,50,70,.18); color: #22314d; }
+#timePanel.show { display: block; }
+#timePanel .th { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+#timePanel .th b { font: 600 30px "Cormorant Garamond", serif; color: #22314d; }
+#tpLive { display: flex; align-items: center; gap: 6px; font: 14px "Noto Serif SC", serif; background: #fdfbf6; border: 1px solid #cbbfa9; border-radius: 999px; padding: 4px 12px; }
+#tpLive img { width: 18px; height: 18px; } #tpLive.on { background: #22314d; color: #fdfbf6; border-color: #22314d; } #tpLive.on img { filter: brightness(0) invert(1); }
+#timePanel input[type=range] { width: 100%; margin: 4px 0 0; accent-color: #4f6a86; }
+#timePanel .tl { position: relative; height: 16px; margin: 2px 2px 8px; } #timePanel .tl small { position: absolute; top: 0; font-size: 11px; color: #8a8278; transform: translateX(-50%); white-space: nowrap; }
+#timePanel .tl small:first-child { left: 0; transform: none; } #timePanel .tl small:last-child { right: 0; transform: none; }
+#timePanel .wxrow { display: flex; justify-content: space-between; border-top: 1px solid #e6dccb; padding-top: 8px; }
+#timePanel .wxrow button { flex: 1; display: grid; justify-items: center; gap: 1px; background: none; border: 0; border-radius: 14px; padding: 4px 0; font: 12px "Noto Serif SC", serif; color: #6f675e; }
+#timePanel .wxrow img { width: 30px; height: 30px; } #timePanel .wxrow button.on { background: #e8eef4; color: #22314d; font-weight: 600; }
+
+#status { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 8; padding: 10px 18px; border-radius: 999px; background: rgba(253,251,246,.94); font-size: 14px; color: #6f675e; box-shadow: 0 4px 12px rgba(40,50,70,.12); }
+
+/* the flags: a pill of upright text on a thin post standing at the base */
+#flags, #tops { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 3; }
+#tops { z-index: 2; }
+.flag { position: absolute; left: 0; top: 0; width: 0; height: 0; padding: 0; border: 0; background: none; pointer-events: none; }
+.flag .post { position: absolute; left: -.75px; bottom: 0; transform-origin: 50% 100%; width: 1.5px; background: #22314d; opacity: .75; }
+.flag .pill { position: absolute; left: 0; top: 0; pointer-events: auto; writing-mode: vertical-rl; white-space: nowrap; padding: 9px 4px; border-radius: 999px; background: #22314d; color: #fff; font: 600 14px/1 "Cormorant Garamond", "Noto Serif SC", serif; letter-spacing: .02em; box-shadow: 0 3px 8px rgba(20,30,50,.28); transition: background .25s, color .25s; }
+.flag.off .pill { background: #fdfbf6; color: #22314d; }
+.flag.off .post { opacity: .45; }
+.flag.on .pill { background: #e8962a; color: #fff; box-shadow: 0 3px 12px rgba(232,150,42,.45); }
+.flag.on .post { background: #e8962a; opacity: 1; width: 2px; }
+/* the tops of the chosen base's lifts: name, height, a gold triangle, a thin gold pin down to the station */
+.top { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+.top .post { position: absolute; left: -.75px; bottom: 0; width: 1.5px; background: #ff9a12; box-shadow: 0 0 4px rgba(255,154,18,.6); }
+.top .lab { position: absolute; left: 0; top: 0; display: grid; justify-items: center; white-space: nowrap; padding-bottom: 1px; }
+.top small { font: 600 12px/1.1 "Cormorant Garamond", serif; color: #33302c; text-shadow: 0 0 3px #fff, 0 0 6px #fff; }
+.top b { font: 600 15px/1.15 Oswald, sans-serif; letter-spacing: .06em; color: #e8840f; text-shadow: 0 0 3px rgba(255,255,255,.95), 0 0 7px rgba(255,255,255,.8); }
+.top .tri { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #ff9a12; }
+body.dusk .top small { color: #22314d; text-shadow: 0 0 3px #eef0fb, 0 0 6px #eef0fb; }
+body.dusk .top b { color: #ffad2e; text-shadow: 0 0 4px rgba(34,49,77,.55), 0 0 8px rgba(34,49,77,.35); }
+
+/* the hint, before a base is chosen */
+#hint { position: fixed; z-index: 4; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); margin: 0; text-align: center; font: 15px "Noto Serif SC", serif; color: #6f675e; letter-spacing: .08em; pointer-events: none; }
+body.dusk #hint { color: #3c4462; }
+body.picked #hint { display: none; }
+
+/* the card: the base, then a row per lift */
+#sheet { position: fixed; z-index: 5; left: 12px; right: 12px; bottom: calc(30px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; max-height: 46vh; overflow-y: auto; display: none; border-radius: 20px; background: rgba(253,251,246,.97); box-shadow: 0 8px 24px rgba(40,50,70,.16); }
+body.picked #sheet { display: block; animation: up .28s ease-out; }
+@keyframes up { from { transform: translateY(16px); opacity: 0; } }
+#eyebrow { padding: 13px 18px 7px; font: 500 12px Oswald, sans-serif; letter-spacing: .24em; text-transform: uppercase; color: #8a5a44; border-bottom: 1px solid #ece4d6; }
+#rows .row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 18px; border: 0; background: none; text-align: left; }
+#rows .row + .row { border-top: 1px solid #ece4d6; }
+#rows .row:active { background: #f3ede2; }
+#rows .row img { width: 30px; height: 30px; flex: none; }
+#rows .row b { flex: 1; min-width: 0; font: 600 20px/1.15 "Cormorant Garamond", "Noto Serif SC", serif; color: #22314d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rows .row span { flex: none; font: 13px "Noto Serif SC", serif; color: #6f675e; white-space: nowrap; }
+#rows .none { margin: 0; padding: 14px 18px; font-size: 14px; color: #8a8278; }
+
+#credit { position: fixed; z-index: 4; left: 8px; right: 8px; bottom: calc(3px + env(safe-area-inset-bottom)); text-align: center; font-size: 8px; line-height: 1.3; color: #8a8278; pointer-events: none; }
+body.dusk #credit { color: #4c5474; }
